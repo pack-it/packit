@@ -13,8 +13,10 @@ pub struct Cli {
 enum Commands {
     /// Install a package on your system
     Install(InstallArgs),
+    
     /// Uninstall a package from your system
     Uninstall(UninstallArgs),
+
     /// List all installed packages
     List(ListArgs),
 }
