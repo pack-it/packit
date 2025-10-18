@@ -1,10 +1,10 @@
 use clap::Parser;
 
 use crate::config::Config;
-use crate::command_handler::Cli;
+use crate::commands::Cli;
 
 mod config;
-mod command_handler;
+mod commands;
 
 fn main() {
     let command = Cli::parse();
