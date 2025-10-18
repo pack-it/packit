@@ -13,7 +13,7 @@ pub struct Cli {
 enum Commands {
     /// Install a package on your system
     Install(InstallArgs),
-    
+
     /// Uninstall a package from your system
     Uninstall(UninstallArgs),
 
@@ -32,7 +32,7 @@ struct InstallArgs {
 }
 
 #[derive(Args, Debug)]
-struct UninstallArgs{
+struct UninstallArgs {
     /// The name of the package to uninstall
     package_name: String,
 }
