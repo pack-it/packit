@@ -1,26 +1,14 @@
-use std::fs;
-
-use crate::{config::Repository, repositories::error::Result};
+use crate::{config::Repository, repositories::{error::Result, filesystem::FileSystemProvider, types::{Package, PackageVersion, RepositoryMetadata}}};
 
 pub trait RepositoryProvider {
-    fn read_file(&self, path: String) -> Result<String>;
+    fn read_repository_metadata(&self) -> Result<RepositoryMetadata>;
+    fn read_package(&self, package: String) -> Result<Package>;
+    fn read_package_version(&self, package: String, version: String) -> Result<PackageVersion>;
 }
 
-pub fn create_provider(repository: &Repository) -> Option<impl RepositoryProvider> {
+pub fn create_repository_provider(repository: &Repository) -> Option<impl RepositoryProvider> {
     match repository.provider.as_str() {
-        "fs" => Some(FileSystemProvider {
-            path: repository.path.clone(),
-        }),
+        "fs" => FileSystemProvider::from_repository(repository),
         _ => None
-    }
-}
-
-pub struct FileSystemProvider {
-    path: String,
-}
-
-impl RepositoryProvider for FileSystemProvider {
-    fn read_file(&self, path: String) -> Result<String> {
-        Ok(fs::read_to_string(self.path.clone() + &path)?)
     }
 }

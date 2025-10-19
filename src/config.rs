@@ -61,6 +61,11 @@ impl Config {
             println!("WARNING: Repositories rank contains undefined repository, ignoring undefined repository...")
         }
 
+        // Remove trailing slashes from repository paths
+        for (_, repository) in &mut config.repositories {
+            repository.path = repository.path.trim_end_matches("/").into();
+        }
+
         Ok(config)
     }
 }
