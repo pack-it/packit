@@ -1,6 +1,6 @@
 use std::fs;
 
-use crate::{config::Repository, repositories::Result};
+use crate::{config::Repository, repositories::error::Result};
 
 pub trait RepositoryProvider {
     fn read_file(&self, path: String) -> Result<String>;

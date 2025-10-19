@@ -1,4 +1,4 @@
-use crate::repositories::{provider::RepositoryProvider, types::{Package, PackageMetadata, PackageVersion, RepositoryMetadata}, Result};
+use crate::repositories::{error::Result, provider::RepositoryProvider, types::{Package, PackageMetadata, PackageVersion, RepositoryMetadata}};
 
 pub fn read_repository_metadata(provider: &impl RepositoryProvider) -> Result<RepositoryMetadata> {
     let data = provider.read_file("/repository.toml".into())?;
