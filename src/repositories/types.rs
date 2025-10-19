@@ -10,7 +10,7 @@ pub struct RepositoryMetadata {
 }
 
 #[derive(Deserialize, Debug)]
-pub struct PackageMetadata {
+pub(super) struct PackageMetadata {
     pub package: Package
 }
 
