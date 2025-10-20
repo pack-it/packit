@@ -1,6 +1,7 @@
 use crate::{
     config::Repository,
     repositories::{
+        default::DefaultProvider,
         error::Result,
         filesystem::FileSystemProvider,
         types::{Package, PackageVersion, RepositoryMetadata},
@@ -24,7 +25,7 @@ pub fn create_repository_provider(repository: &Repository) -> Option<Box<dyn Rep
     match repository.provider.as_str() {
         FILESYSTEM_PROVIDER_ID => boxed(FileSystemProvider::from_repository(repository)),
         DEFAULT_PROVIDER_ID => boxed(DefaultProvider::from_repository(repository)),
-        _ => None
+        _ => None,
     }
 }
 

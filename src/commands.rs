@@ -9,7 +9,9 @@ use crate::{
 
 #[derive(Parser, Debug)]
 #[command(name = "Packit", version, about)]
-#[command(long_about = "The universal package manager, designed to streamline the experience of installing packages on your system.")]
+#[command(
+    long_about = "The universal package manager, designed to streamline the experience of installing packages on your system."
+)]
 pub struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -50,7 +52,7 @@ struct ListArgs {
 }
 
 // This executes a packit subcommand
-pub fn execute(provider: &impl RepositoryProvider) -> Result<(), InstallerError> {
+pub fn execute(provider: &Box<dyn RepositoryProvider>) -> Result<(), InstallerError> {
     let command = Cli::parse();
 
     match command.command {
@@ -68,7 +70,10 @@ pub fn execute(provider: &impl RepositoryProvider) -> Result<(), InstallerError>
 }
 
 // Executes the install command with user specified arguments
-fn handle_install(args: InstallArgs, provider: &impl RepositoryProvider) -> Result<(), InstallerError> {
+fn handle_install(
+    args: InstallArgs,
+    provider: &Box<dyn RepositoryProvider>,
+) -> Result<(), InstallerError> {
     // If no version is supplied use the latest version
     let version = match args.version {
         Some(version) => version,

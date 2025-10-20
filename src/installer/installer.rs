@@ -16,7 +16,12 @@ impl Installer {
     }
 
     // A recursive method which installs a package and its dependencies.
-    pub fn install(&self, provider: &impl RepositoryProvider, package_name: &String, version: Option<&String>) -> Result<()> {
+    pub fn install(
+        &self,
+        provider: &Box<dyn RepositoryProvider>,
+        package_name: &String,
+        version: Option<&String>,
+    ) -> Result<()> {
         // Use the latest version if the version isn't specified
         let version = match version {
             Some(version) => version,
@@ -24,7 +29,7 @@ impl Installer {
         };
 
         // Get package info and its target
-        let package = provider.read_package_version(package_name.into(), version.into())?;
+        let package = provider.read_package_version(package_name, version)?;
         let target = match package.targets.get(TARGET_ARCHITECTURE) {
             Some(target) => target,
             None => {
