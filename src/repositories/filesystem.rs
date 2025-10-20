@@ -28,10 +28,7 @@ impl RepositoryProvider for FileSystemProvider {
     }
 
     fn read_package_version(&self, package: String, version: String) -> Result<PackageVersion> {
-        let data = fs::read_to_string(format!(
-            "{}/packages/{package}/{version}/targets.toml",
-            self.path
-        ))?;
+        let data = fs::read_to_string(format!("{}/packages/{package}/{version}/targets.toml", self.path))?;
 
         Ok(toml::de::from_str(&data)?)
     }

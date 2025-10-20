@@ -1,5 +1,6 @@
 use crate::installer::error::Result;
 
+use crate::target_architecture::TARGET_ARCHITECTURE;
 use crate::{
     installer::{error::InstallerError, unpack::unpack},
     repositories::provider::RepositoryProvider,
@@ -15,13 +16,7 @@ impl Installer {
     }
 
     // A recursive method which installs a package and its dependencies.
-    pub fn install(
-        &self,
-        provider: &impl RepositoryProvider,
-        package_name: &String,
-        version: Option<&String>,
-        platform: &str,
-    ) -> Result<()> {
+    pub fn install(&self, provider: &impl RepositoryProvider, package_name: &String, version: Option<&String>) -> Result<()> {
         // Use the latest version if the version isn't specified
         let version = match version {
             Some(version) => version,
@@ -30,7 +25,7 @@ impl Installer {
 
         // Get package info and its target
         let package = provider.read_package_version(package_name.into(), version.into())?;
-        let target = match package.targets.get(platform) {
+        let target = match package.targets.get(TARGET_ARCHITECTURE) {
             Some(target) => target,
             None => {
                 return Err(InstallerError::TargetError);
@@ -51,14 +46,12 @@ impl Installer {
             .iter()
             .chain(target.dependencies.iter());
         for dependency in dependencies {
-            self.install(provider, dependency, Option::None, platform)?
+            self.install(provider, dependency, Option::None)?
         }
 
         // Install the package in the correct directory
         match target.installer_type.as_str() {
-            "unpack" => {
-                unpack(response, &self.install_directory)?;
-            }
+            "unpack" => unpack(response, &self.install_directory)?,
             _ => {}
         }
 

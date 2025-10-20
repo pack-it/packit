@@ -9,9 +9,7 @@ use crate::{
 
 #[derive(Parser, Debug)]
 #[command(name = "Packit", version, about)]
-#[command(
-    long_about = "The universal package manager, designed to streamline the experience of installing packages on your system."
-)]
+#[command(long_about = "The universal package manager, designed to streamline the experience of installing packages on your system.")]
 pub struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -57,23 +55,20 @@ pub fn execute(provider: &impl RepositoryProvider) -> Result<(), InstallerError>
 
     match command.command {
         Commands::Install(args) => {
-            command_install(args, provider)?;
+            handle_install(args, provider)?;
         }
         Commands::Uninstall(args) => {
-            uninstall(args);
+            handle_uninstall(args);
         }
         Commands::List(args) => {
-            list_(args);
+            handle_list(args);
         }
     }
     Ok(())
 }
 
 // Executes the install command with user specified arguments
-fn command_install(
-    args: InstallArgs,
-    provider: &impl RepositoryProvider,
-) -> Result<(), InstallerError> {
+fn handle_install(args: InstallArgs, provider: &impl RepositoryProvider) -> Result<(), InstallerError> {
     // If no version is supplied use the latest version
     let version = match args.version {
         Some(version) => version,
@@ -82,16 +77,10 @@ fn command_install(
 
     // TODO: Get an install directory from the config
     let installer = Installer::new("./temp".into());
-    installer.install(
-        provider,
-        &args.package_name,
-        Some(&version),
-        TARGET_ARCHITECTURE,
-    )?;
-
+    installer.install(provider, &args.package_name, Some(&version))?;
     Ok(())
 }
 
-fn uninstall(args: UninstallArgs) {}
+fn handle_uninstall(args: UninstallArgs) {}
 
-fn list_(args: ListArgs) {}
+fn handle_list(args: ListArgs) {}
