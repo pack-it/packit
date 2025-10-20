@@ -42,3 +42,27 @@ struct ListArgs {
     /// Directory to list all packages of (OPTIONAL)
     directory: Option<PathBuf>,
 }
+
+// This executes a packit subcommand
+pub fn execute() {
+    let command = Cli::parse();
+
+    match command.command {
+        Commands::Install(args) => {
+            install(args);
+        }
+        Commands::Uninstall(args) => {
+            uninstall(args);
+        }
+        Commands::List(args) => {
+            list_(args);
+        }
+    }
+}
+
+fn install(args: InstallArgs) {}
+
+fn uninstall(args: UninstallArgs) {}
+
+fn list_(args: ListArgs) {}
+
