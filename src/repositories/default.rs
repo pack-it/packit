@@ -1,4 +1,11 @@
-use crate::{config::Repository, repositories::{error::Result, provider::RepositoryProvider, types::{Package, PackageMetadata, PackageVersion, RepositoryMetadata}}};
+use crate::{
+    config::Repository, 
+    repositories::{
+        error::Result, 
+        provider::RepositoryProvider, 
+        types::{Package, PackageMetadata, PackageVersion, RepositoryMetadata},
+    },
+};
 
 pub const DEFAULT_PROVIDER_ID: &str = "packit";
 

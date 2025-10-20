@@ -4,14 +4,11 @@ use std::path::PathBuf;
 use crate::{
     installer::{error::InstallerError, installer::Installer},
     repositories::provider::RepositoryProvider,
-    target_architecture::TARGET_ARCHITECTURE,
 };
 
 #[derive(Parser, Debug)]
 #[command(name = "Packit", version, about)]
-#[command(
-    long_about = "The universal package manager, designed to streamline the experience of installing packages on your system."
-)]
+#[command(long_about = "The universal package manager, designed to streamline the experience of installing packages on your system.")]
 pub struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -51,8 +48,8 @@ struct ListArgs {
     directory: Option<PathBuf>,
 }
 
-// This executes a packit subcommand
-pub fn execute(provider: &Box<dyn RepositoryProvider>) -> Result<(), InstallerError> {
+/// Reads and handles the command.
+pub fn handle_command(provider: &Box<dyn RepositoryProvider>) -> Result<(), InstallerError> {
     let command = Cli::parse();
 
     match command.command {
@@ -60,20 +57,17 @@ pub fn execute(provider: &Box<dyn RepositoryProvider>) -> Result<(), InstallerEr
             handle_install(args, provider)?;
         }
         Commands::Uninstall(args) => {
-            handle_uninstall(args);
+            handle_uninstall(args)?;
         }
         Commands::List(args) => {
-            handle_list(args);
+            handle_list(args)?;
         }
     }
     Ok(())
 }
 
-// Executes the install command with user specified arguments
-fn handle_install(
-    args: InstallArgs,
-    provider: &Box<dyn RepositoryProvider>,
-) -> Result<(), InstallerError> {
+/// Handles the install command with user specified arguments.
+fn handle_install(args: InstallArgs, provider: &Box<dyn RepositoryProvider>) -> Result<(), InstallerError> {
     // If no version is supplied use the latest version
     let version = match args.version {
         Some(version) => version,
@@ -86,6 +80,12 @@ fn handle_install(
     Ok(())
 }
 
-fn handle_uninstall(args: UninstallArgs) {}
+/// Handles the uninstall command with user specified arguments.
+fn handle_uninstall(args: UninstallArgs) -> Result<(), InstallerError> {
+    todo!()
+}
 
-fn handle_list(args: ListArgs) {}
+/// Handles the list command with user specified arguments.
+fn handle_list(args: ListArgs) -> Result<(), InstallerError> {
+    todo!()
+}

@@ -5,6 +5,7 @@ use thiserror::Error;
 
 use crate::repositories::default::DEFAULT_PROVIDER_ID;
 
+/// Represents the main config file of Packit.
 #[derive(Deserialize, Debug)]
 pub struct Config {
     /// Contains all repositories
@@ -18,6 +19,7 @@ pub struct Config {
     pub prompt_repo_conflicts: bool,
 }
 
+/// Represents a repository, containing connection information.
 #[derive(Deserialize, Debug)]
 pub struct Repository {
     /// Path to the repository
@@ -36,12 +38,13 @@ fn default_repository_provider() -> String {
     DEFAULT_PROVIDER_ID.into()
 }
 
+/// The errors that occur when reading the config file.
 #[derive(Error, Debug)]
 pub enum ConfigError {
-    #[error("Cannot read config file contents")]
+    #[error("Cannot read config file contents: {0}")]
     ReadError(#[from] std::io::Error),
 
-    #[error("Cannot parse config file: {message}", message = ._0.message())]
+    #[error("Cannot parse config file: {0}")]
     ParseError(#[from] toml::de::Error),
 }
 

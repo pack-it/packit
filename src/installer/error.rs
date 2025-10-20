@@ -2,7 +2,7 @@ use thiserror::Error;
 
 use crate::repositories::error::RepositoryError;
 
-// Errors which occur during installation
+/// The errors that occur during installation.
 #[derive(Error, Debug)]
 pub enum InstallerError {
     #[error("Platform not found in targets.")]

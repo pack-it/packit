@@ -5,7 +5,7 @@ use tar::Archive;
 
 use crate::installer::error::{InstallerError, Result};
 
-// Unpacks tar files and saves them to a provided install directory
+/// Unpacks tar files and saves them to the provided install directory.
 pub fn unpack(response: reqwest::blocking::Response, install_directory: &String) -> Result<()> {
     let bytes = match response.bytes() {
         Ok(bytes) => bytes,
