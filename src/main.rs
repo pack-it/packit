@@ -2,7 +2,7 @@ use clap::Parser;
 
 use crate::config::Config;
 use crate::commands::Cli;
-use crate::repositories::provider::{create_repository_provider, RepositoryProvider};
+use crate::repositories::provider::{create_repository_provider};
 
 mod config;
 mod commands;

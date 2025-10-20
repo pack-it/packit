@@ -2,10 +2,13 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum RepositoryError {
-    #[error("Cannot read repository file from disk")]
+    #[error("Cannot read repository file from disk: {0}")]
     ReadError(#[from] std::io::Error),
 
-    #[error("Cannot parse repository file: {message}", message = ._0.message())]
+    #[error("Cannot request repository file from external repository: {0}")]
+    RequestError(#[from] reqwest::Error),
+
+    #[error("Cannot parse repository file: {0}")]
     ParseError(#[from] toml::de::Error),
 }
 
