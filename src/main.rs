@@ -16,5 +16,8 @@ fn main() {
 
     let provider = create_repository_provider(core_repo).expect("Cannot create provider");
 
-    commands::handle_command(&provider).expect("Temporary expect");
+    match commands::handle_command(&provider) {
+        Ok(_) => {},
+        Err(e) => println!("An error occured: {}\n{:?}", e, e),
+    };
 }
