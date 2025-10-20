@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use crate::{
     installer::{error::InstallerError, installer::Installer},
     repositories::provider::RepositoryProvider,
+    target_architecture::TARGET_ARCHITECTURE,
 };
 
 #[derive(Parser, Debug)]
@@ -83,7 +84,7 @@ fn command_install(
         provider,
         &args.package_name,
         Some(&version),
-        &"x86_64-apple-darwin".to_string(), // TODO: Get from compile macro
+        &TARGET_ARCHITECTURE.to_string(),
     )?;
 
     Ok(())

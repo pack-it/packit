@@ -7,6 +7,7 @@ mod config;
 mod installer;
 mod logger;
 mod repositories;
+mod target_architecture;
 
 fn main() {
     let config = Config::from("Config.toml").expect("Cannot load config");
