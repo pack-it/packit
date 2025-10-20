@@ -1,5 +1,6 @@
 use thiserror::Error;
 
+/// The errors that occur when requesting metadata from a repository.
 #[derive(Error, Debug)]
 pub enum RepositoryError {
     #[error("Cannot read repository file from disk: {0}")]

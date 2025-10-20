@@ -4,6 +4,7 @@ use crate::{config::Repository, repositories::{error::Result, provider::Reposito
 
 pub const FILESYSTEM_PROVIDER_ID: &str = "fs";
 
+/// The filesystem repository provider, reading package metadata from a local repository on the filesystem.
 pub struct FileSystemProvider {
     path: String,
 }
@@ -30,6 +31,8 @@ impl RepositoryProvider for FileSystemProvider {
 }
 
 impl FileSystemProvider {
+    /// Creates a new filesystem repository provider for the given repository.
+    /// Returns None if the repository is not of the correct type.
     pub fn from_repository(repository: &Repository) -> Option<Self> {
         if repository.provider != FILESYSTEM_PROVIDER_ID {
             return None;

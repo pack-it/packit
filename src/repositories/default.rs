@@ -2,6 +2,7 @@ use crate::{config::Repository, repositories::{error::Result, provider::Reposito
 
 pub const DEFAULT_PROVIDER_ID: &str = "packit";
 
+/// The default packit repository provider, reading package metadata from an external repository.
 pub struct DefaultProvider {
     url: String,
 }
@@ -28,6 +29,8 @@ impl RepositoryProvider for DefaultProvider {
 }
 
 impl DefaultProvider {
+    /// Creates a new default repository provider for the given repository.
+    /// Returns None if the repository is not of the correct type.
     pub fn from_repository(repository: &Repository) -> Option<Self> {
         if repository.provider != DEFAULT_PROVIDER_ID {
             return None;
