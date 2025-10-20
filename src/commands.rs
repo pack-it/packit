@@ -1,9 +1,16 @@
+use clap::{Args, Parser, Subcommand};
 use std::path::PathBuf;
-use clap::{Parser, Subcommand, Args};
+
+use crate::{
+    installer::{error::InstallerError, installer::Installer},
+    repositories::provider::RepositoryProvider,
+};
 
 #[derive(Parser, Debug)]
 #[command(name = "Packit", version, about)]
-#[command(long_about = "The universal package manager, designed to streamline the experience of installing packages on your system.")]
+#[command(
+    long_about = "The universal package manager, designed to streamline the experience of installing packages on your system."
+)]
 pub struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -44,12 +51,12 @@ struct ListArgs {
 }
 
 // This executes a packit subcommand
-pub fn execute() {
+pub fn execute(provider: &impl RepositoryProvider) -> Result<(), InstallerError> {
     let command = Cli::parse();
 
     match command.command {
         Commands::Install(args) => {
-            install(args);
+            command_install(args, provider)?;
         }
         Commands::Uninstall(args) => {
             uninstall(args);
@@ -58,11 +65,30 @@ pub fn execute() {
             list_(args);
         }
     }
+    Ok(())
 }
 
-fn install(args: InstallArgs) {}
+fn command_install(
+    args: InstallArgs,
+    provider: &impl RepositoryProvider,
+) -> Result<(), InstallerError> {
+    let version = match args.version {
+        Some(version) => version,
+        None => provider.read_package(&args.package_name)?.latest_version,
+    };
+
+    // TODO: Get an install directory from the config
+    let installer = Installer::new("./temp".into());
+    installer.install(
+        provider,
+        &args.package_name,
+        Some(&version),
+        &"x86_64-apple-darwin".to_string(), // TODO: Get from compile macro
+    )?;
+
+    Ok(())
+}
 
 fn uninstall(args: UninstallArgs) {}
 
 fn list_(args: ListArgs) {}
-

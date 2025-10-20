@@ -1,6 +1,13 @@
 use std::fs;
 
-use crate::{config::Repository, repositories::{error::Result, provider::RepositoryProvider, types::{Package, PackageMetadata, PackageVersion, RepositoryMetadata}}};
+use crate::{
+    config::Repository,
+    repositories::{
+        error::Result,
+        provider::RepositoryProvider,
+        types::{Package, PackageMetadata, PackageVersion, RepositoryMetadata},
+    },
+};
 
 pub struct FileSystemProvider {
     path: String,
@@ -13,7 +20,7 @@ impl RepositoryProvider for FileSystemProvider {
         Ok(toml::de::from_str(&data)?)
     }
 
-    fn read_package(&self, package: String) -> Result<Package> {
+    fn read_package(&self, package: &String) -> Result<Package> {
         let data = fs::read_to_string(format!("{}/packages/{package}/package.toml", self.path))?;
 
         let content: PackageMetadata = toml::de::from_str(&data)?;
@@ -21,7 +28,10 @@ impl RepositoryProvider for FileSystemProvider {
     }
 
     fn read_package_version(&self, package: String, version: String) -> Result<PackageVersion> {
-        let data = fs::read_to_string(format!("{}/packages/{package}/{version}/targets.toml", self.path))?;
+        let data = fs::read_to_string(format!(
+            "{}/packages/{package}/{version}/targets.toml",
+            self.path
+        ))?;
 
         Ok(toml::de::from_str(&data)?)
     }
