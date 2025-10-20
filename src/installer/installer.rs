@@ -14,12 +14,13 @@ impl Installer {
         Self { install_directory }
     }
 
+    // A recursive method which installs a package and its dependencies.
     pub fn install(
         &self,
         provider: &impl RepositoryProvider,
         package_name: &String,
         version: Option<&String>,
-        platform: &String,
+        platform: &str,
     ) -> Result<()> {
         // Use the latest version if the version isn't specified
         let version = match version {
@@ -27,6 +28,7 @@ impl Installer {
             None => &provider.read_package(package_name)?.latest_version,
         };
 
+        // Get package info and its target
         let package = provider.read_package_version(package_name.into(), version.into())?;
         let target = match package.targets.get(platform) {
             Some(target) => target,
@@ -35,6 +37,7 @@ impl Installer {
             }
         };
 
+        // Request the data of the package
         let response = match reqwest::blocking::get(&target.url) {
             Ok(response) => response,
             Err(e) => {
@@ -42,12 +45,12 @@ impl Installer {
             }
         };
 
-        // Install package dependencies first
-        for dependency in &package.dependencies {
-            self.install(provider, dependency, Option::None, platform)?
-        }
-
-        for dependency in &target.dependencies {
+        // Install global package dependencies and platform specific packages (if there are any, can be empty)
+        let dependencies = package
+            .dependencies
+            .iter()
+            .chain(target.dependencies.iter());
+        for dependency in dependencies {
             self.install(provider, dependency, Option::None, platform)?
         }
 

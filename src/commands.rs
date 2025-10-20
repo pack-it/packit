@@ -69,10 +69,12 @@ pub fn execute(provider: &impl RepositoryProvider) -> Result<(), InstallerError>
     Ok(())
 }
 
+// Executes the install command with user specified arguments
 fn command_install(
     args: InstallArgs,
     provider: &impl RepositoryProvider,
 ) -> Result<(), InstallerError> {
+    // If no version is supplied use the latest version
     let version = match args.version {
         Some(version) => version,
         None => provider.read_package(&args.package_name)?.latest_version,
@@ -84,7 +86,7 @@ fn command_install(
         provider,
         &args.package_name,
         Some(&version),
-        &TARGET_ARCHITECTURE.to_string(),
+        TARGET_ARCHITECTURE,
     )?;
 
     Ok(())
