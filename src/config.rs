@@ -3,6 +3,8 @@ use std::{collections::HashMap, fs};
 use serde::Deserialize;
 use thiserror::Error;
 
+use crate::repositories::default::DEFAULT_PROVIDER_ID;
+
 #[derive(Deserialize, Debug)]
 pub struct Config {
     /// Contains all repositories
@@ -31,7 +33,7 @@ fn default_prompt_repo_conflicts() -> bool {
 }
 
 fn default_repository_provider() -> String {
-    "packit".into()
+    DEFAULT_PROVIDER_ID.into()
 }
 
 #[derive(Error, Debug)]

@@ -7,15 +7,28 @@ use crate::{
     },
 };
 
+/// Generic repository provider trait, reading package metadata from a repository
 pub trait RepositoryProvider {
+    /// Reads repository metadata from the repository, containing information about the repository
     fn read_repository_metadata(&self) -> Result<RepositoryMetadata>;
-    fn read_package(&self, package: &String) -> Result<Package>;
-    fn read_package_version(&self, package: String, version: String) -> Result<PackageVersion>;
+
+    /// Reads package metadata from the repository, containing information about the package
+    fn read_package(&self, package: &str) -> Result<Package>;
+
+    /// Reads the metadata of a certain version of a package, containing dependencies and targets
+    fn read_package_version(&self, package: &str, version: &str) -> Result<PackageVersion>;
 }
 
-pub fn create_repository_provider(repository: &Repository) -> Option<impl RepositoryProvider> {
+/// Creates a repository provider for the given repository
+pub fn create_repository_provider(repository: &Repository) -> Option<Box<dyn RepositoryProvider>> {
     match repository.provider.as_str() {
-        "fs" => FileSystemProvider::from_repository(repository),
-        _ => None,
+        FILESYSTEM_PROVIDER_ID => boxed(FileSystemProvider::from_repository(repository)),
+        DEFAULT_PROVIDER_ID => boxed(DefaultProvider::from_repository(repository)),
+        _ => None
     }
+}
+
+/// Maps an Option<RepositoryProvider> to Option<Box<RepositoryProvider>>
+fn boxed(provider: Option<impl RepositoryProvider + 'static>) -> Option<Box<dyn RepositoryProvider>> {
+    provider.map(|provider| Box::new(provider) as Box<dyn RepositoryProvider>)
 }

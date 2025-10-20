@@ -1,6 +1,7 @@
 use crate::commands::execute;
 use crate::config::Config;
 use crate::repositories::provider::create_repository_provider;
+use crate::commands::Cli;
 
 mod commands;
 mod config;

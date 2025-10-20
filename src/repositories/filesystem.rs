@@ -9,6 +9,9 @@ use crate::{
     },
 };
 
+pub const FILESYSTEM_PROVIDER_ID: &str = "fs";
+
+/// The filesystem repository provider, reading package metadata from a local repository on the filesystem.
 pub struct FileSystemProvider {
     path: String,
 }
@@ -20,14 +23,14 @@ impl RepositoryProvider for FileSystemProvider {
         Ok(toml::de::from_str(&data)?)
     }
 
-    fn read_package(&self, package: &String) -> Result<Package> {
+    fn read_package(&self, package: &str) -> Result<Package> {
         let data = fs::read_to_string(format!("{}/packages/{package}/package.toml", self.path))?;
 
         let content: PackageMetadata = toml::de::from_str(&data)?;
         Ok(content.package)
     }
 
-    fn read_package_version(&self, package: String, version: String) -> Result<PackageVersion> {
+    fn read_package_version(&self, package: &str, version: &str) -> Result<PackageVersion> {
         let data = fs::read_to_string(format!("{}/packages/{package}/{version}/targets.toml", self.path))?;
 
         Ok(toml::de::from_str(&data)?)
@@ -35,8 +38,10 @@ impl RepositoryProvider for FileSystemProvider {
 }
 
 impl FileSystemProvider {
+    /// Creates a new filesystem repository provider for the given repository.
+    /// Returns None if the repository is not of the correct type.
     pub fn from_repository(repository: &Repository) -> Option<Self> {
-        if repository.provider != "fs" {
+        if repository.provider != FILESYSTEM_PROVIDER_ID {
             return None;
         }
 
