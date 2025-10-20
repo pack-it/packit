@@ -1,9 +1,17 @@
+use clap::{Args, Parser, Subcommand};
 use std::path::PathBuf;
-use clap::{Parser, Subcommand, Args};
+
+use crate::{
+    installer::{error::InstallerError, installer::Installer},
+    repositories::provider::RepositoryProvider,
+    target_architecture::TARGET_ARCHITECTURE,
+};
 
 #[derive(Parser, Debug)]
 #[command(name = "Packit", version, about)]
-#[command(long_about = "The universal package manager, designed to streamline the experience of installing packages on your system.")]
+#[command(
+    long_about = "The universal package manager, designed to streamline the experience of installing packages on your system."
+)]
 pub struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -42,3 +50,42 @@ struct ListArgs {
     /// Directory to list all packages of (OPTIONAL)
     directory: Option<PathBuf>,
 }
+
+// This executes a packit subcommand
+pub fn execute(provider: &Box<dyn RepositoryProvider>) -> Result<(), InstallerError> {
+    let command = Cli::parse();
+
+    match command.command {
+        Commands::Install(args) => {
+            handle_install(args, provider)?;
+        }
+        Commands::Uninstall(args) => {
+            handle_uninstall(args);
+        }
+        Commands::List(args) => {
+            handle_list(args);
+        }
+    }
+    Ok(())
+}
+
+// Executes the install command with user specified arguments
+fn handle_install(
+    args: InstallArgs,
+    provider: &Box<dyn RepositoryProvider>,
+) -> Result<(), InstallerError> {
+    // If no version is supplied use the latest version
+    let version = match args.version {
+        Some(version) => version,
+        None => provider.read_package(&args.package_name)?.latest_version,
+    };
+
+    // TODO: Get an install directory from the config
+    let installer = Installer::new("./temp".into());
+    installer.install(provider, &args.package_name, Some(&version))?;
+    Ok(())
+}
+
+fn handle_uninstall(args: UninstallArgs) {}
+
+fn handle_list(args: ListArgs) {}
