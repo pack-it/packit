@@ -3,6 +3,8 @@ use std::{collections::HashMap, fs};
 use serde::Deserialize;
 use thiserror::Error;
 
+use crate::repositories::default::DEFAULT_PROVIDER_ID;
+
 #[derive(Deserialize, Debug)]
 pub struct Config {
     /// Contains all repositories
@@ -31,7 +33,7 @@ fn default_prompt_repo_conflicts() -> bool {
 }
 
 fn default_repository_provider() -> String {
-    "packit".into()
+    DEFAULT_PROVIDER_ID.into()
 }
 
 #[derive(Error, Debug)]
@@ -59,6 +61,11 @@ impl Config {
 
         if config.repositories_rank.len() < old_rank_count {
             println!("WARNING: Repositories rank contains undefined repository, ignoring undefined repository...")
+        }
+
+        // Remove trailing slashes from repository paths
+        for (_, repository) in &mut config.repositories {
+            repository.path = repository.path.trim_end_matches("/").into();
         }
 
         Ok(config)
