@@ -16,8 +16,8 @@ fn main() {
     let provider = create_repository_provider(repo).expect("Cannot create provider");
     
     println!("Repository metadata: {:?}", provider.read_repository_metadata());
-    println!("Package htop: {:?}", provider.read_package("htop".into()));
-    println!("Package htop 3.4.1: {:?}", provider.read_package_version("htop".into(), "3.4.1".into()));
+    println!("Package htop: {:?}", provider.read_package("htop"));
+    println!("Package htop 3.4.1: {:?}", provider.read_package_version("htop", "3.4.1"));
 
     let command = Cli::parse();
     dbg!(command); // Temporary for simple testing

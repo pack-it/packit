@@ -16,14 +16,14 @@ impl RepositoryProvider for FileSystemProvider {
         Ok(toml::de::from_str(&data)?)
     }
 
-    fn read_package(&self, package: String) -> Result<Package> {
+    fn read_package(&self, package: &str) -> Result<Package> {
         let data = fs::read_to_string(format!("{}/packages/{package}/package.toml", self.path))?;
 
         let content: PackageMetadata = toml::de::from_str(&data)?;
         Ok(content.package)
     }
 
-    fn read_package_version(&self, package: String, version: String) -> Result<PackageVersion> {
+    fn read_package_version(&self, package: &str, version: &str) -> Result<PackageVersion> {
         let data = fs::read_to_string(format!("{}/packages/{package}/{version}/targets.toml", self.path))?;
 
         Ok(toml::de::from_str(&data)?)

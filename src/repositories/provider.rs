@@ -6,10 +6,10 @@ pub trait RepositoryProvider {
     fn read_repository_metadata(&self) -> Result<RepositoryMetadata>;
 
     /// Reads package metadata from the repository, containing information about the package
-    fn read_package(&self, package: String) -> Result<Package>;
+    fn read_package(&self, package: &str) -> Result<Package>;
 
     /// Reads the metadata of a certain version of a package, containing dependencies and targets
-    fn read_package_version(&self, package: String, version: String) -> Result<PackageVersion>;
+    fn read_package_version(&self, package: &str, version: &str) -> Result<PackageVersion>;
 }
 
 /// Creates a repository provider for the given repository
