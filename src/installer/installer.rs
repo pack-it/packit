@@ -1,6 +1,6 @@
 use crate::{
     installer::{
-        error::{InstallerError, Result}, 
+        error::{InstallerError, Result},
         unpack::unpack,
     },
     repositories::provider::RepositoryProvider,

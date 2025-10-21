@@ -1,8 +1,8 @@
 use crate::{
-    config::Repository, 
+    config::Repository,
     repositories::{
-        error::Result, 
-        provider::RepositoryProvider, 
+        error::Result,
+        provider::RepositoryProvider,
         types::{Package, PackageMetadata, PackageVersion, RepositoryMetadata},
     },
 };

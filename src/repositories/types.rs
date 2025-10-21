@@ -13,7 +13,7 @@ pub struct RepositoryMetadata {
 /// Wrapper struct to deserialize package.toml files correctly.
 #[derive(Deserialize, Debug)]
 pub(super) struct PackageMetadata {
-    pub package: Package
+    pub package: Package,
 }
 
 /// Represents the package metadata, containing package information.

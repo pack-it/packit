@@ -50,9 +50,9 @@ pub enum ConfigError {
 
 impl Config {
     /// Loads a Packit config from a file.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// This function will return an error if the file cannot be opened or if the content is invalid.
     pub fn from(file: &str) -> Result<Self, ConfigError> {
         let file_content = fs::read_to_string(file)?;
