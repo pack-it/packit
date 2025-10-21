@@ -17,7 +17,7 @@ pub fn unpack(response: reqwest::blocking::Response, install_directory: &String)
     let mut archive = Archive::new(tar);
 
     match archive.unpack(install_directory) {
-        Ok(_) => {}
+        Ok(_) => {},
         Err(e) => return Err(InstallerError::UnpackError(e)),
     };
     Ok(())

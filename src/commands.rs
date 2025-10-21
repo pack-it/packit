@@ -55,13 +55,13 @@ pub fn handle_command(provider: &Box<dyn RepositoryProvider>) -> Result<(), Inst
     match command.command {
         Commands::Install(args) => {
             handle_install(args, provider)?;
-        }
+        },
         Commands::Uninstall(args) => {
             handle_uninstall(args)?;
-        }
+        },
         Commands::List(args) => {
             handle_list(args)?;
-        }
+        },
     }
     Ok(())
 }

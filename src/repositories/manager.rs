@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
 use crate::{
-    config::Config, 
+    config::Config,
     repositories::{
-        error::{RepositoryError, Result}, 
-        provider::{create_repository_provider, RepositoryProvider}, 
+        error::{RepositoryError, Result},
+        provider::{create_repository_provider, RepositoryProvider},
         types::{Package, PackageVersion, RepositoryMetadata},
     },
 };
@@ -30,17 +30,18 @@ impl<'a> RepositoryManager<'a> {
             providers.insert(id.clone(), provider.unwrap());
         }
 
-        Self {
-            config,
-            providers,
-        }
+        Self { config, providers }
     }
 
     /// Reads repository metadata of the given repository, containing information about the repository.
     pub fn read_repository_metadata(&self, repository_id: &str) -> Result<RepositoryMetadata> {
         let provider = match self.providers.get(repository_id) {
             Some(provider) => provider,
-            None => return Err(RepositoryError::RepositoryNotFoundError{ repository_id: repository_id.into() }),
+            None => {
+                return Err(RepositoryError::RepositoryNotFoundError {
+                    repository_id: repository_id.into(),
+                })
+            },
         };
 
         Ok(provider.read_repository_metadata()?)
@@ -74,7 +75,11 @@ impl<'a> RepositoryManager<'a> {
     pub fn read_repo_package(&self, repository_id: &str, package: &str) -> Result<Package> {
         let provider = match self.providers.get(repository_id) {
             Some(provider) => provider,
-            None => return Err(RepositoryError::RepositoryNotFoundError{ repository_id: repository_id.into() }),
+            None => {
+                return Err(RepositoryError::RepositoryNotFoundError {
+                    repository_id: repository_id.into(),
+                })
+            },
         };
 
         Ok(provider.read_package(package)?)
@@ -108,7 +113,11 @@ impl<'a> RepositoryManager<'a> {
     pub fn read_repo_package_version(&self, repository_id: &str, package: &str, version: &str) -> Result<PackageVersion> {
         let provider = match self.providers.get(repository_id) {
             Some(provider) => provider,
-            None => return Err(RepositoryError::RepositoryNotFoundError{ repository_id: repository_id.into() }),
+            None => {
+                return Err(RepositoryError::RepositoryNotFoundError {
+                    repository_id: repository_id.into(),
+                })
+            },
         };
 
         Ok(provider.read_package_version(package, version)?)

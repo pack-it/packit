@@ -47,7 +47,7 @@ impl Installer {
         // Install the package in the correct directory
         match target.installer_type.as_str() {
             "unpack" => unpack(response, &self.install_directory)?,
-            _ => {}
+            _ => {},
         }
 
         Ok(())

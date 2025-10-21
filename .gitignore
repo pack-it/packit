@@ -2,3 +2,4 @@
 Config.toml
 /temp
 .DS_Store
+.vscode/

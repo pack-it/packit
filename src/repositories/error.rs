@@ -13,12 +13,12 @@ pub enum RepositoryError {
     ParseError(#[from] toml::de::Error),
 
     #[error("Cannot find repository '{repository_id}'")]
-    RepositoryNotFoundError{
+    RepositoryNotFoundError {
         repository_id: String,
     },
 
     #[error("Cannot find package '{package_name} {ver}'", ver = .version.clone().unwrap_or_default())]
-    PackageNotFoundError{
+    PackageNotFoundError {
         package_name: String,
         version: Option<String>,
     },

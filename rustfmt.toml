@@ -1,2 +1,6 @@
 max_width = 140
 attr_fn_like_width = 140
+match_block_trailing_comma = true
+match_arm_blocks = false
+struct_variant_width = 0
+use_field_init_shorthand = true

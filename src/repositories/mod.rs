@@ -1,6 +1,6 @@
+pub mod default;
 pub mod error;
-pub mod types;
+pub mod filesystem;
 pub mod manager;
 pub mod provider;
-pub mod filesystem;
-pub mod default;
+pub mod types;
