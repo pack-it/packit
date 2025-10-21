@@ -1,0 +1,116 @@
+use std::collections::HashMap;
+
+use crate::{
+    config::Config, 
+    repositories::{
+        error::{RepositoryError, Result}, 
+        provider::{create_repository_provider, RepositoryProvider}, 
+        types::{Package, PackageVersion, RepositoryMetadata},
+    },
+};
+
+/// Manages all requests to the repositories.
+pub struct RepositoryManager<'a> {
+    config: &'a Config,
+    providers: HashMap<String, Box<dyn RepositoryProvider>>,
+}
+
+impl<'a> RepositoryManager<'a> {
+    /// Creates a new RepositoryManager.
+    pub fn new(config: &'a Config) -> Self {
+        let mut providers = HashMap::new();
+
+        for (id, repository) in &config.repositories {
+            let provider = create_repository_provider(repository);
+            if provider.is_none() {
+                println!("WARNING: Cannot create repository provider for repository {id}.");
+                continue;
+            }
+
+            providers.insert(id.clone(), provider.unwrap());
+        }
+
+        Self {
+            config,
+            providers,
+        }
+    }
+
+    /// Reads repository metadata of the given repository, containing information about the repository.
+    pub fn read_repository_metadata(&self, repository_id: &str) -> Result<RepositoryMetadata> {
+        let provider = match self.providers.get(repository_id) {
+            Some(provider) => provider,
+            None => return Err(RepositoryError::RepositoryNotFoundError{ repository_id: repository_id.into() }),
+        };
+
+        Ok(provider.read_repository_metadata()?)
+    }
+
+    /// Reads package metadata of the given package, containing information about the package.
+    /// Returns the id of the repository and the package metadata.
+    pub fn read_package(&self, package: &str) -> Result<(String, Package)> {
+        for repository_id in &self.config.repositories_rank {
+            let provider = match self.providers.get(repository_id) {
+                Some(provider) => provider,
+                None => {
+                    println!("WARNING: Cannot find provider for {repository_id}, while it should exist.");
+                    continue;
+                },
+            };
+
+            match provider.read_package(package) {
+                Ok(package) => return Ok((repository_id.clone(), package)),
+                Err(_) => continue, //TODO: do we need logging here?
+            }
+        }
+
+        Err(RepositoryError::PackageNotFoundError {
+            package_name: package.into(),
+            version: None,
+        })
+    }
+
+    /// Reads package metadata of the given package from the given repository, containing information about the package.
+    pub fn read_repo_package(&self, repository_id: &str, package: &str) -> Result<Package> {
+        let provider = match self.providers.get(repository_id) {
+            Some(provider) => provider,
+            None => return Err(RepositoryError::RepositoryNotFoundError{ repository_id: repository_id.into() }),
+        };
+
+        Ok(provider.read_package(package)?)
+    }
+
+    /// Reads package version metadata of the given package, containing dependencies and targets.
+    /// Returns the id of the repository and the package version metadata.
+    pub fn read_package_version(&self, package: &str, version: &str) -> Result<(String, PackageVersion)> {
+        for repository_id in &self.config.repositories_rank {
+            let provider = match self.providers.get(repository_id) {
+                Some(provider) => provider,
+                None => {
+                    println!("WARNING: Cannot find provider for {repository_id}, while it should exist.");
+                    continue;
+                },
+            };
+
+            match provider.read_package_version(package, version) {
+                Ok(package) => return Ok((repository_id.clone(), package)),
+                Err(_) => continue, //TODO: do we need logging here?
+            }
+        }
+
+        Err(RepositoryError::PackageNotFoundError {
+            package_name: package.into(),
+            version: Some(version.into()),
+        })
+    }
+
+    /// Reads package version metadata of the given package from the given repository, containing dependencies and targets.
+    pub fn read_repo_package_version(&self, repository_id: &str, package: &str, version: &str) -> Result<PackageVersion> {
+        let provider = match self.providers.get(repository_id) {
+            Some(provider) => provider,
+            None => return Err(RepositoryError::RepositoryNotFoundError{ repository_id: repository_id.into() }),
+        };
+
+        Ok(provider.read_package_version(package, version)?)
+    }
+}

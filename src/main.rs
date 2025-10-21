@@ -1,4 +1,7 @@
-use crate::{config::Config, repositories::provider::create_repository_provider};
+use crate::{
+    config::Config,
+    repositories::{manager::RepositoryManager, provider::create_repository_provider},
+};
 
 mod commands;
 mod config;
@@ -13,8 +16,10 @@ fn main() {
 
     let provider = create_repository_provider(core_repo).expect("Cannot create provider");
 
+    let manager = RepositoryManager::new(&config);
+
     match commands::handle_command(&provider) {
-        Ok(_) => {}
+        Ok(_) => {},
         Err(e) => println!("An error occured: {}\n{:?}", e, e),
     };
 }

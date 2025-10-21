@@ -16,7 +16,7 @@ pub struct Config {
 
     /// False to use the repositories rank to resolve package conflicts, true to ask for confirmation
     #[serde(default = "default_prompt_repo_conflicts")]
-    pub prompt_repo_conflicts: bool,
+    pub prompt_repo_conflicts: bool, //TODO: maybe remove this option? or should it be optional for extra safety?
 }
 
 /// Represents a repository, containing connection information.
