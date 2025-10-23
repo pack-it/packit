@@ -7,6 +7,7 @@ use crate::{
         provider::{create_repository_provider, RepositoryProvider},
         types::{Package, PackageVersion, RepositoryMetadata},
     },
+    target_architecture::TARGET_ARCHITECTURE,
 };
 
 /// Manages all requests to the repositories.
@@ -59,10 +60,14 @@ impl<'a> RepositoryManager<'a> {
                 },
             };
 
-            match provider.read_package(package) {
-                Ok(package) => return Ok((repository_id.clone(), package)),
+            let package = match provider.read_package(package) {
+                Ok(package) => package,
                 Err(_) => continue, //TODO: do we need logging here?
-            }
+            };
+
+            // TODO: check if the package contains the target
+
+            return Ok((repository_id.clone(), package));
         }
 
         Err(RepositoryError::PackageNotFoundError {
@@ -72,6 +77,7 @@ impl<'a> RepositoryManager<'a> {
     }
 
     /// Reads package metadata of the given package from the given repository, containing information about the package.
+    /// Does not check if the data contains the current target.
     pub fn read_repo_package(&self, repository_id: &str, package: &str) -> Result<Package> {
         let provider = match self.providers.get(repository_id) {
             Some(provider) => provider,
@@ -97,10 +103,17 @@ impl<'a> RepositoryManager<'a> {
                 },
             };
 
-            match provider.read_package_version(package, version) {
-                Ok(package) => return Ok((repository_id.clone(), package)),
+            let package = match provider.read_package_version(package, version) {
+                Ok(package) => package,
                 Err(_) => continue, //TODO: do we need logging here?
+            };
+
+            // Check if package contains the target
+            if !package.targets.contains_key(TARGET_ARCHITECTURE) {
+                continue;
             }
+
+            return Ok((repository_id.clone(), package));
         }
 
         Err(RepositoryError::PackageNotFoundError {
@@ -110,6 +123,7 @@ impl<'a> RepositoryManager<'a> {
     }
 
     /// Reads package version metadata of the given package from the given repository, containing dependencies and targets.
+    /// Does not check if the data contains the current target.
     pub fn read_repo_package_version(&self, repository_id: &str, package: &str, version: &str) -> Result<PackageVersion> {
         let provider = match self.providers.get(repository_id) {
             Some(provider) => provider,
