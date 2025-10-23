@@ -3,8 +3,7 @@ use std::path::PathBuf;
 
 use crate::{
     installer::{error::InstallerError, installer::Installer},
-    repositories::provider::RepositoryProvider,
-    target_architecture::TARGET_ARCHITECTURE,
+    repositories::manager::RepositoryManager,
 };
 
 #[derive(Parser, Debug)]
@@ -50,12 +49,12 @@ struct ListArgs {
 }
 
 /// Reads and handles the command.
-pub fn handle_command(provider: &Box<dyn RepositoryProvider>) -> Result<(), InstallerError> {
+pub fn handle_command(manager: &RepositoryManager) -> Result<(), InstallerError> {
     let command = Cli::parse();
 
     match command.command {
         Commands::Install(args) => {
-            handle_install(args, provider)?;
+            handle_install(args, manager)?;
         },
         Commands::Uninstall(args) => {
             handle_uninstall(args)?;
@@ -68,16 +67,10 @@ pub fn handle_command(provider: &Box<dyn RepositoryProvider>) -> Result<(), Inst
 }
 
 /// Handles the install command with user specified arguments.
-fn handle_install(args: InstallArgs, provider: &Box<dyn RepositoryProvider>) -> Result<(), InstallerError> {
-    // If no version is supplied use the latest version
-    let version = match &args.version {
-        Some(version) => version,
-        None => &provider.read_package(&args.package_name)?.latest_versions[TARGET_ARCHITECTURE], //TODO
-    };
-
+fn handle_install(args: InstallArgs, manager: &RepositoryManager) -> Result<(), InstallerError> {
     // TODO: Get an install directory from the config
     let installer = Installer::new("./temp".into());
-    installer.install(provider, &args.package_name, Some(version))?;
+    installer.install(manager, &args.package_name, args.version)?;
     Ok(())
 }
 

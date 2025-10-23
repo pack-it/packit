@@ -1,11 +1,8 @@
 use crate::cli::display::DisplayLoad;
 use crate::installer::error::Result;
-
+use crate::installer::{error::InstallerError, unpack::unpack};
+use crate::repositories::manager::RepositoryManager;
 use crate::target_architecture::TARGET_ARCHITECTURE;
-use crate::{
-    installer::{error::InstallerError, unpack::unpack},
-    repositories::provider::RepositoryProvider,
-};
 
 /// The installer of Packit, managing the installation of packages on the system.
 pub struct Installer {
@@ -18,24 +15,30 @@ impl Installer {
     }
 
     /// Installs the given package and its dependencies.
-    pub fn install(&self, provider: &Box<dyn RepositoryProvider>, package_name: &String, version: Option<&String>) -> Result<()> {
+    pub fn install(&self, manager: &RepositoryManager, package_name: &String, version: Option<String>) -> Result<()> {
+        let package = manager.read_package(package_name)?.1;
+
         // Use the latest version if the version isn't specified
         let version = match version {
             Some(version) => version,
-            None => &provider.read_package(package_name)?.latest_versions[TARGET_ARCHITECTURE], //TODO
+            None => package
+                .latest_versions
+                .get(TARGET_ARCHITECTURE)
+                .expect("Temporary expect")
+                .to_string(),
         };
 
-        // Get package info and its target
-        let package = provider.read_package_version(package_name, version)?;
-        let target = match package.targets.get(TARGET_ARCHITECTURE) {
+        // Get package version info for its target
+        let package_version = manager.read_package_version(&package_name, &version)?.1;
+        let target = match package_version.targets.get(TARGET_ARCHITECTURE) {
             Some(target) => target,
             None => return Err(InstallerError::TargetError),
         };
 
         // Install global package dependencies and platform specific packages (if there are any, can be empty)
-        let dependencies = package.dependencies.iter().chain(target.dependencies.iter());
+        let dependencies = package_version.dependencies.iter().chain(target.dependencies.iter());
         for dependency in dependencies {
-            self.install(provider, dependency, Option::None)?
+            self.install(manager, dependency, Option::None)?
         }
 
         // Show download
