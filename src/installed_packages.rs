@@ -1,0 +1,153 @@
+use std::{fs, path::Path};
+
+use serde::{Deserialize, Serialize};
+use thiserror::Error;
+
+use crate::{
+    config::{self, Repository},
+    repositories::types::{Package, PackageVersion},
+    target_architecture::TARGET_ARCHITECTURE,
+};
+
+/// Represents the file which stores the installed packages.
+#[derive(Serialize, Deserialize, Debug)]
+pub struct InstalledPackageStorage {
+    #[serde(rename = "package")]
+    pub installed_packages: Vec<InstalledPackage>,
+}
+
+/// Represents a package which is installed on the system.
+#[derive(Serialize, Deserialize, Debug)]
+pub struct InstalledPackage {
+    pub name: String,
+    pub description: String,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub homepage: Option<String>,
+    pub source_repository_url: String,
+
+    #[serde(default = "config::default_repository_provider")]
+    #[serde(skip_serializing_if = "is_repository_provider_default")]
+    pub source_repository_provider: String,
+    pub version: String,
+
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub dependencies: Vec<String>,
+    pub install_path: String,
+
+    /// True when the package is found on the system but not installed by Packit, false otherwise
+    pub external: bool,
+}
+
+fn is_repository_provider_default(value: &String) -> bool {
+    *value == config::default_repository_provider()
+}
+
+/// The errors that occur when reading or saving the installed packages file.
+#[derive(Error, Debug)]
+pub enum InstalledPackagesError {
+    #[error("Cannot read or write installed packages file: {0}")]
+    IOError(#[from] std::io::Error),
+
+    #[error("Cannot parse installed packages file: {0}")]
+    ParseError(#[from] toml::de::Error),
+
+    #[error("Cannot serialize installed packages: {0}")]
+    SerializeError(#[from] toml::ser::Error),
+}
+
+impl InstalledPackageStorage {
+    /// Loads the installed packages file from the given path.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the file cannot be opened or if the content is invalid.
+    pub fn from(path: &str) -> Result<Self, InstalledPackagesError> {
+        // If the file does not exist, we return an empty storage
+        if !fs::exists(path)? {
+            return Ok(InstalledPackageStorage {
+                installed_packages: Vec::new(),
+            });
+        }
+
+        // Read data from file
+        let file_content = fs::read_to_string(path)?;
+
+        // Parse data and return
+        Ok(toml::from_str(&file_content)?)
+    }
+
+    /// Adds a package to the storage.
+    /// Please note that this does not save the storage.
+    pub fn add_package(&mut self, package: &Package, package_version: &PackageVersion, source_repository: &Repository, install_path: &str) {
+        // Add global and target specific dependencies together
+        let mut dependencies = package_version.dependencies.clone();
+        if let Some(target) = package_version.targets.get(TARGET_ARCHITECTURE) {
+            dependencies.extend(target.dependencies.clone());
+        }
+
+        let installed_package = InstalledPackage {
+            name: package.name.clone(),
+            description: package.description.clone(),
+            homepage: package.homepage.clone(),
+            source_repository_url: source_repository.path.clone(),
+            source_repository_provider: source_repository.provider.clone(),
+            version: package_version.version.clone(),
+            dependencies,
+            install_path: install_path.into(),
+            external: false,
+        };
+
+        self.installed_packages.push(installed_package);
+    }
+
+    /// Gets all installed versions of a certain package from the storage.
+    /// Returns a list containing all installed versions, or None if the package is not installed.
+    pub fn get_package_versions(&self, package_name: &str) -> Option<Vec<&InstalledPackage>> {
+        let mut result = Vec::new();
+
+        for package in &self.installed_packages {
+            if package.name == package_name {
+                result.push(package);
+            }
+        }
+
+        // Only return the result list if it's not empty
+        (!result.is_empty()).then_some(result)
+    }
+
+    /// Gets a specific version of a certain package from the storage.
+    /// Returns the package version, or None if the package version is not installed.
+    pub fn get_package(&self, package_name: &str, package_version: &str) -> Option<&InstalledPackage> {
+        for package in &self.installed_packages {
+            if package.name == package_name && package.version == package_version {
+                return Some(package);
+            }
+        }
+
+        None
+    }
+
+    /// Saves the installed packages file to the given path.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the data cannot be serialized or if the file cannot be written.
+    pub fn save_to(&self, path: &str) -> Result<(), InstalledPackagesError> {
+        let data = toml::to_string(self)?;
+
+        // Convert string path to Path struct
+        let path = Path::new(path);
+
+        // Create parent directories
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        // Write data to file
+        fs::write(path, data)?;
+
+        Ok(())
+    }
+}

@@ -5,6 +5,7 @@ use crate::{
 
 mod commands;
 mod config;
+mod installed_packages;
 mod installer;
 mod logger;
 mod repositories;

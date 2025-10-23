@@ -34,7 +34,7 @@ fn default_prompt_repo_conflicts() -> bool {
     false
 }
 
-fn default_repository_provider() -> String {
+pub fn default_repository_provider() -> String {
     DEFAULT_PROVIDER_ID.into()
 }
 
