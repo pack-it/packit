@@ -32,21 +32,32 @@ impl Installer {
             None => return Err(InstallerError::TargetError),
         };
 
-        // Request the data of the package
-        let response = match reqwest::blocking::get(&target.url) {
-            Ok(response) => response,
-            Err(e) => return Err(InstallerError::RequestError(e)),
-        };
-
         // Install global package dependencies and platform specific packages (if there are any, can be empty)
         let dependencies = package.dependencies.iter().chain(target.dependencies.iter());
         for dependency in dependencies {
             self.install(provider, dependency, Option::None)?
         }
 
+        // TODO: Logger logic here:
+
+        // Request the data of the package
+        let response = match reqwest::blocking::get(&target.url) {
+            Ok(response) => response,
+            Err(e) => {
+                return Err(InstallerError::RequestError(e));
+            },
+        };
+
+        let bytes = match response.bytes() {
+            Ok(bytes) => bytes,
+            Err(e) => return Err(InstallerError::RequestError(e)),
+        };
+
         // Install the package in the correct directory
         match target.installer_type.as_str() {
-            "unpack" => unpack(response, &self.install_directory)?,
+            "unpack" => {
+                unpack(bytes, &self.install_directory)?;
+            },
             _ => {},
         }
 

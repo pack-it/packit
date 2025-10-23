@@ -1,13 +1,13 @@
 use crate::{
+    cli::commands,
     config::Config,
     repositories::{manager::RepositoryManager, provider::create_repository_provider},
 };
 
-mod commands;
+mod cli;
 mod config;
 mod installed_packages;
 mod installer;
-mod logger;
 mod repositories;
 mod target_architecture;
 
