@@ -65,7 +65,10 @@ impl<'a> RepositoryManager<'a> {
                 Err(_) => continue, //TODO: do we need logging here?
             };
 
-            // TODO: check if the package contains the target
+            // Check if package contains the target
+            if !package.latest_versions.contains_key(TARGET_ARCHITECTURE) {
+                continue;
+            }
 
             return Ok((repository_id.clone(), package));
         }

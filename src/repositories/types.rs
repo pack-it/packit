@@ -10,19 +10,14 @@ pub struct RepositoryMetadata {
     pub maintainers: Vec<String>,
 }
 
-/// Wrapper struct to deserialize package.toml files correctly.
-#[derive(Deserialize, Debug)]
-pub(super) struct PackageMetadata {
-    pub package: Package,
-}
-
 /// Represents the package metadata, containing package information.
 #[derive(Deserialize, Debug)]
 pub struct Package {
     pub name: String,
     pub description: String,
     pub homepage: Option<String>,
-    pub latest_version: String,
+    pub versions: Vec<String>,
+    pub latest_versions: HashMap<String, String>,
 }
 
 /// Represents the package version metadata, containing dependencies and targets.

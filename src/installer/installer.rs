@@ -22,7 +22,7 @@ impl Installer {
         // Use the latest version if the version isn't specified
         let version = match version {
             Some(version) => version,
-            None => &provider.read_package(package_name)?.latest_version,
+            None => &provider.read_package(package_name)?.latest_versions[TARGET_ARCHITECTURE], //TODO
         };
 
         // Get package info and its target

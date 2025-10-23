@@ -5,7 +5,7 @@ use crate::{
     repositories::{
         error::Result,
         provider::RepositoryProvider,
-        types::{Package, PackageMetadata, PackageVersion, RepositoryMetadata},
+        types::{Package, PackageVersion, RepositoryMetadata},
     },
 };
 
@@ -26,8 +26,7 @@ impl RepositoryProvider for FileSystemProvider {
     fn read_package(&self, package: &str) -> Result<Package> {
         let data = fs::read_to_string(format!("{}/packages/{package}/package.toml", self.path))?;
 
-        let content: PackageMetadata = toml::de::from_str(&data)?;
-        Ok(content.package)
+        Ok(toml::de::from_str(&data)?)
     }
 
     fn read_package_version(&self, package: &str, version: &str) -> Result<PackageVersion> {

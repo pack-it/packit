@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use crate::{
     installer::{error::InstallerError, installer::Installer},
     repositories::provider::RepositoryProvider,
+    target_architecture::TARGET_ARCHITECTURE,
 };
 
 #[derive(Parser, Debug)]
@@ -69,14 +70,14 @@ pub fn handle_command(provider: &Box<dyn RepositoryProvider>) -> Result<(), Inst
 /// Handles the install command with user specified arguments.
 fn handle_install(args: InstallArgs, provider: &Box<dyn RepositoryProvider>) -> Result<(), InstallerError> {
     // If no version is supplied use the latest version
-    let version = match args.version {
+    let version = match &args.version {
         Some(version) => version,
-        None => provider.read_package(&args.package_name)?.latest_version,
+        None => &provider.read_package(&args.package_name)?.latest_versions[TARGET_ARCHITECTURE], //TODO
     };
 
     // TODO: Get an install directory from the config
     let installer = Installer::new("./temp".into());
-    installer.install(provider, &args.package_name, Some(&version))?;
+    installer.install(provider, &args.package_name, Some(version))?;
     Ok(())
 }
 
