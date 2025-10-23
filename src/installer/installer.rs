@@ -1,10 +1,10 @@
+use crate::cli::display::DisplayLoad;
+use crate::installer::error::Result;
+
+use crate::target_architecture::TARGET_ARCHITECTURE;
 use crate::{
-    installer::{
-        error::{InstallerError, Result},
-        unpack::unpack,
-    },
+    installer::{error::InstallerError, unpack::unpack},
     repositories::provider::RepositoryProvider,
-    target_architecture::TARGET_ARCHITECTURE,
 };
 
 /// The installer of Packit, managing the installation of packages on the system.
@@ -38,7 +38,9 @@ impl Installer {
             self.install(provider, dependency, Option::None)?
         }
 
-        // TODO: Logger logic here:
+        // Show download
+        let display = DisplayLoad::new();
+        display.show("Downloading ".to_string() + package_name);
 
         // Request the data of the package
         let response = match reqwest::blocking::get(&target.url) {
@@ -48,10 +50,13 @@ impl Installer {
             },
         };
 
+        //  Get bytes from response
         let bytes = match response.bytes() {
             Ok(bytes) => bytes,
             Err(e) => return Err(InstallerError::RequestError(e)),
         };
+
+        display.show_finish("Succesfully downloaded ".to_string() + package_name);
 
         // Install the package in the correct directory
         match target.installer_type.as_str() {

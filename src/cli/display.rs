@@ -1,5 +1,8 @@
-use indicatif::ProgressBar;
-use std::io::{self, Read};
+use indicatif::{ProgressBar, ProgressStyle};
+use std::{
+    io::{self, Read},
+    time::Duration,
+};
 
 pub struct ReaderWithProgress<R: Read> {
     reader: R,
@@ -9,9 +12,14 @@ pub struct ReaderWithProgress<R: Read> {
 
 impl<R: Read> ReaderWithProgress<R> {
     pub fn new(reader: R, size: u64) -> Self {
+        let bar = ProgressBar::new(size);
+        let style = ProgressStyle::with_template("[{wide_bar:.white}] [{percent}%]")
+            .expect("Expected progress style")
+            .progress_chars("=> ");
+        bar.set_style(style);
         Self {
             reader,
-            bar: ProgressBar::new(size),
+            bar,
             total: 0,
         }
     }
@@ -32,8 +40,31 @@ impl<R: Read> Read for ReaderWithProgress<R> {
     }
 }
 
-pub fn display_error(error: String) {}
+pub struct DisplayLoad {
+    progress_bar: ProgressBar,
+}
 
-pub fn succes_message(message: String) {}
+impl DisplayLoad {
+    pub fn new() -> Self {
+        let progress_bar = ProgressBar::new_spinner();
+        progress_bar.set_style(
+            ProgressStyle::with_template("{spinner:.white} {msg}")
+                .unwrap()
+                .tick_chars("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏ "),
+        );
+
+        Self { progress_bar }
+    }
+
+    pub fn show(&self, message: String) {
+        self.progress_bar.set_message(message);
+        self.progress_bar
+            .enable_steady_tick(Duration::from_millis(100));
+    }
+
+    pub fn show_finish(&self, message: String) {
+        self.progress_bar.finish_with_message(message);
+    }
+}
 
 // TODO: Add question to user (continue yes/no)
