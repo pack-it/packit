@@ -79,7 +79,7 @@ impl InstalledPackageStorage {
     }
 
     /// Adds a package to the storage.
-    /// Please note that this does not save the storage.
+    /// Please note that this does not save the storage and does not read the currently installed packages
     pub fn add_package(&mut self, package: &Package, package_version: &PackageVersion, source_repository: &Repository, install_path: &str) {
         // Add global and target specific dependencies together
         let mut dependencies = package_version.dependencies.clone();

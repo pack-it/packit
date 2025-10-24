@@ -2,6 +2,7 @@ use clap::{Args, Parser, Subcommand};
 use std::path::PathBuf;
 
 use crate::{
+    config::Config,
     installer::{error::InstallerError, installer::Installer},
     repositories::manager::RepositoryManager,
 };
@@ -49,12 +50,12 @@ struct ListArgs {
 }
 
 /// Reads and handles the command.
-pub fn handle_command(manager: &RepositoryManager) -> Result<(), InstallerError> {
+pub fn handle_command(manager: &RepositoryManager, config: &Config) -> Result<(), InstallerError> {
     let command = Cli::parse();
 
     match command.command {
         Commands::Install(args) => {
-            handle_install(args, manager)?;
+            handle_install(args, manager, config)?;
         },
         Commands::Uninstall(args) => {
             handle_uninstall(args)?;
@@ -67,10 +68,10 @@ pub fn handle_command(manager: &RepositoryManager) -> Result<(), InstallerError>
 }
 
 /// Handles the install command with user specified arguments.
-fn handle_install(args: InstallArgs, manager: &RepositoryManager) -> Result<(), InstallerError> {
+fn handle_install(args: InstallArgs, manager: &RepositoryManager, config: &Config) -> Result<(), InstallerError> {
     // TODO: Get an install directory from the config
     let installer = Installer::new("./temp".into());
-    installer.install(manager, &args.package_name, args.version)?;
+    installer.install(manager, &args.package_name, args.version, config)?;
     Ok(())
 }
 

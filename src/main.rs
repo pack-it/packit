@@ -11,7 +11,7 @@ fn main() {
     let config = Config::from("Config.toml").expect("Cannot load config");
     let manager = RepositoryManager::new(&config);
 
-    match commands::handle_command(&manager) {
+    match commands::handle_command(&manager, &config) {
         Ok(_) => {},
         Err(e) => println!("An error occured: {}\n{:?}", e, e),
     };

@@ -1,4 +1,6 @@
 use crate::cli::display::DisplayLoad;
+use crate::config::Config;
+use crate::installed_packages::InstalledPackageStorage;
 use crate::installer::error::Result;
 use crate::installer::{error::InstallerError, unpack::unpack};
 use crate::repositories::manager::RepositoryManager;
@@ -15,7 +17,8 @@ impl Installer {
     }
 
     /// Installs the given package and its dependencies.
-    pub fn install(&self, manager: &RepositoryManager, package_name: &String, version: Option<String>) -> Result<()> {
+    /// TODO: Maybe move some of the logic
+    pub fn install(&self, manager: &RepositoryManager, package_name: &String, version: Option<String>, config: &Config) -> Result<()> {
         let (_, package) = manager.read_package(package_name)?;
 
         // Use the latest version if the version isn't specified
@@ -29,7 +32,7 @@ impl Installer {
         };
 
         // Get package version info for its target
-        let (_, package_version) = manager.read_package_version(&package_name, &version)?;
+        let (repository_id, package_version) = manager.read_package_version(&package_name, &version)?;
         let target = match package_version.targets.get(TARGET_ARCHITECTURE) {
             Some(target) => target,
             None => return Err(InstallerError::TargetError),
@@ -38,7 +41,7 @@ impl Installer {
         // Install global package dependencies and platform specific packages (if there are any, can be empty)
         let dependencies = package_version.dependencies.iter().chain(target.dependencies.iter());
         for dependency in dependencies {
-            self.install(manager, dependency, Option::None)?
+            self.install(manager, dependency, Option::None, config)?
         }
 
         // Show download
@@ -69,6 +72,17 @@ impl Installer {
             },
             _ => {},
         }
+
+        // Mark package is installed
+        // TODO: Adjust install directory
+        let mut installed_storage = InstalledPackageStorage::from(&(self.install_directory.to_string() + "/storage.toml"))?;
+        installed_storage.add_package(
+            &package,
+            &package_version,
+            &config.repositories.get(&repository_id).expect("Expected repository in config"),
+            &self.install_directory,
+        );
+        installed_storage.save_to(&(self.install_directory.to_string() + "/storage.toml"))?;
 
         Ok(())
     }

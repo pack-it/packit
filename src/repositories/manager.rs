@@ -124,6 +124,8 @@ impl<'a> RepositoryManager<'a> {
                 continue;
             }
 
+            // TODO: Maybe even specify which repo we're using for the install (maybe not here though, just before the install)
+
             return Ok((repository_id.clone(), package));
         }
 
