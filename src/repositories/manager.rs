@@ -28,7 +28,7 @@ impl<'a> RepositoryManager<'a> {
                 continue;
             }
 
-            providers.insert(id.clone(), provider.unwrap());
+            providers.insert(id.clone(), provider.expect("Expected some provider at this point"));
         }
 
         Self { config, providers }
@@ -62,13 +62,18 @@ impl<'a> RepositoryManager<'a> {
 
             let package = match provider.read_package(package) {
                 Ok(package) => package,
-                Err(_) => continue, //TODO: do we need logging here?
+                Err(_) => {
+                    println!("Cannot find package {package} in repository {repository_id}, continuing.");
+                    continue;
+                },
             };
 
             // Check if package contains the target
             if !package.latest_versions.contains_key(TARGET_ARCHITECTURE) {
                 continue;
             }
+
+            // TODO: Maybe even specify which repo we're using for the install (maybe not here though, just before the install)
 
             return Ok((repository_id.clone(), package));
         }
@@ -108,7 +113,10 @@ impl<'a> RepositoryManager<'a> {
 
             let package = match provider.read_package_version(package, version) {
                 Ok(package) => package,
-                Err(_) => continue, //TODO: do we need logging here?
+                Err(_) => {
+                    println!("Cannot find package {package} {version} in repository {repository_id}, continuing.");
+                    continue;
+                },
             };
 
             // Check if package contains the target

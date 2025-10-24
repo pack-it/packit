@@ -16,7 +16,7 @@ impl Installer {
 
     /// Installs the given package and its dependencies.
     pub fn install(&self, manager: &RepositoryManager, package_name: &String, version: Option<String>) -> Result<()> {
-        let package = manager.read_package(package_name)?.1;
+        let (_, package) = manager.read_package(package_name)?;
 
         // Use the latest version if the version isn't specified
         let version = match version {
@@ -29,7 +29,7 @@ impl Installer {
         };
 
         // Get package version info for its target
-        let package_version = manager.read_package_version(&package_name, &version)?.1;
+        let (_, package_version) = manager.read_package_version(&package_name, &version)?;
         let target = match package_version.targets.get(TARGET_ARCHITECTURE) {
             Some(target) => target,
             None => return Err(InstallerError::TargetError),
@@ -59,6 +59,7 @@ impl Installer {
             Err(e) => return Err(InstallerError::RequestError(e)),
         };
 
+        // TODO: Should download include reading the response to bytes?
         display.show_finish("Succesfully downloaded ".to_string() + package_name);
 
         // Install the package in the correct directory
