@@ -2,7 +2,6 @@ use clap::{Args, Parser, Subcommand};
 use std::path::PathBuf;
 
 use crate::{
-    config::Config,
     installer::{error::InstallerError, installer::Installer},
     repositories::manager::RepositoryManager,
 };
@@ -41,6 +40,10 @@ struct InstallArgs {
 struct UninstallArgs {
     /// The name of the package to uninstall
     package_name: String,
+
+    /// The version of the package to uninstall
+    #[arg(short, long)]
+    version: Option<String>,
 }
 
 #[derive(Args, Debug)]
@@ -50,34 +53,23 @@ struct ListArgs {
 }
 
 /// Reads and handles the command.
-pub fn handle_command(manager: &RepositoryManager, config: &Config) -> Result<(), InstallerError> {
+pub fn handle_command(manager: &RepositoryManager, installer: &Installer) -> Result<(), InstallerError> {
     let command = Cli::parse();
 
     match command.command {
         Commands::Install(args) => {
-            handle_install(args, manager, config)?;
+            // Handle the install command with user specified arguments
+            installer.install(manager, &args.package_name, args.version)?;
         },
         Commands::Uninstall(args) => {
-            handle_uninstall(args)?;
+            // Handle the uninstall command with user specified arguments
+            installer.uninstall(&args.package_name, args.version)?;
         },
         Commands::List(args) => {
             handle_list(args)?;
         },
     }
     Ok(())
-}
-
-/// Handles the install command with user specified arguments.
-fn handle_install(args: InstallArgs, manager: &RepositoryManager, config: &Config) -> Result<(), InstallerError> {
-    // TODO: Get an install directory from the config
-    let installer = Installer::new("./temp".into());
-    installer.install(manager, &args.package_name, args.version, config)?;
-    Ok(())
-}
-
-/// Handles the uninstall command with user specified arguments.
-fn handle_uninstall(args: UninstallArgs) -> Result<(), InstallerError> {
-    todo!()
 }
 
 /// Handles the list command with user specified arguments.

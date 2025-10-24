@@ -17,11 +17,7 @@ impl<R: Read> ReaderWithProgress<R> {
             .expect("Expected progress style")
             .progress_chars("=> ");
         bar.set_style(style);
-        Self {
-            reader,
-            bar,
-            total: 0,
-        }
+        Self { reader, bar, total: 0 }
     }
 }
 
@@ -48,7 +44,7 @@ impl DisplayLoad {
     pub fn new() -> Self {
         let progress_bar = ProgressBar::new_spinner();
         progress_bar.set_style(
-            ProgressStyle::with_template("{spinner:.white} {msg}")
+            ProgressStyle::with_template("{msg} {spinner:.white}")
                 .unwrap()
                 .tick_chars("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏ "),
         );
@@ -58,8 +54,7 @@ impl DisplayLoad {
 
     pub fn show(&self, message: String) {
         self.progress_bar.set_message(message);
-        self.progress_bar
-            .enable_steady_tick(Duration::from_millis(100));
+        self.progress_bar.enable_steady_tick(Duration::from_millis(100));
     }
 
     pub fn show_finish(&self, message: String) {
@@ -67,4 +62,7 @@ impl DisplayLoad {
     }
 }
 
-// TODO: Add question to user (continue yes/no)
+// TODO: Implement
+pub fn ask_user(question: &str) -> bool {
+    true
+}

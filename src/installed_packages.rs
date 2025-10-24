@@ -79,7 +79,7 @@ impl InstalledPackageStorage {
     }
 
     /// Adds a package to the storage.
-    /// Please note that this does not save the storage and does not read the currently installed packages
+    /// Please note that this does not save the storage and does not read the currently installed packages from the toml.
     pub fn add_package(&mut self, package: &Package, package_version: &PackageVersion, source_repository: &Repository, install_path: &str) {
         // Add global and target specific dependencies together
         let mut dependencies = package_version.dependencies.clone();
@@ -102,9 +102,22 @@ impl InstalledPackageStorage {
         self.installed_packages.push(installed_package);
     }
 
+    /// Removes a package from the storage.
+    /// Please note that this does not save the storage and does not read the currently installed packages from the toml.
+    /// If the version isn't specified every package with package name will be removed.
+    pub fn remove_package(&mut self, package_name: &String, version: &Option<String>) {
+        // TODO: This assumes the package is in the storage.toml (doesn't give an error/warning if it's not there)
+        if let Some(version) = version {
+            self.installed_packages
+                .retain(|package| package.name != *package_name || package.version != *version);
+        } else {
+            self.installed_packages.retain(|package| package.name != *package_name);
+        }
+    }
+
     /// Gets all installed versions of a certain package from the storage.
     /// Returns a list containing all installed versions, or None if the package is not installed.
-    pub fn get_package_versions(&self, package_name: &str) -> Option<Vec<&InstalledPackage>> {
+    pub fn get_package_versions(&self, package_name: &str) -> Vec<&InstalledPackage> {
         let mut result = Vec::new();
 
         for package in &self.installed_packages {
@@ -113,8 +126,9 @@ impl InstalledPackageStorage {
             }
         }
 
+        result
         // Only return the result list if it's not empty
-        (!result.is_empty()).then_some(result)
+        //(!result.is_empty()).then_some(result)
     }
 
     /// Gets a specific version of a certain package from the storage.
