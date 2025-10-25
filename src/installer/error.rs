@@ -20,16 +20,13 @@ pub enum InstallerError {
     #[error("Cannot unpack response: {0}")]
     UnpackError(#[from] std::io::Error),
 
-    #[error("Could not uninstall package: {package_name}. {e}")]
+    #[error("Could not uninstall package '{package_name}'. {e}")]
     UninstallError {
         package_name: String,
         e: std::io::Error,
     },
 
-    #[error("Could not remove directory. {0}")]
-    RemovalError(std::io::Error),
-
-    #[error("Installed package with name: {package_name} and version: {version} does not exist.")]
+    #[error("Installed package with name '{package_name}' and version '{version}' does not exist.")]
     InstalledExistError {
         package_name: String,
         version: String,

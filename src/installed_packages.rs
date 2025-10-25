@@ -102,17 +102,18 @@ impl InstalledPackageStorage {
         self.installed_packages.push(installed_package);
     }
 
-    /// Removes a package from the storage.
+    /// Removes a package version from the info storage.
     /// Please note that this does not save the storage and does not read the currently installed packages from the toml.
-    /// If the version isn't specified every package with package name will be removed.
-    pub fn remove_package(&mut self, package_name: &String, version: &Option<String>) {
+    pub fn remove_package_version(&mut self, package_name: &String, version: &String) {
         // TODO: This assumes the package is in the storage.toml (doesn't give an error/warning if it's not there)
-        if let Some(version) = version {
-            self.installed_packages
-                .retain(|package| package.name != *package_name || package.version != *version);
-        } else {
-            self.installed_packages.retain(|package| package.name != *package_name);
-        }
+        self.installed_packages
+            .retain(|package| package.name != *package_name || package.version != *version);
+    }
+
+    /// Removes an entire package from the info storage.
+    /// Please note that this does not save the storage and does not read the currently installed packages from the toml.
+    pub fn remove_package(&mut self, package_name: &String) {
+        self.installed_packages.retain(|package| package.name != *package_name);
     }
 
     /// Gets all installed versions of a certain package from the storage.
