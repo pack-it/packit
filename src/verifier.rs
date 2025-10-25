@@ -7,3 +7,5 @@ pub fn verify_package() {}
 pub fn package_exists(package_name: &String, version: &Option<String>) -> bool {
     true
 }
+
+// TODO: Make a method that syncs info.toml and actuall directory (in case of out of sync)
