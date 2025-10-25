@@ -17,6 +17,9 @@ pub struct Config {
     /// False to use the repositories rank to resolve package conflicts, true to ask for confirmation
     #[serde(default = "default_prompt_repo_conflicts")]
     pub prompt_repo_conflicts: bool, //TODO: maybe remove this option? or should it be optional for extra safety?
+
+    #[serde(default = "default_install_directory")]
+    pub install_directory: String,
 }
 
 /// Represents a repository, containing connection information.
@@ -32,6 +35,10 @@ pub struct Repository {
 
 fn default_prompt_repo_conflicts() -> bool {
     false
+}
+
+fn default_install_directory() -> String {
+    "./temp".to_string()
 }
 
 pub fn default_repository_provider() -> String {

@@ -2,9 +2,10 @@ use clap::{Args, Parser, Subcommand};
 use std::path::PathBuf;
 
 use crate::{
+    config::Config,
+    installed_packages::InstalledPackageStorage,
     installer::{error::InstallerError, installer::Installer},
-    repositories::provider::RepositoryProvider,
-    target_architecture::TARGET_ARCHITECTURE,
+    repositories::manager::RepositoryManager,
 };
 
 #[derive(Parser, Debug)]
@@ -41,49 +42,48 @@ struct InstallArgs {
 struct UninstallArgs {
     /// The name of the package to uninstall
     package_name: String,
+
+    /// The version of the package to uninstall
+    #[arg(short, long)]
+    version: Option<String>,
 }
 
 #[derive(Args, Debug)]
 struct ListArgs {
     /// Directory to list all packages of (OPTIONAL)
     directory: Option<PathBuf>,
+
+    /// Flag to indicate a full check (actually check packit install directory)
+    #[arg(short, long)]
+    use_dir: bool,
 }
 
 /// Reads and handles the command.
-pub fn handle_command(provider: &Box<dyn RepositoryProvider>) -> Result<(), InstallerError> {
+pub fn handle_command(manager: &RepositoryManager, config: &Config) -> Result<(), InstallerError> {
+    let info_directory = config.install_directory.to_string() + "/info.toml";
+    let mut installed_storage = InstalledPackageStorage::from(&info_directory)?;
     let command = Cli::parse();
 
     match command.command {
         Commands::Install(args) => {
-            handle_install(args, provider)?;
+            // Handle the install command with user specified arguments
+            let mut installer = Installer::new(&config, &mut installed_storage);
+            installer.install(manager, &args.package_name, args.version)?;
         },
         Commands::Uninstall(args) => {
-            handle_uninstall(args)?;
+            // Handle the uninstall command with user specified arguments
+            let mut installer = Installer::new(&config, &mut installed_storage);
+            installer.uninstall(&args.package_name, args.version)?;
         },
         Commands::List(args) => {
             handle_list(args)?;
         },
     }
+
+    // Save changes
+    installed_storage.save_to(&info_directory)?;
+
     Ok(())
-}
-
-/// Handles the install command with user specified arguments.
-fn handle_install(args: InstallArgs, provider: &Box<dyn RepositoryProvider>) -> Result<(), InstallerError> {
-    // If no version is supplied use the latest version
-    let version = match &args.version {
-        Some(version) => version,
-        None => &provider.read_package(&args.package_name)?.latest_versions[TARGET_ARCHITECTURE], //TODO
-    };
-
-    // TODO: Get an install directory from the config
-    let installer = Installer::new("./temp".into());
-    installer.install(provider, &args.package_name, Some(version))?;
-    Ok(())
-}
-
-/// Handles the uninstall command with user specified arguments.
-fn handle_uninstall(args: UninstallArgs) -> Result<(), InstallerError> {
-    todo!()
 }
 
 /// Handles the list command with user specified arguments.
