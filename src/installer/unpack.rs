@@ -1,12 +1,12 @@
 use bytes::Bytes;
 use flate2::read::GzDecoder;
-use std::io::Cursor;
+use std::{io::Cursor, path::Path};
 use tar::Archive;
 
 use crate::{cli::display::ReaderWithProgress, installer::error::Result};
 
 // Unpacks tar files and saves them to a provided install directory
-pub fn unpack(bytes: Bytes, install_directory: &String) -> Result<()> {
+pub fn unpack<P: AsRef<Path>>(bytes: Bytes, install_directory: P) -> Result<()> {
     let size = bytes.len();
     let cursor = Cursor::new(bytes);
 

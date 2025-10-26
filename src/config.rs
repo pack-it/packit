@@ -38,7 +38,7 @@ fn default_prompt_repo_conflicts() -> bool {
 }
 
 fn default_install_directory() -> String {
-    "./temp".to_string()
+    "./temp/install".to_string()
 }
 
 pub fn default_repository_provider() -> String {

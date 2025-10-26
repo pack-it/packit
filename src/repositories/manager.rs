@@ -73,8 +73,6 @@ impl<'a> RepositoryManager<'a> {
                 continue;
             }
 
-            // TODO: Maybe even specify which repo we're using for the install (maybe not here though, just before the install)
-
             return Ok((repository_id.clone(), package));
         }
 
@@ -124,8 +122,6 @@ impl<'a> RepositoryManager<'a> {
                 continue;
             }
 
-            // TODO: Maybe even specify which repo we're using for the install (maybe not here though, just before the install)
-
             return Ok((repository_id.clone(), package));
         }
 
@@ -148,5 +144,20 @@ impl<'a> RepositoryManager<'a> {
         };
 
         Ok(provider.read_package_version(package, version)?)
+    }
+
+    /// Reads a script of the given package from the given repository.
+    /// Returns the script as a string.
+    pub fn read_script(&self, repository_id: &str, package: &str, version: &str, script_name: &str) -> Result<String> {
+        let provider = match self.providers.get(repository_id) {
+            Some(provider) => provider,
+            None => {
+                return Err(RepositoryError::RepositoryNotFoundError {
+                    repository_id: repository_id.into(),
+                });
+            },
+        };
+
+        Ok(provider.read_script(package, version, script_name)?)
     }
 }

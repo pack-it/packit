@@ -1,12 +1,19 @@
-use crate::cli::display::{ask_user, DisplayLoad};
-use crate::config::Config;
-use crate::installed_packages::{InstalledPackage, InstalledPackageStorage};
-use crate::installer::error::Result;
-use crate::installer::{error::InstallerError, unpack::unpack};
-use crate::repositories::manager::RepositoryManager;
-use crate::target_architecture::TARGET_ARCHITECTURE;
+use crate::{
+    cli::display::{ask_user, DisplayLoad},
+    config::Config,
+    installed_packages::{InstalledPackage, InstalledPackageStorage},
+    installer::{
+        error::{InstallerError, Result},
+        scripts::{self, SCRIPT_EXTENSION},
+        unpack::unpack,
+    },
+    repositories::manager::RepositoryManager,
+    target_architecture::TARGET_ARCHITECTURE,
+};
 
 use std::fs;
+
+const TEMP_DIRECTORY: &str = "./temp";
 
 /// The installer of Packit, managing the installation of packages on the system.
 pub struct Installer<'a> {
@@ -37,6 +44,7 @@ impl<'a> Installer<'a> {
         // Check if this package version is already installed
         // TODO: Adjust info storage directory (also used in other places)
         if self.installed_storage.get_package(package_name, &version).is_some() {
+            println!("Package {package_name} is already installed!");
             // TODO: Log already installed error with display. if it is a dependency, just log info, already installed, so skipping
             return Ok(());
         }
@@ -66,7 +74,7 @@ impl<'a> Installer<'a> {
             },
         };
 
-        //  Get bytes from response
+        // Get bytes from response
         let bytes = match response.bytes() {
             Ok(bytes) => bytes,
             Err(e) => return Err(InstallerError::RequestError(e)),
@@ -74,17 +82,31 @@ impl<'a> Installer<'a> {
 
         display.show_finish("Downloading ".to_string() + package_name + " successful");
 
-        // Install the package in the correct directory
-        let directory = self.config.install_directory.to_string() + "/" + package_name + "/" + &version;
-        match target.installer_type.as_str() {
-            "unpack" => unpack(bytes, &directory)?,
-            _ => {},
-        }
+        let path_suffix = format!("{package_name}/{version}");
+
+        // Unpack the package to the temp directory
+        let unpack_directory = format!("{}/{path_suffix}", TEMP_DIRECTORY);
+        unpack(bytes, &unpack_directory)?;
+
+        // Get name of the build script
+        let script_name = match &target.build_script {
+            Some(script) => script,
+            None => &format!("build.{SCRIPT_EXTENSION}"),
+        };
+
+        // Download build script
+        let script_destination = format!("{}/{package_name}_{version}_build.sh", TEMP_DIRECTORY);
+        let script_text = manager.read_script(&repository_id, &package_name, &version, &script_name)?;
+        scripts::save_script(&script_text, &script_destination)?;
+
+        // Run build script
+        let install_directory = format!("{}/{path_suffix}", self.config.install_directory);
+        scripts::run_build_script(&script_destination, unpack_directory, self.config, &install_directory)?;
 
         // Add and save package to info storage
         let source_repository = self.config.repositories.get(&repository_id).expect("Expected repository in config");
         self.installed_storage
-            .add_package(&package, &package_version, source_repository, &self.config.install_directory);
+            .add_package(&package, &package_version, source_repository, &install_directory);
 
         Ok(())
     }

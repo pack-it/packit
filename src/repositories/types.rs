@@ -25,6 +25,7 @@ pub struct Package {
 pub struct PackageVersion {
     pub version: String,
     pub dependencies: Vec<String>,
+    pub build_dependencies: Vec<String>,
     pub targets: HashMap<String, PackageTarget>,
 }
 
@@ -32,8 +33,11 @@ pub struct PackageVersion {
 #[derive(Deserialize, Debug)]
 pub struct PackageTarget {
     pub url: String,
-    pub installer_type: String, //TODO: change this to use installer type enum
 
     #[serde(default)]
     pub dependencies: Vec<String>,
+
+    #[serde(default)]
+    pub build_dependencies: Vec<String>,
+    pub build_script: Option<String>,
 }

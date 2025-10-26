@@ -18,6 +18,9 @@ pub trait RepositoryProvider {
 
     /// Reads the metadata of a certain version of a package, containing dependencies and targets.
     fn read_package_version(&self, package: &str, version: &str) -> Result<PackageVersion>;
+
+    /// Reads the requested script from the repository.
+    fn read_script(&self, package: &str, version: &str, script_name: &str) -> Result<String>;
 }
 
 /// Creates a repository provider for the given repository.

@@ -32,6 +32,12 @@ impl RepositoryProvider for DefaultProvider {
 
         Ok(toml::de::from_str(&data)?)
     }
+
+    fn read_script(&self, package: &str, version: &str, script_name: &str) -> Result<String> {
+        let data = reqwest::blocking::get(format!("{}/packages/{package}/{version}/{script_name}", self.url))?.text()?;
+
+        Ok(data)
+    }
 }
 
 impl DefaultProvider {

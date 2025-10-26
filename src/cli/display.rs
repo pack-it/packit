@@ -102,6 +102,8 @@ pub fn ask_user(question: &str, default: bool) -> Result<bool, DisplayError> {
         return Ok(true);
     }
 
+    // TODO also check for no or invalid input
+
     Ok(false)
 }
 
