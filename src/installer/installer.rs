@@ -205,6 +205,7 @@ impl<'a> Installer<'a> {
         }
     }
 
+    /// Downloads a script and saves it to the correct directory.
     fn download_script(
         &self,
         script_name: &str,
@@ -221,7 +222,7 @@ impl<'a> Installer<'a> {
         };
 
         // Download script
-        let script_destination = format!("{}/{package_name}_{version}_{script_name}.{SCRIPT_EXTENSION}", TEMP_DIRECTORY);
+        let script_destination = format!("{}/{package_name}_{version}_{script_name}", TEMP_DIRECTORY);
         match manager.read_script(&repository_id, &package_name, &version, &script_name)? {
             Some(script_text) => scripts::save_script(&script_text, &script_destination)?,
             None => return Ok(None), // Script not found, so return None
