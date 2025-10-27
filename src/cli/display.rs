@@ -78,13 +78,33 @@ impl DisplayLoad {
     }
 }
 
+pub enum QuestionResponse {
+    Yes,
+    No,
+    Invalid,
+}
+
+impl QuestionResponse {
+    pub fn is_yes(&self) -> bool {
+        matches!(self, QuestionResponse::Yes)
+    }
+
+    pub fn is_no(&self) -> bool {
+        matches!(self, QuestionResponse::No)
+    }
+
+    pub fn is_no_or_invalid(&self) -> bool {
+        self.is_no() || matches!(self, QuestionResponse::Invalid)
+    }
+}
+
 // Asks user yes or no questions
-pub fn ask_user(question: &str, default: bool) -> Result<bool, DisplayError> {
+pub fn ask_user(question: &str, default: QuestionResponse) -> Result<QuestionResponse, DisplayError> {
     // Make default bold
-    if default {
-        print!("{question} ({}/n): ", "y".bold());
-    } else {
-        print!("{question} (y/{}): ", "n".bold());
+    match default {
+        QuestionResponse::Yes => print!("{question} ({}/n): ", "y".bold()),
+        QuestionResponse::No => print!("{question} (y/{}): ", "n".bold()),
+        QuestionResponse::Invalid => print!("{question} (y/n): "),
     }
 
     // Get user input
@@ -99,14 +119,19 @@ pub fn ask_user(question: &str, default: bool) -> Result<bool, DisplayError> {
     }
 
     if input == "y" || input == "yes" {
-        return Ok(true);
+        return Ok(QuestionResponse::Yes);
     }
 
-    Ok(false)
+    if input == "n" || input == "no" {
+        return Ok(QuestionResponse::No);
+    }
+
+    display_warning("Invalid input");
+    return Ok(QuestionResponse::Invalid);
 }
 
 pub fn display_warning(message: &str) {
-    println!("{}", "WARNING".yellow().to_string() + ": " + message);
+    println!("{}: {message}", "WARNING".yellow().to_string());
 }
 
 // TODO: Do we also want our own error formatting (red colors)?
