@@ -24,6 +24,9 @@ pub enum ScriptError {
 
     #[error("Cannot parse PathBuf to string")]
     InvalidPathString,
+
+    #[error("Cannot find script '{0}'")]
+    ScriptNotFound(String),
 }
 
 /// Saves the given script text to the given destination.
@@ -31,6 +34,19 @@ pub fn save_script(script_text: &str, destination: &str) -> Result<(), ScriptErr
     fs::write(destination, script_text).map_err(|e| ScriptError::SaveError(e))?;
 
     Ok(())
+}
+
+/// Runs the given pre install script, in the given directory.
+/// Note that the script should be a `.sh` script on Linux and macOS and a `.bat` on Windows.
+pub fn run_pre_script<P: AsRef<Path>>(path: &str, run_dir: P, config: &Config, package_install_path: &str) -> Result<(), ScriptError> {
+    let package_install_path = to_absolute_path(package_install_path)?;
+
+    let env_vars = HashMap::from([(
+        "PACKIT_PACKAGE_PATH",
+        package_install_path.to_str().ok_or(ScriptError::InvalidPathString)?,
+    )]);
+
+    run_script(path, run_dir, config, env_vars)
 }
 
 /// Runs the given build script, in the given directory.
@@ -44,6 +60,19 @@ pub fn run_build_script<P: AsRef<Path>>(path: &str, run_dir: P, config: &Config,
     )]);
 
     run_script(path, run_dir, config, env_vars)
+}
+
+/// Runs the given post install script, in the package install directory.
+/// Note that the script should be a `.sh` script on Linux and macOS and a `.bat` on Windows.
+pub fn run_post_script(path: &str, package_install_path: &str, config: &Config) -> Result<(), ScriptError> {
+    let package_install_path = to_absolute_path(package_install_path)?;
+
+    let env_vars = HashMap::from([(
+        "PACKIT_PACKAGE_PATH",
+        package_install_path.to_str().ok_or(ScriptError::InvalidPathString)?,
+    )]);
+
+    run_script(path, &package_install_path, config, env_vars)
 }
 
 /// Runs the script at the given path, in the given directory.

@@ -4,7 +4,7 @@ use crate::{
     installed_packages::{InstalledPackage, InstalledPackageStorage},
     installer::{
         error::{InstallerError, Result},
-        scripts::{self, SCRIPT_EXTENSION},
+        scripts::{self, ScriptError, SCRIPT_EXTENSION},
         unpack::unpack,
     },
     repositories::manager::RepositoryManager,
@@ -34,11 +34,7 @@ impl<'a> Installer<'a> {
         // Use the latest version if the version isn't specified
         let version = match version {
             Some(version) => version,
-            None => package
-                .latest_versions
-                .get(TARGET_ARCHITECTURE)
-                .ok_or(InstallerError::TargetError)?
-                .to_string(),
+            None => package.latest_versions.get(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?.to_string(),
         };
 
         // Check if this package version is already installed
@@ -88,25 +84,29 @@ impl<'a> Installer<'a> {
         let unpack_directory = format!("{}/{path_suffix}", TEMP_DIRECTORY);
         unpack(bytes, &unpack_directory)?;
 
-        // Get name of the build script
-        let script_name = match &target.build_script {
-            Some(script) => script,
-            None => &format!("build.{SCRIPT_EXTENSION}"),
-        };
-
-        // Download build script
-        let script_destination = format!("{}/{package_name}_{version}_build.sh", TEMP_DIRECTORY);
-        let script_text = manager.read_script(&repository_id, &package_name, &version, &script_name)?;
-        scripts::save_script(&script_text, &script_destination)?;
-
-        // Run build script
         let install_directory = format!("{}/{path_suffix}", self.config.install_directory);
-        scripts::run_build_script(&script_destination, unpack_directory, self.config, &install_directory)?;
+
+        // Download and run pre install script if it exists
+        let script_name = &target.preinstall_script;
+        if let Some(script_path) = self.download_script("preinstall", script_name, package_name, &version, &repository_id, manager)? {
+            scripts::run_pre_script(&script_path, &unpack_directory, self.config, &install_directory)?;
+        }
+
+        // Download and run build script
+        let build_script_path = self
+            .download_script("build", &target.build_script, package_name, &version, &repository_id, manager)?
+            .ok_or(ScriptError::ScriptNotFound("build".into()))?;
+        scripts::run_build_script(&build_script_path, &unpack_directory, self.config, &install_directory)?;
 
         // Add and save package to info storage
         let source_repository = self.config.repositories.get(&repository_id).expect("Expected repository in config");
-        self.installed_storage
-            .add_package(&package, &package_version, source_repository, &install_directory);
+        self.installed_storage.add_package(&package, &package_version, source_repository, &install_directory);
+
+        // Download and run post install script if it exists
+        let script_name = &target.postinstall_script;
+        if let Some(script_path) = self.download_script("postinstall", script_name, package_name, &version, &repository_id, manager)? {
+            scripts::run_post_script(&script_path, &install_directory, self.config)?;
+        }
 
         Ok(())
     }
@@ -197,5 +197,31 @@ impl<'a> Installer<'a> {
                 e,
             }),
         }
+    }
+
+    fn download_script(
+        &self,
+        script_name: &str,
+        target_script_name: &Option<String>,
+        package_name: &str,
+        version: &str,
+        repository_id: &str,
+        manager: &RepositoryManager,
+    ) -> Result<Option<String>> {
+        // Get name of the script
+        let script_name = match target_script_name {
+            Some(script) => script,
+            None => &format!("{script_name}.{SCRIPT_EXTENSION}"),
+        };
+
+        // Download script
+        let script_destination = format!("{}/{package_name}_{version}_{script_name}.{SCRIPT_EXTENSION}", TEMP_DIRECTORY);
+        match manager.read_script(&repository_id, &package_name, &version, &script_name)? {
+            Some(script_text) => scripts::save_script(&script_text, &script_destination)?,
+            None => return Ok(None), // Script not found, so return None
+        }
+
+        // Script succesfully downloaded, so return script location
+        Ok(Some(script_destination))
     }
 }

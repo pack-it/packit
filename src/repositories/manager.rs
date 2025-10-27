@@ -148,7 +148,7 @@ impl<'a> RepositoryManager<'a> {
 
     /// Reads a script of the given package from the given repository.
     /// Returns the script as a string.
-    pub fn read_script(&self, repository_id: &str, package: &str, version: &str, script_name: &str) -> Result<String> {
+    pub fn read_script(&self, repository_id: &str, package: &str, version: &str, script_name: &str) -> Result<Option<String>> {
         let provider = match self.providers.get(repository_id) {
             Some(provider) => provider,
             None => {

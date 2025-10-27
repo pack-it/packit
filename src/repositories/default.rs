@@ -1,3 +1,5 @@
+use reqwest::StatusCode;
+
 use crate::{
     config::Repository,
     repositories::{
@@ -33,10 +35,14 @@ impl RepositoryProvider for DefaultProvider {
         Ok(toml::de::from_str(&data)?)
     }
 
-    fn read_script(&self, package: &str, version: &str, script_name: &str) -> Result<String> {
-        let data = reqwest::blocking::get(format!("{}/packages/{package}/{version}/{script_name}", self.url))?.text()?;
+    fn read_script(&self, package: &str, version: &str, script_name: &str) -> Result<Option<String>> {
+        let response = reqwest::blocking::get(format!("{}/packages/{package}/{version}/{script_name}", self.url))?;
 
-        Ok(data)
+        if response.status() == StatusCode::NOT_FOUND {
+            return Ok(None);
+        }
+
+        Ok(Some(response.text()?))
     }
 }
 

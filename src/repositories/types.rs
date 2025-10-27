@@ -40,4 +40,6 @@ pub struct PackageTarget {
     #[serde(default)]
     pub build_dependencies: Vec<String>,
     pub build_script: Option<String>,
+    pub preinstall_script: Option<String>,
+    pub postinstall_script: Option<String>,
 }
