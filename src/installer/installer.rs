@@ -58,6 +58,12 @@ impl<'a> Installer<'a> {
             self.install(manager, dependency, Option::None)?
         }
 
+        // Install global package build dependencies and platform specific build dependencies
+        let build_dependencies = package_version.build_dependencies.iter().chain(target.build_dependencies.iter());
+        for build_dependency in build_dependencies {
+            self.install(manager, build_dependency, Option::None)?
+        }
+
         // Show download
         let display = DisplayLoad::new();
         display.show("Downloading ".to_string() + package_name);
