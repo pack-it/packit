@@ -1,12 +1,26 @@
 use clap::{Args, Parser, Subcommand};
 use std::path::PathBuf;
+use thiserror::Error;
 
 use crate::{
     config::Config,
-    installed_packages::InstalledPackageStorage,
+    installed_packages::{InstalledPackageStorage, InstalledPackagesError},
     installer::{error::InstallerError, installer::Installer},
     repositories::manager::RepositoryManager,
+    verifier::{get_packages, VerifierError},
 };
+
+#[derive(Error, Debug)]
+pub enum CommandError {
+    #[error("Error in installer: {0}")]
+    InstallerError(#[from] InstallerError),
+
+    #[error("Error while retrieving installed packages info: {0}")]
+    InstalledPackagesError(#[from] InstalledPackagesError),
+
+    #[error("Cannot read install directory: {0}")]
+    VerifierError(#[from] VerifierError),
+}
 
 #[derive(Parser, Debug)]
 #[command(name = "Packit", version, about)]
@@ -59,25 +73,16 @@ struct ListArgs {
 }
 
 /// Reads and handles the command.
-pub fn handle_command(manager: &RepositoryManager, config: &Config) -> Result<(), InstallerError> {
+pub fn handle_command(manager: &RepositoryManager, config: &Config) -> Result<(), CommandError> {
     let info_directory = config.install_directory.to_string() + "/info.toml";
     let mut installed_storage = InstalledPackageStorage::from(&info_directory)?;
     let command = Cli::parse();
 
+    // Handle commands with user specified arguments
     match command.command {
-        Commands::Install(args) => {
-            // Handle the install command with user specified arguments
-            let mut installer = Installer::new(&config, &mut installed_storage);
-            installer.install(manager, &args.package_name, args.version)?;
-        },
-        Commands::Uninstall(args) => {
-            // Handle the uninstall command with user specified arguments
-            let mut installer = Installer::new(&config, &mut installed_storage);
-            installer.uninstall(&args.package_name, args.version)?;
-        },
-        Commands::List(args) => {
-            handle_list(args)?;
-        },
+        Commands::Install(args) => Installer::new(&config, &mut installed_storage).install(manager, &args.package_name, args.version)?,
+        Commands::Uninstall(args) => Installer::new(&config, &mut installed_storage).uninstall(&args.package_name, args.version)?,
+        Commands::List(args) => handle_list(args, &installed_storage, &config)?,
     }
 
     // Save changes
@@ -87,6 +92,16 @@ pub fn handle_command(manager: &RepositoryManager, config: &Config) -> Result<()
 }
 
 /// Handles the list command with user specified arguments.
-fn handle_list(args: ListArgs) -> Result<(), InstallerError> {
-    todo!()
+fn handle_list(args: ListArgs, installed_storage: &InstalledPackageStorage, config: &Config) -> Result<(), VerifierError> {
+    if args.use_dir {
+        for package in get_packages(&config)? {
+            println!("{}", package);
+        }
+    } else {
+        for package in &installed_storage.installed_packages {
+            println!("{} {}", package.name, package.version);
+        }
+    }
+
+    Ok(())
 }

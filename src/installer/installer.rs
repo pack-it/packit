@@ -1,5 +1,5 @@
 use crate::{
-    cli::display::{ask_user, DisplayLoad},
+    cli::display::{ask_user, DisplayLoad, QuestionResponse},
     config::Config,
     installed_packages::{InstalledPackage, InstalledPackageStorage},
     installer::{
@@ -124,7 +124,7 @@ impl<'a> Installer<'a> {
             None => {
                 // Ask the user if he/she wants to continue when version isn't specified and there are multiple versions installed
                 let question = "Version is not specified, do you wish to uninstall all versions of this package?";
-                if installed_versions.len() > 1 && !ask_user(question, true)? {
+                if installed_versions.len() > 1 && ask_user(question, QuestionResponse::No)?.is_no_or_invalid() {
                     println!("Canceled uninstall of package: {package_name}");
                     return Ok(());
                 }
