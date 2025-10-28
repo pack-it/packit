@@ -34,6 +34,16 @@ impl RepositoryProvider for FileSystemProvider {
 
         Ok(toml::de::from_str(&data)?)
     }
+
+    fn read_script(&self, package: &str, version: &str, script_name: &str) -> Result<Option<String>> {
+        let path = format!("{}/packages/{package}/{version}/{script_name}", self.path);
+
+        if !fs::exists(&path)? {
+            return Ok(None);
+        }
+
+        Ok(Some(fs::read_to_string(&path)?))
+    }
 }
 
 impl FileSystemProvider {

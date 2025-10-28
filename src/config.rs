@@ -20,6 +20,9 @@ pub struct Config {
 
     #[serde(default = "default_install_directory")]
     pub install_directory: String,
+
+    #[serde(default = "default_temp_directory")]
+    pub temp_directory: String,
 }
 
 /// Represents a repository, containing connection information.
@@ -38,6 +41,10 @@ fn default_prompt_repo_conflicts() -> bool {
 }
 
 fn default_install_directory() -> String {
+    "./temp/install".to_string()
+}
+
+fn default_temp_directory() -> String {
     "./temp".to_string()
 }
 

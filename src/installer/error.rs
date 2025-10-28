@@ -1,6 +1,9 @@
 use thiserror::Error;
 
-use crate::{cli::display::DisplayError, installed_packages::InstalledPackagesError, repositories::error::RepositoryError};
+use crate::{
+    cli::display::DisplayError, installed_packages::InstalledPackagesError, installer::scripts::ScriptError,
+    repositories::error::RepositoryError,
+};
 
 /// The errors that occur during installation.
 #[derive(Error, Debug)]
@@ -35,6 +38,9 @@ pub enum InstallerError {
 
     #[error("Cannot display: {0}")]
     DisplayError(#[from] DisplayError),
+
+    #[error("Cannot execute script: {0}")]
+    ScriptError(#[from] ScriptError),
 }
 
 pub(super) type Result<T> = std::result::Result<T, InstallerError>;
