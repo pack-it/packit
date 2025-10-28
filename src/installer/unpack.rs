@@ -3,7 +3,7 @@ use flate2::read::GzDecoder;
 use std::{io::Cursor, path::Path};
 use tar::Archive;
 
-use crate::{cli::display::ReaderWithProgress, installer::error::Result};
+use crate::{cli::ReaderWithProgress, installer::error::Result};
 
 // Unpacks tar files and saves them to a provided install directory
 pub fn unpack<P: AsRef<Path>>(bytes: Bytes, install_directory: P) -> Result<()> {

@@ -7,7 +7,7 @@ use std::{
 
 use thiserror::Error;
 
-use crate::{cli::display, config::Config, target_architecture::TARGET_ARCHITECTURE};
+use crate::{cli, config::Config, target_architecture::TARGET_ARCHITECTURE};
 
 /// The errors that occur during script handling.
 #[derive(Error, Debug)]
@@ -97,8 +97,8 @@ pub fn run_script<P: AsRef<Path>>(path: &str, run_dir: P, config: &Config, env_v
     // Display status to user
     match output.status.code() {
         Some(0) => println!("Script executed succesfully."),
-        Some(code) => display::display_warning(&format!("Script executed with status code {code}")),
-        None => display::display_warning("Script executed without a status code"),
+        Some(code) => cli::display_warning(&format!("Script executed with status code {code}")),
+        None => cli::display_warning("Script executed without a status code"),
     }
 
     Ok(())

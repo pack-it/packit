@@ -3,7 +3,7 @@ use std::{collections::HashMap, fs};
 use serde::Deserialize;
 use thiserror::Error;
 
-use crate::repositories::default::DEFAULT_PROVIDER_ID;
+use crate::{cli, repositories::default::DEFAULT_PROVIDER_ID};
 
 /// Represents the main config file of Packit.
 #[derive(Deserialize, Debug)]
@@ -77,7 +77,7 @@ impl Config {
         config.repositories_rank.retain(|repo| config.repositories.contains_key(repo));
 
         if config.repositories_rank.len() < old_rank_count {
-            println!("WARNING: Repositories rank contains undefined repository, ignoring undefined repository...")
+            cli::display_warning("Repositories rank contains undefined repository, ignoring undefined repository...");
         }
 
         // Remove trailing slashes from repository paths

@@ -1,5 +1,5 @@
 use crate::{
-    cli::display::{ask_user, DisplayLoad, QuestionResponse},
+    cli::{ask_user, QuestionResponse, Spinner},
     config::Config,
     installed_packages::{InstalledPackage, InstalledPackageStorage},
     installer::{
@@ -63,14 +63,14 @@ impl<'a> Installer<'a> {
         }
 
         // Show download
-        let display = DisplayLoad::new();
-        display.show("Downloading ".to_string() + package_name);
+        let spinner = Spinner::new();
+        spinner.show("Downloading ".to_string() + package_name);
 
         // Request the data of the package and get bytes
         let response = reqwest::blocking::get(&target.url)?;
         let bytes = response.bytes()?;
 
-        display.show_finish("Downloading ".to_string() + package_name + " successful");
+        spinner.finish("Downloading ".to_string() + package_name + " successful");
 
         let path_suffix = format!("{package_name}/{version}");
 
