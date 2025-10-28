@@ -13,8 +13,6 @@ use crate::{
 
 use std::fs;
 
-const TEMP_DIRECTORY: &str = "./temp";
-
 /// The installer of Packit, managing the installation of packages on the system.
 pub struct Installer<'a> {
     config: &'a Config,
@@ -55,39 +53,29 @@ impl<'a> Installer<'a> {
         // Install global package dependencies and platform specific packages (if there are any, can be empty)
         let dependencies = package_version.dependencies.iter().chain(target.dependencies.iter());
         for dependency in dependencies {
-            self.install(manager, dependency, Option::None)?
+            self.install(manager, dependency, None)?; // TODO: Shouldn't this check if the dependency is installed already?
         }
 
         // Install global package build dependencies and platform specific build dependencies
         let build_dependencies = package_version.build_dependencies.iter().chain(target.build_dependencies.iter());
         for build_dependency in build_dependencies {
-            self.install(manager, build_dependency, Option::None)?
+            self.install(manager, build_dependency, None)?; // TODO: Shouldn't this check if the dependency is installed already?
         }
 
         // Show download
         let display = DisplayLoad::new();
         display.show("Downloading ".to_string() + package_name);
 
-        // Request the data of the package
-        let response = match reqwest::blocking::get(&target.url) {
-            Ok(response) => response,
-            Err(e) => {
-                return Err(InstallerError::RequestError(e));
-            },
-        };
-
-        // Get bytes from response
-        let bytes = match response.bytes() {
-            Ok(bytes) => bytes,
-            Err(e) => return Err(InstallerError::RequestError(e)),
-        };
+        // Request the data of the package and get bytes
+        let response = reqwest::blocking::get(&target.url)?;
+        let bytes = response.bytes()?;
 
         display.show_finish("Downloading ".to_string() + package_name + " successful");
 
         let path_suffix = format!("{package_name}/{version}");
 
         // Unpack the package to the temp directory
-        let unpack_directory = format!("{}/{path_suffix}", TEMP_DIRECTORY);
+        let unpack_directory = format!("{}/{path_suffix}", self.config.temp_directory);
         unpack(bytes, &unpack_directory)?;
 
         let install_directory = format!("{}/{path_suffix}", self.config.install_directory);
@@ -222,7 +210,7 @@ impl<'a> Installer<'a> {
         };
 
         // Download script
-        let script_destination = format!("{}/{package_name}_{version}_{script_name}", TEMP_DIRECTORY);
+        let script_destination = format!("{}/{package_name}_{version}_{script_name}", self.config.temp_directory);
         match manager.read_script(&repository_id, &package_name, &version, &script_name)? {
             Some(script_text) => scripts::save_script(&script_text, &script_destination)?,
             None => return Ok(None), // Script not found, so return None
