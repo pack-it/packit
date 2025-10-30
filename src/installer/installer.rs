@@ -1,7 +1,7 @@
 use crate::{
     cli::{ask_user, QuestionResponse, Spinner},
     config::Config,
-    installed_packages::{InstalledPackage, InstalledPackageStorage},
+    installed_packages::InstalledPackageStorage,
     installer::{
         error::{InstallerError, Result},
         scripts::{self, ScriptError, SCRIPT_EXTENSION},
@@ -26,7 +26,7 @@ impl<'a> Installer<'a> {
     }
 
     /// Installs the given package and its dependencies.
-    pub fn install(&mut self, manager: &RepositoryManager, package_name: &String, version: Option<String>) -> Result<()> {
+    pub fn install(&mut self, manager: &RepositoryManager, package_name: &str, version: Option<String>) -> Result<()> {
         let (repository_id, package) = manager.read_package(package_name)?;
 
         // Use the latest version if the version isn't specified
@@ -36,10 +36,8 @@ impl<'a> Installer<'a> {
         };
 
         // Check if this package version is already installed
-        // TODO: Adjust info storage directory (also used in other places)
         if self.installed_storage.get_package(package_name, &version).is_some() {
-            println!("Package {package_name} is already installed!");
-            // TODO: Log already installed error with display. if it is a dependency, just log info, already installed, so skipping
+            println!("Dependency '{} {}' already satisfied, continuing", package_name, version);
             return Ok(());
         }
 
@@ -53,13 +51,14 @@ impl<'a> Installer<'a> {
         // Install global package dependencies and platform specific packages (if there are any, can be empty)
         let dependencies = package_version.dependencies.iter().chain(target.dependencies.iter());
         for dependency in dependencies {
-            self.install(manager, dependency, None)?; // TODO: Shouldn't this check if the dependency is installed already?
+            self.install(manager, dependency, None)?;
         }
 
         // Install global package build dependencies and platform specific build dependencies
         let build_dependencies = package_version.build_dependencies.iter().chain(target.build_dependencies.iter());
         for build_dependency in build_dependencies {
-            self.install(manager, build_dependency, None)?; // TODO: Shouldn't this check if the dependency is installed already?
+            // TODO: Delete build dependencies later, somewhere
+            self.install(manager, build_dependency, None)?;
         }
 
         // Show download
@@ -105,35 +104,21 @@ impl<'a> Installer<'a> {
         Ok(())
     }
 
-    /// TODO: Doesn't yet uninstall unused dependecies (check dependencies of other packages (loop))
-    /// TODO: Give warning if user tries to delete a dependency (check dependencies of other packages (loop))
     /// Uninstalls a package version if specified, otherwise it will uninstall the entire package directory.
-    pub fn uninstall(&mut self, package_name: &String, version: Option<String>) -> Result<()> {
-        let installed_versions = self.installed_storage.get_package_versions(package_name);
+    pub fn uninstall(&mut self, package_name: &str, version: Option<String>) -> Result<()> {
+        // Check if the current package to delete is a dependency, if so, give dependency error
+        if self.installed_storage.is_dependency(package_name) {
+            return Err(InstallerError::DependencyError {
+                package_name: package_name.into(),
+            });
+        }
 
         // This determines the directory to remove. If there are multiple versions and the version is
         // specified only the specified version directory will be deleted. The entire package directory
         // is deleted if the version isn't specified or if the package directory only contains one version.
         match version {
-            Some(version) => {
-                self.uninstall_single(package_name, &version, &installed_versions)?;
-
-                // Delete the package info
-                self.installed_storage.remove_package_version(package_name, &version);
-            },
-            None => {
-                // Ask the user if he/she wants to continue when version isn't specified and there are multiple versions installed
-                let question = "Version is not specified, do you wish to uninstall all versions of this package?";
-                if installed_versions.len() > 1 && ask_user(question, QuestionResponse::No)?.is_no_or_invalid() {
-                    println!("Canceled uninstall of package: {package_name}");
-                    return Ok(());
-                }
-
-                self.uninstall_all(package_name, &installed_versions)?;
-
-                // Delete the package info
-                self.installed_storage.remove_package(package_name);
-            },
+            Some(version) => self.uninstall_single(package_name, &version)?,
+            None => self.uninstall_all(package_name)?,
         };
 
         Ok(())
@@ -141,11 +126,13 @@ impl<'a> Installer<'a> {
 
     /// Checks if the directory exists. If so, it gets the remove directory for a package version, if there only exists one
     /// version it will return the package directory.
-    fn uninstall_single(&self, package_name: &String, version: &String, installed_versions: &Vec<&InstalledPackage>) -> Result<()> {
+    fn uninstall_single(&mut self, package_name: &str, version: &String) -> Result<()> {
+        let installed_versions = self.installed_storage.get_package_versions(package_name);
+
         // Check if the specified package version exists.
         if !installed_versions.iter().any(|package| package.version == *version) {
             return Err(InstallerError::InstalledExistError {
-                package_name: package_name.clone(),
+                package_name: package_name.into(),
                 version: version.clone(),
             });
         }
@@ -162,15 +149,27 @@ impl<'a> Installer<'a> {
         // Delete the determined directory
         self.remove_dir_all(&directory, package_name)?;
 
+        // Remove package from installed package info
+        self.installed_storage.remove_package_version(package_name, &version);
+
         Ok(())
     }
 
     // Checks if there exists at least one version of the specified package. If so, it returns the package directory.
-    fn uninstall_all(&self, package_name: &String, installed_versions: &Vec<&InstalledPackage>) -> Result<()> {
+    fn uninstall_all(&mut self, package_name: &str) -> Result<()> {
+        let installed_versions = self.installed_storage.get_package_versions(package_name);
+
+        // Ask the user if he/she wants to continue when version isn't specified and there are multiple versions installed
+        let question = "Version is not specified, do you wish to uninstall all versions of this package?";
+        if installed_versions.len() > 1 && ask_user(question, QuestionResponse::No)?.is_no_or_invalid() {
+            println!("Canceled uninstall of package: {package_name}");
+            return Ok(());
+        }
+
         // Make sure at least on version exists
         if installed_versions.is_empty() {
             return Err(InstallerError::InstalledExistError {
-                package_name: package_name.clone(),
+                package_name: package_name.into(),
                 version: "any".to_string(),
             });
         }
@@ -179,15 +178,18 @@ impl<'a> Installer<'a> {
         let directory = self.config.install_directory.to_string() + "/" + package_name;
         self.remove_dir_all(&directory, package_name)?;
 
+        // Delete the package info
+        self.installed_storage.remove_package(package_name);
+
         Ok(())
     }
 
     /// Wraps around the fs::remove_dir_all to map its error.
-    fn remove_dir_all(&self, directory: &String, package_name: &String) -> Result<()> {
+    fn remove_dir_all(&self, directory: &str, package_name: &str) -> Result<()> {
         match fs::remove_dir_all(directory) {
             Ok(_) => Ok(()), // TODO: Log succes with display
             Err(e) => Err(InstallerError::UninstallError {
-                package_name: package_name.clone(),
+                package_name: package_name.into(),
                 e,
             }),
         }

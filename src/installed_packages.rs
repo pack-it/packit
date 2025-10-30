@@ -114,9 +114,8 @@ impl InstalledPackageStorage {
     /// Removes a package version from the info storage.
     /// Please note that this does not save the storage and does not read the currently installed packages from the toml.
     pub fn remove_package_version(&mut self, package_name: &str, version: &str) {
-        // TODO: This assumes the package is in the storage.toml (doesn't give an error/warning if it's not there)
-        self.installed_packages
-            .retain(|package| package.name != package_name || package.version != version);
+        // TODO: This doesn't give an error/warning if the package is not there
+        self.installed_packages.retain(|package| package.name != package_name || package.version != version);
     }
 
     /// Removes an entire package from the info storage.
@@ -126,7 +125,7 @@ impl InstalledPackageStorage {
     }
 
     /// Gets all installed versions of a certain package from the storage.
-    /// Returns a list containing all installed versions, or None if the package is not installed.
+    /// Returns a list containing all installed versions, which is empty if the package is not installed.
     pub fn get_package_versions(&self, package_name: &str) -> Vec<&InstalledPackage> {
         let mut result = Vec::new();
 
@@ -137,6 +136,17 @@ impl InstalledPackageStorage {
         }
 
         result
+    }
+
+    /// Checks if a certain package is a dependency by looping over all dependencies.
+    pub fn is_dependency(&self, package_name: &str) -> bool {
+        for package in &self.installed_packages {
+            if package.dependencies.iter().any(|d| d == package_name) {
+                return true;
+            }
+        }
+
+        false
     }
 
     /// Gets a specific version of a certain package from the storage.

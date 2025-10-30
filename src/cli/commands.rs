@@ -85,7 +85,13 @@ pub fn handle_command(manager: &RepositoryManager, config: &Config) -> Result<()
 
     // Handle commands with user specified arguments
     match command.command {
-        Commands::Install(args) => Installer::new(&config, &mut installed_storage).install(manager, &args.package_name, args.version)?,
+        Commands::Install(args) => {
+            if installed_storage.get_package_versions(&args.package_name).len() >= 1 {
+                println!("Package '{}' already exists.", args.package_name);
+            } else {
+                Installer::new(&config, &mut installed_storage).install(manager, &args.package_name, args.version)?
+            }
+        },
         Commands::Uninstall(args) => Installer::new(&config, &mut installed_storage).uninstall(&args.package_name, args.version)?,
         Commands::List(args) => handle_list(args, &installed_storage, &config)?,
         Commands::Repositories => handle_repositories(config, manager),
