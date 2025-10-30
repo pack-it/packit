@@ -2,6 +2,7 @@ use crate::{cli::commands, config::Config, repositories::manager::RepositoryMana
 
 mod cli;
 mod config;
+mod history;
 mod installed_packages;
 mod installer;
 mod repositories;
