@@ -33,6 +33,11 @@ pub enum InstallerError {
         package_name: String,
     },
 
+    #[error("Cannot delete external package '{package_name}'.")]
+    ExternalError {
+        package_name: String,
+    },
+
     // Wrapped custom errors
     #[error("Cannot find a repository for installation: {0}")]
     RepositoryError(#[from] RepositoryError),

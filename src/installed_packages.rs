@@ -118,10 +118,10 @@ impl InstalledPackageStorage {
         self.installed_packages.retain(|package| package.name != package_name || package.version != version);
     }
 
-    /// Removes an entire package from the info storage.
+    /// Removes an entire package from the info storage, except when it's an external package.
     /// Please note that this does not save the storage and does not read the currently installed packages from the toml.
     pub fn remove_package(&mut self, package_name: &str) {
-        self.installed_packages.retain(|package| package.name != package_name);
+        self.installed_packages.retain(|package| package.name != package_name || package.external);
     }
 
     /// Gets all installed versions of a certain package from the storage.
@@ -139,6 +139,7 @@ impl InstalledPackageStorage {
     }
 
     /// Checks if a certain package is a dependency by looping over all dependencies.
+    /// TODO: Dependency versions don't exist yet, but should be used here
     pub fn is_dependency(&self, package_name: &str) -> bool {
         for package in &self.installed_packages {
             if package.dependencies.iter().any(|d| d == package_name) {

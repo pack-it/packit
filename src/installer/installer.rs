@@ -137,6 +137,13 @@ impl<'a> Installer<'a> {
             });
         }
 
+        // Give an error when the user tries to uninstall an external package
+        if self.installed_storage.get_package(package_name, &version).expect("Expected package to exist at this point.").external {
+            return Err(InstallerError::ExternalError {
+                package_name: package_name.into(),
+            });
+        }
+
         // Remove entire package directory if there is only one version
         let directory: String;
         if installed_versions.len() == 1 {
@@ -158,6 +165,14 @@ impl<'a> Installer<'a> {
     // Checks if there exists at least one version of the specified package. If so, it returns the package directory.
     fn uninstall_all(&mut self, package_name: &str) -> Result<()> {
         let installed_versions = self.installed_storage.get_package_versions(package_name);
+
+        // Tell user if one of the package versions is an external package
+        for package_version in &installed_versions {
+            if package_version.external {
+                println!("Packit found external versions of this package, it will only uninstall internal packages.");
+                break;
+            }
+        }
 
         // Ask the user if he/she wants to continue when version isn't specified and there are multiple versions installed
         let question = "Version is not specified, do you wish to uninstall all versions of this package?";
