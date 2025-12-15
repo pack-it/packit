@@ -111,7 +111,7 @@ fn to_absolute_path<P: AsRef<Path>>(path: P) -> Result<PathBuf, ScriptError> {
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 fn create_command<P: AsRef<Path>>(path: P) -> Command {
     let mut command = Command::new("sh");
-    command.arg(path.as_ref());
+    command.arg("-eu").arg(path.as_ref());
 
     command
 }
