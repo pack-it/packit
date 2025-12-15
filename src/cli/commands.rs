@@ -9,6 +9,7 @@ use crate::{
     installed_packages::{InstalledPackageStorage, InstalledPackagesError},
     installer::{error::InstallerError, installer::Installer},
     repositories::manager::RepositoryManager,
+    utils::constants::INSTALLED_DIR,
     verifier::{get_packages, VerifierError},
 };
 
@@ -79,8 +80,8 @@ struct ListArgs {
 
 /// Reads and handles the command.
 pub fn handle_command(manager: &RepositoryManager, config: &Config) -> Result<(), CommandError> {
-    let info_directory = config.install_directory.to_string() + "/info.toml";
-    let mut installed_storage = InstalledPackageStorage::from(&info_directory)?;
+    let installed_dir = config.install_directory.to_string() + INSTALLED_DIR;
+    let mut installed_storage = InstalledPackageStorage::from(&installed_dir)?;
     let command = Cli::parse();
 
     // Handle commands with user specified arguments
@@ -98,7 +99,7 @@ pub fn handle_command(manager: &RepositoryManager, config: &Config) -> Result<()
     }
 
     // Save changes
-    installed_storage.save_to(&info_directory)?;
+    installed_storage.save_to(&installed_dir)?;
 
     Ok(())
 }

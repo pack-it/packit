@@ -91,7 +91,7 @@ impl<'a> Installer<'a> {
             .ok_or(ScriptError::ScriptNotFound("build".into()))?;
         scripts::run_build_script(&build_script_path, &unpack_directory, self.config, &install_directory)?;
 
-        // Add and save package to info storage
+        // Add and save package to installed storage toml
         let source_repository = self.config.repositories.get(&repository_id).expect("Expected repository in config");
         self.installed_storage.add_package(&package, &package_version, source_repository, &install_directory);
 
@@ -156,7 +156,7 @@ impl<'a> Installer<'a> {
         // Delete the determined directory
         self.remove_dir_all(&directory, package_name)?;
 
-        // Remove package from installed package info
+        // Remove package from installed package toml
         self.installed_storage.remove_package_version(package_name, &version);
 
         Ok(())
@@ -193,7 +193,7 @@ impl<'a> Installer<'a> {
         let directory = self.config.install_directory.to_string() + "/" + package_name;
         self.remove_dir_all(&directory, package_name)?;
 
-        // Delete the package info
+        // Delete the installed package from toml
         self.installed_storage.remove_package(package_name);
 
         Ok(())
