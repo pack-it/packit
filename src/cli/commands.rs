@@ -71,7 +71,7 @@ struct UninstallArgs {
 #[derive(Args, Debug)]
 struct ListArgs {
     /// Directory to list all packages of (OPTIONAL)
-    directory: Option<PathBuf>,
+    directory: Option<PathBuf>, // TODO: Unused atm
 
     /// Flag to indicate a full check (actually check packit install directory)
     #[arg(short, long)]
