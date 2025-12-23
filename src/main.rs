@@ -4,8 +4,8 @@ mod cli;
 mod config;
 mod installed_packages;
 mod installer;
+mod platforms;
 mod repositories;
-mod target_architecture;
 mod utils;
 mod verifier;
 

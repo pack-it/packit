@@ -3,12 +3,12 @@ use std::collections::HashMap;
 use crate::{
     cli,
     config::Config,
+    platforms::TARGET_ARCHITECTURE,
     repositories::{
         error::{RepositoryError, Result},
         provider::{create_repository_provider, RepositoryProvider},
         types::{Package, PackageVersion, RepositoryMetadata},
     },
-    target_architecture::TARGET_ARCHITECTURE,
 };
 
 /// Manages all requests to the repositories.

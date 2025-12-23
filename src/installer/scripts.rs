@@ -7,7 +7,7 @@ use std::{
 
 use thiserror::Error;
 
-use crate::{cli, config::Config, target_architecture::TARGET_ARCHITECTURE};
+use crate::{cli, config::Config, platforms::TARGET_ARCHITECTURE};
 
 /// The errors that occur during script handling.
 #[derive(Error, Debug)]

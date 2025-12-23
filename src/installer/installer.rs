@@ -7,8 +7,8 @@ use crate::{
         scripts::{self, ScriptError, SCRIPT_EXTENSION},
         unpack::unpack,
     },
+    platforms::TARGET_ARCHITECTURE,
     repositories::manager::RepositoryManager,
-    target_architecture::TARGET_ARCHITECTURE,
 };
 
 use std::fs;
