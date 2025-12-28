@@ -1,9 +1,18 @@
-use std::{collections::HashMap, fs};
+use std::{
+    collections::HashMap,
+    fs,
+    path::{Path, PathBuf},
+};
 
 use serde::Deserialize;
 use thiserror::Error;
 
-use crate::{cli, repositories::default::DEFAULT_PROVIDER_ID};
+use crate::{
+    cli,
+    platforms::{DEFAULT_CONFIG_DIR, DEFAULT_PREFIX},
+    repositories::default::DEFAULT_PROVIDER_ID,
+    utils::constants::CONFIG_FILENAME,
+};
 
 /// Represents the main config file of Packit.
 #[derive(Deserialize, Debug)]
@@ -41,7 +50,7 @@ fn default_prompt_repo_conflicts() -> bool {
 }
 
 fn default_install_directory() -> String {
-    "./temp/install".to_string()
+    DEFAULT_PREFIX.into()
 }
 
 fn default_temp_directory() -> String {
@@ -68,8 +77,8 @@ impl Config {
     /// # Errors
     ///
     /// This function will return an error if the file cannot be opened or if the content is invalid.
-    pub fn from(file: &str) -> Result<Self, ConfigError> {
-        let file_content = fs::read_to_string(file)?;
+    pub fn from(file_path: &Path) -> Result<Self, ConfigError> {
+        let file_content = fs::read_to_string(file_path)?;
         let mut config: Self = toml::from_str(&file_content)?;
 
         // Remove undefined repositories from rank list
@@ -86,5 +95,10 @@ impl Config {
         }
 
         Ok(config)
+    }
+
+    /// Gets the default path of the Packit config file.
+    pub fn get_default_path() -> PathBuf {
+        Path::new(DEFAULT_CONFIG_DIR).join(CONFIG_FILENAME)
     }
 }

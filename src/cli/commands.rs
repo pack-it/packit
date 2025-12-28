@@ -8,8 +8,8 @@ use crate::{
     config::Config,
     installed_packages::{InstalledPackageStorage, InstalledPackagesError},
     installer::{error::InstallerError, installer::Installer},
-    repositories::manager::RepositoryManager,
-    utils::constants::INSTALLED_DIR,
+    platforms::TARGET_ARCHITECTURE,
+    repositories::{error::RepositoryError, manager::RepositoryManager},
     verifier::{get_packages, VerifierError},
 };
 
@@ -46,6 +46,9 @@ enum Commands {
 
     /// List all configured repositories
     Repositories,
+
+    /// Search a certain package
+    Search(SearchArgs),
 }
 
 #[derive(Args, Debug)]
@@ -78,9 +81,19 @@ struct ListArgs {
     use_dir: bool,
 }
 
+#[derive(Args, Debug)]
+struct SearchArgs {
+    /// The name of the package to search
+    package_name: String,
+
+    /// The version of the package to search
+    #[arg(short, long)]
+    version: Option<String>,
+}
+
 /// Reads and handles the command.
 pub fn handle_command(manager: &RepositoryManager, config: &Config) -> Result<(), CommandError> {
-    let installed_dir = config.install_directory.to_string() + INSTALLED_DIR;
+    let installed_dir = InstalledPackageStorage::get_default_path();
     let mut installed_storage = InstalledPackageStorage::from(&installed_dir)?;
     let command = Cli::parse();
 
@@ -96,10 +109,11 @@ pub fn handle_command(manager: &RepositoryManager, config: &Config) -> Result<()
         Commands::Uninstall(args) => Installer::new(&config, &mut installed_storage).uninstall(&args.package_name, args.version)?,
         Commands::List(args) => handle_list(args, &installed_storage, &config)?,
         Commands::Repositories => handle_repositories(config, manager),
+        Commands::Search(args) => handle_search(args, manager),
     }
 
     // Save changes
-    installed_storage.save_to(&installed_dir)?;
+    installed_storage.save_to(&installed_dir)?; // TODO: shouldn't this only be done when actually changing the file?
 
     Ok(())
 }
@@ -146,4 +160,63 @@ fn handle_repositories(config: &Config, manager: &RepositoryManager) {
         println!("Maintainers: {}", metadata.maintainers.join(", "));
         println!("Repository provider: {}, path: {}", repository.provider, repository.path);
     }
+}
+
+/// Handles the search command, searching a certain package.
+fn handle_search(args: SearchArgs, manager: &RepositoryManager) {
+    let (repository_id, package) = match manager.read_package(&args.package_name) {
+        Ok(package) => package,
+        Err(RepositoryError::PackageNotFoundError { .. }) => {
+            println!("Cannot find package {}", args.package_name);
+            return;
+        },
+        Err(e) => {
+            println!("Cannot read package: {e:?}");
+            return;
+        },
+    };
+
+    // Get latest version of package
+    let latest_version = match package.latest_versions.get(TARGET_ARCHITECTURE) {
+        Some(version) => version.to_string(),
+        None => {
+            println!("Package does not exist for current target");
+            return;
+        },
+    };
+
+    // Use the latest version if the version isn't specified
+    let version = match args.version {
+        Some(version) => version,
+        None => latest_version.clone(),
+    };
+
+    // Get package version info for its target
+    let package_version = match manager.read_repo_package_version(&repository_id, &package.name, &version) {
+        Ok(package_version) => package_version,
+        Err(_) => {
+            println!("Cannot read {} version {version} from repository {repository_id}", package.name);
+            return;
+        },
+    };
+
+    // Get current target
+    let target = match package_version.targets.get(TARGET_ARCHITECTURE) {
+        Some(target) => target,
+        None => {
+            println!(
+                "Package {} version {version} from repository {repository_id} does not exist for current target",
+                package.name
+            );
+            return;
+        },
+    };
+
+    let dependencies: Vec<_> = package_version.dependencies.iter().chain(target.dependencies.iter()).map(|x| x.as_str()).collect();
+
+    // Print package information
+    println!("{} ({})", package.name.bold().blue(), package_version.version);
+    println!("{}", package.description.green());
+    println!("Latest version: {}", latest_version.red());
+    println!("Dependencies: {}", dependencies.join(", ").red());
 }

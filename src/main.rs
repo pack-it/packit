@@ -1,4 +1,4 @@
-use crate::{cli::commands, config::Config, repositories::manager::RepositoryManager, utils::constants::CONFIG_DIR};
+use crate::{cli::commands, config::Config, repositories::manager::RepositoryManager};
 
 mod cli;
 mod config;
@@ -10,7 +10,7 @@ mod utils;
 mod verifier;
 
 fn main() {
-    let config = Config::from(CONFIG_DIR).expect("Cannot load config");
+    let config = Config::from(&Config::get_default_path()).expect("Cannot load config");
     let manager = RepositoryManager::new(&config);
 
     match commands::handle_command(&manager, &config) {
