@@ -34,10 +34,10 @@ pub struct PackageVersion {
     pub script_args: HashMap<String, String>,
 
     #[serde(default = "PackageVersion::default_use_version_specific")]
-    pub use_version_specific_build: bool,
+    pub use_version_specific_preinstall: bool,
 
     #[serde(default = "PackageVersion::default_use_version_specific")]
-    pub use_version_specific_preinstall: bool,
+    pub use_version_specific_build: bool,
 
     #[serde(default = "PackageVersion::default_use_version_specific")]
     pub use_version_specific_postinstall: bool,

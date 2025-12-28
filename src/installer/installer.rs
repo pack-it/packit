@@ -4,7 +4,7 @@ use crate::{
     installed_packages::InstalledPackageStorage,
     installer::{
         error::{InstallerError, Result},
-        scripts::{self, ScriptError},
+        scripts::{self, ScriptError, SCRIPT_EXTENSION},
         unpack::unpack,
     },
     repositories::manager::RepositoryManager,
@@ -86,14 +86,14 @@ impl<'a> Installer<'a> {
 
         // Download and run pre install script if it exists
         let script_name = package_version.get_preinstall_script_name(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
-        if let Some(script_path) = self.download_script(&script_name, package_name, &version, &repository_id)? {
+        if let Some(script_path) = self.download_script("preinstall", &script_name, package_name, &version, &repository_id)? {
             scripts::run_pre_script(&script_path, &unpack_directory, self.config, &install_directory)?;
         }
 
         // Download and run build script
         let script_name = package_version.get_build_script_name(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
         let build_script_path = self
-            .download_script(&script_name, package_name, &version, &repository_id)?
+            .download_script("build", &script_name, package_name, &version, &repository_id)?
             .ok_or(ScriptError::ScriptNotFound("build".into()))?;
         scripts::run_build_script(&build_script_path, &unpack_directory, self.config, &install_directory)?;
 
@@ -103,7 +103,7 @@ impl<'a> Installer<'a> {
 
         // Download and run post install script if it exists
         let script_name = package_version.get_postinstall_script_name(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
-        if let Some(script_path) = self.download_script(&script_name, package_name, &version, &repository_id)? {
+        if let Some(script_path) = self.download_script("postinstall", &script_name, package_name, &version, &repository_id)? {
             scripts::run_post_script(&script_path, &install_directory, self.config)?;
         }
 
@@ -217,9 +217,19 @@ impl<'a> Installer<'a> {
     }
 
     /// Downloads a script and saves it to the correct directory.
-    fn download_script(&self, script_name: &str, package_name: &str, version: &str, repository_id: &str) -> Result<Option<String>> {
-        let script_destination = format!("{}/{package_name}_{version}_{script_name}", self.config.temp_directory);
-        match self.repository_manager.read_script(&repository_id, &package_name, &script_name)? {
+    fn download_script(
+        &self,
+        script_name: &str,
+        script_path: &str,
+        package_name: &str,
+        version: &str,
+        repository_id: &str,
+    ) -> Result<Option<String>> {
+        let script_destination = format!(
+            "{}/{package_name}_{version}_{script_name}.{SCRIPT_EXTENSION}",
+            self.config.temp_directory
+        );
+        match self.repository_manager.read_script(&repository_id, &package_name, &script_path)? {
             Some(script_text) => scripts::save_script(&script_text, &script_destination)?,
             None => return Ok(None), // Script not found, so return None
         }
