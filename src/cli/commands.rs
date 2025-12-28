@@ -90,10 +90,12 @@ pub fn handle_command(manager: &RepositoryManager, config: &Config) -> Result<()
             if installed_storage.get_package_versions(&args.package_name).len() >= 1 {
                 println!("Package '{}' already exists.", args.package_name);
             } else {
-                Installer::new(&config, &mut installed_storage).install(manager, &args.package_name, args.version)?
+                Installer::new(&config, &mut installed_storage, manager).install(&args.package_name, args.version)?
             }
         },
-        Commands::Uninstall(args) => Installer::new(&config, &mut installed_storage).uninstall(&args.package_name, args.version)?,
+        Commands::Uninstall(args) => {
+            Installer::new(&config, &mut installed_storage, manager).uninstall(&args.package_name, args.version)?
+        },
         Commands::List(args) => handle_list(args, &installed_storage, &config)?,
         Commands::Repositories => handle_repositories(config, manager),
     }

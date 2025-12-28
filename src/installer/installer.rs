@@ -4,7 +4,7 @@ use crate::{
     installed_packages::InstalledPackageStorage,
     installer::{
         error::{InstallerError, Result},
-        scripts::{self, ScriptError, SCRIPT_EXTENSION},
+        scripts::{self, ScriptError},
         unpack::unpack,
     },
     repositories::manager::RepositoryManager,
@@ -17,17 +17,22 @@ use std::fs;
 pub struct Installer<'a> {
     config: &'a Config,
     installed_storage: &'a mut InstalledPackageStorage,
+    repository_manager: &'a RepositoryManager<'a>,
 }
 
 impl<'a> Installer<'a> {
     /// Creates new installer
-    pub fn new(config: &'a Config, installed_storage: &'a mut InstalledPackageStorage) -> Self {
-        Self { config, installed_storage }
+    pub fn new(config: &'a Config, installed_storage: &'a mut InstalledPackageStorage, repository_manager: &'a RepositoryManager) -> Self {
+        Self {
+            config,
+            installed_storage,
+            repository_manager,
+        }
     }
 
     /// Installs the given package and its dependencies.
-    pub fn install(&mut self, manager: &RepositoryManager, package_name: &str, version: Option<String>) -> Result<()> {
-        let (repository_id, package) = manager.read_package(package_name)?;
+    pub fn install(&mut self, package_name: &str, version: Option<String>) -> Result<()> {
+        let (repository_id, package) = self.repository_manager.read_package(package_name)?;
 
         // Use the latest version if the version isn't specified
         let version = match version {
@@ -42,7 +47,7 @@ impl<'a> Installer<'a> {
         }
 
         // Get package version info for its target
-        let package_version = manager.read_repo_package_version(&repository_id, &package_name, &version)?;
+        let package_version = self.repository_manager.read_repo_package_version(&repository_id, &package_name, &version)?;
         let target = match package_version.targets.get(TARGET_ARCHITECTURE) {
             Some(target) => target,
             None => return Err(InstallerError::TargetError),
@@ -51,14 +56,14 @@ impl<'a> Installer<'a> {
         // Install global package dependencies and platform specific packages (if there are any, can be empty)
         let dependencies = package_version.dependencies.iter().chain(target.dependencies.iter());
         for dependency in dependencies {
-            self.install(manager, dependency, None)?;
+            self.install(dependency, None)?;
         }
 
         // Install global package build dependencies and platform specific build dependencies
         let build_dependencies = package_version.build_dependencies.iter().chain(target.build_dependencies.iter());
         for build_dependency in build_dependencies {
             // TODO: Delete build dependencies later, somewhere
-            self.install(manager, build_dependency, None)?;
+            self.install(build_dependency, None)?;
         }
 
         // Show download
@@ -80,14 +85,15 @@ impl<'a> Installer<'a> {
         let install_directory = format!("{}/{path_suffix}", self.config.install_directory);
 
         // Download and run pre install script if it exists
-        let script_name = &target.preinstall_script;
-        if let Some(script_path) = self.download_script("preinstall", script_name, package_name, &version, &repository_id, manager)? {
+        let script_name = package_version.get_preinstall_script_name(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
+        if let Some(script_path) = self.download_script(&script_name, package_name, &version, &repository_id)? {
             scripts::run_pre_script(&script_path, &unpack_directory, self.config, &install_directory)?;
         }
 
         // Download and run build script
+        let script_name = package_version.get_build_script_name(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
         let build_script_path = self
-            .download_script("build", &target.build_script, package_name, &version, &repository_id, manager)?
+            .download_script(&script_name, package_name, &version, &repository_id)?
             .ok_or(ScriptError::ScriptNotFound("build".into()))?;
         scripts::run_build_script(&build_script_path, &unpack_directory, self.config, &install_directory)?;
 
@@ -96,8 +102,8 @@ impl<'a> Installer<'a> {
         self.installed_storage.add_package(&package, &package_version, source_repository, &install_directory);
 
         // Download and run post install script if it exists
-        let script_name = &target.postinstall_script;
-        if let Some(script_path) = self.download_script("postinstall", script_name, package_name, &version, &repository_id, manager)? {
+        let script_name = package_version.get_postinstall_script_name(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
+        if let Some(script_path) = self.download_script(&script_name, package_name, &version, &repository_id)? {
             scripts::run_post_script(&script_path, &install_directory, self.config)?;
         }
 
@@ -211,24 +217,9 @@ impl<'a> Installer<'a> {
     }
 
     /// Downloads a script and saves it to the correct directory.
-    fn download_script(
-        &self,
-        script_name: &str,
-        target_script_name: &Option<String>,
-        package_name: &str,
-        version: &str,
-        repository_id: &str,
-        manager: &RepositoryManager,
-    ) -> Result<Option<String>> {
-        // Get name of the script
-        let script_name = match target_script_name {
-            Some(script) => script,
-            None => &format!("{script_name}.{SCRIPT_EXTENSION}"),
-        };
-
-        // Download script
+    fn download_script(&self, script_name: &str, package_name: &str, version: &str, repository_id: &str) -> Result<Option<String>> {
         let script_destination = format!("{}/{package_name}_{version}_{script_name}", self.config.temp_directory);
-        match manager.read_script(&repository_id, &package_name, &version, &script_name)? {
+        match self.repository_manager.read_script(&repository_id, &package_name, &script_name)? {
             Some(script_text) => scripts::save_script(&script_text, &script_destination)?,
             None => return Ok(None), // Script not found, so return None
         }
