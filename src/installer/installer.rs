@@ -7,11 +7,11 @@ use crate::{
         scripts::{self, ScriptError, SCRIPT_EXTENSION},
         unpack::unpack,
     },
-    platforms::TARGET_ARCHITECTURE,
+    platforms::{symlink, TARGET_ARCHITECTURE},
     repositories::manager::RepositoryManager,
 };
 
-use std::fs;
+use std::{fs, path::Path};
 
 /// The installer of Packit, managing the installation of packages on the system.
 pub struct Installer<'a> {
@@ -77,7 +77,7 @@ impl<'a> Installer<'a> {
         let unpack_directory = format!("{}/{path_suffix}", self.config.temp_directory);
         unpack(bytes, &unpack_directory)?;
 
-        let install_directory = format!("{}/{path_suffix}", self.config.install_directory);
+        let install_directory = format!("{}/packages/{path_suffix}", self.config.prefix_directory);
 
         // Download and run pre install script if it exists
         let script_name = &target.preinstall_script;
@@ -100,6 +100,9 @@ impl<'a> Installer<'a> {
         if let Some(script_path) = self.download_script("postinstall", script_name, package_name, &version, &repository_id, manager)? {
             scripts::run_post_script(&script_path, &install_directory, self.config)?;
         }
+
+        // Create symlinks for package
+        self.create_symlinks(Path::new(&install_directory))?;
 
         Ok(())
     }
@@ -147,10 +150,10 @@ impl<'a> Installer<'a> {
         // Remove entire package directory if there is only one version
         let directory: String;
         if installed_versions.len() == 1 {
-            directory = self.config.install_directory.to_string() + "/" + package_name;
+            directory = self.config.prefix_directory.to_string() + "/packages/" + package_name;
         } else {
             // The remove directory of a specific package version
-            directory = self.config.install_directory.to_string() + "/" + package_name + "/" + version;
+            directory = self.config.prefix_directory.to_string() + "/packages/" + package_name + "/" + version;
         }
 
         // Delete the determined directory
@@ -190,7 +193,7 @@ impl<'a> Installer<'a> {
         }
 
         // Delete the determined directory
-        let directory = self.config.install_directory.to_string() + "/" + package_name;
+        let directory = self.config.prefix_directory.to_string() + "/packages/" + package_name;
         self.remove_dir_all(&directory, package_name)?;
 
         // Delete the installed package from toml
@@ -235,5 +238,29 @@ impl<'a> Installer<'a> {
 
         // Script succesfully downloaded, so return script location
         Ok(Some(script_destination))
+    }
+
+    fn create_symlinks(&self, package_directory: &Path) -> Result<()> {
+        let prefix_dir = Path::new(&self.config.prefix_directory);
+
+        // Symlink bin files
+        let prefix_bin_dir = prefix_dir.join("bin");
+        let package_bin_dir = package_directory.join("bin");
+        for file in fs::read_dir(package_bin_dir)? {
+            let bin = file?;
+
+            let destination = prefix_bin_dir.join(bin.file_name());
+
+            // Check if file already exists
+            if fs::exists(&destination)? {
+                println!("WARNING: binary {:?} does already exist in {:?}", bin.file_name(), prefix_bin_dir);
+                continue;
+            }
+
+            // Symlink binary
+            symlink::create_symlink(&bin.path(), &destination)?;
+        }
+
+        Ok(())
     }
 }

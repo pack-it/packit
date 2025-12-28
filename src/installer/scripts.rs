@@ -84,7 +84,7 @@ pub fn run_script<P: AsRef<Path>>(path: &str, run_dir: P, config: &Config, env_v
         .current_dir(run_dir)
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
-        .env("PACKIT_INSTALL_PATH", &config.install_directory)
+        .env("PACKIT_PREFIX_PATH", &config.prefix_directory)
         .env("PACKIT_TARGET", TARGET_ARCHITECTURE);
 
     for (key, value) in env_vars {

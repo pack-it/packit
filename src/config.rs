@@ -27,8 +27,8 @@ pub struct Config {
     #[serde(default = "default_prompt_repo_conflicts")]
     pub prompt_repo_conflicts: bool, //TODO: maybe remove this option? or should it be optional for extra safety?
 
-    #[serde(default = "default_install_directory")]
-    pub install_directory: String,
+    #[serde(default = "default_prefix_directory")]
+    pub prefix_directory: String,
 
     #[serde(default = "default_temp_directory")]
     pub temp_directory: String,
@@ -49,7 +49,7 @@ fn default_prompt_repo_conflicts() -> bool {
     false
 }
 
-fn default_install_directory() -> String {
+fn default_prefix_directory() -> String {
     DEFAULT_PREFIX.into()
 }
 

@@ -1,4 +1,5 @@
 mod defaults;
+pub mod symlink;
 mod target_architecture;
 
 pub use defaults::DEFAULT_CONFIG_DIR;

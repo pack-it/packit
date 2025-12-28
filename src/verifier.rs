@@ -1,4 +1,4 @@
-use std::fs;
+use std::{fs, path::Path};
 use thiserror::Error;
 
 use crate::config::Config;
@@ -21,9 +21,11 @@ pub fn package_exists(package_name: &String, version: &Option<String>) -> bool {
 
 /// Gets the installed packages, by actually checking the install directory.
 pub fn get_packages(config: &Config) -> Result<Vec<String>, VerifierError> {
+    let packages_dir = Path::new(&config.prefix_directory).join("packages");
+
     // Look inside the packit install directory for package installations
     let mut packages: Vec<String> = Vec::new();
-    let directory = fs::read_dir(&config.install_directory)?;
+    let directory = fs::read_dir(packages_dir)?;
     for package_entry in directory {
         let package_entry = package_entry?;
         let path = package_entry.path();
