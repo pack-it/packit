@@ -46,9 +46,9 @@ pub struct PackageVersion {
 impl PackageVersion {
     fn get_script_name(&self, use_version_specific: bool, script: &Option<Script>, default_script_name: &str) -> String {
         match script {
-            Some(Script::NameOnly(name)) => name.into(),
-            Some(Script::Expanded { name, version_specific }) if *version_specific => format!("{}/{name}", self.version),
-            Some(Script::Expanded { name, .. }) => format!("{}/{name}", self.version),
+            Some(Script::NameOnly(name)) => format!("{name}.{SCRIPT_EXTENSION}"),
+            Some(Script::Expanded { name, version_specific }) if *version_specific => format!("{}/{name}.{SCRIPT_EXTENSION}", self.version),
+            Some(Script::Expanded { name, .. }) => format!("{}/{name}.{SCRIPT_EXTENSION}", self.version),
             None if use_version_specific => format!("{}/{default_script_name}.{SCRIPT_EXTENSION}", self.version),
             None => format!("{default_script_name}.{SCRIPT_EXTENSION}"),
         }

@@ -229,6 +229,7 @@ impl<'a> Installer<'a> {
             "{}/{package_name}_{version}_{script_name}.{SCRIPT_EXTENSION}",
             self.config.temp_directory
         );
+
         match self.repository_manager.read_script(&repository_id, &package_name, &script_path)? {
             Some(script_text) => scripts::save_script(&script_text, &script_destination)?,
             None => return Ok(None), // Script not found, so return None
