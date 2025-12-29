@@ -1,5 +1,5 @@
 use crate::{
-    cli::{ask_user, QuestionResponse, Spinner},
+    cli::{self, ask_user, QuestionResponse, Spinner},
     config::Config,
     installed_packages::InstalledPackageStorage,
     installer::{
@@ -96,9 +96,15 @@ impl<'a> Installer<'a> {
             .ok_or(ScriptError::ScriptNotFound("build".into()))?;
         scripts::run_build_script(&build_script_path, &unpack_directory, self.config, &install_directory)?;
 
+        // Check if symlinking should be skipped
+        let skip_symlinking = match target.skip_symlinking {
+            Some(skip_symlinking) => skip_symlinking,
+            None => package_version.skip_symlinking,
+        };
+
         // Add and save package to installed storage toml
         let source_repository = self.config.repositories.get(&repository_id).expect("Expected repository in config");
-        self.installed_storage.add_package(&package, &package_version, source_repository, &install_directory);
+        self.installed_storage.add_package(&package, &package_version, source_repository, &install_directory, !skip_symlinking);
 
         // Download and run post install script if it exists
         let script_name = &target.postinstall_script;
@@ -107,7 +113,9 @@ impl<'a> Installer<'a> {
         }
 
         // Create symlinks for package
-        self.create_symlinks(Path::new(&install_directory))?;
+        if !skip_symlinking {
+            self.create_symlinks(Path::new(&install_directory))?;
+        }
 
         Ok(())
     }
@@ -150,11 +158,21 @@ impl<'a> Installer<'a> {
             });
         }
 
+        // TODO: refactor this expect
+        let installed_package =
+            self.installed_storage.get_package(package_name, &version).expect("Expected package to exist at this point.");
+
         // Give an error when the user tries to uninstall an external package
-        if self.installed_storage.get_package(package_name, &version).expect("Expected package to exist at this point.").external {
+        if installed_package.external {
             return Err(InstallerError::ExternalError {
                 package_name: package_name.into(),
             });
+        }
+
+        // Check if the package was symlinked
+        if installed_package.symlinked {
+            //TODO
+            cli::display_warning("Package was symlinked, symlink deletion is not yet implemented!");
         }
 
         // Remove entire package directory if there is only one version
@@ -200,6 +218,14 @@ impl<'a> Installer<'a> {
                 package_name: package_name.into(),
                 version: "any".to_string(),
             });
+        }
+
+        // Check if package was symlinked
+        for package_version in &installed_versions {
+            if package_version.symlinked {
+                //TODO
+                cli::display_warning("Package was symlinked, symlink deletion is not yet implemented!");
+            }
         }
 
         // Delete the determined directory

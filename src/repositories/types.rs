@@ -27,6 +27,9 @@ pub struct PackageVersion {
     pub dependencies: Vec<String>,
     pub build_dependencies: Vec<String>,
     pub targets: HashMap<String, PackageTarget>,
+
+    #[serde(default = "default_skip_symlinking")]
+    pub skip_symlinking: bool,
 }
 
 /// Represents the package target data, containing the download url and installer type.
@@ -39,7 +42,12 @@ pub struct PackageTarget {
 
     #[serde(default)]
     pub build_dependencies: Vec<String>,
+    pub skip_symlinking: Option<bool>,
     pub build_script: Option<String>,
     pub preinstall_script: Option<String>,
     pub postinstall_script: Option<String>,
+}
+
+fn default_skip_symlinking() -> bool {
+    false
 }

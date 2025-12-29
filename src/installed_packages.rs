@@ -41,6 +41,7 @@ pub struct InstalledPackage {
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub dependencies: Vec<String>,
     pub install_path: String,
+    pub symlinked: bool,
 
     /// True when the package is found on the system but not installed by Packit, false otherwise
     pub external: bool,
@@ -93,7 +94,14 @@ impl InstalledPackageStorage {
 
     /// Adds a package to the storage.
     /// Please note that this does not save the storage and does not read the currently installed packages from the toml.
-    pub fn add_package(&mut self, package: &Package, package_version: &PackageVersion, source_repository: &Repository, install_path: &str) {
+    pub fn add_package(
+        &mut self,
+        package: &Package,
+        package_version: &PackageVersion,
+        source_repository: &Repository,
+        install_path: &str,
+        symlinked: bool,
+    ) {
         // Add global and target specific dependencies together
         let mut dependencies = package_version.dependencies.clone();
         if let Some(target) = package_version.targets.get(TARGET_ARCHITECTURE) {
@@ -109,6 +117,7 @@ impl InstalledPackageStorage {
             version: package_version.version.clone(),
             dependencies,
             install_path: install_path.into(),
+            symlinked,
             external: false,
         };
 
