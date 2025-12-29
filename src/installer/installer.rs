@@ -246,19 +246,21 @@ impl<'a> Installer<'a> {
         // Symlink bin files
         let prefix_bin_dir = prefix_dir.join("bin");
         let package_bin_dir = package_directory.join("bin");
-        for file in fs::read_dir(package_bin_dir)? {
-            let bin = file?;
+        if package_bin_dir.exists() {
+            for file in fs::read_dir(package_bin_dir)? {
+                let bin = file?;
 
-            let destination = prefix_bin_dir.join(bin.file_name());
+                let destination = prefix_bin_dir.join(bin.file_name());
 
-            // Check if file already exists
-            if fs::exists(&destination)? {
-                println!("WARNING: binary {:?} does already exist in {:?}", bin.file_name(), prefix_bin_dir);
-                continue;
+                // Check if file already exists
+                if fs::exists(&destination)? {
+                    println!("WARNING: binary {:?} does already exist in {:?}", bin.file_name(), prefix_bin_dir);
+                    continue;
+                }
+
+                // Symlink binary
+                symlink::create_symlink(&bin.path(), &destination)?;
             }
-
-            // Symlink binary
-            symlink::create_symlink(&bin.path(), &destination)?;
         }
 
         Ok(())

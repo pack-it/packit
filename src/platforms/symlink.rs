@@ -3,6 +3,7 @@ use std::path::Path;
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 pub fn create_symlink(source: &Path, destination: &Path) -> Result<(), std::io::Error> {
     std::os::unix::fs::symlink(source, destination)?;
+
     Ok(())
 }
 
