@@ -31,13 +31,13 @@ impl<'a> Installer<'a> {
     }
 
     /// Installs the given package and its dependencies.
-    pub fn install(&mut self, package_name: &str, version: Option<String>) -> Result<()> {
+    pub fn install(&mut self, package_name: &str, version: &Option<String>) -> Result<()> {
         let (repository_id, package) = self.repository_manager.read_package(package_name)?;
 
         // Use the latest version if the version isn't specified
         let version = match version {
             Some(version) => version,
-            None => package.latest_versions.get(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?.to_string(),
+            None => package.latest_versions.get(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?,
         };
 
         // Check if this package version is already installed
@@ -56,14 +56,14 @@ impl<'a> Installer<'a> {
         // Install global package dependencies and platform specific packages (if there are any, can be empty)
         let dependencies = package_version.dependencies.iter().chain(target.dependencies.iter());
         for dependency in dependencies {
-            self.install(dependency, None)?;
+            self.install(dependency, &None)?;
         }
 
         // Install global package build dependencies and platform specific build dependencies
         let build_dependencies = package_version.build_dependencies.iter().chain(target.build_dependencies.iter());
         for build_dependency in build_dependencies {
             // TODO: Delete build dependencies later, somewhere
-            self.install(build_dependency, None)?;
+            self.install(build_dependency, &None)?;
         }
 
         // Show download
@@ -118,7 +118,7 @@ impl<'a> Installer<'a> {
     }
 
     /// Uninstalls a package version if specified, otherwise it will uninstall the entire package directory.
-    pub fn uninstall(&mut self, package_name: &str, version: Option<String>) -> Result<()> {
+    pub fn uninstall(&mut self, package_name: &str, version: &Option<String>) -> Result<()> {
         // Check if the current package to delete is a dependency, if so, give dependency error
         if self.installed_storage.is_dependency(package_name) {
             return Err(InstallerError::DependencyError {

@@ -1,8 +1,10 @@
 pub mod commands;
 mod display;
+mod error;
 mod prompts;
 mod reader;
 mod spinner;
+mod subcommands;
 
 pub use display::display_warning;
 pub use display::DisplayError;
