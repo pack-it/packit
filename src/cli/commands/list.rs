@@ -3,12 +3,14 @@ use std::path::PathBuf;
 use clap::Args;
 
 use crate::{
+    cli::{commands::HandleCommand, error::CommandError},
     config::Config,
     installed_packages::InstalledPackageStorage,
-    verifier::{get_packages, VerifierError},
+    repositories::manager::RepositoryManager,
+    utils::constants::INSTALLED_DIR,
+    verifier::get_packages,
 };
 
-// TODO: Maybe rename to just List
 #[derive(Args, Debug)]
 pub struct ListArgs {
     /// Directory to list all packages of (OPTIONAL)
@@ -19,9 +21,11 @@ pub struct ListArgs {
     use_dir: bool,
 }
 
-impl ListArgs {
-    /// Handles the list command with user specified arguments.
-    pub fn handle(&self, installed_storage: &InstalledPackageStorage, config: &Config) -> Result<(), VerifierError> {
+impl HandleCommand for ListArgs {
+    fn handle(&self, config: &Config, _: &RepositoryManager) -> Result<(), CommandError> {
+        let installed_dir = config.install_directory.to_string() + INSTALLED_DIR;
+        let installed_storage = InstalledPackageStorage::from(&installed_dir)?;
+
         if self.use_dir {
             for package in get_packages(&config)? {
                 println!("{}", package);
@@ -31,6 +35,9 @@ impl ListArgs {
                 println!("{} {}", package.name, package.version);
             }
         }
+
+        // Save changes
+        installed_storage.save_to(&installed_dir)?;
 
         Ok(())
     }

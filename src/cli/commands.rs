@@ -1,14 +1,17 @@
+mod install;
+mod list;
+mod repositories;
+mod uninstall;
+
 use clap::{Parser, Subcommand};
 
 use crate::{
     cli::{
+        commands::{install::InstallArgs, list::ListArgs, repositories::RepositoryArgs, uninstall::UninstallArgs},
         error::CommandError,
-        subcommands::{install::InstallArgs, list::ListArgs, repositories::handle_repositories, uninstall::UninstallArgs},
     },
     config::Config,
-    installed_packages::InstalledPackageStorage,
     repositories::manager::RepositoryManager,
-    utils::constants::INSTALLED_DIR,
 };
 
 #[derive(Parser, Debug)]
@@ -31,7 +34,7 @@ enum Commands {
     List(ListArgs),
 
     /// List all configured repositories
-    Repositories,
+    Repositories(RepositoryArgs),
 }
 
 impl Cli {
@@ -41,20 +44,20 @@ impl Cli {
 
     /// Reads and handles the command.
     pub fn handle_command(&self, manager: &RepositoryManager, config: &Config) -> Result<(), CommandError> {
-        let installed_dir = config.install_directory.to_string() + INSTALLED_DIR;
-        let mut installed_storage = InstalledPackageStorage::from(&installed_dir)?;
-
         // Handle commands with user specified arguments
-        match &self.command {
-            Commands::Install(args) => args.handle(config, &mut installed_storage, manager)?,
-            Commands::Uninstall(args) => args.handle(config, &mut installed_storage, manager)?,
-            Commands::List(args) => args.handle(&installed_storage, &config)?,
-            Commands::Repositories => handle_repositories(config, manager),
-        }
+        let args: &dyn HandleCommand = match &self.command {
+            Commands::Install(args) => args,
+            Commands::Uninstall(args) => args,
+            Commands::List(args) => args,
+            Commands::Repositories(args) => args,
+        };
 
-        // Save changes
-        installed_storage.save_to(&installed_dir)?;
+        args.handle(config, manager)?;
 
         Ok(())
     }
+}
+
+trait HandleCommand {
+    fn handle(&self, config: &Config, manager: &RepositoryManager) -> Result<(), CommandError>;
 }
