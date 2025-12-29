@@ -243,8 +243,13 @@ impl<'a> Installer<'a> {
     fn create_symlinks(&self, package_directory: &Path) -> Result<()> {
         let prefix_dir = Path::new(&self.config.prefix_directory);
 
-        // Symlink bin files
+        // Create bin directory in prefix if it does not exist
         let prefix_bin_dir = prefix_dir.join("bin");
+        if !prefix_bin_dir.exists() {
+            fs::create_dir_all(&prefix_bin_dir)?;
+        }
+
+        // Symlink bin files
         let package_bin_dir = package_directory.join("bin");
         if package_bin_dir.exists() {
             for file in fs::read_dir(package_bin_dir)? {
