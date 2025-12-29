@@ -84,10 +84,17 @@ impl<'a> Installer<'a> {
 
         let install_directory = format!("{}/{path_suffix}", self.config.install_directory);
 
+        let args = package_version
+            .script_args
+            .iter()
+            .chain(target.script_args.iter())
+            .map(|(key, value)| (key.as_str(), value.as_str()))
+            .collect();
+
         // Download and run pre install script if it exists
         let script_name = package_version.get_preinstall_script_name(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
         if let Some(script_path) = self.download_script("preinstall", &script_name, package_name, &version, &repository_id)? {
-            scripts::run_pre_script(&script_path, &unpack_directory, self.config, &install_directory)?;
+            scripts::run_pre_script(&script_path, &unpack_directory, self.config, &install_directory, &args)?;
         }
 
         // Download and run build script
@@ -95,7 +102,7 @@ impl<'a> Installer<'a> {
         let build_script_path = self
             .download_script("build", &script_name, package_name, &version, &repository_id)?
             .ok_or(ScriptError::ScriptNotFound("build".into()))?;
-        scripts::run_build_script(&build_script_path, &unpack_directory, self.config, &install_directory)?;
+        scripts::run_build_script(&build_script_path, &unpack_directory, self.config, &install_directory, &args)?;
 
         // Add and save package to installed storage toml
         let source_repository = self.config.repositories.get(&repository_id).expect("Expected repository in config");
@@ -104,7 +111,7 @@ impl<'a> Installer<'a> {
         // Download and run post install script if it exists
         let script_name = package_version.get_postinstall_script_name(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
         if let Some(script_path) = self.download_script("postinstall", &script_name, package_name, &version, &repository_id)? {
-            scripts::run_post_script(&script_path, &install_directory, self.config)?;
+            scripts::run_post_script(&script_path, &install_directory, self.config, &args)?;
         }
 
         Ok(())

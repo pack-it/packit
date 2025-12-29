@@ -37,7 +37,13 @@ pub fn save_script(script_text: &str, destination: &str) -> Result<(), ScriptErr
 
 /// Runs the given pre install script, in the given directory.
 /// Note that the script should be a `.sh` script on Linux and macOS and a `.bat` on Windows.
-pub fn run_pre_script<P: AsRef<Path>>(path: &str, run_dir: P, config: &Config, package_install_path: &str) -> Result<(), ScriptError> {
+pub fn run_pre_script<P: AsRef<Path>>(
+    path: &str,
+    run_dir: P,
+    config: &Config,
+    package_install_path: &str,
+    args: &HashMap<&str, &str>,
+) -> Result<(), ScriptError> {
     let package_install_path = to_absolute_path(package_install_path)?;
 
     let env_vars = HashMap::from([(
@@ -45,12 +51,18 @@ pub fn run_pre_script<P: AsRef<Path>>(path: &str, run_dir: P, config: &Config, p
         package_install_path.to_str().ok_or(ScriptError::InvalidPathString)?,
     )]);
 
-    run_script(path, run_dir, config, env_vars)
+    run_script(path, run_dir, config, env_vars, args)
 }
 
 /// Runs the given build script, in the given directory.
 /// Note that the script should be a `.sh` script on Linux and macOS and a `.bat` on Windows.
-pub fn run_build_script<P: AsRef<Path>>(path: &str, run_dir: P, config: &Config, package_install_path: &str) -> Result<(), ScriptError> {
+pub fn run_build_script<P: AsRef<Path>>(
+    path: &str,
+    run_dir: P,
+    config: &Config,
+    package_install_path: &str,
+    args: &HashMap<&str, &str>,
+) -> Result<(), ScriptError> {
     let package_install_path = to_absolute_path(package_install_path)?;
 
     let env_vars = HashMap::from([(
@@ -58,12 +70,12 @@ pub fn run_build_script<P: AsRef<Path>>(path: &str, run_dir: P, config: &Config,
         package_install_path.to_str().ok_or(ScriptError::InvalidPathString)?,
     )]);
 
-    run_script(path, run_dir, config, env_vars)
+    run_script(path, run_dir, config, env_vars, args)
 }
 
 /// Runs the given post install script, in the package install directory.
 /// Note that the script should be a `.sh` script on Linux and macOS and a `.bat` on Windows.
-pub fn run_post_script(path: &str, package_install_path: &str, config: &Config) -> Result<(), ScriptError> {
+pub fn run_post_script(path: &str, package_install_path: &str, config: &Config, args: &HashMap<&str, &str>) -> Result<(), ScriptError> {
     let package_install_path = to_absolute_path(package_install_path)?;
 
     let env_vars = HashMap::from([(
@@ -71,12 +83,18 @@ pub fn run_post_script(path: &str, package_install_path: &str, config: &Config) 
         package_install_path.to_str().ok_or(ScriptError::InvalidPathString)?,
     )]);
 
-    run_script(path, &package_install_path, config, env_vars)
+    run_script(path, &package_install_path, config, env_vars, args)
 }
 
 /// Runs the script at the given path, in the given directory.
 /// Note that the script should be a `.sh` script on Linux and macOS and a `.bat` on Windows.
-pub fn run_script<P: AsRef<Path>>(path: &str, run_dir: P, config: &Config, env_vars: HashMap<&str, &str>) -> Result<(), ScriptError> {
+pub fn run_script<P: AsRef<Path>>(
+    path: &str,
+    run_dir: P,
+    config: &Config,
+    env_vars: HashMap<&str, &str>,
+    args: &HashMap<&str, &str>,
+) -> Result<(), ScriptError> {
     let path = to_absolute_path(path)?;
 
     let mut command = create_command(path);
@@ -89,6 +107,12 @@ pub fn run_script<P: AsRef<Path>>(path: &str, run_dir: P, config: &Config, env_v
 
     for (key, value) in env_vars {
         command.env(key, value);
+    }
+
+    // Add script arguments
+    for (key, value) in args {
+        let formatted_key = format!("PACKIT_ARGS_{}", key.to_uppercase());
+        command.env(formatted_key, value);
     }
 
     // Run script
