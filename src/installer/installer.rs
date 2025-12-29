@@ -309,6 +309,10 @@ impl<'a> Installer<'a> {
     }
 
     fn can_write_prefix_dir(&self) -> Result<bool> {
+        if !fs::exists(&self.config.prefix_directory)? {
+            return Ok(false);
+        }
+
         let metadata = fs::metadata(&self.config.prefix_directory)?;
         let permissions = metadata.permissions();
 
