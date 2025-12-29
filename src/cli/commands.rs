@@ -1,16 +1,18 @@
-use clap::{Args, Parser, Subcommand};
-use colored::Colorize;
-use std::path::PathBuf;
+mod install;
+mod list;
+mod repositories;
+mod uninstall;
+
+use clap::{Parser, Subcommand};
 use thiserror::Error;
 
 use crate::{
-    cli::{self},
+    cli::commands::{install::InstallArgs, list::ListArgs, repositories::RepositoryArgs, uninstall::UninstallArgs},
     config::Config,
-    installed_packages::{InstalledPackageStorage, InstalledPackagesError},
-    installer::{error::InstallerError, installer::Installer},
+    installed_packages::InstalledPackagesError,
+    installer::error::InstallerError,
     repositories::manager::RepositoryManager,
-    utils::constants::INSTALLED_DIR,
-    verifier::{get_packages, VerifierError},
+    verifier::VerifierError,
 };
 
 #[derive(Error, Debug)]
@@ -45,107 +47,30 @@ enum Commands {
     List(ListArgs),
 
     /// List all configured repositories
-    Repositories,
+    Repositories(RepositoryArgs),
 }
 
-#[derive(Args, Debug)]
-struct InstallArgs {
-    /// The name of the package to install
-    package_name: String,
-
-    /// The version of the package to install
-    #[arg(short, long)]
-    version: Option<String>,
-}
-
-#[derive(Args, Debug)]
-struct UninstallArgs {
-    /// The name of the package to uninstall
-    package_name: String,
-
-    /// The version of the package to uninstall
-    #[arg(short, long)]
-    version: Option<String>,
-}
-
-#[derive(Args, Debug)]
-struct ListArgs {
-    /// Directory to list all packages of (OPTIONAL)
-    directory: Option<PathBuf>, // TODO: Unused atm
-
-    /// Flag to indicate a full check (actually check packit install directory)
-    #[arg(short, long)]
-    use_dir: bool,
-}
-
-/// Reads and handles the command.
-pub fn handle_command(manager: &RepositoryManager, config: &Config) -> Result<(), CommandError> {
-    let installed_dir = config.install_directory.to_string() + INSTALLED_DIR;
-    let mut installed_storage = InstalledPackageStorage::from(&installed_dir)?;
-    let command = Cli::parse();
-
-    // Handle commands with user specified arguments
-    match command.command {
-        Commands::Install(args) => {
-            if installed_storage.get_package_versions(&args.package_name).len() >= 1 {
-                println!("Package '{}' already exists.", args.package_name);
-            } else {
-                Installer::new(&config, &mut installed_storage, manager).install(&args.package_name, args.version)?
-            }
-        },
-        Commands::Uninstall(args) => {
-            Installer::new(&config, &mut installed_storage, manager).uninstall(&args.package_name, args.version)?
-        },
-        Commands::List(args) => handle_list(args, &installed_storage, &config)?,
-        Commands::Repositories => handle_repositories(config, manager),
+impl Cli {
+    pub fn get_instance() -> Self {
+        Cli::parse()
     }
 
-    // Save changes
-    installed_storage.save_to(&installed_dir)?;
-
-    Ok(())
-}
-
-/// Handles the list command with user specified arguments.
-fn handle_list(args: ListArgs, installed_storage: &InstalledPackageStorage, config: &Config) -> Result<(), VerifierError> {
-    if args.use_dir {
-        for package in get_packages(&config)? {
-            println!("{}", package);
-        }
-    } else {
-        for package in &installed_storage.installed_packages {
-            println!("{} {}", package.name, package.version);
-        }
-    }
-
-    Ok(())
-}
-
-/// Handles the repositories command, listing all configured repositories.
-fn handle_repositories(config: &Config, manager: &RepositoryManager) {
-    let mut first = true;
-
-    for (repository_id, repository) in &config.repositories {
-        if !first {
-            println!();
-        }
-        first = false;
-
-        // Read metadata of repository
-        let metadata = match manager.read_repository_metadata(&repository_id) {
-            Ok(metadata) => metadata,
-            Err(e) => {
-                // Display the error and continue
-                cli::display_warning(&format!("Cannot read repository metadata of repository '{repository_id}'"));
-                cli::display_warning(&format!("{e}"));
-                continue;
-            },
+    /// Reads and handles the command.
+    pub fn handle_command(&self, manager: &RepositoryManager, config: &Config) -> Result<(), CommandError> {
+        // Handle commands with user specified arguments
+        let args: &dyn HandleCommand = match &self.command {
+            Commands::Install(args) => args,
+            Commands::Uninstall(args) => args,
+            Commands::List(args) => args,
+            Commands::Repositories(args) => args,
         };
 
-        // Print repository information
-        println!("{} ({repository_id})", metadata.name.bold().blue());
-        println!("{}", metadata.description.green());
-        println!("Maintainers: {}", metadata.maintainers.join(", "));
-        println!("Repository provider: {}, path: {}", repository.provider, repository.path);
+        args.handle(config, manager)?;
+
+        Ok(())
     }
+}
+
+trait HandleCommand {
+    fn handle(&self, config: &Config, manager: &RepositoryManager) -> Result<(), CommandError>;
 }

@@ -12,8 +12,9 @@ mod verifier;
 fn main() {
     let config = Config::from(CONFIG_DIR).expect("Cannot load config");
     let manager = RepositoryManager::new(&config);
+    let cli = commands::Cli::get_instance();
 
-    match commands::handle_command(&manager, &config) {
+    match cli.handle_command(&manager, &config) {
         Ok(_) => {},
         Err(e) => println!("An error occured: {}\n{:?}", e, e),
     };
