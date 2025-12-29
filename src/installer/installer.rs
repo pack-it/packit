@@ -253,29 +253,56 @@ impl<'a> Installer<'a> {
     fn create_symlinks(&self, package_directory: &Path) -> Result<()> {
         let prefix_dir = Path::new(&self.config.prefix_directory);
 
-        // Create bin directory in prefix if it does not exist
-        let prefix_bin_dir = prefix_dir.join("bin");
-        if !prefix_bin_dir.exists() {
-            fs::create_dir_all(&prefix_bin_dir)?;
+        // Symlink directories bin, include and lib
+        for dir_name in vec!["bin", "include", "lib"] {
+            let package_dir_path = package_directory.join(dir_name);
+            let prefix_dir_path = prefix_dir.join(dir_name);
+
+            self.create_folder_symlinks(&package_dir_path, &prefix_dir_path)?;
         }
 
-        // Symlink bin files
-        let package_bin_dir = package_directory.join("bin");
-        if package_bin_dir.exists() {
-            for file in fs::read_dir(package_bin_dir)? {
-                let bin = file?;
+        // Symlink man page directories
+        let prefix_man_dir = prefix_dir.join("share").join("man");
+        let package_man_dir = package_directory.join("share").join("man");
+        if package_man_dir.exists() {
+            for man_dir in fs::read_dir(&package_man_dir)? {
+                let man_dir = man_dir?;
 
-                let destination = prefix_bin_dir.join(bin.file_name());
+                let package_dir_path = package_man_dir.join(man_dir.file_name());
+                let prefix_dir_path = prefix_man_dir.join(man_dir.file_name());
 
-                // Check if file already exists
-                if fs::exists(&destination)? {
-                    println!("WARNING: binary {:?} does already exist in {:?}", bin.file_name(), prefix_bin_dir);
-                    continue;
-                }
-
-                // Symlink binary
-                symlink::create_symlink(&bin.path(), &destination)?;
+                self.create_folder_symlinks(&package_dir_path, &prefix_dir_path)?;
             }
+        }
+
+        Ok(())
+    }
+
+    fn create_folder_symlinks(&self, source_dir: &Path, destination_dir: &Path) -> Result<()> {
+        // Create destination if it does not exist
+        if !destination_dir.exists() {
+            fs::create_dir_all(&destination_dir)?;
+        }
+
+        // Skip symlinking if source does not exist
+        if !source_dir.exists() {
+            return Ok(());
+        }
+
+        // Symlink files
+        for file in fs::read_dir(source_dir)? {
+            let file = file?;
+
+            let destination = destination_dir.join(file.file_name());
+
+            // Check if file already exists
+            if fs::exists(&destination)? {
+                println!("WARNING: symlink {:?} already exists in {:?}", file.file_name(), destination_dir);
+                continue;
+            }
+
+            // Symlink file in destination directory
+            symlink::create_symlink(&file.path(), &destination)?;
         }
 
         Ok(())
