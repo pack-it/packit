@@ -54,7 +54,7 @@ fn default_prefix_directory() -> String {
 }
 
 fn default_temp_directory() -> String {
-    "./temp".to_string()
+    "./temp".to_string() //TODO: Remove and use proper tempfiles
 }
 
 pub fn default_repository_provider() -> String {

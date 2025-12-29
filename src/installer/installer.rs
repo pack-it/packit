@@ -27,6 +27,11 @@ impl<'a> Installer<'a> {
 
     /// Installs the given package and its dependencies.
     pub fn install(&mut self, manager: &RepositoryManager, package_name: &str, version: Option<String>) -> Result<()> {
+        // Check if we can write to the prefix directory
+        if !self.can_write_prefix_dir()? {
+            return Err(InstallerError::PermissionsError);
+        }
+
         let (repository_id, package) = manager.read_package(package_name)?;
 
         // Use the latest version if the version isn't specified
@@ -109,6 +114,11 @@ impl<'a> Installer<'a> {
 
     /// Uninstalls a package version if specified, otherwise it will uninstall the entire package directory.
     pub fn uninstall(&mut self, package_name: &str, version: Option<String>) -> Result<()> {
+        // Check if we can write to the prefix directory
+        if !self.can_write_prefix_dir()? {
+            return Err(InstallerError::PermissionsError);
+        }
+
         // Check if the current package to delete is a dependency, if so, give dependency error
         if self.installed_storage.is_dependency(package_name) {
             return Err(InstallerError::DependencyError {
@@ -269,5 +279,12 @@ impl<'a> Installer<'a> {
         }
 
         Ok(())
+    }
+
+    fn can_write_prefix_dir(&self) -> Result<bool> {
+        let metadata = fs::metadata(&self.config.prefix_directory)?;
+        let permissions = metadata.permissions();
+
+        Ok(!permissions.readonly())
     }
 }
