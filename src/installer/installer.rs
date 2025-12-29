@@ -312,9 +312,10 @@ impl<'a> Installer<'a> {
                 // If we want to keep subdirectories, create the symlinks for the subdirectory
                 if keep_subdirectories {
                     self.create_folder_symlinks(&file.path(), &destination, true)?;
+                } else {
+                    dbg!("Skipping subdirectory", file);
                 }
 
-                dbg!("Skipping subdirectory", file);
                 continue;
             }
 
