@@ -20,7 +20,7 @@ pub trait RepositoryProvider {
     fn read_package_version(&self, package: &str, version: &str) -> Result<PackageVersion>;
 
     /// Reads the requested script from the repository.
-    fn read_script(&self, package: &str, version: &str, script_name: &str) -> Result<Option<String>>;
+    fn read_script(&self, package: &str, script_path: &str) -> Result<Option<String>>;
 }
 
 /// Creates a repository provider for the given repository.

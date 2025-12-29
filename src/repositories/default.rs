@@ -35,8 +35,8 @@ impl RepositoryProvider for DefaultProvider {
         Ok(toml::de::from_str(&data)?)
     }
 
-    fn read_script(&self, package: &str, version: &str, script_name: &str) -> Result<Option<String>> {
-        let response = reqwest::blocking::get(format!("{}/packages/{package}/{version}/{script_name}", self.url))?;
+    fn read_script(&self, package: &str, script_path: &str) -> Result<Option<String>> {
+        let response = reqwest::blocking::get(format!("{}/packages/{package}/{script_path}", self.url))?;
 
         if response.status() == StatusCode::NOT_FOUND {
             return Ok(None);
