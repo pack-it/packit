@@ -253,32 +253,18 @@ impl<'a> Installer<'a> {
     fn create_symlinks(&self, package_directory: &Path) -> Result<()> {
         let prefix_dir = Path::new(&self.config.prefix_directory);
 
-        // Symlink directories bin, include and lib
-        for dir_name in vec!["bin", "include", "lib"] {
+        // Symlink directories bin, include, lib and share
+        for dir_name in vec!["bin", "include", "lib", "share"] {
             let package_dir_path = package_directory.join(dir_name);
             let prefix_dir_path = prefix_dir.join(dir_name);
 
-            self.create_folder_symlinks(&package_dir_path, &prefix_dir_path)?;
-        }
-
-        // Symlink man page directories
-        let prefix_man_dir = prefix_dir.join("share").join("man");
-        let package_man_dir = package_directory.join("share").join("man");
-        if package_man_dir.exists() {
-            for man_dir in fs::read_dir(&package_man_dir)? {
-                let man_dir = man_dir?;
-
-                let package_dir_path = package_man_dir.join(man_dir.file_name());
-                let prefix_dir_path = prefix_man_dir.join(man_dir.file_name());
-
-                self.create_folder_symlinks(&package_dir_path, &prefix_dir_path)?;
-            }
+            self.create_folder_symlinks(&package_dir_path, &prefix_dir_path, true)?;
         }
 
         Ok(())
     }
 
-    fn create_folder_symlinks(&self, source_dir: &Path, destination_dir: &Path) -> Result<()> {
+    fn create_folder_symlinks(&self, source_dir: &Path, destination_dir: &Path, keep_subdirectories: bool) -> Result<()> {
         // Create destination if it does not exist
         if !destination_dir.exists() {
             fs::create_dir_all(&destination_dir)?;
@@ -294,6 +280,17 @@ impl<'a> Installer<'a> {
             let file = file?;
 
             let destination = destination_dir.join(file.file_name());
+
+            // Handle directories
+            if file.file_type()?.is_dir() {
+                // If we want to keep subdirectories, create the symlinks for the subdirectory
+                if keep_subdirectories {
+                    self.create_folder_symlinks(&file.path(), &destination, true)?;
+                }
+
+                dbg!("Skipping subdirectory", file);
+                continue;
+            }
 
             // Check if file already exists
             if fs::exists(&destination)? {
