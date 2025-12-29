@@ -26,6 +26,9 @@ pub enum ScriptError {
 
     #[error("Cannot find script '{0}'")]
     ScriptNotFound(String),
+
+    #[error("Script executed with status code {0}")]
+    ScriptFailed(i32),
 }
 
 /// Saves the given script text to the given destination.
@@ -96,12 +99,19 @@ pub fn run_script<P: AsRef<Path>>(path: &str, run_dir: P, config: &Config, env_v
 
     // Display status to user
     match output.status.code() {
-        Some(0) => println!("Script executed succesfully."),
-        Some(code) => cli::display_warning(&format!("Script executed with status code {code}")),
-        None => cli::display_warning("Script executed without a status code"),
+        Some(0) => {
+            println!("Script executed succesfully.");
+            Ok(())
+        },
+        Some(code) => {
+            cli::display_warning(&format!("Script executed with status code {code}"));
+            Err(ScriptError::ScriptFailed(code))
+        },
+        None => {
+            cli::display_warning("Script executed without a status code");
+            Err(ScriptError::ScriptFailed(-1))
+        },
     }
-
-    Ok(())
 }
 
 fn to_absolute_path<P: AsRef<Path>>(path: P) -> Result<PathBuf, ScriptError> {
