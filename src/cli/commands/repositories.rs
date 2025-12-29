@@ -1,5 +1,8 @@
 use crate::{
-    cli::{self, commands::HandleCommand, error::CommandError},
+    cli::{
+        self,
+        commands::{CommandError, HandleCommand},
+    },
     config::Config,
     repositories::manager::RepositoryManager,
 };

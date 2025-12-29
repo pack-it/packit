@@ -4,15 +4,28 @@ mod repositories;
 mod uninstall;
 
 use clap::{Parser, Subcommand};
+use thiserror::Error;
 
 use crate::{
-    cli::{
-        commands::{install::InstallArgs, list::ListArgs, repositories::RepositoryArgs, uninstall::UninstallArgs},
-        error::CommandError,
-    },
+    cli::commands::{install::InstallArgs, list::ListArgs, repositories::RepositoryArgs, uninstall::UninstallArgs},
     config::Config,
+    installed_packages::InstalledPackagesError,
+    installer::error::InstallerError,
     repositories::manager::RepositoryManager,
+    verifier::VerifierError,
 };
+
+#[derive(Error, Debug)]
+pub enum CommandError {
+    #[error("Error in installer: {0}")]
+    InstallerError(#[from] InstallerError),
+
+    #[error("Error while retrieving installed packages info: {0}")]
+    InstalledPackagesError(#[from] InstalledPackagesError),
+
+    #[error("Cannot read install directory: {0}")]
+    VerifierError(#[from] VerifierError),
+}
 
 #[derive(Parser, Debug)]
 #[command(name = "Packit", version, about)]

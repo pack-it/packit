@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use clap::Args;
 
 use crate::{
-    cli::{commands::HandleCommand, error::CommandError},
+    cli::commands::{CommandError, HandleCommand},
     config::Config,
     installed_packages::InstalledPackageStorage,
     repositories::manager::RepositoryManager,

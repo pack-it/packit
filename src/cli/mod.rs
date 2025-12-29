@@ -1,6 +1,5 @@
 pub mod commands;
 mod display;
-mod error;
 mod prompts;
 mod reader;
 mod spinner;
