@@ -10,6 +10,9 @@ pub enum InstallerError {
     #[error("Platform not found in targets.")]
     TargetError,
 
+    #[error("Cannot write prefix directory due to incorrect permissions.")]
+    PermissionsError,
+
     #[error("Cannot request files for installation: {0}")]
     RequestError(#[from] reqwest::Error),
 

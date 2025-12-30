@@ -7,7 +7,7 @@ use std::{
 
 use thiserror::Error;
 
-use crate::{cli, config::Config, target_architecture::TARGET_ARCHITECTURE};
+use crate::{cli, config::Config, platforms::TARGET_ARCHITECTURE};
 
 /// The errors that occur during script handling.
 #[derive(Error, Debug)]
@@ -26,6 +26,9 @@ pub enum ScriptError {
 
     #[error("Cannot find script '{0}'")]
     ScriptNotFound(String),
+
+    #[error("Script executed with status code {0}")]
+    ScriptFailed(i32),
 }
 
 /// Saves the given script text to the given destination.
@@ -102,7 +105,7 @@ pub fn run_script<P: AsRef<Path>>(
         .current_dir(run_dir)
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
-        .env("PACKIT_INSTALL_PATH", &config.install_directory)
+        .env("PACKIT_PREFIX_PATH", &config.prefix_directory)
         .env("PACKIT_TARGET", TARGET_ARCHITECTURE);
 
     for (key, value) in env_vars {
@@ -120,12 +123,19 @@ pub fn run_script<P: AsRef<Path>>(
 
     // Display status to user
     match output.status.code() {
-        Some(0) => println!("Script executed succesfully."),
-        Some(code) => cli::display_warning(&format!("Script executed with status code {code}")),
-        None => cli::display_warning("Script executed without a status code"),
+        Some(0) => {
+            println!("Script executed succesfully.");
+            Ok(())
+        },
+        Some(code) => {
+            cli::display_warning(&format!("Script executed with status code {code}"));
+            Err(ScriptError::ScriptFailed(code))
+        },
+        None => {
+            cli::display_warning("Script executed without a status code");
+            Err(ScriptError::ScriptFailed(-1))
+        },
     }
-
-    Ok(())
 }
 
 fn to_absolute_path<P: AsRef<Path>>(path: P) -> Result<PathBuf, ScriptError> {

@@ -1,13 +1,14 @@
 mod install;
 mod list;
 mod repositories;
+mod search;
 mod uninstall;
 
 use clap::{Parser, Subcommand};
 use thiserror::Error;
 
 use crate::{
-    cli::commands::{install::InstallArgs, list::ListArgs, repositories::RepositoryArgs, uninstall::UninstallArgs},
+    cli::commands::{install::InstallArgs, list::ListArgs, repositories::RepositoryArgs, search::SearchArgs, uninstall::UninstallArgs},
     config::Config,
     installed_packages::InstalledPackagesError,
     installer::error::InstallerError,
@@ -48,6 +49,9 @@ enum Commands {
 
     /// List all configured repositories
     Repositories(RepositoryArgs),
+
+    /// Search a certain package
+    Search(SearchArgs),
 }
 
 impl Cli {
@@ -63,6 +67,7 @@ impl Cli {
             Commands::Uninstall(args) => args,
             Commands::List(args) => args,
             Commands::Repositories(args) => args,
+            Commands::Search(args) => args,
         };
 
         args.handle(config, manager)?;

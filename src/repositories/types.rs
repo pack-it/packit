@@ -30,6 +30,9 @@ pub struct PackageVersion {
     pub build_dependencies: Vec<String>,
     pub targets: HashMap<String, PackageTarget>,
 
+    #[serde(default = "PackageVersion::default_skip_symlinking")]
+    pub skip_symlinking: bool,
+
     #[serde(default)]
     pub script_args: HashMap<String, String>,
 
@@ -72,6 +75,10 @@ impl PackageVersion {
         Some(self.get_script_name(self.use_version_specific_postinstall, &target.postinstall_script, "postinstall"))
     }
 
+    fn default_skip_symlinking() -> bool {
+        false
+    }
+
     fn default_use_version_specific() -> bool {
         false
     }
@@ -87,6 +94,8 @@ pub struct PackageTarget {
 
     #[serde(default)]
     pub build_dependencies: Vec<String>,
+
+    pub skip_symlinking: Option<bool>,
 
     #[serde(default)]
     pub script_args: HashMap<String, String>,

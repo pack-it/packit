@@ -7,7 +7,6 @@ use crate::{
     config::Config,
     installed_packages::InstalledPackageStorage,
     repositories::manager::RepositoryManager,
-    utils::constants::INSTALLED_DIR,
     verifier::get_packages,
 };
 
@@ -23,7 +22,7 @@ pub struct ListArgs {
 
 impl HandleCommand for ListArgs {
     fn handle(&self, config: &Config, _: &RepositoryManager) -> Result<(), CommandError> {
-        let installed_dir = config.install_directory.to_string() + INSTALLED_DIR;
+        let installed_dir = InstalledPackageStorage::get_default_path();
         let installed_storage = InstalledPackageStorage::from(&installed_dir)?;
 
         if self.use_dir {

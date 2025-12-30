@@ -1,5 +1,5 @@
 use crate::{
-    cli::{ask_user, QuestionResponse, Spinner},
+    cli::{self, ask_user, QuestionResponse, Spinner},
     config::Config,
     installed_packages::InstalledPackageStorage,
     installer::{
@@ -7,11 +7,11 @@ use crate::{
         scripts::{self, ScriptError, SCRIPT_EXTENSION},
         unpack::unpack,
     },
+    platforms::{symlink, TARGET_ARCHITECTURE},
     repositories::manager::RepositoryManager,
-    target_architecture::TARGET_ARCHITECTURE,
 };
 
-use std::fs;
+use std::{fs, path::Path};
 
 /// The installer of Packit, managing the installation of packages on the system.
 pub struct Installer<'a> {
@@ -32,6 +32,11 @@ impl<'a> Installer<'a> {
 
     /// Installs the given package and its dependencies.
     pub fn install(&mut self, package_name: &str, version: &Option<String>) -> Result<()> {
+        // Check if we can write to the prefix directory
+        if !self.can_write_prefix_dir()? {
+            return Err(InstallerError::PermissionsError);
+        }
+
         let (repository_id, package) = self.repository_manager.read_package(package_name)?;
 
         // Use the latest version if the version isn't specified
@@ -82,8 +87,9 @@ impl<'a> Installer<'a> {
         let unpack_directory = format!("{}/{path_suffix}", self.config.temp_directory);
         unpack(bytes, &unpack_directory)?;
 
-        let install_directory = format!("{}/{path_suffix}", self.config.install_directory);
+        let install_directory = format!("{}/packages/{path_suffix}", self.config.prefix_directory);
 
+        // TODO: Check for collisions in script args chain
         let args = package_version
             .script_args
             .iter()
@@ -104,9 +110,15 @@ impl<'a> Installer<'a> {
             .ok_or(ScriptError::ScriptNotFound("build".into()))?;
         scripts::run_build_script(&build_script_path, &unpack_directory, self.config, &install_directory, &args)?;
 
+        // Check if symlinking should be skipped
+        let skip_symlinking = match target.skip_symlinking {
+            Some(skip_symlinking) => skip_symlinking,
+            None => package_version.skip_symlinking,
+        };
+
         // Add and save package to installed storage toml
         let source_repository = self.config.repositories.get(&repository_id).expect("Expected repository in config");
-        self.installed_storage.add_package(&package, &package_version, source_repository, &install_directory);
+        self.installed_storage.add_package(&package, &package_version, source_repository, &install_directory, !skip_symlinking);
 
         // Download and run post install script if it exists
         let script_name = package_version.get_postinstall_script_name(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
@@ -114,11 +126,21 @@ impl<'a> Installer<'a> {
             scripts::run_post_script(&script_path, &install_directory, self.config, &args)?;
         }
 
+        // Create symlinks for package
+        if !skip_symlinking {
+            self.create_symlinks(Path::new(&install_directory))?;
+        }
+
         Ok(())
     }
 
     /// Uninstalls a package version if specified, otherwise it will uninstall the entire package directory.
     pub fn uninstall(&mut self, package_name: &str, version: &Option<String>) -> Result<()> {
+        // Check if we can write to the prefix directory
+        if !self.can_write_prefix_dir()? {
+            return Err(InstallerError::PermissionsError);
+        }
+
         // Check if the current package to delete is a dependency, if so, give dependency error
         if self.installed_storage.is_dependency(package_name) {
             return Err(InstallerError::DependencyError {
@@ -150,20 +172,30 @@ impl<'a> Installer<'a> {
             });
         }
 
+        // TODO: refactor this expect
+        let installed_package =
+            self.installed_storage.get_package(package_name, &version).expect("Expected package to exist at this point.");
+
         // Give an error when the user tries to uninstall an external package
-        if self.installed_storage.get_package(package_name, &version).expect("Expected package to exist at this point.").external {
+        if installed_package.external {
             return Err(InstallerError::ExternalError {
                 package_name: package_name.into(),
             });
         }
 
+        // Check if the package was symlinked
+        if installed_package.symlinked {
+            //TODO
+            cli::display_warning("Package was symlinked, symlink deletion is not yet implemented!");
+        }
+
         // Remove entire package directory if there is only one version
         let directory: String;
         if installed_versions.len() == 1 {
-            directory = self.config.install_directory.to_string() + "/" + package_name;
+            directory = self.config.prefix_directory.to_string() + "/packages/" + package_name;
         } else {
             // The remove directory of a specific package version
-            directory = self.config.install_directory.to_string() + "/" + package_name + "/" + version;
+            directory = self.config.prefix_directory.to_string() + "/packages/" + package_name + "/" + version;
         }
 
         // Delete the determined directory
@@ -194,7 +226,7 @@ impl<'a> Installer<'a> {
             return Ok(());
         }
 
-        // Make sure at least on version exists
+        // Make sure at least one version exists
         if installed_versions.is_empty() {
             return Err(InstallerError::InstalledExistError {
                 package_name: package_name.into(),
@@ -202,8 +234,16 @@ impl<'a> Installer<'a> {
             });
         }
 
+        // Check if package was symlinked
+        for package_version in &installed_versions {
+            if package_version.symlinked {
+                //TODO
+                cli::display_warning("Package was symlinked, symlink deletion is not yet implemented!");
+            }
+        }
+
         // Delete the determined directory
-        let directory = self.config.install_directory.to_string() + "/" + package_name;
+        let directory = self.config.prefix_directory.to_string() + "/packages/" + package_name;
         self.remove_dir_all(&directory, package_name)?;
 
         // Delete the installed package from toml
@@ -244,5 +284,73 @@ impl<'a> Installer<'a> {
 
         // Script succesfully downloaded, so return script location
         Ok(Some(script_destination))
+    }
+
+    fn create_symlinks(&self, package_directory: &Path) -> Result<()> {
+        let prefix_dir = Path::new(&self.config.prefix_directory);
+
+        // Symlink directories bin, include, lib and share
+        for dir_name in vec!["bin", "include", "lib", "share"] {
+            let package_dir_path = package_directory.join(dir_name);
+            let prefix_dir_path = prefix_dir.join(dir_name);
+
+            self.create_folder_symlinks(&package_dir_path, &prefix_dir_path, true)?;
+        }
+
+        Ok(())
+    }
+
+    fn create_folder_symlinks(&self, source_dir: &Path, destination_dir: &Path, keep_subdirectories: bool) -> Result<()> {
+        // Create destination if it does not exist
+        if !destination_dir.exists() {
+            fs::create_dir_all(&destination_dir)?;
+        }
+
+        // Skip symlinking if source does not exist
+        if !source_dir.exists() {
+            return Ok(());
+        }
+
+        // Symlink files
+        for file in fs::read_dir(source_dir)? {
+            let file = file?;
+
+            let destination = destination_dir.join(file.file_name());
+
+            // Handle directories
+            if file.file_type()?.is_dir() {
+                // If we want to keep subdirectories, create the symlinks for the subdirectory
+                if keep_subdirectories {
+                    self.create_folder_symlinks(&file.path(), &destination, true)?;
+                } else {
+                    dbg!("Skipping subdirectory", file);
+                }
+
+                continue;
+            }
+
+            // Check if file already exists
+            if fs::exists(&destination)? {
+                println!("WARNING: symlink {:?} already exists in {:?}", file.file_name(), destination_dir);
+                continue;
+            }
+
+            // Symlink file in destination directory
+            symlink::create_symlink(&file.path(), &destination)?;
+        }
+
+        Ok(())
+    }
+
+    fn can_write_prefix_dir(&self) -> Result<bool> {
+        if !fs::exists(&self.config.prefix_directory)? {
+            return Ok(false);
+        }
+
+        let metadata = fs::metadata(&self.config.prefix_directory)?;
+        let permissions = metadata.permissions();
+
+        // TODO: Use something else then readonly, because it can be different for super user and group
+        Ok(!permissions.readonly())
     }
 }

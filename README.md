@@ -20,6 +20,9 @@ Lists all the installed packages. `-u` specifies the use of the install director
 #### `pit repositories`
 Lists all configured repositories.
 
+#### `pit search <PACKAGE-NAME> [<VERSION>]`
+Searches a package with `<PACKAGE-NAME>`. If the version is given Packit will search for that specific version.
+
 ## File structure
 You might be interested in how (and why) Packit manages build dependencies, configs and most importantly the installs. We explain that here, ofcourse this differs a bit for each platform as they have different file structures. Luckly Packit manages this for you!
 

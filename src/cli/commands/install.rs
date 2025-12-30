@@ -6,7 +6,6 @@ use crate::{
     installed_packages::InstalledPackageStorage,
     installer::installer::Installer,
     repositories::manager::RepositoryManager,
-    utils::constants::INSTALLED_DIR,
 };
 
 #[derive(Args, Debug)]
@@ -21,7 +20,7 @@ pub struct InstallArgs {
 
 impl HandleCommand for InstallArgs {
     fn handle(&self, config: &Config, manager: &RepositoryManager) -> Result<(), CommandError> {
-        let installed_dir = config.install_directory.to_string() + INSTALLED_DIR;
+        let installed_dir = InstalledPackageStorage::get_default_path();
         let mut installed_storage = InstalledPackageStorage::from(&installed_dir)?;
 
         if installed_storage.get_package_versions(&self.package_name).len() >= 1 {
