@@ -89,6 +89,7 @@ impl<'a> Installer<'a> {
 
         let install_directory = format!("{}/packages/{path_suffix}", self.config.prefix_directory);
 
+        // TODO: Check for collisions in script args chain
         let args = package_version
             .script_args
             .iter()
@@ -225,7 +226,7 @@ impl<'a> Installer<'a> {
             return Ok(());
         }
 
-        // Make sure at least on version exists
+        // Make sure at least one version exists
         if installed_versions.is_empty() {
             return Err(InstallerError::InstalledExistError {
                 package_name: package_name.into(),
@@ -349,6 +350,7 @@ impl<'a> Installer<'a> {
         let metadata = fs::metadata(&self.config.prefix_directory)?;
         let permissions = metadata.permissions();
 
+        // TODO: Use something else then readonly, because it can be different for super user and group
         Ok(!permissions.readonly())
     }
 }
