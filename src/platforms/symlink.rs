@@ -21,3 +21,9 @@ pub fn create_symlink(source: &Path, destination: &Path) -> Result<(), std::io::
 pub fn create_symlink(source: &Path, destination: &Path) -> Result<(), std::io::Error> {
     panic!("Cannot create link for target, target is not supported.");
 }
+
+pub fn remove_symlink(symlink: &Path) -> Result<(), std::io::Error> {
+    std::fs::remove_file(symlink)?;
+
+    Ok(())
+}
