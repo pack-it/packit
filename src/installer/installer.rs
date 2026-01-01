@@ -131,6 +131,12 @@ impl<'a> Installer<'a> {
             self.create_symlinks(Path::new(&install_directory))?;
         }
 
+        // Download and run test script if it exists
+        let script_name = package_version.get_test_script_name(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
+        if let Some(script_path) = self.download_script("test", &script_name, package_name, &version, &repository_id)? {
+            scripts::run_test_script(&script_path, &install_directory, self.config, &args)?;
+        }
+
         Ok(())
     }
 

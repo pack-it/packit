@@ -37,13 +37,16 @@ pub struct PackageVersion {
     pub script_args: HashMap<String, String>,
 
     #[serde(default = "PackageVersion::default_use_version_specific")]
-    pub use_version_specific_preinstall: bool,
-
-    #[serde(default = "PackageVersion::default_use_version_specific")]
     pub use_version_specific_build: bool,
 
     #[serde(default = "PackageVersion::default_use_version_specific")]
+    pub use_version_specific_preinstall: bool,
+
+    #[serde(default = "PackageVersion::default_use_version_specific")]
     pub use_version_specific_postinstall: bool,
+
+    #[serde(default = "PackageVersion::default_use_version_specific")]
+    pub use_version_specific_test: bool,
 }
 
 impl PackageVersion {
@@ -57,22 +60,28 @@ impl PackageVersion {
         }
     }
 
-    pub fn get_preinstall_script_name(&self, target_name: &str) -> Option<String> {
-        let target = self.targets.get(target_name)?;
-
-        Some(self.get_script_name(self.use_version_specific_preinstall, &target.preinstall_script, "preinstall"))
-    }
-
     pub fn get_build_script_name(&self, target_name: &str) -> Option<String> {
         let target = self.targets.get(target_name)?;
 
         Some(self.get_script_name(self.use_version_specific_build, &target.build_script, "build"))
     }
 
+    pub fn get_preinstall_script_name(&self, target_name: &str) -> Option<String> {
+        let target = self.targets.get(target_name)?;
+
+        Some(self.get_script_name(self.use_version_specific_preinstall, &target.preinstall_script, "preinstall"))
+    }
+
     pub fn get_postinstall_script_name(&self, target_name: &str) -> Option<String> {
         let target = self.targets.get(target_name)?;
 
         Some(self.get_script_name(self.use_version_specific_postinstall, &target.postinstall_script, "postinstall"))
+    }
+
+    pub fn get_test_script_name(&self, target_name: &str) -> Option<String> {
+        let target = self.targets.get(target_name)?;
+
+        Some(self.get_script_name(self.use_version_specific_test, &target.test_script, "test"))
     }
 
     fn default_skip_symlinking() -> bool {
@@ -103,6 +112,7 @@ pub struct PackageTarget {
     pub build_script: Option<Script>,
     pub preinstall_script: Option<Script>,
     pub postinstall_script: Option<Script>,
+    pub test_script: Option<Script>,
 }
 
 #[derive(Deserialize, Debug)]
