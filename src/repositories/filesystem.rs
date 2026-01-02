@@ -7,6 +7,7 @@ use crate::{
         provider::RepositoryProvider,
         types::{Package, PackageVersion, RepositoryMetadata},
     },
+    version::Version,
 };
 
 pub const FILESYSTEM_PROVIDER_ID: &str = "fs";
@@ -29,7 +30,7 @@ impl RepositoryProvider for FileSystemProvider {
         Ok(toml::de::from_str(&data)?)
     }
 
-    fn read_package_version(&self, package: &str, version: &str) -> Result<PackageVersion> {
+    fn read_package_version(&self, package: &str, version: &Version) -> Result<PackageVersion> {
         let data = fs::read_to_string(format!("{}/packages/{package}/{version}/targets.toml", self.path))?;
 
         Ok(toml::de::from_str(&data)?)

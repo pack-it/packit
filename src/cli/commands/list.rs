@@ -13,7 +13,7 @@ use crate::{
 #[derive(Args, Debug)]
 pub struct ListArgs {
     /// Directory to list all packages of (OPTIONAL)
-    directory: Option<PathBuf>, // TODO: Unused atm
+    directory: Option<PathBuf>, // TODO: Not implemented yet, for when language package support exists
 
     /// Flag to indicate a full check (actually check packit install directory)
     #[arg(short, long)]

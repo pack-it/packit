@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::Deserialize;
 
-use crate::installer::scripts::SCRIPT_EXTENSION;
+use crate::{dependency::Dependency, installer::scripts::SCRIPT_EXTENSION, version::Version};
 
 /// Represents the repository metadata, containing repository information.
 #[derive(Deserialize, Debug)]
@@ -19,15 +19,16 @@ pub struct Package {
     pub description: String,
     pub homepage: Option<String>,
     pub versions: Vec<String>,
-    pub latest_versions: HashMap<String, String>,
+    pub latest_versions: HashMap<String, Version>,
 }
 
 /// Represents the package version metadata, containing dependencies and targets.
 #[derive(Deserialize, Debug)]
 pub struct PackageVersion {
-    pub version: String,
-    pub dependencies: Vec<String>,
-    pub build_dependencies: Vec<String>,
+    pub version: Version,
+
+    pub dependencies: Vec<Dependency>,
+    pub build_dependencies: Vec<Dependency>,
     pub targets: HashMap<String, PackageTarget>,
 
     #[serde(default = "PackageVersion::default_skip_symlinking")]
@@ -99,10 +100,10 @@ pub struct PackageTarget {
     pub url: String,
 
     #[serde(default)]
-    pub dependencies: Vec<String>,
+    pub dependencies: Vec<Dependency>,
 
     #[serde(default)]
-    pub build_dependencies: Vec<String>,
+    pub build_dependencies: Vec<Dependency>,
 
     pub skip_symlinking: Option<bool>,
 

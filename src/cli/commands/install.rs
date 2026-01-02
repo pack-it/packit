@@ -6,6 +6,7 @@ use crate::{
     installed_packages::InstalledPackageStorage,
     installer::installer::Installer,
     repositories::manager::RepositoryManager,
+    version::Version,
 };
 
 #[derive(Args, Debug)]
@@ -15,7 +16,7 @@ pub struct InstallArgs {
 
     /// The version of the package to install
     #[arg(short, long)]
-    pub version: Option<String>,
+    pub version: Option<Version>,
 }
 
 impl HandleCommand for InstallArgs {

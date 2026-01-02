@@ -25,10 +25,10 @@ pub enum InstallerError {
         e: std::io::Error,
     },
 
-    #[error("Installed package '{package_name} {version}' does not exist.")]
+    #[error("Installed package '{package_name} {}' does not exist.", version.clone().unwrap_or_default())]
     InstalledExistError {
         package_name: String,
-        version: String,
+        version: Option<String>,
     },
 
     #[error("Cannot delete package, '{package_name}' is a dependency.")]

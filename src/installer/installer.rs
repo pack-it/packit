@@ -9,6 +9,7 @@ use crate::{
     },
     platforms::{symlink, TARGET_ARCHITECTURE},
     repositories::manager::RepositoryManager,
+    version::Version,
 };
 
 use std::{fs, path::Path};
@@ -31,7 +32,7 @@ impl<'a> Installer<'a> {
     }
 
     /// Installs the given package and its dependencies.
-    pub fn install(&mut self, package_name: &str, version: &Option<String>) -> Result<()> {
+    pub fn install(&mut self, package_name: &str, version: &Option<Version>) -> Result<()> {
         // Check if we can write to the prefix directory
         if !self.can_write_prefix_dir()? {
             return Err(InstallerError::PermissionsError);
@@ -47,7 +48,7 @@ impl<'a> Installer<'a> {
 
         // Check if this package version is already installed
         if self.installed_storage.get_package(package_name, &version).is_some() {
-            println!("Dependency '{} {}' already satisfied, continuing", package_name, version);
+            println!("Package '{} {}' already installed.", package_name, version);
             return Ok(());
         }
 
@@ -61,14 +62,24 @@ impl<'a> Installer<'a> {
         // Install global package dependencies and platform specific packages (if there are any, can be empty)
         let dependencies = package_version.dependencies.iter().chain(target.dependencies.iter());
         for dependency in dependencies {
-            self.install(dependency, &None)?;
+            if self.installed_storage.dependency_satisfied(dependency) {
+                println!("Dependency '{}' already satisfied, continuing", dependency.get_name());
+                continue;
+            }
+
+            self.install(dependency.get_name(), &dependency.get_highest_version().cloned())?;
         }
 
         // Install global package build dependencies and platform specific build dependencies
         let build_dependencies = package_version.build_dependencies.iter().chain(target.build_dependencies.iter());
         for build_dependency in build_dependencies {
+            if self.installed_storage.dependency_satisfied(build_dependency) {
+                println!("Dependency '{}' already satisfied, continuing", build_dependency.get_name());
+                continue;
+            }
+
             // TODO: Delete build dependencies later, somewhere
-            self.install(build_dependency, &None)?;
+            self.install(build_dependency.get_name(), &build_dependency.get_highest_version().cloned())?;
         }
 
         // Show download
@@ -141,14 +152,14 @@ impl<'a> Installer<'a> {
     }
 
     /// Uninstalls a package version if specified, otherwise it will uninstall the entire package directory.
-    pub fn uninstall(&mut self, package_name: &str, version: &Option<String>) -> Result<()> {
+    pub fn uninstall(&mut self, package_name: &str, version: &Option<Version>) -> Result<()> {
         // Check if we can write to the prefix directory
         if !self.can_write_prefix_dir()? {
             return Err(InstallerError::PermissionsError);
         }
 
         // Check if the current package to delete is a dependency, if so, give dependency error
-        if self.installed_storage.is_dependency(package_name) {
+        if self.installed_storage.is_dependency(package_name, version) {
             return Err(InstallerError::DependencyError {
                 package_name: package_name.into(),
             });
@@ -167,14 +178,14 @@ impl<'a> Installer<'a> {
 
     /// Checks if the directory exists. If so, it gets the remove directory for a package version, if there only exists one
     /// version it will return the package directory.
-    fn uninstall_single(&mut self, package_name: &str, version: &String) -> Result<()> {
+    fn uninstall_single(&mut self, package_name: &str, version: &Version) -> Result<()> {
         let installed_versions = self.installed_storage.get_package_versions(package_name);
 
         // Check if the specified package version exists.
         if !installed_versions.iter().any(|package| package.version == *version) {
             return Err(InstallerError::InstalledExistError {
                 package_name: package_name.into(),
-                version: version.clone(),
+                version: Some(version.to_string()),
             });
         }
 
@@ -196,12 +207,13 @@ impl<'a> Installer<'a> {
         }
 
         // Remove entire package directory if there is only one version
+        // TODO: Use join instead
         let directory: String;
         if installed_versions.len() == 1 {
             directory = self.config.prefix_directory.to_string() + "/packages/" + package_name;
         } else {
             // The remove directory of a specific package version
-            directory = self.config.prefix_directory.to_string() + "/packages/" + package_name + "/" + version;
+            directory = self.config.prefix_directory.to_string() + "/packages/" + package_name + "/" + &version.to_string();
         }
 
         // Delete the determined directory
@@ -236,7 +248,7 @@ impl<'a> Installer<'a> {
         if installed_versions.is_empty() {
             return Err(InstallerError::InstalledExistError {
                 package_name: package_name.into(),
-                version: "any".to_string(),
+                version: None,
             });
         }
 
@@ -275,7 +287,7 @@ impl<'a> Installer<'a> {
         script_name: &str,
         script_path: &str,
         package_name: &str,
-        version: &str,
+        version: &Version,
         repository_id: &str,
     ) -> Result<Option<String>> {
         let script_destination = format!(
