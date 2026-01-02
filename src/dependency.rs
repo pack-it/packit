@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{fmt::Display, str::FromStr};
 
 use serde::{de, Deserialize, Serialize};
 use thiserror::Error;
@@ -105,7 +105,36 @@ impl Serialize for Dependency {
     where
         S: serde::Serializer,
     {
-        serializer.collect_str(&self.as_str())
+        serializer.collect_str(&self.to_string())
+    }
+}
+
+impl Display for Dependency {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // Return only the name if the version isn't specified
+        if self.version_ranges.is_empty() {
+            write!(f, "{}", self.name);
+            return Ok(());
+        }
+
+        let mut string_version = String::new();
+        for range in &self.version_ranges {
+            if !string_version.is_empty() {
+                string_version.push('|');
+            }
+
+            match range {
+                VersionBounds::Range(lower, upper) => string_version.push_str(&format!("{}-{}", lower.to_string(), upper.to_string())),
+                VersionBounds::Lower(version) => string_version.push_str(&format!("<{}", version.to_string())),
+                VersionBounds::LowerEqual(version) => string_version.push_str(&format!("<={}", version.to_string())),
+                VersionBounds::Higher(version) => string_version.push_str(&format!(">{}", version.to_string())),
+                VersionBounds::HigherEqual(version) => string_version.push_str(&format!(">={}", version.to_string())),
+                VersionBounds::Equal(version) => string_version.push_str(&format!("={}", version.to_string())),
+            }
+        }
+
+        write!(f, "{}", self.name.clone() + "@" + &string_version);
+        Ok(())
     }
 }
 
@@ -160,31 +189,5 @@ impl Dependency {
         }
 
         current_highest
-    }
-
-    // TODO: Use trait
-    pub fn as_str(&self) -> String {
-        // Return only the name if the version isn't specified
-        if self.version_ranges.is_empty() {
-            return self.name.clone();
-        }
-
-        let mut string_version = String::new();
-        for range in &self.version_ranges {
-            if !string_version.is_empty() {
-                string_version.push('|');
-            }
-
-            match range {
-                VersionBounds::Range(lower, upper) => string_version.push_str(&format!("{}-{}", lower.to_string(), upper.to_string())),
-                VersionBounds::Lower(version) => string_version.push_str(&format!("<{}", version.to_string())),
-                VersionBounds::LowerEqual(version) => string_version.push_str(&format!("<={}", version.to_string())),
-                VersionBounds::Higher(version) => string_version.push_str(&format!(">{}", version.to_string())),
-                VersionBounds::HigherEqual(version) => string_version.push_str(&format!(">={}", version.to_string())),
-                VersionBounds::Equal(version) => string_version.push_str(&format!("={}", version.to_string())),
-            }
-        }
-
-        self.name.clone() + "@" + &string_version
     }
 }
