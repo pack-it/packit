@@ -11,10 +11,7 @@ use crate::{
     repositories::manager::RepositoryManager,
 };
 
-use std::{
-    fs,
-    path::{Path, PathBuf},
-};
+use std::{fs, path::Path};
 
 /// The installer of Packit, managing the installation of packages on the system.
 pub struct Installer<'a> {
@@ -197,7 +194,7 @@ impl<'a> Installer<'a> {
 
         // Check if the package was symlinked
         if installed_package.symlinked {
-            self.remove_symlinks(Path::new(&directory))?;
+            self.remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&directory))?;
         }
 
         // Delete the determined directory
@@ -242,7 +239,7 @@ impl<'a> Installer<'a> {
         // Check if package was symlinked
         for package_version in &installed_versions {
             if package_version.symlinked {
-                self.remove_symlinks(Path::new(&directory))?;
+                self.remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&directory))?;
             }
         }
 
@@ -344,31 +341,26 @@ impl<'a> Installer<'a> {
         Ok(())
     }
 
-    fn remove_symlinks(&self, destination_dir: &Path) -> Result<()> {
-        let symlinks = self.find_symlinks(Path::new(&self.config.prefix_directory), destination_dir)?;
-        for symlink in symlinks {
-            symlink::remove_symlink(&symlink)?;
-        }
-
-        Ok(())
-    }
-
     /// Searches for symlinks with a certain destination (destinations inside of the destination are also a match).
-    fn find_symlinks(&self, search_dir: &Path, destination_dir: &Path) -> Result<Vec<PathBuf>> {
-        let mut symlinks = Vec::new();
+    fn remove_symlinks(&self, search_dir: &Path, destination_dir: &Path) -> Result<()> {
         for file in fs::read_dir(search_dir)? {
             let file = file?;
 
             if file.file_type()?.is_dir() {
-                symlinks.extend(self.find_symlinks(&file.path(), destination_dir)?);
+                self.remove_symlinks(&file.path(), destination_dir)?;
+
+                // Remove the directory if it is empty after removing symlinks
+                if fs::read_dir(file.path())?.next().is_none() {
+                    fs::remove_dir(file.path())?;
+                }
             }
 
             if file.file_type()?.is_symlink() && fs::read_link(file.path())?.starts_with(destination_dir) {
-                symlinks.push(file.path());
+                symlink::remove_symlink(&file.path())?
             }
         }
 
-        Ok(symlinks)
+        Ok(())
     }
 
     fn can_write_prefix_dir(&self) -> Result<bool> {
