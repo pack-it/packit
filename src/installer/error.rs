@@ -1,7 +1,8 @@
 use thiserror::Error;
 
 use crate::{
-    cli::DisplayError, installed_packages::InstalledPackagesError, installer::scripts::ScriptError, repositories::error::RepositoryError,
+    cli::DisplayError, installed_packages::InstalledPackagesError, installer::scripts::ScriptError, platforms::symlink::SymlinkError,
+    repositories::error::RepositoryError,
 };
 
 /// The errors that occur during installation.
@@ -53,6 +54,9 @@ pub enum InstallerError {
 
     #[error("Cannot execute script: {0}")]
     ScriptError(#[from] ScriptError),
+
+    #[error("Cannot execute symlink opperation: {0}")]
+    SymlinkError(#[from] SymlinkError),
 }
 
 pub(super) type Result<T> = std::result::Result<T, InstallerError>;

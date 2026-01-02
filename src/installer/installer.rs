@@ -240,6 +240,7 @@ impl<'a> Installer<'a> {
         for package_version in &installed_versions {
             if package_version.symlinked {
                 self.remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&directory))?;
+                break;
             }
         }
 
@@ -345,8 +346,9 @@ impl<'a> Installer<'a> {
     fn remove_symlinks(&self, search_dir: &Path, destination_dir: &Path) -> Result<()> {
         for file in fs::read_dir(search_dir)? {
             let file = file?;
+            let file_type = file.file_type()?;
 
-            if file.file_type()?.is_dir() {
+            if file_type.is_dir() {
                 self.remove_symlinks(&file.path(), destination_dir)?;
 
                 // Remove the directory if it is empty after removing symlinks
@@ -355,7 +357,7 @@ impl<'a> Installer<'a> {
                 }
             }
 
-            if file.file_type()?.is_symlink() && fs::read_link(file.path())?.starts_with(destination_dir) {
+            if file_type.is_symlink() && fs::read_link(file.path())?.starts_with(destination_dir) {
                 symlink::remove_symlink(&file.path())?
             }
         }
