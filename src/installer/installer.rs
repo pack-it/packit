@@ -1,5 +1,5 @@
 use crate::{
-    cli::{self, ask_user, QuestionResponse, Spinner},
+    cli::{ask_user, QuestionResponse, Spinner},
     config::Config,
     installed_packages::InstalledPackageStorage,
     installer::{
@@ -182,17 +182,11 @@ impl<'a> Installer<'a> {
         let installed_package =
             self.installed_storage.get_package(package_name, &version).expect("Expected package to exist at this point.");
 
-        // Give an error when the user tries to uninstall an external package
+        // Return an error when the user tries to uninstall an external package
         if installed_package.external {
             return Err(InstallerError::ExternalError {
                 package_name: package_name.into(),
             });
-        }
-
-        // Check if the package was symlinked
-        if installed_package.symlinked {
-            //TODO
-            cli::display_warning("Package was symlinked, symlink deletion is not yet implemented!");
         }
 
         // Remove entire package directory if there is only one version
@@ -202,6 +196,11 @@ impl<'a> Installer<'a> {
         } else {
             // The remove directory of a specific package version
             directory = self.config.prefix_directory.to_string() + "/packages/" + package_name + "/" + version;
+        }
+
+        // Check if the package was symlinked
+        if installed_package.symlinked {
+            self.remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&directory))?;
         }
 
         // Delete the determined directory
@@ -240,16 +239,17 @@ impl<'a> Installer<'a> {
             });
         }
 
+        // Path to the determined directory
+        let directory = self.config.prefix_directory.to_string() + "/packages/" + package_name;
+
         // Check if package was symlinked
         for package_version in &installed_versions {
             if package_version.symlinked {
-                //TODO
-                cli::display_warning("Package was symlinked, symlink deletion is not yet implemented!");
+                self.remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&directory))?;
+                break;
             }
         }
 
-        // Delete the determined directory
-        let directory = self.config.prefix_directory.to_string() + "/packages/" + package_name;
         self.remove_dir_all(&directory, package_name)?;
 
         // Delete the installed package from toml
@@ -343,6 +343,29 @@ impl<'a> Installer<'a> {
 
             // Symlink file in destination directory
             symlink::create_symlink(&file.path(), &destination)?;
+        }
+
+        Ok(())
+    }
+
+    /// Searches for symlinks with a certain destination (destinations inside of the destination are also a match).
+    fn remove_symlinks(&self, search_dir: &Path, destination_dir: &Path) -> Result<()> {
+        for file in fs::read_dir(search_dir)? {
+            let file = file?;
+            let file_type = file.file_type()?;
+
+            if file_type.is_dir() {
+                self.remove_symlinks(&file.path(), destination_dir)?;
+
+                // Remove the directory if it is empty after removing symlinks
+                if fs::read_dir(file.path())?.next().is_none() {
+                    fs::remove_dir(file.path())?;
+                }
+            }
+
+            if file_type.is_symlink() && fs::read_link(file.path())?.starts_with(destination_dir) {
+                symlink::remove_symlink(&file.path())?
+            }
         }
 
         Ok(())
