@@ -1,5 +1,6 @@
 pub mod commands;
 mod display;
+mod progressbar;
 mod prompts;
 mod reader;
 mod spinner;
@@ -14,3 +15,5 @@ pub use prompts::QuestionResponse;
 pub use reader::ReaderWithProgress;
 
 pub use spinner::Spinner;
+
+pub use progressbar::ProgressBar;

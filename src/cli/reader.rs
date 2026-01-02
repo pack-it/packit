@@ -1,6 +1,6 @@
 use std::io::{self, Read};
 
-use indicatif::{ProgressBar, ProgressStyle};
+use crate::cli::ProgressBar;
 
 /// Custom reader which updates a progress bar.
 pub struct ReaderWithProgress<R: Read> {
@@ -12,15 +12,11 @@ pub struct ReaderWithProgress<R: Read> {
 impl<R: Read> ReaderWithProgress<R> {
     /// Creates a new reader with a progress bar.
     pub fn new(reader: R, size: u64) -> Self {
-        let bar = ProgressBar::new(size);
-
-        // Set the style of the progress bar
-        let style = ProgressStyle::with_template("[{wide_bar:.white}] [{percent}%]")
-            .expect("Expected progress style here")
-            .progress_chars("=> ");
-        bar.set_style(style);
-
-        Self { reader, bar, total: 0 }
+        Self {
+            reader,
+            bar: ProgressBar::new(size),
+            total: 0,
+        }
     }
 }
 
@@ -31,11 +27,6 @@ impl<R: Read> Read for ReaderWithProgress<R> {
 
         self.total += n_bytes as u64;
         self.bar.set_position(self.total);
-
-        // Finish the bar if the bar is full
-        if self.bar.length().expect("Expected bar length") <= self.total {
-            self.bar.finish();
-        }
 
         Ok(n_bytes)
     }
