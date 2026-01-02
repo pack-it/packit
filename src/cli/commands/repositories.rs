@@ -25,8 +25,8 @@ impl HandleCommand for RepositoryArgs {
                 Ok(metadata) => metadata,
                 Err(e) => {
                     // Display the error and continue
-                    cli::display_warning(&format!("Cannot read repository metadata of repository '{repository_id}'"));
-                    cli::display_warning(&format!("{e}"));
+                    cli::display_warning!("Cannot read repository metadata of repository '{repository_id}'");
+                    cli::display_warning!("{e}");
                     continue;
                 },
             };

@@ -54,6 +54,6 @@ pub fn ask_user(question: &str, default: QuestionResponse) -> Result<QuestionRes
         return Ok(QuestionResponse::No);
     }
 
-    display_warning("Invalid input");
+    display_warning!("Invalid input");
     return Ok(QuestionResponse::Invalid);
 }

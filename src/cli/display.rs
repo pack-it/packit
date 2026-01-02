@@ -8,8 +8,18 @@ pub enum DisplayError {
     IOError(#[from] std::io::Error),
 }
 
-pub fn display_warning(message: &str) {
+pub fn display_warning_impl(message: std::fmt::Arguments) {
     println!("{}: {message}", "WARNING".yellow().to_string());
 }
+
+macro_rules! display_warning {
+    ($message:ident) => {
+        $crate::cli::display_warning_impl(format_args!("{}", $message))
+    };
+    ($($arg:tt)*) => {
+        $crate::cli::display_warning_impl(format_args!($($arg)*))
+    };
+}
+pub(crate) use display_warning;
 
 // TODO: Do we also want our own error formatting (red colors)?

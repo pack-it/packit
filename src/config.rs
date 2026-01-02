@@ -86,7 +86,7 @@ impl Config {
         config.repositories_rank.retain(|repo| config.repositories.contains_key(repo));
 
         if config.repositories_rank.len() < old_rank_count {
-            cli::display_warning("Repositories rank contains undefined repository, ignoring undefined repository...");
+            cli::display_warning!("Repositories rank contains undefined repository, ignoring undefined repository...");
         }
 
         // Remove trailing slashes from repository paths

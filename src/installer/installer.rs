@@ -1,5 +1,5 @@
 use crate::{
-    cli::{ask_user, QuestionResponse, Spinner},
+    cli::{self, ask_user, QuestionResponse, Spinner},
     config::Config,
     installed_packages::InstalledPackageStorage,
     installer::{
@@ -337,7 +337,7 @@ impl<'a> Installer<'a> {
 
             // Check if file already exists
             if fs::exists(&destination)? {
-                println!("WARNING: symlink {:?} already exists in {:?}", file.file_name(), destination_dir);
+                cli::display_warning!("Symlink {:?} already exists in {:?}", file.file_name(), destination_dir);
                 continue;
             }
 

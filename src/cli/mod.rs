@@ -4,7 +4,8 @@ mod prompts;
 mod reader;
 mod spinner;
 
-pub use display::display_warning;
+pub(crate) use display::display_warning;
+pub(crate) use display::display_warning_impl;
 pub use display::DisplayError;
 
 pub use prompts::ask_user;

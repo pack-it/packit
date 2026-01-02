@@ -141,11 +141,11 @@ pub fn run_script<P: AsRef<Path>>(
             Ok(())
         },
         Some(code) => {
-            cli::display_warning(&format!("Script executed with status code {code}"));
+            cli::display_warning!("Script executed with status code {code}");
             Err(ScriptError::ScriptFailed(code))
         },
         None => {
-            cli::display_warning("Script executed without a status code");
+            cli::display_warning!("Script executed without a status code");
             Err(ScriptError::ScriptFailed(-1))
         },
     }
