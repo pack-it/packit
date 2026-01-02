@@ -345,7 +345,8 @@ impl<'a> Installer<'a> {
     }
 
     fn remove_symlinks(&self, destination_dir: &Path) -> Result<()> {
-        for symlink in self.find_symlinks(destination_dir)? {
+        let symlinks = self.find_symlinks(Path::new(&self.config.prefix_directory), destination_dir)?;
+        for symlink in symlinks {
             symlink::remove_symlink(&symlink)?;
         }
 
@@ -353,13 +354,13 @@ impl<'a> Installer<'a> {
     }
 
     /// Searches for symlinks with a certain destination (destinations inside of the destination are also a match).
-    fn find_symlinks(&self, destination_dir: &Path) -> Result<Vec<PathBuf>> {
+    fn find_symlinks(&self, search_dir: &Path, destination_dir: &Path) -> Result<Vec<PathBuf>> {
         let mut symlinks = Vec::new();
-        for file in fs::read_dir(&self.config.prefix_directory)? {
+        for file in fs::read_dir(search_dir)? {
             let file = file?;
 
             if file.file_type()?.is_dir() {
-                symlinks.extend(self.find_symlinks(destination_dir)?);
+                symlinks.extend(self.find_symlinks(&file.path(), destination_dir)?);
             }
 
             if file.file_type()?.is_symlink() && fs::read_link(file.path())?.starts_with(destination_dir) {
