@@ -26,10 +26,10 @@ pub enum InstallerError {
         e: std::io::Error,
     },
 
-    #[error("Installed package '{package_name} {version}' does not exist.")]
+    #[error("Installed package '{package_name} {}' does not exist.", version.clone().unwrap_or_default())]
     InstalledExistError {
         package_name: String,
-        version: String,
+        version: Option<String>,
     },
 
     #[error("Cannot delete package, '{package_name}' is a dependency.")]
@@ -41,6 +41,9 @@ pub enum InstallerError {
     ExternalError {
         package_name: String,
     },
+
+    #[error("Cannot install package because the '{0}' dependency cannot be satisfied by the current package repository.")]
+    SupportError(String),
 
     // Wrapped custom errors
     #[error("Cannot find a repository for installation: {0}")]

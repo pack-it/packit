@@ -4,7 +4,7 @@ use crate::{
     cli::commands::{CommandError, HandleCommand},
     config::Config,
     installed_packages::InstalledPackageStorage,
-    installer::installer::Installer,
+    installer::{installer::Installer, types::Version},
     repositories::manager::RepositoryManager,
 };
 
@@ -15,7 +15,7 @@ pub struct UninstallArgs {
 
     /// The version of the package to uninstall
     #[arg(short, long)]
-    pub version: Option<String>,
+    pub version: Option<Version>,
 }
 
 impl HandleCommand for UninstallArgs {

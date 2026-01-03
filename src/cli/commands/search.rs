@@ -4,6 +4,7 @@ use colored::Colorize;
 use crate::{
     cli::commands::{CommandError, HandleCommand},
     config::Config,
+    installer::types::Version,
     platforms::TARGET_ARCHITECTURE,
     repositories::{error::RepositoryError, manager::RepositoryManager},
 };
@@ -15,7 +16,7 @@ pub struct SearchArgs {
 
     /// The version of the package to search
     #[arg(short, long)]
-    version: Option<String>,
+    version: Option<Version>,
 }
 
 impl HandleCommand for SearchArgs {
@@ -35,7 +36,7 @@ impl HandleCommand for SearchArgs {
 
         // Get latest version of package
         let latest_version = match package.latest_versions.get(TARGET_ARCHITECTURE) {
-            Some(version) => version.to_string(),
+            Some(version) => version,
             None => {
                 println!("Package does not exist for current target");
                 return Ok(());
@@ -51,8 +52,9 @@ impl HandleCommand for SearchArgs {
         // Get package version info for its target
         let package_version = match manager.read_repo_package_version(&repository_id, &package.name, &version) {
             Ok(package_version) => package_version,
-            Err(_) => {
+            Err(e) => {
                 println!("Cannot read {} version {version} from repository {repository_id}", package.name);
+                println!("{e}");
                 return Ok(());
             },
         };
@@ -69,12 +71,13 @@ impl HandleCommand for SearchArgs {
             },
         };
 
-        let dependencies: Vec<_> = package_version.dependencies.iter().chain(target.dependencies.iter()).map(|x| x.as_str()).collect();
+        let dependencies: Vec<_> = package_version.dependencies.iter().chain(target.dependencies.iter()).collect();
+        let dependencies: Vec<String> = dependencies.iter().map(|d| d.to_string()).collect();
 
         // Print package information
         println!("{} ({})", package.name.bold().blue(), package_version.version);
         println!("{}", package.description.green());
-        println!("Latest version: {}", latest_version.red());
+        println!("Latest version: {}", latest_version.to_string().red());
         println!("Dependencies: {}", dependencies.join(", ").red());
 
         Ok(())

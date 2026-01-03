@@ -2,6 +2,7 @@ use std::fs;
 
 use crate::{
     config::Repository,
+    installer::types::Version,
     repositories::{
         error::Result,
         provider::RepositoryProvider,
@@ -29,7 +30,7 @@ impl RepositoryProvider for FileSystemProvider {
         Ok(toml::de::from_str(&data)?)
     }
 
-    fn read_package_version(&self, package: &str, version: &str) -> Result<PackageVersion> {
+    fn read_package_version(&self, package: &str, version: &Version) -> Result<PackageVersion> {
         let data = fs::read_to_string(format!("{}/packages/{package}/{version}/targets.toml", self.path))?;
 
         Ok(toml::de::from_str(&data)?)

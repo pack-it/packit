@@ -2,7 +2,10 @@ use std::collections::HashMap;
 
 use serde::Deserialize;
 
-use crate::installer::scripts::SCRIPT_EXTENSION;
+use crate::installer::{
+    scripts::SCRIPT_EXTENSION,
+    types::{Dependency, Version},
+};
 
 /// Represents the repository metadata, containing repository information.
 #[derive(Deserialize, Debug)]
@@ -18,16 +21,17 @@ pub struct Package {
     pub name: String,
     pub description: String,
     pub homepage: Option<String>,
-    pub versions: Vec<String>,
-    pub latest_versions: HashMap<String, String>,
+    pub versions: Vec<Version>,
+    pub latest_versions: HashMap<String, Version>,
 }
 
 /// Represents the package version metadata, containing dependencies and targets.
 #[derive(Deserialize, Debug)]
 pub struct PackageVersion {
-    pub version: String,
-    pub dependencies: Vec<String>,
-    pub build_dependencies: Vec<String>,
+    pub version: Version,
+
+    pub dependencies: Vec<Dependency>,
+    pub build_dependencies: Vec<Dependency>,
     pub targets: HashMap<String, PackageTarget>,
 
     #[serde(default = "PackageVersion::default_skip_symlinking")]
@@ -84,6 +88,31 @@ impl PackageVersion {
         Some(self.get_script_name(self.use_version_specific_test, &target.test_script, "test"))
     }
 
+    /// Checks if there are conflicts between the global and target specific dependencies
+    pub fn has_conflicts(&self) -> bool {
+        for dependency in &self.dependencies {
+            for (_, target) in &self.targets {
+                for target_dependency in &target.dependencies {
+                    if dependency.get_name() == target_dependency.get_name() {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        for dependency in &self.build_dependencies {
+            for (_, target) in &self.targets {
+                for target_dependency in &target.build_dependencies {
+                    if dependency.get_name() == target_dependency.get_name() {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        false
+    }
+
     fn default_skip_symlinking() -> bool {
         false
     }
@@ -99,10 +128,10 @@ pub struct PackageTarget {
     pub url: String,
 
     #[serde(default)]
-    pub dependencies: Vec<String>,
+    pub dependencies: Vec<Dependency>,
 
     #[serde(default)]
-    pub build_dependencies: Vec<String>,
+    pub build_dependencies: Vec<Dependency>,
 
     pub skip_symlinking: Option<bool>,
 

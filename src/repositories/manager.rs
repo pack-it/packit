@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use crate::{
     cli,
     config::Config,
+    installer::types::Version,
     platforms::TARGET_ARCHITECTURE,
     repositories::{
         error::{RepositoryError, Result},
@@ -100,7 +101,7 @@ impl<'a> RepositoryManager<'a> {
 
     /// Reads package version metadata of the given package, containing dependencies and targets.
     /// Returns the id of the repository and the package version metadata.
-    pub fn read_package_version(&self, package: &str, version: &str) -> Result<(String, PackageVersion)> {
+    pub fn read_package_version(&self, package: &str, version: &Version) -> Result<(String, PackageVersion)> {
         for repository_id in &self.config.repositories_rank {
             let provider = match self.providers.get(repository_id) {
                 Some(provider) => provider,
@@ -123,18 +124,23 @@ impl<'a> RepositoryManager<'a> {
                 continue;
             }
 
+            // Validate the package before returning
+            if package.has_conflicts() {
+                return Err(RepositoryError::ValidationError("Package has dependency conflicts.".to_string()));
+            }
+
             return Ok((repository_id.clone(), package));
         }
 
         Err(RepositoryError::PackageNotFoundError {
             package_name: package.into(),
-            version: Some(version.into()),
+            version: Some(version.to_string()),
         })
     }
 
     /// Reads package version metadata of the given package from the given repository, containing dependencies and targets.
     /// Does not check if the data contains the current target.
-    pub fn read_repo_package_version(&self, repository_id: &str, package: &str, version: &str) -> Result<PackageVersion> {
+    pub fn read_repo_package_version(&self, repository_id: &str, package: &str, version: &Version) -> Result<PackageVersion> {
         let provider = match self.providers.get(repository_id) {
             Some(provider) => provider,
             None => {
@@ -144,7 +150,13 @@ impl<'a> RepositoryManager<'a> {
             },
         };
 
-        Ok(provider.read_package_version(package, version)?)
+        // Validate the package before returning
+        let package = provider.read_package_version(package, version)?;
+        if package.has_conflicts() {
+            return Err(RepositoryError::ValidationError("Package has dependency conflicts.".to_string()));
+        }
+
+        Ok(package)
     }
 
     /// Reads a script of the given package from the given repository.

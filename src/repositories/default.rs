@@ -2,6 +2,7 @@ use reqwest::StatusCode;
 
 use crate::{
     config::Repository,
+    installer::types::Version,
     repositories::{
         error::Result,
         provider::RepositoryProvider,
@@ -29,7 +30,7 @@ impl RepositoryProvider for DefaultProvider {
         Ok(toml::de::from_str(&data)?)
     }
 
-    fn read_package_version(&self, package: &str, version: &str) -> Result<PackageVersion> {
+    fn read_package_version(&self, package: &str, version: &Version) -> Result<PackageVersion> {
         let data = reqwest::blocking::get(format!("{}/packages/{package}/{version}/targets.toml", self.url))?.text()?;
 
         Ok(toml::de::from_str(&data)?)
