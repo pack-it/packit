@@ -34,8 +34,8 @@ impl<'de> Deserialize<'de> for Version {
     where
         D: serde::Deserializer<'de>,
     {
-        let s: &str = de::Deserialize::deserialize(deserializer)?;
-        Ok(Version::from_str(s).map_err(de::Error::custom)?)
+        let string: String = de::Deserialize::deserialize(deserializer)?;
+        Ok(Version::from_str(&string).map_err(de::Error::custom)?)
     }
 }
 

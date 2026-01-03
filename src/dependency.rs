@@ -35,14 +35,14 @@ impl<'de> Deserialize<'de> for Dependency {
     where
         D: serde::Deserializer<'de>,
     {
-        let s: &str = de::Deserialize::deserialize(deserializer)?;
-        let index = s.chars().position(|c| c == '@');
+        let string: String = de::Deserialize::deserialize(deserializer)?;
+        let index = string.chars().position(|c| c == '@');
 
         let (name, version) = match index {
-            Some(index) => s.split_at(index),
+            Some(index) => string.split_at(index),
             None => {
                 return Ok(Self {
-                    name: s.to_string(),
+                    name: string.to_string(),
                     version_ranges: vec![],
                 })
             },

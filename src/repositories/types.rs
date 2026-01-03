@@ -18,7 +18,7 @@ pub struct Package {
     pub name: String,
     pub description: String,
     pub homepage: Option<String>,
-    pub versions: Vec<String>,
+    pub versions: Vec<Version>,
     pub latest_versions: HashMap<String, Version>,
 }
 
