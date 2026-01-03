@@ -84,20 +84,22 @@ fn parse_version_range(version: &str) -> Result<VersionBounds, DependencyParserE
         }
     }
 
-    if let Some(version) = version.strip_prefix('<') {
-        return Ok(VersionBounds::Lower(Version::from_str(version)?));
-    }
-
+    // Check lower equal before lower
     if let Some(version) = version.strip_prefix("<=") {
         return Ok(VersionBounds::LowerEqual(Version::from_str(version)?));
     }
 
-    if let Some(version) = version.strip_prefix('>') {
-        return Ok(VersionBounds::Higher(Version::from_str(version)?));
+    if let Some(version) = version.strip_prefix('<') {
+        return Ok(VersionBounds::Lower(Version::from_str(version)?));
     }
 
+    // Check higher equal before higher
     if let Some(version) = version.strip_prefix(">=") {
         return Ok(VersionBounds::HigherEqual(Version::from_str(version)?));
+    }
+
+    if let Some(version) = version.strip_prefix('>') {
+        return Ok(VersionBounds::Higher(Version::from_str(version)?));
     }
 
     return Ok(VersionBounds::Equal(Version::from_str(version)?));

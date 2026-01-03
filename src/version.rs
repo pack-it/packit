@@ -57,7 +57,7 @@ impl Ord for Version {
                 None => 0,
             };
 
-            let other_num = match self.numbers.get(i) {
+            let other_num = match other.numbers.get(i) {
                 Some(num) => *num,
                 None => 0,
             };
