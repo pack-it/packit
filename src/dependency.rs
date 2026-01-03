@@ -48,6 +48,9 @@ impl<'de> Deserialize<'de> for Dependency {
             },
         };
 
+        // Remove @ character from version number
+        let version = version.strip_prefix("@").unwrap_or("");
+
         let version_ranges = parse_ranges(version).map_err(de::Error::custom)?;
 
         Ok(Self {
