@@ -71,7 +71,7 @@ impl HandleCommand for SearchArgs {
         };
 
         let dependencies: Vec<_> = package_version.dependencies.iter().chain(target.dependencies.iter()).collect();
-        let dependencies: Vec<String> = dependencies.iter().map(|d| d.as_str()).collect();
+        let dependencies: Vec<String> = dependencies.iter().map(|d| d.to_string()).collect();
 
         // Print package information
         println!("{} ({})", package.name.bold().blue(), package_version.version);

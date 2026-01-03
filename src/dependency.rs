@@ -113,7 +113,7 @@ impl Display for Dependency {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // Return only the name if the version isn't specified
         if self.version_ranges.is_empty() {
-            write!(f, "{}", self.name);
+            write!(f, "{}", self.name)?;
             return Ok(());
         }
 
@@ -133,7 +133,7 @@ impl Display for Dependency {
             }
         }
 
-        write!(f, "{}", self.name.clone() + "@" + &string_version);
+        write!(f, "{}", self.name.clone() + "@" + &string_version)?;
         Ok(())
     }
 }
