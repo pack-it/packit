@@ -1,13 +1,17 @@
 use thiserror::Error;
 
 use crate::{
-    cli::DisplayError, installed_packages::InstalledPackagesError, installer::scripts::ScriptError, platforms::symlink::SymlinkError,
+    cli::DisplayError,
+    installed_packages::InstalledPackagesError,
+    installer::{builder::BuilderError, scripts::ScriptError},
+    platforms::symlink::SymlinkError,
     repositories::error::RepositoryError,
 };
 
 /// The errors that occur during installation.
 #[derive(Error, Debug)]
 pub enum InstallerError {
+    //TODO: Split out errors
     #[error("Platform not found in targets.")]
     TargetError,
 
@@ -60,6 +64,9 @@ pub enum InstallerError {
 
     #[error("Cannot execute symlink opperation: {0}")]
     SymlinkError(#[from] SymlinkError),
+
+    #[error("Cannot build package: {0}")]
+    BuildError(#[from] BuilderError),
 }
 
 pub(super) type Result<T> = std::result::Result<T, InstallerError>;

@@ -173,4 +173,9 @@ impl<'a> RepositoryManager<'a> {
 
         Ok(provider.read_script(package, script_path)?)
     }
+
+    pub fn get_prebuild_url(&self, repository_id: &str, package_name: &str, version: &Version) -> Option<String> {
+        //TODO: implement
+        None
+    }
 }
