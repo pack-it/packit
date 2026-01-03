@@ -41,6 +41,9 @@ pub enum InstallerError {
         package_name: String,
     },
 
+    #[error("Cannot install package because the '{0}' dependency cannot be satisfied by the current package repository.")]
+    SupportError(String),
+
     // Wrapped custom errors
     #[error("Cannot find a repository for installation: {0}")]
     RepositoryError(#[from] RepositoryError),

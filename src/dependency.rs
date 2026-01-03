@@ -170,27 +170,4 @@ impl Dependency {
 
         false
     }
-
-    /// Gets the highest possible dependency version
-    pub fn get_highest_version(&self) -> Option<&Version> {
-        let mut current_highest = None;
-        for range in &self.version_ranges {
-            let version = match range {
-                VersionBounds::Range(_, upper) => upper,
-                VersionBounds::Lower(version) => version,
-                VersionBounds::LowerEqual(version) => version,
-                VersionBounds::Higher(version) => version,
-                VersionBounds::HigherEqual(version) => version,
-                VersionBounds::Equal(version) => version,
-            };
-
-            current_highest = match current_highest {
-                Some(highest) if highest < version => Some(version),
-                None => Some(version),
-                _ => continue,
-            }
-        }
-
-        current_highest
-    }
 }

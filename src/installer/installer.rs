@@ -1,6 +1,7 @@
 use crate::{
     cli::{self, ask_user, QuestionResponse, Spinner},
     config::Config,
+    dependency::Dependency,
     installed_packages::InstalledPackageStorage,
     installer::{
         error::{InstallerError, Result},
@@ -67,7 +68,11 @@ impl<'a> Installer<'a> {
                 continue;
             }
 
-            self.install(dependency.get_name(), &dependency.get_highest_version().cloned())?;
+            // Determine the latest supported version for the dependency
+            let version = self.get_latest_dependency_version(dependency);
+            let version = version.ok_or(InstallerError::SupportError(dependency.to_string()))?;
+
+            self.install(dependency.get_name(), &Some(version.clone()))?;
         }
 
         // Install global package build dependencies and platform specific build dependencies
@@ -78,8 +83,12 @@ impl<'a> Installer<'a> {
                 continue;
             }
 
+            // Determine the latest supported version for the dependency
+            let version = self.get_latest_dependency_version(build_dependency);
+            let version = version.ok_or(InstallerError::SupportError(build_dependency.to_string()))?;
+
             // TODO: Delete build dependencies later, somewhere
-            self.install(build_dependency.get_name(), &build_dependency.get_highest_version().cloned())?;
+            self.install(build_dependency.get_name(), &Some(version.clone()))?;
         }
 
         // Show download
@@ -370,5 +379,22 @@ impl<'a> Installer<'a> {
 
         // TODO: Use something else then readonly, because it can be different for super user and group
         Ok(!permissions.readonly())
+    }
+
+    fn get_latest_dependency_version(&self, dependency: &Dependency) -> Option<&Version> {
+        // Get all supported versions for the dependency
+        let supported = self.installed_storage.get_package_versions(dependency.get_name());
+
+        // The supported vec isn't necessary in order, so we need to keep track of the current highest version
+        let mut current_highest: Option<&Version> = None;
+        for package in supported {
+            current_highest = match current_highest {
+                Some(highest) if *highest < package.version => Some(&package.version),
+                None => Some(&package.version),
+                _ => continue,
+            }
+        }
+
+        current_highest
     }
 }
