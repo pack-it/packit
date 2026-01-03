@@ -1,16 +1,15 @@
 use crate::{
     cli::{self, ask_user, QuestionResponse, Spinner},
     config::Config,
-    dependency::Dependency,
     installed_packages::InstalledPackageStorage,
     installer::{
         error::{InstallerError, Result},
         scripts::{self, ScriptError, SCRIPT_EXTENSION},
+        types::{Dependency, Version},
         unpack::unpack,
     },
     platforms::{symlink, TARGET_ARCHITECTURE},
     repositories::manager::RepositoryManager,
-    version::Version,
 };
 
 use std::{fs, path::Path};

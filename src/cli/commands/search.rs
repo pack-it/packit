@@ -4,9 +4,9 @@ use colored::Colorize;
 use crate::{
     cli::commands::{CommandError, HandleCommand},
     config::Config,
+    installer::types::Version,
     platforms::TARGET_ARCHITECTURE,
     repositories::{error::RepositoryError, manager::RepositoryManager},
-    version::Version,
 };
 
 #[derive(Args, Debug)]

@@ -1,9 +1,9 @@
-use std::{fmt::Display, str::FromStr};
+use std::fmt::Display;
 
 use serde::{de, Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::version::{Version, VersionError};
+use crate::installer::types::{Version, VersionBounds, VersionError};
 
 #[derive(Error, Debug)]
 pub enum DependencyParserError {
@@ -12,16 +12,6 @@ pub enum DependencyParserError {
 
     #[error("No bounds specified while request with '@'.")]
     EmptyBoundsError,
-}
-
-#[derive(Debug, Clone)]
-enum VersionBounds {
-    Range(Version, Version),
-    Lower(Version),
-    LowerEqual(Version),
-    Higher(Version),
-    HigherEqual(Version),
-    Equal(Version),
 }
 
 #[derive(Debug, Clone)]
@@ -51,58 +41,13 @@ impl<'de> Deserialize<'de> for Dependency {
         // Remove @ character from version number
         let version = version.strip_prefix("@").unwrap_or("");
 
-        let version_ranges = parse_ranges(version).map_err(de::Error::custom)?;
+        let version_ranges = VersionBounds::from_str_ranges(version).map_err(de::Error::custom)?;
 
         Ok(Self {
             name: name.to_string(),
             version_ranges,
         })
     }
-}
-
-fn parse_ranges(ranges: &str) -> Result<Vec<VersionBounds>, DependencyParserError> {
-    let ranges = ranges.split('|');
-    let mut bounds = Vec::new();
-
-    for range in ranges {
-        bounds.push(parse_version_range(range)?);
-    }
-
-    // Bounds must have at least one item
-    if bounds.is_empty() {
-        return Err(DependencyParserError::EmptyBoundsError);
-    }
-
-    Ok(bounds)
-}
-
-fn parse_version_range(version: &str) -> Result<VersionBounds, DependencyParserError> {
-    // Check if the statement is a two sided range
-    if let Some(index) = version.chars().position(|c| c == '-') {
-        if let Some((lower, upper)) = version.split_at_checked(index) {
-            return Ok(VersionBounds::Range(Version::from_str(lower)?, Version::from_str(upper)?));
-        }
-    }
-
-    // Check lower equal before lower
-    if let Some(version) = version.strip_prefix("<=") {
-        return Ok(VersionBounds::LowerEqual(Version::from_str(version)?));
-    }
-
-    if let Some(version) = version.strip_prefix('<') {
-        return Ok(VersionBounds::Lower(Version::from_str(version)?));
-    }
-
-    // Check higher equal before higher
-    if let Some(version) = version.strip_prefix(">=") {
-        return Ok(VersionBounds::HigherEqual(Version::from_str(version)?));
-    }
-
-    if let Some(version) = version.strip_prefix('>') {
-        return Ok(VersionBounds::Higher(Version::from_str(version)?));
-    }
-
-    return Ok(VersionBounds::Equal(Version::from_str(version)?));
 }
 
 impl Serialize for Dependency {

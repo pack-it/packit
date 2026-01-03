@@ -2,14 +2,12 @@ use crate::{cli::commands, config::Config, repositories::manager::RepositoryMana
 
 mod cli;
 mod config;
-mod dependency;
 mod installed_packages;
 mod installer;
 mod platforms;
 mod repositories;
 mod utils;
 mod verifier;
-mod version;
 
 fn main() {
     let config = Config::from(&Config::get_default_path()).expect("Cannot load config");

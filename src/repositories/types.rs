@@ -2,7 +2,10 @@ use std::collections::HashMap;
 
 use serde::Deserialize;
 
-use crate::{dependency::Dependency, installer::scripts::SCRIPT_EXTENSION, version::Version};
+use crate::installer::{
+    scripts::SCRIPT_EXTENSION,
+    types::{Dependency, Version},
+};
 
 /// Represents the repository metadata, containing repository information.
 #[derive(Deserialize, Debug)]

@@ -1,12 +1,12 @@
 use crate::{
     config::Repository,
+    installer::types::Version,
     repositories::{
         default::{DefaultProvider, DEFAULT_PROVIDER_ID},
         error::Result,
         filesystem::{FileSystemProvider, FILESYSTEM_PROVIDER_ID},
         types::{Package, PackageVersion, RepositoryMetadata},
     },
-    version::Version,
 };
 
 /// Generic repository provider trait, reading package metadata from a repository.

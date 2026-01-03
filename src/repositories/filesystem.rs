@@ -2,12 +2,12 @@ use std::fs;
 
 use crate::{
     config::Repository,
+    installer::types::Version,
     repositories::{
         error::Result,
         provider::RepositoryProvider,
         types::{Package, PackageVersion, RepositoryMetadata},
     },
-    version::Version,
 };
 
 pub const FILESYSTEM_PROVIDER_ID: &str = "fs";
