@@ -66,18 +66,7 @@ impl<'a> Installer<'a> {
         };
 
         // Install global package dependencies and platform specific packages (if there are any, can be empty)
-        let dependencies = package_version.dependencies.iter().chain(target.dependencies.iter());
-        for dependency in dependencies {
-            if self.installed_storage.dependency_satisfied(dependency) {
-                println!("Dependency '{}' already satisfied, continuing", dependency.get_name());
-                continue;
-            }
-
-            // Determine the latest supported version for the dependency
-            let version = self.get_latest_dependency_version(dependency)?;
-
-            self.install(dependency.get_name(), &Some(version.clone()))?;
-        }
+        self.install_dependencies(&package_version.dependencies, &target.dependencies)?;
 
         let install_directory = self.config.prefix_directory.join("packages").join(package_name).join(version.to_string());
 
@@ -140,7 +129,24 @@ impl<'a> Installer<'a> {
         Ok(())
     }
 
-    pub fn build_package(
+    fn install_dependencies<'d>(&mut self, global_dependencies: &Vec<Dependency>, target_dependencies: &Vec<Dependency>) -> Result<()> {
+        let dependencies = global_dependencies.iter().chain(target_dependencies.iter());
+        for dependency in dependencies {
+            if self.installed_storage.dependency_satisfied(dependency) {
+                println!("Dependency '{}' already satisfied, continuing", dependency.get_name());
+                continue;
+            }
+
+            // Determine the latest supported version for the dependency
+            let version = self.get_latest_dependency_version(dependency)?;
+
+            self.install(dependency.get_name(), &Some(version.clone()))?;
+        }
+
+        Ok(())
+    }
+
+    fn build_package(
         &mut self,
         package: &Package,
         package_version: &PackageVersion,
@@ -149,29 +155,18 @@ impl<'a> Installer<'a> {
         destination_dir: &PathBuf,
     ) -> Result<()> {
         // Install global package build dependencies and platform specific build dependencies
-        let build_dependencies = package_version.build_dependencies.iter().chain(target.build_dependencies.iter());
-        for build_dependency in build_dependencies {
-            if self.installed_storage.dependency_satisfied(build_dependency) {
-                println!("Dependency '{}' already satisfied, continuing", build_dependency.get_name());
-                continue;
-            }
-
-            // Determine the latest supported version for the dependency
-            let version = self.get_latest_dependency_version(build_dependency)?;
-
-            // TODO: Delete build dependencies later, somewhere
-            self.install(build_dependency.get_name(), &Some(version.clone()))?;
-        }
+        self.install_dependencies(&package_version.build_dependencies, &target.build_dependencies)?;
 
         // Build package if we did not find a prebuild
         let builder = Builder::new(self.config, self.installed_storage, self.repository_manager);
 
         //TODO: do we want to build into the final install directory?
         builder.build(&package, &package_version, &repository_id, &destination_dir)?;
+
         Ok(())
     }
 
-    pub fn download_prebuild(&self, prebuild_url: &str, destination_dir: &PathBuf) -> Result<()> {
+    fn download_prebuild(&self, prebuild_url: &str, destination_dir: &PathBuf) -> Result<()> {
         todo!()
     }
 
