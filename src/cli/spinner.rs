@@ -13,7 +13,9 @@ impl Spinner {
         let progress_bar = ProgressBar::new_spinner();
 
         // Set the style of the spinner
-        let style = ProgressStyle::with_template("{msg} {spinner:.white}").unwrap().tick_chars("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏ ");
+        let style = ProgressStyle::with_template("{msg} {spinner:.white}")
+            .expect("Expected template to be correct.")
+            .tick_chars("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏ ");
         progress_bar.set_style(style);
 
         Self { progress_bar }

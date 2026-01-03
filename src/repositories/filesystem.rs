@@ -1,4 +1,4 @@
-use std::fs;
+use std::{fs, path::PathBuf};
 
 use crate::{
     config::Repository,
@@ -14,30 +14,31 @@ pub const FILESYSTEM_PROVIDER_ID: &str = "fs";
 
 /// The filesystem repository provider, reading package metadata from a local repository on the filesystem.
 pub struct FileSystemProvider {
-    path: String,
+    path: PathBuf,
 }
 
 impl RepositoryProvider for FileSystemProvider {
     fn read_repository_metadata(&self) -> Result<RepositoryMetadata> {
-        let data = fs::read_to_string(format!("{}/repository.toml", self.path))?;
+        let data = fs::read_to_string(self.path.join("repository.toml"))?;
 
         Ok(toml::de::from_str(&data)?)
     }
 
     fn read_package(&self, package: &str) -> Result<Package> {
-        let data = fs::read_to_string(format!("{}/packages/{package}/package.toml", self.path))?;
+        let data = fs::read_to_string(self.path.join("packages").join(package).join("package.toml"))?;
 
         Ok(toml::de::from_str(&data)?)
     }
 
     fn read_package_version(&self, package: &str, version: &Version) -> Result<PackageVersion> {
-        let data = fs::read_to_string(format!("{}/packages/{package}/{version}/targets.toml", self.path))?;
+        let path = self.path.join("packages").join(package).join(version.to_string()).join("targets.toml");
+        let data = fs::read_to_string(path)?;
 
         Ok(toml::de::from_str(&data)?)
     }
 
     fn read_script(&self, package: &str, script_path: &str) -> Result<Option<String>> {
-        let path = format!("{}/packages/{package}/{script_path}", self.path);
+        let path = self.path.join("packages").join(package).join(script_path);
 
         if !fs::exists(&path)? {
             return Ok(None);
@@ -56,7 +57,7 @@ impl FileSystemProvider {
         }
 
         Some(FileSystemProvider {
-            path: repository.path.clone(),
+            path: PathBuf::from(repository.path.clone()),
         })
     }
 }

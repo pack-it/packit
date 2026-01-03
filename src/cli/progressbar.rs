@@ -13,7 +13,7 @@ impl ProgressBar {
 
         // Set the style of the progress bar
         let style = ProgressStyle::with_template("[{wide_bar:.white}] [{percent}%]")
-            .expect("Expected progress style here")
+            .expect("Expected template to be correct.")
             .progress_chars("=> ");
         bar.set_style(style);
 

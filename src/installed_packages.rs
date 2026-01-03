@@ -41,7 +41,7 @@ pub struct InstalledPackage {
     #[serde(default)]
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub dependencies: Vec<Dependency>,
-    pub install_path: String,
+    pub install_path: PathBuf,
     pub symlinked: bool,
 
     /// True when the package is found on the system but not installed by Packit, false otherwise
@@ -100,7 +100,7 @@ impl InstalledPackageStorage {
         package: &Package,
         package_version: &PackageVersion,
         source_repository: &Repository,
-        install_path: &str,
+        install_path: &PathBuf,
         symlinked: bool,
     ) {
         // Add global and target specific dependencies together
@@ -128,7 +128,6 @@ impl InstalledPackageStorage {
     /// Removes a package version from the info storage.
     /// Please note that this does not save the storage and does not read the currently installed packages from the toml.
     pub fn remove_package_version(&mut self, package_name: &str, version: &Version) {
-        // TODO: This doesn't give an error/warning if the package is not there
         self.installed_packages.retain(|package| package.name != package_name || package.version != *version);
     }
 
