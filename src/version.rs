@@ -80,9 +80,12 @@ impl Ord for Version {
 }
 
 impl PartialEq for Version {
-    /// TODO: Doesn't support different version lengths (3.4 == 3.4.0)
     fn eq(&self, other: &Self) -> bool {
-        self.numbers == other.numbers
+        match self.cmp(other) {
+            Ordering::Less => false,
+            Ordering::Equal => true,
+            Ordering::Greater => false,
+        }
     }
 }
 
