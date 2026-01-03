@@ -22,6 +22,9 @@ pub enum RepositoryError {
         package_name: String,
         version: Option<String>,
     },
+
+    #[error("Package is not valid. {0}")]
+    ValidationError(String),
 }
 
 pub(super) type Result<T> = std::result::Result<T, RepositoryError>;

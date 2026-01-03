@@ -107,7 +107,6 @@ impl<'a> Installer<'a> {
 
         let install_directory = format!("{}/packages/{path_suffix}", self.config.prefix_directory);
 
-        // TODO: Check for collisions in script args chain
         let args = package_version
             .script_args
             .iter()

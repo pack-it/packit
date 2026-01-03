@@ -52,8 +52,9 @@ impl HandleCommand for SearchArgs {
         // Get package version info for its target
         let package_version = match manager.read_repo_package_version(&repository_id, &package.name, &version) {
             Ok(package_version) => package_version,
-            Err(_) => {
+            Err(e) => {
                 println!("Cannot read {} version {version} from repository {repository_id}", package.name);
+                println!("{e}");
                 return Ok(());
             },
         };

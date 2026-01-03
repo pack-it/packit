@@ -124,6 +124,11 @@ impl<'a> RepositoryManager<'a> {
                 continue;
             }
 
+            // Validate the package before returning
+            if package.has_conflicts() {
+                return Err(RepositoryError::ValidationError("Package has dependency conflicts.".to_string()));
+            }
+
             return Ok((repository_id.clone(), package));
         }
 
@@ -145,7 +150,13 @@ impl<'a> RepositoryManager<'a> {
             },
         };
 
-        Ok(provider.read_package_version(package, version)?)
+        // Validate the package before returning
+        let package = provider.read_package_version(package, version)?;
+        if package.has_conflicts() {
+            return Err(RepositoryError::ValidationError("Package has dependency conflicts.".to_string()));
+        }
+
+        Ok(package)
     }
 
     /// Reads a script of the given package from the given repository.

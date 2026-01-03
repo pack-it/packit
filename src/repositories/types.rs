@@ -85,6 +85,31 @@ impl PackageVersion {
         Some(self.get_script_name(self.use_version_specific_test, &target.test_script, "test"))
     }
 
+    /// Checks if there are conflicts between the global and target specific dependencies
+    pub fn has_conflicts(&self) -> bool {
+        for dependency in &self.dependencies {
+            for (_, target) in &self.targets {
+                for target_dependency in &target.dependencies {
+                    if dependency.get_name() == target_dependency.get_name() {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        for dependency in &self.build_dependencies {
+            for (_, target) in &self.targets {
+                for target_dependency in &target.build_dependencies {
+                    if dependency.get_name() == target_dependency.get_name() {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        false
+    }
+
     fn default_skip_symlinking() -> bool {
         false
     }
