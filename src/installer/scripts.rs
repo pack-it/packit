@@ -65,7 +65,7 @@ pub fn run_build_script(
     path: impl AsRef<Path>,
     run_dir: impl AsRef<Path>,
     config: &Config,
-    package_install_path: &PathBuf,
+    package_install_path: impl AsRef<Path>,
     args: &HashMap<&str, &str>,
 ) -> Result<(), ScriptError> {
     let package_install_path = to_absolute_path(package_install_path)?;

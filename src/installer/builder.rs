@@ -1,5 +1,6 @@
-use std::path::PathBuf;
+use std::path::Path;
 
+use tempfile::TempDir;
 use thiserror::Error;
 
 use crate::{
@@ -67,7 +68,7 @@ impl<'a> Builder<'a> {
         package: &Package,
         package_version: &PackageVersion,
         repository_id: &str,
-        destination_path: &PathBuf,
+        destination_dir: impl AsRef<Path>,
     ) -> Result<()> {
         let target = package_version.targets.get(TARGET_ARCHITECTURE).ok_or(BuilderError::TargetError)?;
 
@@ -111,7 +112,7 @@ impl<'a> Builder<'a> {
         spinner.finish("Downloading ".to_string() + &package.name + " successful");
 
         // Unpack the package to the temp directory
-        let unpack_directory = self.config.temp_directory.join(&package.name).join(package_version.version.to_string());
+        let unpack_directory = TempDir::new()?;
         unpack(bytes, &unpack_directory)?;
 
         // Construct args for the build script
@@ -121,7 +122,7 @@ impl<'a> Builder<'a> {
         let script_path = package_version.get_build_script_path(TARGET_ARCHITECTURE).ok_or(BuilderError::TargetError)?;
         let build_script_path = scripts::download_script(self.repository_manager, &script_path, &package.name, &repository_id)?
             .ok_or(ScriptError::ScriptNotFound("build".into()))?;
-        scripts::run_build_script(build_script_path, &unpack_directory, self.config, &destination_path, &script_args)?;
+        scripts::run_build_script(build_script_path, &unpack_directory, self.config, &destination_dir, &script_args)?;
 
         Ok(())
     }
