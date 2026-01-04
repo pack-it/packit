@@ -21,5 +21,3 @@ macro_rules! display_warning {
     };
 }
 pub(crate) use display_warning;
-
-// TODO: Do we also want our own error formatting (red colors)?

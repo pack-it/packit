@@ -12,7 +12,10 @@ use crate::{
     repositories::manager::RepositoryManager,
 };
 
-use std::{fs, path::Path};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 /// The installer of Packit, managing the installation of packages on the system.
 pub struct Installer<'a> {
@@ -98,13 +101,11 @@ impl<'a> Installer<'a> {
 
         spinner.finish("Downloading ".to_string() + package_name + " successful");
 
-        let path_suffix = format!("{package_name}/{version}");
-
         // Unpack the package to the temp directory
-        let unpack_directory = format!("{}/{path_suffix}", self.config.temp_directory);
+        let unpack_directory = self.config.temp_directory.join(package_name).join(version.to_string());
         unpack(bytes, &unpack_directory)?;
 
-        let install_directory = format!("{}/packages/{path_suffix}", self.config.prefix_directory);
+        let install_directory = self.config.prefix_directory.join("packages").join(package_name).join(version.to_string());
 
         let args = package_version
             .script_args
@@ -206,13 +207,12 @@ impl<'a> Installer<'a> {
         }
 
         // Remove entire package directory if there is only one version
-        // TODO: Use join instead
-        let directory: String;
+        let directory: PathBuf;
         if installed_versions.len() == 1 {
-            directory = self.config.prefix_directory.to_string() + "/packages/" + package_name;
+            directory = self.config.prefix_directory.join("packages").join(package_name);
         } else {
             // The remove directory of a specific package version
-            directory = self.config.prefix_directory.to_string() + "/packages/" + package_name + "/" + &version.to_string();
+            directory = self.config.prefix_directory.join("packages").join(package_name).join(version.to_string());
         }
 
         // Check if the package was symlinked
@@ -257,7 +257,7 @@ impl<'a> Installer<'a> {
         }
 
         // Path to the determined directory
-        let directory = self.config.prefix_directory.to_string() + "/packages/" + package_name;
+        let directory = self.config.prefix_directory.join("packages").join(package_name);
 
         // Check if package was symlinked
         for package_version in &installed_versions {
@@ -276,7 +276,7 @@ impl<'a> Installer<'a> {
     }
 
     /// Wraps around the fs::remove_dir_all to map its error.
-    fn remove_dir_all(&self, directory: &str, package_name: &str) -> Result<()> {
+    fn remove_dir_all(&self, directory: &PathBuf, package_name: &str) -> Result<()> {
         match fs::remove_dir_all(directory) {
             Ok(_) => Ok(()), // TODO: Log succes with display
             Err(e) => Err(InstallerError::UninstallError {
@@ -294,11 +294,9 @@ impl<'a> Installer<'a> {
         package_name: &str,
         version: &Version,
         repository_id: &str,
-    ) -> Result<Option<String>> {
-        let script_destination = format!(
-            "{}/{package_name}_{version}_{script_name}.{SCRIPT_EXTENSION}",
-            self.config.temp_directory
-        );
+    ) -> Result<Option<PathBuf>> {
+        let name = format!("{package_name}_{version}_{script_name}");
+        let script_destination = self.config.temp_directory.join(name).with_extension(SCRIPT_EXTENSION);
 
         match self.repository_manager.read_script(&repository_id, &package_name, &script_path)? {
             Some(script_text) => scripts::save_script(&script_text, &script_destination)?,
