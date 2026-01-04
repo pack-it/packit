@@ -105,7 +105,7 @@ impl<'a> Installer<'a> {
         let unpack_directory = self.config.temp_directory.join(package_name).join(version.to_string());
         unpack(bytes, &unpack_directory)?;
 
-        let install_directory = self.config.prefix_directory.join(package_name).join(version.to_string());
+        let install_directory = self.config.prefix_directory.join("packages").join(package_name).join(version.to_string());
 
         let args = package_version
             .script_args
