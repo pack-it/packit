@@ -212,7 +212,7 @@ impl<'a> Installer<'a> {
             directory = self.config.prefix_directory.join("packages").join(package_name);
         } else {
             // The remove directory of a specific package version
-            directory = self.config.prefix_directory.join("packages").join(package_name);
+            directory = self.config.prefix_directory.join("packages").join(package_name).join(version.to_string());
         }
 
         // Check if the package was symlinked
