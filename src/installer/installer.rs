@@ -5,7 +5,7 @@ use crate::{
     installer::{
         builder::Builder,
         error::{InstallerError, Result},
-        scripts::{self, SCRIPT_EXTENSION},
+        scripts,
         types::{Dependency, Version},
     },
     platforms::{symlink, TARGET_ARCHITECTURE},
@@ -84,7 +84,15 @@ impl<'a> Installer<'a> {
 
         // Download and run pre install script if it exists
         let script_name = package_version.get_preinstall_script_name(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
-        if let Some(script_path) = self.download_script("preinstall", &script_name, package_name, &version, &repository_id)? {
+        if let Some(script_path) = scripts::download_script(
+            self.config,
+            self.repository_manager,
+            "preinstall",
+            &script_name,
+            package_name,
+            &version,
+            &repository_id,
+        )? {
             scripts::run_pre_script(&script_path, &install_directory, self.config, &install_directory, &args)?;
         }
 
@@ -111,7 +119,15 @@ impl<'a> Installer<'a> {
 
         // Download and run post install script if it exists
         let script_name = package_version.get_postinstall_script_name(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
-        if let Some(script_path) = self.download_script("postinstall", &script_name, package_name, &version, &repository_id)? {
+        if let Some(script_path) = scripts::download_script(
+            self.config,
+            self.repository_manager,
+            "postinstall",
+            &script_name,
+            package_name,
+            &version,
+            &repository_id,
+        )? {
             scripts::run_post_script(&script_path, &install_directory, self.config, &args)?;
         }
 
@@ -122,7 +138,15 @@ impl<'a> Installer<'a> {
 
         // Download and run test script if it exists
         let script_name = package_version.get_test_script_name(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
-        if let Some(script_path) = self.download_script("test", &script_name, package_name, &version, &repository_id)? {
+        if let Some(script_path) = scripts::download_script(
+            self.config,
+            self.repository_manager,
+            "test",
+            &script_name,
+            package_name,
+            &version,
+            &repository_id,
+        )? {
             scripts::run_test_script(&script_path, &install_directory, self.config, &args)?;
         }
 
@@ -297,27 +321,6 @@ impl<'a> Installer<'a> {
                 e,
             }),
         }
-    }
-
-    /// Downloads a script and saves it to the correct directory.
-    fn download_script(
-        &self,
-        script_name: &str,
-        script_path: &str,
-        package_name: &str,
-        version: &Version,
-        repository_id: &str,
-    ) -> Result<Option<PathBuf>> {
-        let name = format!("{package_name}_{version}_{script_name}");
-        let script_destination = self.config.temp_directory.join(name).with_extension(SCRIPT_EXTENSION);
-
-        match self.repository_manager.read_script(&repository_id, &package_name, &script_path)? {
-            Some(script_text) => scripts::save_script(&script_text, &script_destination)?,
-            None => return Ok(None), // Script not found, so return None
-        }
-
-        // Script succesfully downloaded, so return script location
-        Ok(Some(script_destination))
     }
 
     fn create_symlinks(&self, package_directory: &Path) -> Result<()> {

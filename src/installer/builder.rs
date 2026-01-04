@@ -7,8 +7,7 @@ use crate::{
     config::Config,
     installed_packages::InstalledPackageStorage,
     installer::{
-        scripts::{self, ScriptError, SCRIPT_EXTENSION},
-        types::Version,
+        scripts::{self, ScriptError},
         unpack::unpack,
     },
     platforms::TARGET_ARCHITECTURE,
@@ -125,33 +124,18 @@ impl<'a> Builder<'a> {
 
         // Download and run build script
         let script_name = package_version.get_build_script_name(TARGET_ARCHITECTURE).ok_or(BuilderError::TargetError)?;
-        let build_script_path = self
-            .download_script("build", &script_name, &package.name, &package_version.version, &repository_id)?
-            .ok_or(ScriptError::ScriptNotFound("build".into()))?;
+        let build_script_path = scripts::download_script(
+            self.config,
+            self.repository_manager,
+            "build",
+            &script_name,
+            &package.name,
+            &package_version.version,
+            &repository_id,
+        )?
+        .ok_or(ScriptError::ScriptNotFound("build".into()))?;
         scripts::run_build_script(&build_script_path, &unpack_directory, self.config, &destination_path, &args)?;
 
         Ok(())
-    }
-
-    //TODO: extract this script from installer and builder into separate module
-    /// Downloads a script and saves it to the correct directory.
-    fn download_script(
-        &self,
-        script_name: &str,
-        script_path: &str,
-        package_name: &str,
-        version: &Version,
-        repository_id: &str,
-    ) -> Result<Option<PathBuf>> {
-        let name = format!("{package_name}_{version}_{script_name}");
-        let script_destination = self.config.temp_directory.join(name).with_extension(SCRIPT_EXTENSION);
-
-        match self.repository_manager.read_script(&repository_id, &package_name, &script_path)? {
-            Some(script_text) => scripts::save_script(&script_text, &script_destination)?,
-            None => return Ok(None), // Script not found, so return None
-        }
-
-        // Script succesfully downloaded, so return script location
-        Ok(Some(script_destination))
     }
 }
