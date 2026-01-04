@@ -183,8 +183,6 @@ impl<'a> Installer<'a> {
 
         // Build package if we did not find a prebuild
         let builder = Builder::new(self.config, self.installed_storage, self.repository_manager);
-
-        //TODO: do we want to build into the final install directory?
         builder.build(&package, &package_version, &repository_id, &destination_dir)?;
 
         Ok(())

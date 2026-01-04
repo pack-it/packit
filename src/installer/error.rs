@@ -18,11 +18,8 @@ pub enum InstallerError {
     #[error("Cannot write prefix directory due to incorrect permissions.")]
     PermissionsError,
 
-    #[error("Cannot request files for installation: {0}")]
-    RequestError(#[from] reqwest::Error),
-
-    #[error("Cannot unpack response: {0}")]
-    UnpackError(#[from] std::io::Error),
+    #[error("Error while interacting with filesystem: {0}")]
+    IOError(#[from] std::io::Error),
 
     #[error("Could not uninstall package '{package_name}'. {e}")]
     UninstallError {
