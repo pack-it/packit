@@ -118,18 +118,10 @@ impl<'a> Builder<'a> {
         let script_args = package_version.get_script_args(TARGET_ARCHITECTURE).ok_or(BuilderError::TargetError)?;
 
         // Download and run build script
-        let script_name = package_version.get_build_script_name(TARGET_ARCHITECTURE).ok_or(BuilderError::TargetError)?;
-        let build_script_path = scripts::download_script(
-            self.config,
-            self.repository_manager,
-            "build",
-            &script_name,
-            &package.name,
-            &package_version.version,
-            &repository_id,
-        )?
-        .ok_or(ScriptError::ScriptNotFound("build".into()))?;
-        scripts::run_build_script(&build_script_path, &unpack_directory, self.config, &destination_path, &script_args)?;
+        let script_path = package_version.get_build_script_path(TARGET_ARCHITECTURE).ok_or(BuilderError::TargetError)?;
+        let build_script_path = scripts::download_script(self.repository_manager, &script_path, &package.name, &repository_id)?
+            .ok_or(ScriptError::ScriptNotFound("build".into()))?;
+        scripts::run_build_script(build_script_path, &unpack_directory, self.config, &destination_path, &script_args)?;
 
         Ok(())
     }

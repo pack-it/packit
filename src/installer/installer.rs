@@ -78,17 +78,9 @@ impl<'a> Installer<'a> {
         let script_args = package_version.get_script_args(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
 
         // Download and run pre install script if it exists
-        let script_name = package_version.get_preinstall_script_name(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
-        if let Some(script_path) = scripts::download_script(
-            self.config,
-            self.repository_manager,
-            "preinstall",
-            &script_name,
-            package_name,
-            &version,
-            &repository_id,
-        )? {
-            scripts::run_pre_script(&script_path, &install_directory, self.config, &install_directory, &script_args)?;
+        let script_path = package_version.get_preinstall_script_path(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
+        if let Some(script_file) = scripts::download_script(self.repository_manager, &script_path, package_name, &repository_id)? {
+            scripts::run_pre_script(script_file, &install_directory, self.config, &install_directory, &script_args)?;
         }
 
         let build_destination_dir = self.config.temp_directory.join("build").join(package_name).join(version.to_string());
@@ -113,17 +105,9 @@ impl<'a> Installer<'a> {
         self.installed_storage.add_package(&package, &package_version, source_repository, &install_directory, !skip_symlinking);
 
         // Download and run post install script if it exists
-        let script_name = package_version.get_postinstall_script_name(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
-        if let Some(script_path) = scripts::download_script(
-            self.config,
-            self.repository_manager,
-            "postinstall",
-            &script_name,
-            package_name,
-            &version,
-            &repository_id,
-        )? {
-            scripts::run_post_script(&script_path, &install_directory, self.config, &script_args)?;
+        let script_path = package_version.get_postinstall_script_path(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
+        if let Some(script_file) = scripts::download_script(self.repository_manager, &script_path, package_name, &repository_id)? {
+            scripts::run_post_script(script_file, &install_directory, self.config, &script_args)?;
         }
 
         // Create symlinks for package
@@ -132,17 +116,9 @@ impl<'a> Installer<'a> {
         }
 
         // Download and run test script if it exists
-        let script_name = package_version.get_test_script_name(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
-        if let Some(script_path) = scripts::download_script(
-            self.config,
-            self.repository_manager,
-            "test",
-            &script_name,
-            package_name,
-            &version,
-            &repository_id,
-        )? {
-            scripts::run_test_script(&script_path, &install_directory, self.config, &script_args)?;
+        let script_path = package_version.get_test_script_path(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
+        if let Some(script_file) = scripts::download_script(self.repository_manager, &script_path, package_name, &repository_id)? {
+            scripts::run_test_script(script_file, &install_directory, self.config, &script_args)?;
         }
 
         Ok(())
