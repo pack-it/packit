@@ -21,7 +21,7 @@ use crate::{
 /// The errors that occur during building.
 #[derive(Error, Debug)]
 pub enum BuilderError {
-    #[error("Platform not found in targets.")]
+    #[error("Cannot find target for package.")]
     TargetError,
 
     #[error("Cannot request files for building: {0}")]
@@ -31,7 +31,7 @@ pub enum BuilderError {
     UnpackError(#[from] std::io::Error),
 
     #[error("Dependency '{package_name}' of type '{dependency_type}' is not installed.")]
-    DependencyError {
+    MissingDependencyError {
         dependency_type: String,
         package_name: String,
     },
@@ -79,7 +79,7 @@ impl<'a> Builder<'a> {
             }
 
             // Return error to indicate the dependency is not installed yet
-            return Err(BuilderError::DependencyError {
+            return Err(BuilderError::MissingDependencyError {
                 dependency_type: "normal".into(),
                 package_name: dependency.get_name().into(),
             });
@@ -93,7 +93,7 @@ impl<'a> Builder<'a> {
             }
 
             // Return error to indicate the dependency is not installed yet
-            return Err(BuilderError::DependencyError {
+            return Err(BuilderError::MissingDependencyError {
                 dependency_type: "build".into(),
                 package_name: build_dependency.get_name().into(),
             });
@@ -115,12 +115,7 @@ impl<'a> Builder<'a> {
         unpack(bytes, &unpack_directory)?;
 
         // Construct args for the build script
-        let args = package_version
-            .script_args
-            .iter()
-            .chain(target.script_args.iter())
-            .map(|(key, value)| (key.as_str(), value.as_str()))
-            .collect();
+        let script_args = package_version.get_script_args(TARGET_ARCHITECTURE).ok_or(BuilderError::TargetError)?;
 
         // Download and run build script
         let script_name = package_version.get_build_script_name(TARGET_ARCHITECTURE).ok_or(BuilderError::TargetError)?;
@@ -134,7 +129,7 @@ impl<'a> Builder<'a> {
             &repository_id,
         )?
         .ok_or(ScriptError::ScriptNotFound("build".into()))?;
-        scripts::run_build_script(&build_script_path, &unpack_directory, self.config, &destination_path, &args)?;
+        scripts::run_build_script(&build_script_path, &unpack_directory, self.config, &destination_path, &script_args)?;
 
         Ok(())
     }

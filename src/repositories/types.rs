@@ -88,6 +88,14 @@ impl PackageVersion {
         Some(self.get_script_name(self.use_version_specific_test, &target.test_script, "test"))
     }
 
+    /// Gets the script arguments for the given target.
+    /// Returns None when the target cannot be found.
+    pub fn get_script_args(&self, target_name: &str) -> Option<HashMap<&str, &str>> {
+        let target = self.targets.get(target_name)?;
+
+        Some(self.script_args.iter().chain(target.script_args.iter()).map(|(key, value)| (key.as_str(), value.as_str())).collect())
+    }
+
     /// Checks if there are conflicts between the global and target specific dependencies
     pub fn has_conflicts(&self) -> bool {
         for dependency in &self.dependencies {

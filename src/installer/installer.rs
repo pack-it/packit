@@ -75,12 +75,7 @@ impl<'a> Installer<'a> {
             fs::create_dir_all(&install_directory)?;
         }
 
-        let args = package_version
-            .script_args
-            .iter()
-            .chain(target.script_args.iter())
-            .map(|(key, value)| (key.as_str(), value.as_str()))
-            .collect();
+        let script_args = package_version.get_script_args(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
 
         // Download and run pre install script if it exists
         let script_name = package_version.get_preinstall_script_name(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
@@ -93,7 +88,7 @@ impl<'a> Installer<'a> {
             &version,
             &repository_id,
         )? {
-            scripts::run_pre_script(&script_path, &install_directory, self.config, &install_directory, &args)?;
+            scripts::run_pre_script(&script_path, &install_directory, self.config, &install_directory, &script_args)?;
         }
 
         let build_destination_dir = self.config.temp_directory.join("build").join(package_name).join(version.to_string());
@@ -128,7 +123,7 @@ impl<'a> Installer<'a> {
             &version,
             &repository_id,
         )? {
-            scripts::run_post_script(&script_path, &install_directory, self.config, &args)?;
+            scripts::run_post_script(&script_path, &install_directory, self.config, &script_args)?;
         }
 
         // Create symlinks for package
@@ -147,7 +142,7 @@ impl<'a> Installer<'a> {
             &version,
             &repository_id,
         )? {
-            scripts::run_test_script(&script_path, &install_directory, self.config, &args)?;
+            scripts::run_test_script(&script_path, &install_directory, self.config, &script_args)?;
         }
 
         Ok(())
