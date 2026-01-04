@@ -113,6 +113,7 @@ impl<'a> Builder<'a> {
 
         // Unpack the package to the temp directory
         let unpack_directory = TempDir::new()?;
+        dbg!("Created tempdir for unpack: ", unpack_directory.path());
         unpack(bytes, &unpack_directory)?;
 
         // Construct args for the build script

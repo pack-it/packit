@@ -86,6 +86,7 @@ impl<'a> Installer<'a> {
         }
 
         let build_destination_dir = TempDir::new()?;
+        dbg!("Created tempdir for build: ", build_destination_dir.path());
 
         // Get build version of package
         match self.repository_manager.get_prebuild_url(&repository_id, package_name, version) {
