@@ -1,6 +1,6 @@
 use std::io::{self, Write};
 
-use crate::cli::{display_warning, DisplayError};
+use crate::cli::display::{display_warning, DisplayError};
 
 /// Represents the response of the prompt.
 pub enum QuestionResponse {

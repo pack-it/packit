@@ -3,7 +3,7 @@ use flate2::read::GzDecoder;
 use std::{io::Cursor, path::Path};
 use tar::Archive;
 
-use crate::cli::ReaderWithProgress;
+use crate::cli::display::ReaderWithProgress;
 
 // Unpacks tar files and saves them to a provided destination directory
 pub fn unpack<P: AsRef<Path>>(bytes: Bytes, destination_directory: P) -> Result<(), std::io::Error> {

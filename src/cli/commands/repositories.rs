@@ -1,7 +1,7 @@
 use crate::{
     cli::{
-        self,
         commands::{CommandError, HandleCommand},
+        display::display_warning,
     },
     config::Config,
     repositories::manager::RepositoryManager,
@@ -25,8 +25,8 @@ impl HandleCommand for RepositoryArgs {
                 Ok(metadata) => metadata,
                 Err(e) => {
                     // Display the error and continue
-                    cli::display_warning!("Cannot read repository metadata of repository '{repository_id}'");
-                    cli::display_warning!("{e}");
+                    display_warning!("Cannot read repository metadata of repository '{repository_id}'");
+                    display_warning!("{e}");
                     continue;
                 },
             };

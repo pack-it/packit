@@ -4,7 +4,7 @@ use tempfile::TempDir;
 use thiserror::Error;
 
 use crate::{
-    cli::Spinner,
+    cli::display::Spinner,
     config::Config,
     installed_packages::InstalledPackageStorage,
     installer::{

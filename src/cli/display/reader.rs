@@ -1,6 +1,6 @@
 use std::io::{self, Read};
 
-use crate::cli::ProgressBar;
+use crate::cli::display::ProgressBar;
 
 /// Custom reader which updates a progress bar.
 pub struct ReaderWithProgress<R: Read> {
