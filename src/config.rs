@@ -29,9 +29,6 @@ pub struct Config {
 
     #[serde(default = "default_prefix_directory")]
     pub prefix_directory: PathBuf,
-
-    #[serde(default = "default_temp_directory")]
-    pub temp_directory: PathBuf,
 }
 
 /// Represents a repository, containing connection information.
@@ -51,10 +48,6 @@ fn default_prompt_repo_conflicts() -> bool {
 
 fn default_prefix_directory() -> PathBuf {
     DEFAULT_PREFIX.into()
-}
-
-fn default_temp_directory() -> PathBuf {
-    "./temp".into() //TODO: Remove and use proper tempfiles
 }
 
 pub fn default_repository_provider() -> String {
