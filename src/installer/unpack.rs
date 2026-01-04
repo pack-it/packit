@@ -3,10 +3,10 @@ use flate2::read::GzDecoder;
 use std::{io::Cursor, path::Path};
 use tar::Archive;
 
-use crate::{cli::ReaderWithProgress, installer::error::Result};
+use crate::cli::ReaderWithProgress;
 
 // Unpacks tar files and saves them to a provided install directory
-pub fn unpack<P: AsRef<Path>>(bytes: Bytes, install_directory: P) -> Result<()> {
+pub fn unpack<P: AsRef<Path>>(bytes: Bytes, install_directory: P) -> Result<(), std::io::Error> {
     let size = bytes.len();
     let cursor = Cursor::new(bytes);
 

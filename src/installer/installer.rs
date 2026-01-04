@@ -1,15 +1,18 @@
 use crate::{
-    cli::{self, ask_user, QuestionResponse, Spinner},
+    cli::{self, ask_user, QuestionResponse},
     config::Config,
     installed_packages::InstalledPackageStorage,
     installer::{
+        builder::Builder,
         error::{InstallerError, Result},
-        scripts::{self, ScriptError, SCRIPT_EXTENSION},
+        scripts,
         types::{Dependency, Version},
-        unpack::unpack,
     },
     platforms::{symlink, TARGET_ARCHITECTURE},
-    repositories::manager::RepositoryManager,
+    repositories::{
+        manager::RepositoryManager,
+        types::{Package, PackageTarget, PackageVersion},
+    },
 };
 
 use std::{
@@ -63,69 +66,41 @@ impl<'a> Installer<'a> {
         };
 
         // Install global package dependencies and platform specific packages (if there are any, can be empty)
-        let dependencies = package_version.dependencies.iter().chain(target.dependencies.iter());
-        for dependency in dependencies {
-            if self.installed_storage.dependency_satisfied(dependency) {
-                println!("Dependency '{}' already satisfied, continuing", dependency.get_name());
-                continue;
-            }
-
-            // Determine the latest supported version for the dependency
-            let version = self.get_latest_dependency_version(dependency)?;
-
-            self.install(dependency.get_name(), &Some(version.clone()))?;
-        }
-
-        // Install global package build dependencies and platform specific build dependencies
-        let build_dependencies = package_version.build_dependencies.iter().chain(target.build_dependencies.iter());
-        for build_dependency in build_dependencies {
-            if self.installed_storage.dependency_satisfied(build_dependency) {
-                println!("Dependency '{}' already satisfied, continuing", build_dependency.get_name());
-                continue;
-            }
-
-            // Determine the latest supported version for the dependency
-            let version = self.get_latest_dependency_version(build_dependency)?;
-
-            // TODO: Delete build dependencies later, somewhere
-            self.install(build_dependency.get_name(), &Some(version.clone()))?;
-        }
-
-        // Show download
-        let spinner = Spinner::new();
-        spinner.show("Downloading ".to_string() + package_name);
-
-        // Request the data of the package and get bytes
-        let response = reqwest::blocking::get(&target.url)?;
-        let bytes = response.bytes()?;
-
-        spinner.finish("Downloading ".to_string() + package_name + " successful");
-
-        // Unpack the package to the temp directory
-        let unpack_directory = self.config.temp_directory.join(package_name).join(version.to_string());
-        unpack(bytes, &unpack_directory)?;
+        self.install_dependencies(&package_version.dependencies, &target.dependencies)?;
 
         let install_directory = self.config.prefix_directory.join("packages").join(package_name).join(version.to_string());
 
-        let args = package_version
-            .script_args
-            .iter()
-            .chain(target.script_args.iter())
-            .map(|(key, value)| (key.as_str(), value.as_str()))
-            .collect();
+        // Create install directory if it does not exist
+        if !fs::exists(&install_directory)? {
+            fs::create_dir_all(&install_directory)?;
+        }
+
+        let script_args = package_version.get_script_args(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
 
         // Download and run pre install script if it exists
         let script_name = package_version.get_preinstall_script_name(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
-        if let Some(script_path) = self.download_script("preinstall", &script_name, package_name, &version, &repository_id)? {
-            scripts::run_pre_script(&script_path, &unpack_directory, self.config, &install_directory, &args)?;
+        if let Some(script_path) = scripts::download_script(
+            self.config,
+            self.repository_manager,
+            "preinstall",
+            &script_name,
+            package_name,
+            &version,
+            &repository_id,
+        )? {
+            scripts::run_pre_script(&script_path, &install_directory, self.config, &install_directory, &script_args)?;
         }
 
-        // Download and run build script
-        let script_name = package_version.get_build_script_name(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
-        let build_script_path = self
-            .download_script("build", &script_name, package_name, &version, &repository_id)?
-            .ok_or(ScriptError::ScriptNotFound("build".into()))?;
-        scripts::run_build_script(&build_script_path, &unpack_directory, self.config, &install_directory, &args)?;
+        let build_destination_dir = self.config.temp_directory.join("build").join(package_name).join(version.to_string());
+
+        // Get build version of package
+        match self.repository_manager.get_prebuild_url(&repository_id, package_name, version) {
+            Some(url) => self.download_prebuild(&url, &build_destination_dir)?,
+            None => self.build_package(&package, &package_version, &target, &repository_id, &build_destination_dir)?,
+        }
+
+        // Move build to final directory
+        fs::rename(&build_destination_dir, &install_directory)?;
 
         // Check if symlinking should be skipped
         let skip_symlinking = match target.skip_symlinking {
@@ -139,8 +114,16 @@ impl<'a> Installer<'a> {
 
         // Download and run post install script if it exists
         let script_name = package_version.get_postinstall_script_name(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
-        if let Some(script_path) = self.download_script("postinstall", &script_name, package_name, &version, &repository_id)? {
-            scripts::run_post_script(&script_path, &install_directory, self.config, &args)?;
+        if let Some(script_path) = scripts::download_script(
+            self.config,
+            self.repository_manager,
+            "postinstall",
+            &script_name,
+            package_name,
+            &version,
+            &repository_id,
+        )? {
+            scripts::run_post_script(&script_path, &install_directory, self.config, &script_args)?;
         }
 
         // Create symlinks for package
@@ -150,11 +133,58 @@ impl<'a> Installer<'a> {
 
         // Download and run test script if it exists
         let script_name = package_version.get_test_script_name(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
-        if let Some(script_path) = self.download_script("test", &script_name, package_name, &version, &repository_id)? {
-            scripts::run_test_script(&script_path, &install_directory, self.config, &args)?;
+        if let Some(script_path) = scripts::download_script(
+            self.config,
+            self.repository_manager,
+            "test",
+            &script_name,
+            package_name,
+            &version,
+            &repository_id,
+        )? {
+            scripts::run_test_script(&script_path, &install_directory, self.config, &script_args)?;
         }
 
         Ok(())
+    }
+
+    fn install_dependencies<'d>(&mut self, global_dependencies: &Vec<Dependency>, target_dependencies: &Vec<Dependency>) -> Result<()> {
+        let dependencies = global_dependencies.iter().chain(target_dependencies.iter());
+        for dependency in dependencies {
+            if self.installed_storage.dependency_satisfied(dependency) {
+                println!("Dependency '{}' already satisfied, continuing", dependency.get_name());
+                continue;
+            }
+
+            // Determine the latest supported version for the dependency
+            let version = self.get_latest_dependency_version(dependency)?;
+
+            self.install(dependency.get_name(), &Some(version.clone()))?;
+        }
+
+        Ok(())
+    }
+
+    fn build_package(
+        &mut self,
+        package: &Package,
+        package_version: &PackageVersion,
+        target: &PackageTarget,
+        repository_id: &str,
+        destination_dir: &PathBuf,
+    ) -> Result<()> {
+        // Install global package build dependencies and platform specific build dependencies
+        self.install_dependencies(&package_version.build_dependencies, &target.build_dependencies)?;
+
+        // Build package if we did not find a prebuild
+        let builder = Builder::new(self.config, self.installed_storage, self.repository_manager);
+        builder.build(&package, &package_version, &repository_id, &destination_dir)?;
+
+        Ok(())
+    }
+
+    fn download_prebuild(&self, prebuild_url: &str, destination_dir: &PathBuf) -> Result<()> {
+        todo!()
     }
 
     /// Uninstalls a package version if specified, otherwise it will uninstall the entire package directory.
@@ -284,27 +314,6 @@ impl<'a> Installer<'a> {
                 e,
             }),
         }
-    }
-
-    /// Downloads a script and saves it to the correct directory.
-    fn download_script(
-        &self,
-        script_name: &str,
-        script_path: &str,
-        package_name: &str,
-        version: &Version,
-        repository_id: &str,
-    ) -> Result<Option<PathBuf>> {
-        let name = format!("{package_name}_{version}_{script_name}");
-        let script_destination = self.config.temp_directory.join(name).with_extension(SCRIPT_EXTENSION);
-
-        match self.repository_manager.read_script(&repository_id, &package_name, &script_path)? {
-            Some(script_text) => scripts::save_script(&script_text, &script_destination)?,
-            None => return Ok(None), // Script not found, so return None
-        }
-
-        // Script succesfully downloaded, so return script location
-        Ok(Some(script_destination))
     }
 
     fn create_symlinks(&self, package_directory: &Path) -> Result<()> {

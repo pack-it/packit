@@ -1,24 +1,25 @@
 use thiserror::Error;
 
 use crate::{
-    cli::DisplayError, installed_packages::InstalledPackagesError, installer::scripts::ScriptError, platforms::symlink::SymlinkError,
+    cli::DisplayError,
+    installed_packages::InstalledPackagesError,
+    installer::{builder::BuilderError, scripts::ScriptError},
+    platforms::symlink::SymlinkError,
     repositories::error::RepositoryError,
 };
 
 /// The errors that occur during installation.
 #[derive(Error, Debug)]
 pub enum InstallerError {
+    //TODO: Split out errors
     #[error("Platform not found in targets.")]
     TargetError,
 
     #[error("Cannot write prefix directory due to incorrect permissions.")]
     PermissionsError,
 
-    #[error("Cannot request files for installation: {0}")]
-    RequestError(#[from] reqwest::Error),
-
-    #[error("Cannot unpack response: {0}")]
-    UnpackError(#[from] std::io::Error),
+    #[error("Error while interacting with filesystem: {0}")]
+    IOError(#[from] std::io::Error),
 
     #[error("Could not uninstall package '{package_name}'. {e}")]
     UninstallError {
@@ -60,6 +61,9 @@ pub enum InstallerError {
 
     #[error("Cannot execute symlink opperation: {0}")]
     SymlinkError(#[from] SymlinkError),
+
+    #[error("Cannot build package: {0}")]
+    BuildError(#[from] BuilderError),
 }
 
 pub(super) type Result<T> = std::result::Result<T, InstallerError>;

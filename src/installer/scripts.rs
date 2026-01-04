@@ -7,13 +7,19 @@ use std::{
 
 use thiserror::Error;
 
-use crate::{cli, config::Config, platforms::TARGET_ARCHITECTURE};
+use crate::{
+    cli,
+    config::Config,
+    installer::types::Version,
+    platforms::TARGET_ARCHITECTURE,
+    repositories::{error::RepositoryError, manager::RepositoryManager},
+};
 
 /// The errors that occur during script handling.
 #[derive(Error, Debug)]
 pub enum ScriptError {
     #[error("Cannot run script: {0}")]
-    RunError(#[from] std::io::Error),
+    RunError(std::io::Error),
 
     #[error("Cannot transform path to absolute path: {0}")]
     AbsolutePathError(std::io::Error),
@@ -29,13 +35,9 @@ pub enum ScriptError {
 
     #[error("Script executed with status code {0}")]
     ScriptFailed(i32),
-}
 
-/// Saves the given script text to the given destination.
-pub fn save_script(script_text: &str, destination: &PathBuf) -> Result<(), ScriptError> {
-    fs::write(destination, script_text).map_err(|e| ScriptError::SaveError(e))?;
-
-    Ok(())
+    #[error("Cannot fetch script from repository: {0}")]
+    FetchScriptError(#[from] RepositoryError),
 }
 
 /// Runs the given pre install script, in the given directory.
@@ -142,7 +144,7 @@ pub fn run_script<P: AsRef<Path>>(
     }
 
     // Run script
-    let output = command.output()?;
+    let output = command.output().map_err(ScriptError::RunError)?;
 
     // Display status to user
     match output.status.code() {
@@ -159,6 +161,28 @@ pub fn run_script<P: AsRef<Path>>(
             Err(ScriptError::ScriptFailed(-1))
         },
     }
+}
+
+/// Downloads a script and saves it as a temp file.
+pub fn download_script(
+    config: &Config,
+    repository_manager: &RepositoryManager,
+    script_name: &str,
+    script_path: &str,
+    package_name: &str,
+    version: &Version,
+    repository_id: &str,
+) -> Result<Option<PathBuf>, ScriptError> {
+    let name = format!("{package_name}_{version}_{script_name}");
+    let script_destination = config.temp_directory.join(name).with_extension(SCRIPT_EXTENSION);
+
+    match repository_manager.read_script(&repository_id, &package_name, &script_path)? {
+        Some(script_text) => fs::write(&script_destination, &script_text).map_err(ScriptError::SaveError)?,
+        None => return Ok(None), // Script not found, so return None
+    }
+
+    // Script succesfully downloaded, so return script location
+    Ok(Some(script_destination))
 }
 
 fn to_absolute_path<P: AsRef<Path>>(path: P) -> Result<PathBuf, ScriptError> {
