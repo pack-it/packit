@@ -162,14 +162,20 @@ impl InstalledPackageStorage {
         false
     }
 
+    /// Checks if the dependency is already satisfied.
     pub fn dependency_satisfied(&self, dependency: &Dependency) -> bool {
+        self.get_satisfying_package(dependency).is_some()
+    }
+
+    /// Gets the installed package which statisfies the dependency.
+    pub fn get_satisfying_package(&self, dependency: &Dependency) -> Option<&InstalledPackage> {
         for package in &self.installed_packages {
             if dependency.satisfied(&package.name, Some(&package.version)) {
-                return true;
+                return Some(package);
             }
         }
 
-        false
+        None
     }
 
     /// Gets a specific version of a certain package from the storage.

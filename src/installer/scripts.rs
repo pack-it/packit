@@ -11,7 +11,7 @@ use thiserror::Error;
 use crate::{
     cli::display::logging::warning,
     config::Config,
-    installer::build_env,
+    installer::build_env::BuildEnv,
     platforms::TARGET_ARCHITECTURE,
     repositories::{error::RepositoryError, manager::RepositoryManager},
 };
@@ -62,13 +62,10 @@ pub fn run_build_script(
     run_dir: impl AsRef<Path>,
     config: &Config,
     package_install_path: impl AsRef<Path>,
+    build_env: BuildEnv,
     args: &HashMap<&str, &str>,
 ) -> Result<()> {
-    let env_vars = HashMap::from([
-        ("PATH", build_env::create_path()), // TODO: add other variables
-    ]);
-
-    run_script(path, run_dir, config, &package_install_path, env_vars, args)
+    run_script(path, run_dir, config, &package_install_path, build_env.to_hashmap(), args)
 }
 
 /// Runs the given post install script, in the package install directory.
