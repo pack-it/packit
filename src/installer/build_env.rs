@@ -26,6 +26,7 @@ impl<'a> BuildEnv<'a> {
         let mut vars = HashMap::from([
             ("PATH", self.create_path()),
             ("PKG_CONFIG_PATH", self.create_pkg_config_path()),
+            ("PKG_CONFIG_LIBDIR", "".into()),
             ("CMAKE_PREFIX_PATH", self.create_cmake_prefix_path()),
             ("ACLOCAL_PATH", self.create_aclocal_path()),
         ]);
@@ -112,7 +113,7 @@ impl<'a> BuildEnv<'a> {
             }
         }
 
-        parts.join(" ")
+        parts.join(":")
     }
 
     fn create_cmake_prefix_path(&self) -> String {
