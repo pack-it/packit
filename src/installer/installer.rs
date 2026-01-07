@@ -86,7 +86,6 @@ impl<'a> Installer<'a> {
         }
 
         let build_destination_dir = TempDir::new()?;
-        dbg!("Created tempdir for build: ", build_destination_dir.path());
 
         // Get build version of package
         match self.repository_manager.get_prebuild_url(&repository_id, package_name, version) {
@@ -329,6 +328,7 @@ impl<'a> Installer<'a> {
             // Handle directories
             if file.file_type()?.is_dir() {
                 // If we want to keep subdirectories, create the symlinks for the subdirectory
+                // TODO: Handle subdirectories properly
                 if keep_subdirectories {
                     self.create_folder_symlinks(&file.path(), &destination, true)?;
                 } else {

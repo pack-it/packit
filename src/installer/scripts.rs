@@ -123,7 +123,7 @@ pub fn run_script(
     env_vars: HashMap<&str, &str>,
     args: &HashMap<&str, &str>,
 ) -> Result<(), ScriptError> {
-    let path = to_absolute_path(path)?;
+    let path = to_absolute_path(path.as_ref())?;
 
     let mut command = create_command(path);
     command
@@ -170,13 +170,14 @@ pub fn download_script(
     package_name: &str,
     repository_id: &str,
 ) -> Result<Option<NamedTempFile>, ScriptError> {
-    let file = NamedTempFile::new().map_err(ScriptError::SaveError)?;
-    dbg!("Created tempfile: ", file.path());
-
-    match repository_manager.read_script(&repository_id, &package_name, &script_path)? {
-        Some(script_text) => fs::write(&file, &script_text).map_err(ScriptError::SaveError)?,
+    let script_text = match repository_manager.read_script(&repository_id, &package_name, &script_path)? {
+        Some(script_text) => script_text,
         None => return Ok(None), // Script not found, so return None
-    }
+    };
+
+    // Write script to file
+    let file = NamedTempFile::new().map_err(ScriptError::SaveError)?;
+    fs::write(&file, &script_text).map_err(ScriptError::SaveError)?;
 
     // Script succesfully downloaded, so return created tempfile
     Ok(Some(file))
