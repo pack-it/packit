@@ -40,7 +40,13 @@ impl<'a> BuildEnv<'a> {
             };
         }
 
-        // TODO: add xcode paths
+        // Add macos specific environment variables
+        #[cfg(target_os = "macos")]
+        {
+            vars.insert("PERL", "/usr/bin/perl".into());
+
+            // TODO: add xcode paths
+        }
 
         vars
     }

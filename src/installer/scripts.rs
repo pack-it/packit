@@ -104,6 +104,7 @@ pub fn run_script(
         .env("PACKIT_TARGET", TARGET_ARCHITECTURE)
         .env("PACKIT_PACKAGE_PATH", package_install_path);
 
+    // Add script environment variables
     for (key, value) in env_vars {
         command.env(key, value);
     }
