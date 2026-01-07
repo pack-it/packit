@@ -23,6 +23,9 @@ use crate::{
 /// The errors that occur during building.
 #[derive(Error, Debug)]
 pub enum BuilderError {
+    #[error("Build files download unsuccessful")]
+    RequestUnsuccessful(reqwest::StatusCode),
+
     #[error("Cannot request files for building")]
     RequestError(#[from] reqwest::Error),
 
@@ -109,8 +112,13 @@ impl<'a> Builder<'a> {
         let spinner = Spinner::new();
         spinner.show("Downloading ".to_string() + &package.name);
 
-        // Request the data of the package and get bytes
+        // Download the build files
         let response = reqwest::blocking::get(&target.url)?;
+        if !response.status().is_success() {
+            return Err(BuilderError::RequestUnsuccessful(response.status()));
+        }
+
+        // Get the bytes from the response
         let bytes = response.bytes()?;
 
         // Finish download spinner
