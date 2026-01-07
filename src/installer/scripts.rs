@@ -5,12 +5,12 @@ use std::{
     process::{Command, Stdio},
 };
 
+use tempfile::NamedTempFile;
 use thiserror::Error;
 
 use crate::{
     cli,
     config::Config,
-    installer::types::Version,
     platforms::TARGET_ARCHITECTURE,
     repositories::{error::RepositoryError, manager::RepositoryManager},
 };
@@ -42,9 +42,9 @@ pub enum ScriptError {
 
 /// Runs the given pre install script, in the given directory.
 /// Note that the script should be a `.sh` script on Linux and macOS and a `.bat` on Windows.
-pub fn run_pre_script<P: AsRef<Path>>(
-    path: &PathBuf,
-    run_dir: P,
+pub fn run_pre_script(
+    path: impl AsRef<Path>,
+    run_dir: impl AsRef<Path>,
     config: &Config,
     package_install_path: &PathBuf,
     args: &HashMap<&str, &str>,
@@ -61,11 +61,11 @@ pub fn run_pre_script<P: AsRef<Path>>(
 
 /// Runs the given build script, in the given directory.
 /// Note that the script should be a `.sh` script on Linux and macOS and a `.bat` on Windows.
-pub fn run_build_script<P: AsRef<Path>>(
-    path: &PathBuf,
-    run_dir: P,
+pub fn run_build_script(
+    path: impl AsRef<Path>,
+    run_dir: impl AsRef<Path>,
     config: &Config,
-    package_install_path: &PathBuf,
+    package_install_path: impl AsRef<Path>,
     args: &HashMap<&str, &str>,
 ) -> Result<(), ScriptError> {
     let package_install_path = to_absolute_path(package_install_path)?;
@@ -81,7 +81,7 @@ pub fn run_build_script<P: AsRef<Path>>(
 /// Runs the given post install script, in the package install directory.
 /// Note that the script should be a `.sh` script on Linux and macOS and a `.bat` on Windows.
 pub fn run_post_script(
-    path: &PathBuf,
+    path: impl AsRef<Path>,
     package_install_path: &PathBuf,
     config: &Config,
     args: &HashMap<&str, &str>,
@@ -99,7 +99,7 @@ pub fn run_post_script(
 /// Runs the given test script, in the package install directory.
 /// Note that the script should be a `.sh` script on Linux and macOS and a `.bat` on Windows.
 pub fn run_test_script(
-    path: &PathBuf,
+    path: impl AsRef<Path>,
     package_install_path: &PathBuf,
     config: &Config,
     args: &HashMap<&str, &str>,
@@ -116,14 +116,14 @@ pub fn run_test_script(
 
 /// Runs the script at the given path, in the given directory.
 /// Note that the script should be a `.sh` script on Linux and macOS and a `.bat` on Windows.
-pub fn run_script<P: AsRef<Path>>(
-    path: &PathBuf,
-    run_dir: P,
+pub fn run_script(
+    path: impl AsRef<Path>,
+    run_dir: impl AsRef<Path>,
     config: &Config,
     env_vars: HashMap<&str, &str>,
     args: &HashMap<&str, &str>,
 ) -> Result<(), ScriptError> {
-    let path = to_absolute_path(path)?;
+    let path = to_absolute_path(path.as_ref())?;
 
     let mut command = create_command(path);
     command
@@ -165,24 +165,22 @@ pub fn run_script<P: AsRef<Path>>(
 
 /// Downloads a script and saves it as a temp file.
 pub fn download_script(
-    config: &Config,
     repository_manager: &RepositoryManager,
-    script_name: &str,
     script_path: &str,
     package_name: &str,
-    version: &Version,
     repository_id: &str,
-) -> Result<Option<PathBuf>, ScriptError> {
-    let name = format!("{package_name}_{version}_{script_name}");
-    let script_destination = config.temp_directory.join(name).with_extension(SCRIPT_EXTENSION);
-
-    match repository_manager.read_script(&repository_id, &package_name, &script_path)? {
-        Some(script_text) => fs::write(&script_destination, &script_text).map_err(ScriptError::SaveError)?,
+) -> Result<Option<NamedTempFile>, ScriptError> {
+    let script_text = match repository_manager.read_script(&repository_id, &package_name, &script_path)? {
+        Some(script_text) => script_text,
         None => return Ok(None), // Script not found, so return None
-    }
+    };
 
-    // Script succesfully downloaded, so return script location
-    Ok(Some(script_destination))
+    // Write script to file
+    let file = NamedTempFile::new().map_err(ScriptError::SaveError)?;
+    fs::write(&file, &script_text).map_err(ScriptError::SaveError)?;
+
+    // Script succesfully downloaded, so return created tempfile
+    Ok(Some(file))
 }
 
 fn to_absolute_path<P: AsRef<Path>>(path: P) -> Result<PathBuf, ScriptError> {

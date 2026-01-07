@@ -54,7 +54,7 @@ pub struct PackageVersion {
 }
 
 impl PackageVersion {
-    fn get_script_name(&self, use_version_specific: bool, script: &Option<Script>, default_script_name: &str) -> String {
+    fn get_script_path(&self, use_version_specific: bool, script: &Option<Script>, default_script_name: &str) -> String {
         match script {
             Some(Script::NameOnly(name)) => format!("{name}.{SCRIPT_EXTENSION}"),
             Some(Script::Expanded { name, version_specific }) if *version_specific => format!("{}/{name}.{SCRIPT_EXTENSION}", self.version),
@@ -64,28 +64,28 @@ impl PackageVersion {
         }
     }
 
-    pub fn get_build_script_name(&self, target_name: &str) -> Option<String> {
+    pub fn get_build_script_path(&self, target_name: &str) -> Option<String> {
         let target = self.targets.get(target_name)?;
 
-        Some(self.get_script_name(self.use_version_specific_build, &target.build_script, "build"))
+        Some(self.get_script_path(self.use_version_specific_build, &target.build_script, "build"))
     }
 
-    pub fn get_preinstall_script_name(&self, target_name: &str) -> Option<String> {
+    pub fn get_preinstall_script_path(&self, target_name: &str) -> Option<String> {
         let target = self.targets.get(target_name)?;
 
-        Some(self.get_script_name(self.use_version_specific_preinstall, &target.preinstall_script, "preinstall"))
+        Some(self.get_script_path(self.use_version_specific_preinstall, &target.preinstall_script, "preinstall"))
     }
 
-    pub fn get_postinstall_script_name(&self, target_name: &str) -> Option<String> {
+    pub fn get_postinstall_script_path(&self, target_name: &str) -> Option<String> {
         let target = self.targets.get(target_name)?;
 
-        Some(self.get_script_name(self.use_version_specific_postinstall, &target.postinstall_script, "postinstall"))
+        Some(self.get_script_path(self.use_version_specific_postinstall, &target.postinstall_script, "postinstall"))
     }
 
-    pub fn get_test_script_name(&self, target_name: &str) -> Option<String> {
+    pub fn get_test_script_path(&self, target_name: &str) -> Option<String> {
         let target = self.targets.get(target_name)?;
 
-        Some(self.get_script_name(self.use_version_specific_test, &target.test_script, "test"))
+        Some(self.get_script_path(self.use_version_specific_test, &target.test_script, "test"))
     }
 
     /// Gets the script arguments for the given target.

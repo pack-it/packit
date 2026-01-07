@@ -5,8 +5,8 @@ use tar::Archive;
 
 use crate::cli::ReaderWithProgress;
 
-// Unpacks tar files and saves them to a provided install directory
-pub fn unpack<P: AsRef<Path>>(bytes: Bytes, install_directory: P) -> Result<(), std::io::Error> {
+// Unpacks tar files and saves them to a provided destination directory
+pub fn unpack<P: AsRef<Path>>(bytes: Bytes, destination_directory: P) -> Result<(), std::io::Error> {
     let size = bytes.len();
     let cursor = Cursor::new(bytes);
 
@@ -15,6 +15,6 @@ pub fn unpack<P: AsRef<Path>>(bytes: Bytes, install_directory: P) -> Result<(), 
 
     let tar = GzDecoder::new(reader);
     let mut archive = Archive::new(tar);
-    archive.unpack(install_directory)?;
+    archive.unpack(destination_directory)?;
     Ok(())
 }

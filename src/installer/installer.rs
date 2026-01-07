@@ -1,3 +1,5 @@
+use tempfile::TempDir;
+
 use crate::{
     cli::{self, ask_user, QuestionResponse},
     config::Config,
@@ -78,20 +80,12 @@ impl<'a> Installer<'a> {
         let script_args = package_version.get_script_args(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
 
         // Download and run pre install script if it exists
-        let script_name = package_version.get_preinstall_script_name(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
-        if let Some(script_path) = scripts::download_script(
-            self.config,
-            self.repository_manager,
-            "preinstall",
-            &script_name,
-            package_name,
-            &version,
-            &repository_id,
-        )? {
-            scripts::run_pre_script(&script_path, &install_directory, self.config, &install_directory, &script_args)?;
+        let script_path = package_version.get_preinstall_script_path(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
+        if let Some(script_file) = scripts::download_script(self.repository_manager, &script_path, package_name, &repository_id)? {
+            scripts::run_pre_script(script_file, &install_directory, self.config, &install_directory, &script_args)?;
         }
 
-        let build_destination_dir = self.config.temp_directory.join("build").join(package_name).join(version.to_string());
+        let build_destination_dir = TempDir::new()?;
 
         // Get build version of package
         match self.repository_manager.get_prebuild_url(&repository_id, package_name, version) {
@@ -100,7 +94,7 @@ impl<'a> Installer<'a> {
         }
 
         // Move build to final directory
-        fs::rename(&build_destination_dir, &install_directory)?;
+        fs::rename(build_destination_dir.keep(), &install_directory)?;
 
         // Check if symlinking should be skipped
         let skip_symlinking = match target.skip_symlinking {
@@ -113,17 +107,9 @@ impl<'a> Installer<'a> {
         self.installed_storage.add_package(&package, &package_version, source_repository, &install_directory, !skip_symlinking);
 
         // Download and run post install script if it exists
-        let script_name = package_version.get_postinstall_script_name(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
-        if let Some(script_path) = scripts::download_script(
-            self.config,
-            self.repository_manager,
-            "postinstall",
-            &script_name,
-            package_name,
-            &version,
-            &repository_id,
-        )? {
-            scripts::run_post_script(&script_path, &install_directory, self.config, &script_args)?;
+        let script_path = package_version.get_postinstall_script_path(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
+        if let Some(script_file) = scripts::download_script(self.repository_manager, &script_path, package_name, &repository_id)? {
+            scripts::run_post_script(script_file, &install_directory, self.config, &script_args)?;
         }
 
         // Create symlinks for package
@@ -132,17 +118,9 @@ impl<'a> Installer<'a> {
         }
 
         // Download and run test script if it exists
-        let script_name = package_version.get_test_script_name(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
-        if let Some(script_path) = scripts::download_script(
-            self.config,
-            self.repository_manager,
-            "test",
-            &script_name,
-            package_name,
-            &version,
-            &repository_id,
-        )? {
-            scripts::run_test_script(&script_path, &install_directory, self.config, &script_args)?;
+        let script_path = package_version.get_test_script_path(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
+        if let Some(script_file) = scripts::download_script(self.repository_manager, &script_path, package_name, &repository_id)? {
+            scripts::run_test_script(script_file, &install_directory, self.config, &script_args)?;
         }
 
         Ok(())
@@ -171,7 +149,7 @@ impl<'a> Installer<'a> {
         package_version: &PackageVersion,
         target: &PackageTarget,
         repository_id: &str,
-        destination_dir: &PathBuf,
+        destination_dir: impl AsRef<Path>,
     ) -> Result<()> {
         // Install global package build dependencies and platform specific build dependencies
         self.install_dependencies(&package_version.build_dependencies, &target.build_dependencies)?;
@@ -183,7 +161,7 @@ impl<'a> Installer<'a> {
         Ok(())
     }
 
-    fn download_prebuild(&self, prebuild_url: &str, destination_dir: &PathBuf) -> Result<()> {
+    fn download_prebuild(&self, prebuild_url: &str, destination_dir: impl AsRef<Path>) -> Result<()> {
         todo!()
     }
 
@@ -350,6 +328,7 @@ impl<'a> Installer<'a> {
             // Handle directories
             if file.file_type()?.is_dir() {
                 // If we want to keep subdirectories, create the symlinks for the subdirectory
+                // TODO: Handle subdirectories properly
                 if keep_subdirectories {
                     self.create_folder_symlinks(&file.path(), &destination, true)?;
                 } else {
