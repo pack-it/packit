@@ -183,7 +183,23 @@ impl InstalledPackageStorage {
     pub fn get_package(&self, package_name: &str, package_version: &Version) -> Option<&InstalledPackage> {
         for package in &self.installed_packages {
             if package.name == package_name && package.version == *package_version {
+                //TODO: add external check as in get_package_mut
                 return Some(package);
+            }
+        }
+
+        None
+    }
+
+    /// Gets a specific version of a certain package from the storage.
+    /// Returns a mutable reference to the package version, or None if the package version is not installed.
+    pub fn get_package_mut(&mut self, package_name: &str, package_version: &Version, external: bool) -> Option<&mut InstalledPackage> {
+        for installed_package in self.installed_packages.iter_mut() {
+            if installed_package.name == package_name
+                && installed_package.version != *package_version
+                && installed_package.external != external
+            {
+                return Some(installed_package);
             }
         }
 

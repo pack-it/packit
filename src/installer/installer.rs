@@ -90,18 +90,15 @@ impl<'a> Installer<'a> {
             None => self.build_package(&package, &package_version, &target, &repository_id, &build_destination_dir)?,
         }
 
+        // Get source repository for installed storage before persisting the package to its final destination
+        let source_repository = self.config.repositories.get(&repository_id).expect("Expected repository in config");
+
         // Move build to final directory
         fs::rename(build_destination_dir.keep(), &install_directory)?;
 
-        // Check if symlinking should be skipped
-        let skip_symlinking = match target.skip_symlinking {
-            Some(skip_symlinking) => skip_symlinking,
-            None => package_version.skip_symlinking,
-        };
-
         // Add and save package to installed storage toml
-        let source_repository = self.config.repositories.get(&repository_id).expect("Expected repository in config");
-        self.installed_storage.add_package(&package, &package_version, source_repository, &install_directory, !skip_symlinking);
+        self.installed_storage.add_package(&package, &package_version, source_repository, &install_directory, false);
+        self.installed_storage.save_to(&InstalledPackageStorage::get_default_path())?;
 
         // Download and run post install script if it exists
         let script_path = package_version.get_postinstall_script_path(TARGET_ARCHITECTURE)?;
@@ -109,9 +106,26 @@ impl<'a> Installer<'a> {
             scripts::run_post_script(script_file, &install_directory, self.config, &script_args)?;
         }
 
+        // Check if symlinking should be skipped
+        let skip_symlinking = match target.skip_symlinking {
+            Some(skip_symlinking) => skip_symlinking,
+            None => package_version.skip_symlinking,
+        };
+
         // Create symlinks for package
         if !skip_symlinking {
             self.create_symlinks(Path::new(&install_directory))?;
+
+            // Update symlinked state in installed storage
+            match self.installed_storage.get_package_mut(&package.name, &package_version.version, false) {
+                Some(package) => {
+                    package.symlinked = true;
+                    self.installed_storage.save_to(&InstalledPackageStorage::get_default_path())?;
+                },
+                None => cli::display_warning!(
+                    "Cannot get installed package from installed storage... Please check installation with 'pit list'"
+                ),
+            }
         }
 
         // Download and run test script if it exists
