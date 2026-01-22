@@ -30,9 +30,6 @@ impl HandleCommand for ListArgs {
             }
         }
 
-        // Save changes
-        installed_storage.save_to(&installed_dir)?;
-
         Ok(())
     }
 }
