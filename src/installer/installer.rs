@@ -1,5 +1,3 @@
-use tempfile::TempDir;
-
 use crate::{
     cli::display::{ask_user, logging::warning, QuestionResponse},
     config::Config,
@@ -82,19 +80,14 @@ impl<'a> Installer<'a> {
             scripts::run_pre_script(script_file, &install_directory, self.config, &install_directory, &script_args)?;
         }
 
-        let build_destination_dir = TempDir::new()?;
+        // Get source repository for installed storage before actually installing package
+        let source_repository = self.config.repositories.get(&repository_id).expect("Expected repository in config");
 
         // Get build version of package
         match self.repository_manager.get_prebuild_url(&repository_id, package_name, version) {
-            Some(url) => self.download_prebuild(&url, &build_destination_dir)?,
-            None => self.build_package(&package, &package_version, &target, &repository_id, &build_destination_dir)?,
+            Some(url) => self.download_prebuild(&url, &install_directory)?,
+            None => self.build_package(&package, &package_version, &target, &repository_id, &install_directory)?,
         }
-
-        // Get source repository for installed storage before persisting the package to its final destination
-        let source_repository = self.config.repositories.get(&repository_id).expect("Expected repository in config");
-
-        // Move build to final directory
-        fs::rename(build_destination_dir.keep(), &install_directory)?;
 
         // Add and save package to installed storage toml
         self.installed_storage.add_package(&package, &package_version, source_repository, &install_directory, false);
