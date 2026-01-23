@@ -14,6 +14,7 @@ use crate::{
     installer::build_env::BuildEnv,
     platforms::TARGET_ARCHITECTURE,
     repositories::{error::RepositoryError, manager::RepositoryManager},
+    utils::env::Environment,
 };
 
 /// The errors that occur during script handling.
@@ -52,7 +53,7 @@ pub fn run_pre_script(
     package_install_path: &PathBuf,
     args: &HashMap<&str, &str>,
 ) -> Result<()> {
-    run_script(path, run_dir, config, &package_install_path, HashMap::new(), args)
+    run_script(path, run_dir, config, &package_install_path, Environment::new(), args)
 }
 
 /// Runs the given build script, in the given directory.
@@ -65,19 +66,19 @@ pub fn run_build_script(
     build_env: BuildEnv,
     args: &HashMap<&str, &str>,
 ) -> Result<()> {
-    run_script(path, run_dir, config, &package_install_path, build_env.to_hashmap(), args)
+    run_script(path, run_dir, config, &package_install_path, build_env.into(), args)
 }
 
 /// Runs the given post install script, in the package install directory.
 /// Note that the script should be a `.sh` script on Linux and macOS and a `.bat` on Windows.
 pub fn run_post_script(path: impl AsRef<Path>, package_install_path: &PathBuf, config: &Config, args: &HashMap<&str, &str>) -> Result<()> {
-    run_script(path, &package_install_path, config, &package_install_path, HashMap::new(), args)
+    run_script(path, &package_install_path, config, &package_install_path, Environment::new(), args)
 }
 
 /// Runs the given test script, in the package install directory.
 /// Note that the script should be a `.sh` script on Linux and macOS and a `.bat` on Windows.
 pub fn run_test_script(path: impl AsRef<Path>, package_install_path: &PathBuf, config: &Config, args: &HashMap<&str, &str>) -> Result<()> {
-    run_script(path, &package_install_path, config, &package_install_path, HashMap::new(), args)
+    run_script(path, &package_install_path, config, &package_install_path, Environment::new(), args)
 }
 
 /// Runs the script at the given path, in the given directory.
@@ -87,7 +88,7 @@ pub fn run_script(
     run_dir: impl AsRef<Path>,
     config: &Config,
     package_install_path: impl AsRef<Path>,
-    env_vars: HashMap<&str, String>,
+    env: Environment,
     args: &HashMap<&str, &str>,
 ) -> Result<()> {
     let path = to_absolute_path(&path)?;
@@ -104,8 +105,13 @@ pub fn run_script(
         .env("PACKIT_TARGET", TARGET_ARCHITECTURE)
         .env("PACKIT_PACKAGE_PATH", package_install_path);
 
+    // Remove stripped environment variables
+    for key in env.stripped_vars {
+        command.env_remove(key);
+    }
+
     // Add script environment variables
-    for (key, value) in env_vars {
+    for (key, value) in env.env_vars {
         command.env(key, value);
     }
 

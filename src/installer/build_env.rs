@@ -1,11 +1,66 @@
 use std::{collections::HashMap, path::PathBuf};
 
-use crate::{cli, installed_packages::InstalledPackage};
+use crate::{cli, installed_packages::InstalledPackage, utils::env::Environment};
+
+// TODO: We should probably also strip tokens from the env
+#[rustfmt::skip]
+const STRIPPED_VARS: &'static [&'static str] = &[
+    "CC", "CXX", "OBJC", "OBJCXX", "CPP", "MAKE", "LD", "LDSHARED", "AR", "AS", "NM", "STRIP", "RANLIB", 
+    "OBJCOPY", "CDPATH", "CPATH", "C_INCLUDE_PATH", "CPLUS_INCLUDE_PATH", "OBJC_INCLUDE_PATH",
+    "CFLAGS", "CXXFLAGS", "OBJCFLAGS", "OBJCXXFLAGS", "LDFLAGS", "CPPFLAGS", "ASFLAGS", "MAKEFLAGS",
+    "CMAKE_INCLUDE_PATH", "CMAKE_FRAMEWORK_PATH", "CMAKE_TOOLCHAIN_FILE", "LIBRARY_PATH",
+    "LD_LIBRARY_PATH", "LD_PRELOAD", "LD_RUN_PATH", "DYLD_LIBRARY_PATH", "DYLD_INSERT_LIBRARIES",
+    "DYLD_FRAMEWORK_PATH", "DYLD_FALLBACK_LIBRARY_PATH", "DYLD_FALLBACK_FRAMEWORK_PATH", "PKG_CONFIG_SYSROOT_DIR",
+    "PYTHONPATH", "PYTHONHOME", "PERL5LIB", "PERL_MB_OPT", "PERL_MM_OPT", "RUBYLIB", "NODE_PATH", 
+    "CARGO_HOME", "RUSTUP_HOME", "RUSTFLAGS", "GOBIN", "GOPATH", "GOROOT",
+    "MACOSX_DEPLOYMENT_TARGET", "SDKROOT", "DEVELOPER_DIR"
+];
 
 pub struct BuildEnv<'a> {
     prefix_directory: &'a PathBuf,
     dependencies: Vec<&'a InstalledPackage>,
     build_dependencies: Vec<&'a InstalledPackage>,
+}
+
+impl<'a> Into<Environment> for BuildEnv<'a> {
+    fn into(self) -> Environment {
+        let mut env = Environment::new();
+
+        // TODO: maybe also sandbox TMPDIR variable
+        // TODO: maybe use active version path instead of real version path for all dependencies
+        env.insert_vars(HashMap::from([
+            ("PATH", self.create_path()),
+            ("PKG_CONFIG_PATH", self.create_pkg_config_path()),
+            ("PKG_CONFIG_LIBDIR", "".into()),
+            ("CMAKE_PREFIX_PATH", self.create_cmake_prefix_path()),
+            ("ACLOCAL_PATH", self.create_aclocal_path()),
+        ]));
+
+        // Strip all vars which should be stripped
+        for var in STRIPPED_VARS {
+            env.strip_var(*var);
+        }
+
+        // Add M4 variable if m4 is a dependency
+        if self.build_dependencies.iter().any(|x| x.name == "m4") {
+            let m4_path = self.prefix_directory.join("bin").join("m4");
+            match m4_path.to_str() {
+                Some(path) => drop(env.insert_var("M4", path)),
+                None => cli::display_warning!("Cannot add M4 var to build env: cannot convert PathBuf to string"),
+            };
+        }
+
+        // Add macos specific environment variables
+        #[cfg(target_os = "macos")]
+        {
+            env.insert_var("PERL", "/usr/bin/perl");
+            env.insert_var("ZERO_AR_DATE", "1"); // Ensure no arbritary timestamps are in builds
+
+            // TODO: add xcode paths
+        }
+
+        env
+    }
 }
 
 impl<'a> BuildEnv<'a> {
@@ -19,36 +74,6 @@ impl<'a> BuildEnv<'a> {
             dependencies,
             build_dependencies,
         }
-    }
-
-    pub fn to_hashmap(&self) -> HashMap<&str, String> {
-        // TODO: maybe use active version path instead of real version path for all dependencies
-        let mut vars = HashMap::from([
-            ("PATH", self.create_path()),
-            ("PKG_CONFIG_PATH", self.create_pkg_config_path()),
-            ("PKG_CONFIG_LIBDIR", "".into()),
-            ("CMAKE_PREFIX_PATH", self.create_cmake_prefix_path()),
-            ("ACLOCAL_PATH", self.create_aclocal_path()),
-        ]);
-
-        // Add M4 variable if m4 is a dependency
-        if self.build_dependencies.iter().any(|x| x.name == "m4") {
-            let m4_path = self.prefix_directory.join("bin").join("m4");
-            match m4_path.to_str() {
-                Some(path) => drop(vars.insert("M4", path.into())),
-                None => cli::display_warning!("Cannot add M4 var to build env: cannot convert PathBuf to string"),
-            };
-        }
-
-        // Add macos specific environment variables
-        #[cfg(target_os = "macos")]
-        {
-            vars.insert("PERL", "/usr/bin/perl".into());
-
-            // TODO: add xcode paths
-        }
-
-        vars
     }
 
     fn create_path(&self) -> String {
@@ -117,6 +142,12 @@ impl<'a> BuildEnv<'a> {
                     },
                 };
             }
+        }
+
+        // Add macos specific paths
+        #[cfg(target_os = "macos")]
+        {
+            parts.push("/usr/lib/pkgconfig".into());
         }
 
         parts.join(":")
