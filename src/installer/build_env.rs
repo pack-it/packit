@@ -101,8 +101,11 @@ impl<'a> BuildEnv<'a> {
             };
         }
 
-        // Add standard system bin paths to PATH
-        parts.append(&mut vec!["/usr/bin", "/bin", "/usr/sbin", "/sbin"].into_iter().map(String::from).collect());
+        // Add standard unix system bin paths to PATH
+        #[cfg(any(target_os = "macos", target_os = "linux"))]
+        {
+            parts.append(&mut vec!["/usr/bin", "/bin", "/usr/sbin", "/sbin"].into_iter().map(String::from).collect());
+        }
 
         parts.join(":")
     }
