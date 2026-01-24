@@ -25,6 +25,9 @@ pub enum RepositoryError {
 
     #[error("Package is not valid\nCaused by: {0}")]
     ValidationError(String),
+
+    #[error("Cannot find target for package.")]
+    TargetError,
 }
 
 pub(super) type Result<T> = std::result::Result<T, RepositoryError>;

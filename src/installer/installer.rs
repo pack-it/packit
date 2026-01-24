@@ -51,7 +51,7 @@ impl<'a> Installer<'a> {
         // Use the latest version if the version isn't specified
         let version = match version {
             Some(version) => version,
-            None => package.latest_versions.get(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?,
+            None => package.get_latest_version(TARGET_ARCHITECTURE)?,
         };
 
         // Check if this package version is already installed
@@ -62,10 +62,7 @@ impl<'a> Installer<'a> {
 
         // Get package version info for its target
         let package_version = self.repository_manager.read_repo_package_version(&repository_id, &package_name, &version)?;
-        let target = match package_version.targets.get(TARGET_ARCHITECTURE) {
-            Some(target) => target,
-            None => return Err(InstallerError::TargetError),
-        };
+        let target = package_version.get_target(TARGET_ARCHITECTURE)?;
 
         // Install global package dependencies and platform specific packages (if there are any, can be empty)
         self.install_dependencies(&package_version.dependencies, &target.dependencies)?;
@@ -77,10 +74,10 @@ impl<'a> Installer<'a> {
             fs::create_dir_all(&install_directory)?;
         }
 
-        let script_args = package_version.get_script_args(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
+        let script_args = package_version.get_script_args(TARGET_ARCHITECTURE)?;
 
         // Download and run pre install script if it exists
-        let script_path = package_version.get_preinstall_script_path(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
+        let script_path = package_version.get_preinstall_script_path(TARGET_ARCHITECTURE)?;
         if let Some(script_file) = scripts::download_script(self.repository_manager, &script_path, package_name, &repository_id)? {
             scripts::run_pre_script(script_file, &install_directory, self.config, &install_directory, &script_args)?;
         }
@@ -107,7 +104,7 @@ impl<'a> Installer<'a> {
         self.installed_storage.add_package(&package, &package_version, source_repository, &install_directory, !skip_symlinking);
 
         // Download and run post install script if it exists
-        let script_path = package_version.get_postinstall_script_path(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
+        let script_path = package_version.get_postinstall_script_path(TARGET_ARCHITECTURE)?;
         if let Some(script_file) = scripts::download_script(self.repository_manager, &script_path, package_name, &repository_id)? {
             scripts::run_post_script(script_file, &install_directory, self.config, &script_args)?;
         }
@@ -118,7 +115,7 @@ impl<'a> Installer<'a> {
         }
 
         // Download and run test script if it exists
-        let script_path = package_version.get_test_script_path(TARGET_ARCHITECTURE).ok_or(InstallerError::TargetError)?;
+        let script_path = package_version.get_test_script_path(TARGET_ARCHITECTURE)?;
         if let Some(script_file) = scripts::download_script(self.repository_manager, &script_path, package_name, &repository_id)? {
             scripts::run_test_script(script_file, &install_directory, self.config, &script_args)?;
         }

@@ -10,10 +10,6 @@ use crate::{
 /// The errors that occur during installation.
 #[derive(Error, Debug)]
 pub enum InstallerError {
-    //TODO: Split out errors
-    #[error("Platform not found in targets.")]
-    TargetError,
-
     #[error("Cannot write prefix directory due to incorrect permissions.")]
     PermissionsError,
 

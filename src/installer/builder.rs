@@ -22,9 +22,6 @@ use crate::{
 /// The errors that occur during building.
 #[derive(Error, Debug)]
 pub enum BuilderError {
-    #[error("Cannot find target for package.")]
-    TargetError,
-
     #[error("Cannot request files for building\nCaused by: {0}")]
     RequestError(#[from] reqwest::Error),
 
@@ -70,7 +67,7 @@ impl<'a> Builder<'a> {
         repository_id: &str,
         destination_dir: impl AsRef<Path>,
     ) -> Result<()> {
-        let target = package_version.targets.get(TARGET_ARCHITECTURE).ok_or(BuilderError::TargetError)?;
+        let target = package_version.get_target(TARGET_ARCHITECTURE)?;
 
         // Check if the normal dependencies are installed
         let dependencies = package_version.dependencies.iter().chain(target.dependencies.iter());
@@ -116,10 +113,10 @@ impl<'a> Builder<'a> {
         unpack(bytes, &unpack_directory)?;
 
         // Construct args for the build script
-        let script_args = package_version.get_script_args(TARGET_ARCHITECTURE).ok_or(BuilderError::TargetError)?;
+        let script_args = package_version.get_script_args(TARGET_ARCHITECTURE)?;
 
         // Download and run build script
-        let script_path = package_version.get_build_script_path(TARGET_ARCHITECTURE).ok_or(BuilderError::TargetError)?;
+        let script_path = package_version.get_build_script_path(TARGET_ARCHITECTURE)?;
         let build_script_path = scripts::download_script(self.repository_manager, &script_path, &package.name, &repository_id)?
             .ok_or(ScriptError::ScriptNotFound("build".into()))?;
         scripts::run_build_script(build_script_path, &unpack_directory, self.config, &destination_dir, &script_args)?;
