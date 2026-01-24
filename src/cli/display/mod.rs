@@ -1,14 +1,9 @@
-pub mod message;
-pub mod progressbar;
-pub mod prompts;
-pub mod reader;
-pub mod spinner;
-
-pub use message::display_error;
-pub use message::display_warning;
-pub(crate) use message::error;
-pub(crate) use message::warning;
-pub use message::DisplayError;
+pub mod error;
+pub mod logging;
+mod progressbar;
+mod prompts;
+mod reader;
+mod spinner;
 
 pub use progressbar::ProgressBar;
 

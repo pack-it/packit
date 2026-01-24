@@ -9,7 +9,7 @@ use tempfile::NamedTempFile;
 use thiserror::Error;
 
 use crate::{
-    cli::display,
+    cli::display::logging::warning,
     config::Config,
     platforms::TARGET_ARCHITECTURE,
     repositories::{error::RepositoryError, manager::RepositoryManager},
@@ -153,11 +153,11 @@ pub fn run_script(
             Ok(())
         },
         Some(code) => {
-            display::warning!("Script executed with status code {code}");
+            warning!("Script executed with status code {code}");
             Err(ScriptError::ScriptFailed(code))
         },
         None => {
-            display::warning!("Script executed without a status code");
+            warning!("Script executed without a status code");
             Err(ScriptError::ScriptFailed(-1))
         },
     }

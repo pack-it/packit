@@ -8,7 +8,7 @@ use serde::Deserialize;
 use thiserror::Error;
 
 use crate::{
-    cli::display,
+    cli::display::logging::warning,
     platforms::{DEFAULT_CONFIG_DIR, DEFAULT_PREFIX},
     repositories::default::DEFAULT_PROVIDER_ID,
     utils::constants::CONFIG_FILENAME,
@@ -79,7 +79,7 @@ impl Config {
         config.repositories_rank.retain(|repo| config.repositories.contains_key(repo));
 
         if config.repositories_rank.len() < old_rank_count {
-            display::warning!("Repositories rank contains undefined repository, ignoring undefined repository...");
+            warning!("Repositories rank contains undefined repository, ignoring undefined repository...");
         }
 
         // Remove trailing slashes from repository paths

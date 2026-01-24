@@ -1,5 +1,3 @@
-use std::process::ExitCode;
-
 use clap::Args;
 
 use crate::{

@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 use crate::{
-    cli::display::DisplayError,
+    cli::display::error::DisplayError,
     installer::{builder::BuilderError, scripts::ScriptError},
     platforms::symlink::SymlinkError,
     repositories::error::RepositoryError,
