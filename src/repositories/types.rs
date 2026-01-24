@@ -29,8 +29,8 @@ pub struct Package {
 }
 
 impl Package {
-    pub fn get_latest_version(&self, latest_version: &str) -> Result<&Version, RepositoryError> {
-        Ok(self.latest_versions.get(latest_version).ok_or(RepositoryError::TargetError)?)
+    pub fn get_latest_version(&self, target_name: &str) -> Result<&Version, RepositoryError> {
+        Ok(self.latest_versions.get(target_name).ok_or(RepositoryError::TargetError)?)
     }
 }
 
