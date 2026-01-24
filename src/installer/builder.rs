@@ -25,10 +25,10 @@ pub enum BuilderError {
     #[error("Cannot find target for package.")]
     TargetError,
 
-    #[error("Cannot request files for building: {0}")]
+    #[error("Cannot request files for building\nCaused by: {0}")]
     RequestError(#[from] reqwest::Error),
 
-    #[error("Cannot unpack response: {0}")]
+    #[error("Cannot unpack response\nCaused by: {0}")]
     UnpackError(#[from] std::io::Error),
 
     #[error("Dependency '{package_name}' of type '{dependency_type}' is not installed.")]
@@ -37,10 +37,10 @@ pub enum BuilderError {
         package_name: String,
     },
 
-    #[error("Cannot execute script: {0}")]
+    #[error("Cannot execute build script\nCaused by: {0}")]
     ScriptError(#[from] ScriptError),
 
-    #[error("Cannot find a repository for building: {0}")]
+    #[error("Cannot find a repository for building\nCaused by: {0}")]
     RepositoryError(#[from] RepositoryError),
 }
 

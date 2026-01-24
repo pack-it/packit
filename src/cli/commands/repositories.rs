@@ -1,8 +1,5 @@
 use crate::{
-    cli::{
-        commands::{CommandError, HandleCommand},
-        display::display_warning,
-    },
+    cli::{commands::HandleCommand, display},
     config::Config,
     repositories::manager::RepositoryManager,
 };
@@ -14,7 +11,7 @@ pub struct RepositoryArgs {}
 
 impl HandleCommand for RepositoryArgs {
     /// Handles the repositories command, listing all configured repositories.
-    fn handle(&self, config: &Config, manager: &RepositoryManager) -> Result<(), CommandError> {
+    fn handle(&self, config: &Config, manager: &RepositoryManager) {
         for (index, (repository_id, repository)) in config.repositories.iter().enumerate() {
             if index != 0 {
                 println!();
@@ -25,8 +22,8 @@ impl HandleCommand for RepositoryArgs {
                 Ok(metadata) => metadata,
                 Err(e) => {
                     // Display the error and continue
-                    display_warning!("Cannot read repository metadata of repository '{repository_id}'");
-                    display_warning!("{e}");
+                    display::warning!("Cannot read repository metadata of repository '{repository_id}'");
+                    display::warning!("{e}");
                     continue;
                 },
             };
@@ -37,7 +34,5 @@ impl HandleCommand for RepositoryArgs {
             println!("Maintainers: {}", metadata.maintainers.join(", "));
             println!("Repository provider: {}, path: {}", repository.provider, repository.path);
         }
-
-        Ok(())
     }
 }

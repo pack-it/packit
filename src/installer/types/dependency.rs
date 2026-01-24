@@ -7,10 +7,10 @@ use crate::installer::types::{Version, VersionBounds, VersionError};
 
 #[derive(Error, Debug)]
 pub enum DependencyParserError {
-    #[error("Cannot parse version number. {0}")]
+    #[error("Caused by: Cannot parse version number\nCaused by: {0}")]
     VersionNumberError(#[from] VersionError),
 
-    #[error("No bounds specified while request with '@'.")]
+    #[error("No bounds specified while requested with '@'")]
     EmptyBoundsError,
 }
 

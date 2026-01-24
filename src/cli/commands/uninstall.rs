@@ -1,8 +1,9 @@
 use clap::Args;
 
 use crate::{
-    cli::commands::{CommandError, HandleCommand},
+    cli::commands::HandleCommand,
     config::Config,
+    error_handling::HandleError,
     installed_packages::InstalledPackageStorage,
     installer::{installer::Installer, types::Version},
     repositories::manager::RepositoryManager,
@@ -19,15 +20,13 @@ pub struct UninstallArgs {
 }
 
 impl HandleCommand for UninstallArgs {
-    fn handle(&self, config: &Config, manager: &RepositoryManager) -> Result<(), CommandError> {
+    fn handle(&self, config: &Config, manager: &RepositoryManager) {
         let installed_dir = InstalledPackageStorage::get_default_path();
-        let mut installed_storage = InstalledPackageStorage::from(&installed_dir)?;
+        let mut installed_storage = InstalledPackageStorage::from(&installed_dir).unwrap_or_exit();
 
-        Installer::new(config, &mut installed_storage, manager).uninstall(&self.package_name, &self.version)?;
+        Installer::new(config, &mut installed_storage, manager).uninstall(&self.package_name, &self.version).unwrap_or_exit();
 
         // Save changes
-        installed_storage.save_to(&installed_dir)?;
-
-        Ok(())
+        installed_storage.save_to(&installed_dir).unwrap_or_exit();
     }
 }

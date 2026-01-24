@@ -5,7 +5,7 @@ use thiserror::Error;
 /// The errors that occur during display.
 #[derive(Error, Debug)]
 pub enum SymlinkError {
-    #[error("Symlink IO failed: {0}")]
+    #[error("Symlink IO failed\nCaused by: {0}")]
     IOError(#[from] std::io::Error),
 
     #[error("Path is not a symlink")]

@@ -9,7 +9,7 @@ use tempfile::NamedTempFile;
 use thiserror::Error;
 
 use crate::{
-    cli::display::display_warning,
+    cli::display,
     config::Config,
     platforms::TARGET_ARCHITECTURE,
     repositories::{error::RepositoryError, manager::RepositoryManager},
@@ -36,7 +36,7 @@ pub enum ScriptError {
     #[error("Script executed with status code {0}")]
     ScriptFailed(i32),
 
-    #[error("Cannot fetch script from repository: {0}")]
+    #[error("Cannot fetch script from repository\nCaused by: {0}")]
     FetchScriptError(#[from] RepositoryError),
 }
 
@@ -153,11 +153,11 @@ pub fn run_script(
             Ok(())
         },
         Some(code) => {
-            display_warning!("Script executed with status code {code}");
+            display::warning!("Script executed with status code {code}");
             Err(ScriptError::ScriptFailed(code))
         },
         None => {
-            display_warning!("Script executed without a status code");
+            display::warning!("Script executed without a status code");
             Err(ScriptError::ScriptFailed(-1))
         },
     }

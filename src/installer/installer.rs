@@ -1,7 +1,7 @@
 use tempfile::TempDir;
 
 use crate::{
-    cli::display::{ask_user, display_warning, QuestionResponse, Spinner},
+    cli::display::{self, ask_user, QuestionResponse},
     config::Config,
     installed_packages::InstalledPackageStorage,
     installer::{
@@ -340,7 +340,7 @@ impl<'a> Installer<'a> {
 
             // Check if file already exists
             if fs::exists(&destination)? {
-                display_warning!("Symlink {:?} already exists in {:?}", file.file_name(), destination_dir);
+                display::warning!("Symlink {:?} already exists in {:?}", file.file_name(), destination_dir);
                 continue;
             }
 

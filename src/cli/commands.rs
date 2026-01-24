@@ -5,28 +5,12 @@ mod search;
 mod uninstall;
 
 use clap::{Parser, Subcommand};
-use thiserror::Error;
 
 use crate::{
     cli::commands::{install::InstallArgs, list::ListArgs, repositories::RepositoryArgs, search::SearchArgs, uninstall::UninstallArgs},
     config::Config,
-    installed_packages::InstalledPackagesError,
-    installer::error::InstallerError,
     repositories::manager::RepositoryManager,
-    verifier::VerifierError,
 };
-
-#[derive(Error, Debug)]
-pub enum CommandError {
-    #[error("Error in installer: {0}")]
-    InstallerError(#[from] InstallerError),
-
-    #[error("Error while retrieving installed packages info: {0}")]
-    InstalledPackagesError(#[from] InstalledPackagesError),
-
-    #[error("Cannot read install directory: {0}")]
-    VerifierError(#[from] VerifierError),
-}
 
 #[derive(Parser, Debug)]
 #[command(name = "Packit", version, about)]
@@ -60,7 +44,7 @@ impl Cli {
     }
 
     /// Reads and handles the command.
-    pub fn handle_command(&self, manager: &RepositoryManager, config: &Config) -> Result<(), CommandError> {
+    pub fn handle_command(&self, manager: &RepositoryManager, config: &Config) {
         // Handle commands with user specified arguments
         let args: &dyn HandleCommand = match &self.command {
             Commands::Install(args) => args,
@@ -70,12 +54,10 @@ impl Cli {
             Commands::Search(args) => args,
         };
 
-        args.handle(config, manager)?;
-
-        Ok(())
+        args.handle(config, manager);
     }
 }
 
 trait HandleCommand {
-    fn handle(&self, config: &Config, manager: &RepositoryManager) -> Result<(), CommandError>;
+    fn handle(&self, config: &Config, manager: &RepositoryManager);
 }

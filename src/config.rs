@@ -8,7 +8,7 @@ use serde::Deserialize;
 use thiserror::Error;
 
 use crate::{
-    cli::display::display_warning,
+    cli::display,
     platforms::{DEFAULT_CONFIG_DIR, DEFAULT_PREFIX},
     repositories::default::DEFAULT_PROVIDER_ID,
     utils::constants::CONFIG_FILENAME,
@@ -57,10 +57,10 @@ pub fn default_repository_provider() -> String {
 /// The errors that occur when reading the config file.
 #[derive(Error, Debug)]
 pub enum ConfigError {
-    #[error("Cannot read config file contents: {0}")]
+    #[error("Cannot read config file contents\nCaused by: {0}")]
     ReadError(#[from] std::io::Error),
 
-    #[error("Cannot parse config file: {0}")]
+    #[error("Cannot parse config file\nCaused by: {0}")]
     ParseError(#[from] toml::de::Error),
 }
 
@@ -79,7 +79,7 @@ impl Config {
         config.repositories_rank.retain(|repo| config.repositories.contains_key(repo));
 
         if config.repositories_rank.len() < old_rank_count {
-            display_warning!("Repositories rank contains undefined repository, ignoring undefined repository...");
+            display::warning!("Repositories rank contains undefined repository, ignoring undefined repository...");
         }
 
         // Remove trailing slashes from repository paths

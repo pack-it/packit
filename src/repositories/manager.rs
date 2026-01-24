@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    cli::{self, display::display_warning},
+    cli::display,
     config::Config,
     installer::types::Version,
     platforms::TARGET_ARCHITECTURE,
@@ -26,7 +26,7 @@ impl<'a> RepositoryManager<'a> {
         for (id, repository) in &config.repositories {
             let provider = create_repository_provider(repository);
             if provider.is_none() {
-                display_warning!("Cannot create repository provider for repository {id}.");
+                display::warning!("Cannot create repository provider for repository {id}.");
                 continue;
             }
 
@@ -57,7 +57,7 @@ impl<'a> RepositoryManager<'a> {
             let provider = match self.providers.get(repository_id) {
                 Some(provider) => provider,
                 None => {
-                    display_warning!("Cannot find provider for {repository_id}, while it should exist.");
+                    display::warning!("Cannot find provider for {repository_id}, while it should exist.");
                     continue;
                 },
             };
@@ -65,7 +65,7 @@ impl<'a> RepositoryManager<'a> {
             let package = match provider.read_package(package) {
                 Ok(package) => package,
                 Err(_) => {
-                    println!("Cannot find package {package} in repository {repository_id}, continuing.");
+                    println!("Cannot find package {package} in repository {repository_id}, continuing...");
                     continue;
                 },
             };
@@ -106,7 +106,7 @@ impl<'a> RepositoryManager<'a> {
             let provider = match self.providers.get(repository_id) {
                 Some(provider) => provider,
                 None => {
-                    display_warning!("Cannot find provider for {repository_id}, while it should exist.");
+                    display::warning!("Cannot find provider for {repository_id}, while it should exist.");
                     continue;
                 },
             };

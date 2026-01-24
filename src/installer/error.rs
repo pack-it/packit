@@ -2,7 +2,6 @@ use thiserror::Error;
 
 use crate::{
     cli::display::DisplayError,
-    installed_packages::InstalledPackagesError,
     installer::{builder::BuilderError, scripts::ScriptError},
     platforms::symlink::SymlinkError,
     repositories::error::RepositoryError,
@@ -18,7 +17,7 @@ pub enum InstallerError {
     #[error("Cannot write prefix directory due to incorrect permissions.")]
     PermissionsError,
 
-    #[error("Error while interacting with filesystem: {0}")]
+    #[error("Error while interacting with filesystem\nCaused by: {0}")]
     IOError(#[from] std::io::Error),
 
     #[error("Could not uninstall package '{package_name}'. {e}")]
@@ -47,22 +46,19 @@ pub enum InstallerError {
     SupportError(String),
 
     // Wrapped custom errors
-    #[error("Cannot find a repository for installation: {0}")]
+    #[error("Cannot find a repository for installation\nCaused by: {0}")]
     RepositoryError(#[from] RepositoryError),
 
-    #[error("Cannot info package information: {0}")]
-    InstalledPackagesError(#[from] InstalledPackagesError),
-
-    #[error("Cannot display: {0}")]
+    #[error("Cannot display installer error\nCaused by: {0}")]
     DisplayError(#[from] DisplayError),
 
-    #[error("Cannot execute script: {0}")]
+    #[error("Cannot execute script\nCaused by: {0}")]
     ScriptError(#[from] ScriptError),
 
-    #[error("Cannot execute symlink opperation: {0}")]
+    #[error("Cannot execute symlink opperation\nCaused by: {0}")]
     SymlinkError(#[from] SymlinkError),
 
-    #[error("Cannot build package: {0}")]
+    #[error("Cannot build package\nCaused by: {0}")]
     BuildError(#[from] BuilderError),
 }
 

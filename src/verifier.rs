@@ -5,7 +5,7 @@ use crate::config::Config;
 
 #[derive(Error, Debug)]
 pub enum VerifierError {
-    #[error("Cannot read install directory: {0}")]
+    #[error("Cannot read install directory\nCaused by: {0}")]
     IOError(#[from] std::io::Error),
 }
 
