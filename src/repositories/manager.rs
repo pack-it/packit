@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    cli::display::logging::warning,
+    cli::display::logging::{debug, warning},
     config::Config,
     installer::types::Version,
     platforms::TARGET_ARCHITECTURE,
@@ -65,7 +65,7 @@ impl<'a> RepositoryManager<'a> {
             let package = match provider.read_package(package) {
                 Ok(package) => package,
                 Err(_) => {
-                    println!("Cannot find package {package} in repository {repository_id}, continuing...");
+                    debug!("Cannot find package {package} in repository {repository_id}, continuing...");
                     continue;
                 },
             };
@@ -114,7 +114,7 @@ impl<'a> RepositoryManager<'a> {
             let package = match provider.read_package_version(package, version) {
                 Ok(package) => package,
                 Err(_) => {
-                    println!("Cannot find package {package} {version} in repository {repository_id}, continuing.");
+                    debug!("Cannot find package {package} {version} in repository {repository_id}, continuing.");
                     continue;
                 },
             };
