@@ -34,6 +34,7 @@ impl<'a> Into<Environment> for BuildEnv<'a> {
             ("PKG_CONFIG_LIBDIR", "".into()),
             ("CMAKE_PREFIX_PATH", self.create_cmake_prefix_path()),
             ("ACLOCAL_PATH", self.create_aclocal_path()),
+            ("TZ", "UTC0".into()), // Ensure timezone is the same across all builds
         ]));
 
         // Strip all vars which should be stripped
@@ -78,6 +79,8 @@ impl<'a> BuildEnv<'a> {
 
     fn create_path(&self) -> String {
         let mut parts = Vec::new();
+
+        //TODO: add compiler wrappers to path
 
         // Add all dependencies to PATH
         let dependencies = self.dependencies.iter().chain(self.build_dependencies.iter());
