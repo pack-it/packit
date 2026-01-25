@@ -32,20 +32,31 @@ fn trace_error<T: Error>(error: T) -> String {
     message
 }
 
-pub fn error_message_impl(message: std::fmt::Arguments) {
+pub fn error_msg_impl(message: std::fmt::Arguments) {
     log_impl("ERROR".red().to_string(), message);
 }
 
 pub fn error_impl<T: Error>(error: T) {
-    error_message_impl(format_args!("{}", trace_error(error)));
+    error_msg_impl(format_args!("{}", trace_error(error)));
+}
+
+pub fn error_with_msg_impl<T: Error>(error: T, message: std::fmt::Arguments) {
+    let error_message = format_args!("{message}\n{}", trace_error(error));
+    error_msg_impl(error_message);
 }
 
 macro_rules! error {
     ($error:expr, $message:ident) => {
-        $crate::cli::display::logging::error_with_message_impl($error, format_args!("{}", $message))
+        $crate::cli::display::logging::error_with_msg_impl($error, format_args!("{}", $message))
     };
     ($error:expr, $($arg:tt)*) => {
-        $crate::cli::display::logging::error_with_message_impl($error, format_args!($($arg)*))
+        $crate::cli::display::logging::error_with_msg_impl($error, format_args!($($arg)*))
+    };
+    (msg : $message:ident) => {
+        $crate::cli::display::logging::error_msg_impl(format_args!("{}", $message))
+    };
+    (msg : $($arg:tt)*) => {
+        $crate::cli::display::logging::error_msg_impl(format_args!($($arg)*))
     };
     ($error:expr) => {
         $crate::cli::display::logging::error_impl($error)
