@@ -103,6 +103,10 @@ impl Dependency {
             None => return true,
         };
 
+        if self.version_ranges.is_empty() {
+            return true;
+        }
+
         for range in &self.version_ranges {
             return match range {
                 VersionBounds::Range(lower, upper) if lower <= version && upper >= version => true,

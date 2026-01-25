@@ -1,4 +1,4 @@
-use std::{fs, path::Path};
+use std::path::Path;
 
 use tempfile::TempDir;
 use thiserror::Error;
@@ -8,6 +8,7 @@ use crate::{
     config::Config,
     installed_packages::InstalledPackageStorage,
     installer::{
+        build_env::BuildEnv,
         scripts::{self, ScriptError},
         unpack::unpack,
     },
@@ -22,6 +23,9 @@ use crate::{
 /// The errors that occur during building.
 #[derive(Error, Debug)]
 pub enum BuilderError {
+    #[error("Build files download unsuccessful")]
+    RequestUnsuccessful(reqwest::StatusCode),
+
     #[error("Cannot request files for building")]
     RequestError(#[from] reqwest::Error),
 
@@ -69,10 +73,15 @@ impl<'a> Builder<'a> {
     ) -> Result<()> {
         let target = package_version.get_target(TARGET_ARCHITECTURE)?;
 
-        // Check if the normal dependencies are installed
+        let mut installed_dependencies = Vec::new();
+        let mut installed_build_dependencies = Vec::new();
+
+        // Check if the normal dependencies are installed and get installed package for each dependency.
         let dependencies = package_version.dependencies.iter().chain(target.dependencies.iter());
         for dependency in dependencies {
-            if self.installed_storage.dependency_satisfied(dependency) {
+            if let Some(package) = self.installed_storage.get_satisfying_package(dependency) {
+                installed_dependencies.push(package);
+
                 continue;
             }
 
@@ -83,10 +92,12 @@ impl<'a> Builder<'a> {
             });
         }
 
-        // Check if the build dependencies are installed
+        // Check if the build dependencies are installed and get installed package for each dependency.
         let build_dependencies = package_version.build_dependencies.iter().chain(target.build_dependencies.iter());
         for build_dependency in build_dependencies {
-            if self.installed_storage.dependency_satisfied(build_dependency) {
+            if let Some(package) = self.installed_storage.get_satisfying_package(build_dependency) {
+                installed_build_dependencies.push(package);
+
                 continue;
             }
 
@@ -101,8 +112,13 @@ impl<'a> Builder<'a> {
         let spinner = Spinner::new();
         spinner.show("Downloading ".to_string() + &package.name);
 
-        // Request the data of the package and get bytes
+        // Download the build files
         let response = reqwest::blocking::get(&target.url)?;
+        if !response.status().is_success() {
+            return Err(BuilderError::RequestUnsuccessful(response.status()));
+        }
+
+        // Get the bytes from the response
         let bytes = response.bytes()?;
 
         // Finish download spinner
@@ -112,14 +128,17 @@ impl<'a> Builder<'a> {
         let unpack_directory = TempDir::new()?;
         unpack(bytes, &unpack_directory)?;
 
+        // Create build env
+        let env = BuildEnv::new(&self.config.prefix_directory, installed_dependencies, installed_build_dependencies);
+
         // Construct args for the build script
         let script_args = package_version.get_script_args(TARGET_ARCHITECTURE)?;
 
         // Download and run build script
         let script_path = package_version.get_build_script_path(TARGET_ARCHITECTURE)?;
-        let build_script_path = scripts::download_script(self.repository_manager, &script_path, &package.name, &repository_id)?
+        let script_path = scripts::download_script(self.repository_manager, &script_path, &package.name, &repository_id)?
             .ok_or(ScriptError::ScriptNotFound("build".into()))?;
-        scripts::run_build_script(build_script_path, &unpack_directory, self.config, &destination_dir, &script_args)?;
+        scripts::run_build_script(script_path, &unpack_directory, self.config, &destination_dir, env, &script_args)?;
 
         Ok(())
     }

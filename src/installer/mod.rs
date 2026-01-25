@@ -1,3 +1,4 @@
+pub(self) mod build_env;
 mod builder;
 pub mod error;
 pub mod installer;
