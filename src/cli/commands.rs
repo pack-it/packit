@@ -4,29 +4,18 @@ mod repositories;
 mod search;
 mod uninstall;
 
-use clap::{Parser, Subcommand};
-use thiserror::Error;
+use std::process::exit;
+
+use clap::{builder::Styles, Parser, Subcommand};
 
 use crate::{
-    cli::commands::{install::InstallArgs, list::ListArgs, repositories::RepositoryArgs, search::SearchArgs, uninstall::UninstallArgs},
+    cli::{
+        commands::{install::InstallArgs, list::ListArgs, repositories::RepositoryArgs, search::SearchArgs, uninstall::UninstallArgs},
+        display::logging::error,
+    },
     config::Config,
-    installed_packages::InstalledPackagesError,
-    installer::error::InstallerError,
     repositories::manager::RepositoryManager,
-    verifier::VerifierError,
 };
-
-#[derive(Error, Debug)]
-pub enum CommandError {
-    #[error("Error in installer: {0}")]
-    InstallerError(#[from] InstallerError),
-
-    #[error("Error while retrieving installed packages info: {0}")]
-    InstalledPackagesError(#[from] InstalledPackagesError),
-
-    #[error("Cannot read install directory: {0}")]
-    VerifierError(#[from] VerifierError),
-}
 
 #[derive(Parser, Debug)]
 #[command(name = "Packit", version, about)]
@@ -56,11 +45,26 @@ enum Commands {
 
 impl Cli {
     pub fn get_instance() -> Self {
-        Cli::parse()
+        match Cli::try_parse() {
+            Ok(cli) => cli,
+            Err(e) => {
+                let styles = Styles::default();
+                let prefix = format!("{}error:{:#} ", styles.get_error(), styles.get_error());
+
+                let msg = e.render().ansi().to_string();
+                let msg = match msg.strip_prefix(&prefix) {
+                    Some(msg) => msg.to_string(),
+                    None => msg,
+                };
+
+                error!(msg: msg);
+                exit(e.exit_code())
+            },
+        }
     }
 
     /// Reads and handles the command.
-    pub fn handle_command(&self, manager: &RepositoryManager, config: &Config) -> Result<(), CommandError> {
+    pub fn handle_command(&self, manager: &RepositoryManager, config: &Config) {
         // Handle commands with user specified arguments
         let args: &dyn HandleCommand = match &self.command {
             Commands::Install(args) => args,
@@ -70,12 +74,10 @@ impl Cli {
             Commands::Search(args) => args,
         };
 
-        args.handle(config, manager)?;
-
-        Ok(())
+        args.handle(config, manager);
     }
 }
 
 trait HandleCommand {
-    fn handle(&self, config: &Config, manager: &RepositoryManager) -> Result<(), CommandError>;
+    fn handle(&self, config: &Config, manager: &RepositoryManager);
 }

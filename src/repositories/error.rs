@@ -3,13 +3,13 @@ use thiserror::Error;
 /// The errors that occur when requesting metadata from a repository.
 #[derive(Error, Debug)]
 pub enum RepositoryError {
-    #[error("Cannot read repository file from disk: {0}")]
+    #[error("Cannot read repository file from disk")]
     ReadError(#[from] std::io::Error),
 
-    #[error("Cannot request repository file from external repository: {0}")]
+    #[error("Cannot request repository file from external repository")]
     RequestError(#[from] reqwest::Error),
 
-    #[error("Cannot parse repository file: {0}")]
+    #[error("Cannot parse repository file")]
     ParseError(#[from] toml::de::Error),
 
     #[error("Cannot find repository '{repository_id}'")]
@@ -17,14 +17,17 @@ pub enum RepositoryError {
         repository_id: String,
     },
 
-    #[error("Cannot find package '{package_name} {}'", version.clone().unwrap_or_default())]
+    #[error("Cannot find package '{package_name}' with version '{}' in any repository", version.clone().unwrap_or("any".into()))]
     PackageNotFoundError {
         package_name: String,
         version: Option<String>,
     },
 
-    #[error("Package is not valid. {0}")]
+    #[error("Package is not valid")]
     ValidationError(String),
+
+    #[error("Cannot find target for package.")]
+    TargetError,
 }
 
 pub(super) type Result<T> = std::result::Result<T, RepositoryError>;

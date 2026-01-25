@@ -2,7 +2,7 @@ use clap::Args;
 use colored::Colorize;
 
 use crate::{
-    cli::commands::{CommandError, HandleCommand},
+    cli::commands::HandleCommand,
     config::Config,
     installer::types::Version,
     platforms::TARGET_ARCHITECTURE,
@@ -21,16 +21,16 @@ pub struct SearchArgs {
 
 impl HandleCommand for SearchArgs {
     /// Handles the search command, searching a certain package.
-    fn handle(&self, _: &Config, manager: &RepositoryManager) -> Result<(), CommandError> {
+    fn handle(&self, _: &Config, manager: &RepositoryManager) {
         let (repository_id, package) = match manager.read_package(&self.package_name) {
             Ok(package) => package,
             Err(RepositoryError::PackageNotFoundError { .. }) => {
                 println!("Cannot find package {}", self.package_name);
-                return Ok(());
+                return;
             },
             Err(e) => {
                 println!("Cannot read package: {e:?}");
-                return Ok(());
+                return;
             },
         };
 
@@ -39,7 +39,7 @@ impl HandleCommand for SearchArgs {
             Some(version) => version,
             None => {
                 println!("Package does not exist for current target");
-                return Ok(());
+                return;
             },
         };
 
@@ -55,7 +55,7 @@ impl HandleCommand for SearchArgs {
             Err(e) => {
                 println!("Cannot read {} version {version} from repository {repository_id}", package.name);
                 println!("{e}");
-                return Ok(());
+                return;
             },
         };
 
@@ -67,7 +67,7 @@ impl HandleCommand for SearchArgs {
                     "Package {} version {version} from repository {repository_id} does not exist for current target",
                     package.name
                 );
-                return Ok(());
+                return;
             },
         };
 
@@ -79,7 +79,5 @@ impl HandleCommand for SearchArgs {
         println!("{}", package.description.green());
         println!("Latest version: {}", latest_version.to_string().red());
         println!("Dependencies: {}", dependencies.join(", ").red());
-
-        Ok(())
     }
 }

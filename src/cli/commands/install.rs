@@ -1,8 +1,9 @@
 use clap::Args;
 
 use crate::{
-    cli::commands::{CommandError, HandleCommand},
+    cli::commands::HandleCommand,
     config::Config,
+    error_handling::HandleError,
     installed_packages::InstalledPackageStorage,
     installer::{installer::Installer, types::Version},
     repositories::manager::RepositoryManager,
@@ -19,19 +20,19 @@ pub struct InstallArgs {
 }
 
 impl HandleCommand for InstallArgs {
-    fn handle(&self, config: &Config, manager: &RepositoryManager) -> Result<(), CommandError> {
+    fn handle(&self, config: &Config, manager: &RepositoryManager) {
         let installed_dir = InstalledPackageStorage::get_default_path();
-        let mut installed_storage = InstalledPackageStorage::from(&installed_dir)?;
+        let mut installed_storage = InstalledPackageStorage::from(&installed_dir).unwrap_or_exit(1);
 
+        // Make sure the package doesn't already exist before installing
         if installed_storage.get_package_versions(&self.package_name).len() >= 1 {
             println!("Package '{}' already exists.", &self.package_name);
-        } else {
-            Installer::new(&config, &mut installed_storage, &manager).install(&self.package_name, &self.version)?
+            return;
         }
 
-        // Save changes
-        installed_storage.save_to(&installed_dir)?;
+        Installer::new(&config, &mut installed_storage, &manager).install(&self.package_name, &self.version).unwrap_or_exit(1);
 
-        Ok(())
+        // Save changes
+        installed_storage.save_to(&installed_dir).unwrap_or_exit(1);
     }
 }

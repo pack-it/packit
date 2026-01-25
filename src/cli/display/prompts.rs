@@ -1,6 +1,6 @@
 use std::io::{self, Write};
 
-use crate::cli::{display_warning, DisplayError};
+use crate::cli::display::{error::DisplayError, logging::warning};
 
 /// Represents the response of the prompt.
 pub enum QuestionResponse {
@@ -54,6 +54,6 @@ pub fn ask_user(question: &str, default: QuestionResponse) -> Result<QuestionRes
         return Ok(QuestionResponse::No);
     }
 
-    display_warning!("Invalid input");
+    warning!("Invalid input");
     return Ok(QuestionResponse::Invalid);
 }
