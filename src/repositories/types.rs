@@ -7,7 +7,7 @@ use crate::{
         scripts::SCRIPT_EXTENSION,
         types::{Dependency, Version},
     },
-    repositories::error::RepositoryError,
+    repositories::error::{RepositoryError, Result},
 };
 
 /// Represents the repository metadata, containing repository information.
@@ -29,7 +29,7 @@ pub struct Package {
 }
 
 impl Package {
-    pub fn get_latest_version(&self, target_name: &str) -> Result<&Version, RepositoryError> {
+    pub fn get_latest_version(&self, target_name: &str) -> Result<&Version> {
         Ok(self.latest_versions.get(target_name).ok_or(RepositoryError::TargetError)?)
     }
 }
@@ -73,29 +73,29 @@ impl PackageVersion {
         }
     }
 
-    pub fn get_target(&self, target_name: &str) -> Result<&PackageTarget, RepositoryError> {
+    pub fn get_target(&self, target_name: &str) -> Result<&PackageTarget> {
         Ok(self.targets.get(target_name).ok_or(RepositoryError::TargetError)?)
     }
 
-    pub fn get_build_script_path(&self, target_name: &str) -> Result<String, RepositoryError> {
+    pub fn get_build_script_path(&self, target_name: &str) -> Result<String> {
         let target = self.get_target(target_name)?;
 
         Ok(self.get_script_path(self.use_version_specific_build, &target.build_script, "build"))
     }
 
-    pub fn get_preinstall_script_path(&self, target_name: &str) -> Result<String, RepositoryError> {
+    pub fn get_preinstall_script_path(&self, target_name: &str) -> Result<String> {
         let target = self.get_target(target_name)?;
 
         Ok(self.get_script_path(self.use_version_specific_preinstall, &target.preinstall_script, "preinstall"))
     }
 
-    pub fn get_postinstall_script_path(&self, target_name: &str) -> Result<String, RepositoryError> {
+    pub fn get_postinstall_script_path(&self, target_name: &str) -> Result<String> {
         let target = self.get_target(target_name)?;
 
         Ok(self.get_script_path(self.use_version_specific_postinstall, &target.postinstall_script, "postinstall"))
     }
 
-    pub fn get_test_script_path(&self, target_name: &str) -> Result<String, RepositoryError> {
+    pub fn get_test_script_path(&self, target_name: &str) -> Result<String> {
         let target = self.get_target(target_name)?;
 
         Ok(self.get_script_path(self.use_version_specific_test, &target.test_script, "test"))
@@ -103,7 +103,7 @@ impl PackageVersion {
 
     /// Gets the script arguments for the given target.
     /// Returns None when the target cannot be found.
-    pub fn get_script_args(&self, target_name: &str) -> Result<HashMap<&str, &str>, RepositoryError> {
+    pub fn get_script_args(&self, target_name: &str) -> Result<HashMap<&str, &str>> {
         let target = self.get_target(target_name)?;
 
         Ok(self.script_args.iter().chain(target.script_args.iter()).map(|(key, value)| (key.as_str(), value.as_str())).collect())

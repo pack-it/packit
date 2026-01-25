@@ -12,7 +12,7 @@ impl<T, E: Error> HandleError<T> for Result<T, E> {
             Ok(value) => value,
             Err(e) => {
                 error!(e);
-                exit(1); // TODO: Make status code variable
+                exit(1);
             },
         }
     }
