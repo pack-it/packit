@@ -1,6 +1,6 @@
 use std::{collections::HashMap, path::PathBuf};
 
-use crate::{cli, installed_packages::InstalledPackage, utils::env::Environment};
+use crate::{cli::display::logging::warning, installed_packages::InstalledPackage, utils::env::Environment};
 
 // TODO: We should probably also strip tokens from the env
 #[rustfmt::skip]
@@ -47,7 +47,7 @@ impl<'a> Into<Environment> for BuildEnv<'a> {
             let m4_path = self.prefix_directory.join("bin").join("m4");
             match m4_path.to_str() {
                 Some(path) => drop(env.insert_var("M4", path)),
-                None => cli::display_warning!("Cannot add M4 var to build env: cannot convert PathBuf to string"),
+                None => warning!("Cannot add M4 var to build env: cannot convert PathBuf to string"),
             };
         }
 
@@ -95,7 +95,7 @@ impl<'a> BuildEnv<'a> {
             match bin_path.to_str() {
                 Some(path) => parts.push(path.into()),
                 None => {
-                    cli::display_warning!(
+                    warning!(
                         "Cannot add dependency {} to build env PATH: cannot convert PathBuf to string",
                         dependency.name
                     );
@@ -126,7 +126,7 @@ impl<'a> BuildEnv<'a> {
                 match lib_path.to_str() {
                     Some(path) => parts.push(path.into()),
                     None => {
-                        cli::display_warning!(
+                        warning!(
                             "Cannot add dependency {} lib/pkgconfig to build env PKG_CONFIG_PATH: cannot convert PathBuf to string",
                             dependency.name
                         );
@@ -140,7 +140,7 @@ impl<'a> BuildEnv<'a> {
                 match share_path.to_str() {
                     Some(path) => parts.push(path.into()),
                     None => {
-                        cli::display_warning!(
+                        warning!(
                             "Cannot add dependency {} share/pkgconfig to build env PKG_CONFIG_PATH: cannot convert PathBuf to string",
                             dependency.name
                         );
@@ -172,7 +172,7 @@ impl<'a> BuildEnv<'a> {
             match path.to_str() {
                 Some(path) => parts.push(path.into()),
                 None => {
-                    cli::display_warning!(
+                    warning!(
                         "Cannot add dependency {} to build env CMAKE_PREFIX_PATH: cannot convert PathBuf to string",
                         dependency.name
                     );
@@ -185,7 +185,7 @@ impl<'a> BuildEnv<'a> {
         match self.prefix_directory.to_str() {
             Some(path) => parts.push(path.into()),
             None => {
-                cli::display_warning!("Cannot add Packit prefix directory to build env CMAKE_PREFIX_PATH: cannot convert PathBuf to string")
+                warning!("Cannot add Packit prefix directory to build env CMAKE_PREFIX_PATH: cannot convert PathBuf to string")
             },
         };
 
@@ -211,7 +211,7 @@ impl<'a> BuildEnv<'a> {
             match share_path.to_str() {
                 Some(path) => parts.push(path.into()),
                 None => {
-                    cli::display_warning!(
+                    warning!(
                         "Cannot add dependency {} to build env ACLOCAL_PATH: cannot convert PathBuf to string",
                         dependency.name
                     );
@@ -224,7 +224,7 @@ impl<'a> BuildEnv<'a> {
         match self.prefix_directory.join("share").join("aclocal").to_str() {
             Some(path) => parts.push(path.into()),
             None => {
-                cli::display_warning!("Cannot add Packit prefix directory to build env ACLOCAL_PATH: cannot convert PathBuf to string")
+                warning!("Cannot add Packit prefix directory to build env ACLOCAL_PATH: cannot convert PathBuf to string")
             },
         };
 

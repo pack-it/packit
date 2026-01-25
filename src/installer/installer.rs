@@ -115,9 +115,7 @@ impl<'a> Installer<'a> {
                     package.symlinked = true;
                     self.installed_storage.save_to(&InstalledPackageStorage::get_default_path())?;
                 },
-                None => cli::display_warning!(
-                    "Cannot get installed package from installed storage... Please check installation with 'pit list'"
-                ),
+                None => warning!("Cannot get installed package from installed storage... Please check installation with 'pit list'"),
             }
         }
 

@@ -2,6 +2,7 @@ use thiserror::Error;
 
 use crate::{
     cli::display::error::DisplayError,
+    installed_packages::InstalledPackagesError,
     installer::{builder::BuilderError, scripts::ScriptError},
     platforms::symlink::SymlinkError,
     repositories::error::RepositoryError,
@@ -44,6 +45,9 @@ pub enum InstallerError {
     // Wrapped custom errors
     #[error("Cannot find a repository for installation")]
     RepositoryError(#[from] RepositoryError),
+
+    #[error("Cannot info package information")]
+    InstalledPackagesError(#[from] InstalledPackagesError),
 
     #[error("Cannot display installer error")]
     DisplayError(#[from] DisplayError),
