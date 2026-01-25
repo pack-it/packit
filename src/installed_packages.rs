@@ -55,13 +55,13 @@ fn is_repository_provider_default(value: &String) -> bool {
 /// The errors that occur when reading or saving the installed packages file.
 #[derive(Error, Debug)]
 pub enum InstalledPackagesError {
-    #[error("Cannot read or write installed packages file\nCaused by: {0}")]
+    #[error("Cannot read or write installed packages file")]
     IOError(#[from] std::io::Error),
 
-    #[error("Cannot parse installed packages file\nCaused by: {0}")]
+    #[error("Cannot parse installed packages file")]
     ParseError(#[from] toml::de::Error),
 
-    #[error("Cannot serialize installed packages\nCaused by: {0}")]
+    #[error("Cannot serialize installed packages")]
     SerializeError(#[from] toml::ser::Error),
 }
 

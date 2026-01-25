@@ -36,7 +36,7 @@ pub enum ScriptError {
     #[error("Script executed with status code {0}")]
     ScriptFailed(i32),
 
-    #[error("Cannot fetch script from repository\nCaused by: {0}")]
+    #[error("Cannot fetch script from repository")]
     FetchScriptError(#[from] RepositoryError),
 }
 

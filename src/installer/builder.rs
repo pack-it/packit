@@ -22,10 +22,10 @@ use crate::{
 /// The errors that occur during building.
 #[derive(Error, Debug)]
 pub enum BuilderError {
-    #[error("Cannot request files for building\nCaused by: {0}")]
+    #[error("Cannot request files for building")]
     RequestError(#[from] reqwest::Error),
 
-    #[error("Cannot unpack response\nCaused by: {0}")]
+    #[error("Cannot unpack response")]
     UnpackError(#[from] std::io::Error),
 
     #[error("Dependency '{package_name}' of type '{dependency_type}' is not installed.")]
@@ -34,10 +34,10 @@ pub enum BuilderError {
         package_name: String,
     },
 
-    #[error("Cannot execute build script\nCaused by: {0}")]
+    #[error("Cannot execute build script")]
     ScriptError(#[from] ScriptError),
 
-    #[error("Cannot find a repository for building\nCaused by: {0}")]
+    #[error("Cannot find a repository for building")]
     RepositoryError(#[from] RepositoryError),
 }
 

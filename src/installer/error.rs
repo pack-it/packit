@@ -13,7 +13,7 @@ pub enum InstallerError {
     #[error("Cannot write prefix directory due to incorrect permissions.")]
     PermissionsError,
 
-    #[error("Error while interacting with filesystem\nCaused by: {0}")]
+    #[error("Error while interacting with filesystem")]
     IOError(#[from] std::io::Error),
 
     #[error("Could not uninstall package '{package_name}'. {e}")]
@@ -42,19 +42,19 @@ pub enum InstallerError {
     SupportError(String),
 
     // Wrapped custom errors
-    #[error("Cannot find a repository for installation\nCaused by: {0}")]
+    #[error("Cannot find a repository for installation")]
     RepositoryError(#[from] RepositoryError),
 
-    #[error("Cannot display installer error\nCaused by: {0}")]
+    #[error("Cannot display installer error")]
     DisplayError(#[from] DisplayError),
 
-    #[error("Cannot execute script\nCaused by: {0}")]
+    #[error("Cannot execute script")]
     ScriptError(#[from] ScriptError),
 
-    #[error("Cannot execute symlink opperation\nCaused by: {0}")]
+    #[error("Cannot execute symlink opperation")]
     SymlinkError(#[from] SymlinkError),
 
-    #[error("Cannot build package\nCaused by: {0}")]
+    #[error("Cannot build package")]
     BuildError(#[from] BuilderError),
 }
 

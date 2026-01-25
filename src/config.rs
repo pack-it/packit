@@ -57,10 +57,10 @@ pub fn default_repository_provider() -> String {
 /// The errors that occur when reading the config file.
 #[derive(Error, Debug)]
 pub enum ConfigError {
-    #[error("Cannot read config file contents\nCaused by: {0}")]
+    #[error("Cannot read config file contents")]
     ReadError(#[from] std::io::Error),
 
-    #[error("Cannot parse config file\nCaused by: {0}")]
+    #[error("Cannot parse config file")]
     ParseError(#[from] toml::de::Error),
 }
 

@@ -20,7 +20,7 @@ pub enum VersionError {
     #[error("Multiple consecutive dots are not allowed in version number.")]
     ConsecutiveDotsError,
 
-    #[error("Couldn't parse version number\nCaused by: {0}")]
+    #[error("Couldn't parse version number")]
     ParseError(#[from] ParseIntError),
 }
 

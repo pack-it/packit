@@ -1,3 +1,5 @@
+use std::error::Error;
+
 use clap::Args;
 
 use crate::{

@@ -1,4 +1,4 @@
-use std::sync::LazyLock;
+use std::{error::Error, sync::LazyLock};
 
 use colored::Colorize;
 
@@ -21,17 +21,34 @@ macro_rules! warning {
 }
 pub(crate) use warning;
 
-pub fn error_impl(message: std::fmt::Arguments) {
+fn trace_error<T: Error>(error: T) -> String {
+    let mut message = error.to_string();
+    let mut source = error.source();
+    while let Some(cause) = source {
+        message.push_str(format!("\nCaused by: {cause}").as_str());
+        source = cause.source();
+    }
+
+    message
+}
+
+pub fn error_message_impl(message: std::fmt::Arguments) {
     log_impl("ERROR".red().to_string(), message);
 }
 
-// Macro for displaying errors
+pub fn error_impl<T: Error>(error: T) {
+    error_message_impl(format_args!("{}", trace_error(error)));
+}
+
 macro_rules! error {
-    ($message:ident) => {
-        $crate::cli::display::logging::error_impl(format_args!("{}", $message))
+    ($error:expr, $message:ident) => {
+        $crate::cli::display::logging::error_with_message_impl($error, format_args!("{}", $message))
     };
-    ($($arg:tt)*) => {
-        $crate::cli::display::logging::error_impl(format_args!($($arg)*))
+    ($error:expr, $($arg:tt)*) => {
+        $crate::cli::display::logging::error_with_message_impl($error, format_args!($($arg)*))
+    };
+    ($error:expr) => {
+        $crate::cli::display::logging::error_impl($error)
     };
 }
 pub(crate) use error;
