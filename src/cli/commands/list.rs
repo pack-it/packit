@@ -15,10 +15,10 @@ pub struct ListArgs {
 impl HandleCommand for ListArgs {
     fn handle(&self, config: &Config, _: &RepositoryManager) {
         let installed_dir = InstalledPackageStorage::get_default_path();
-        let installed_storage = InstalledPackageStorage::from(&installed_dir).unwrap_or_exit();
+        let installed_storage = InstalledPackageStorage::from(&installed_dir).unwrap_or_exit(1);
 
         if self.use_dir {
-            for package in get_packages(&config).unwrap_or_exit() {
+            for package in get_packages(&config).unwrap_or_exit(1) {
                 println!("{}", package);
             }
         } else {

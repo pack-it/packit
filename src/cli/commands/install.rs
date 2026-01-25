@@ -1,5 +1,3 @@
-use std::error::Error;
-
 use clap::Args;
 
 use crate::{
@@ -24,7 +22,7 @@ pub struct InstallArgs {
 impl HandleCommand for InstallArgs {
     fn handle(&self, config: &Config, manager: &RepositoryManager) {
         let installed_dir = InstalledPackageStorage::get_default_path();
-        let mut installed_storage = InstalledPackageStorage::from(&installed_dir).unwrap_or_exit();
+        let mut installed_storage = InstalledPackageStorage::from(&installed_dir).unwrap_or_exit(1);
 
         // Make sure the package doesn't already exist before installing
         if installed_storage.get_package_versions(&self.package_name).len() >= 1 {
@@ -32,9 +30,9 @@ impl HandleCommand for InstallArgs {
             return;
         }
 
-        Installer::new(&config, &mut installed_storage, &manager).install(&self.package_name, &self.version).unwrap_or_exit();
+        Installer::new(&config, &mut installed_storage, &manager).install(&self.package_name, &self.version).unwrap_or_exit(1);
 
         // Save changes
-        installed_storage.save_to(&installed_dir).unwrap_or_exit();
+        installed_storage.save_to(&installed_dir).unwrap_or_exit(1);
     }
 }

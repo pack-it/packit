@@ -22,11 +22,11 @@ pub struct UninstallArgs {
 impl HandleCommand for UninstallArgs {
     fn handle(&self, config: &Config, manager: &RepositoryManager) {
         let installed_dir = InstalledPackageStorage::get_default_path();
-        let mut installed_storage = InstalledPackageStorage::from(&installed_dir).unwrap_or_exit();
+        let mut installed_storage = InstalledPackageStorage::from(&installed_dir).unwrap_or_exit(1);
 
-        Installer::new(config, &mut installed_storage, manager).uninstall(&self.package_name, &self.version).unwrap_or_exit();
+        Installer::new(config, &mut installed_storage, manager).uninstall(&self.package_name, &self.version).unwrap_or_exit(1);
 
         // Save changes
-        installed_storage.save_to(&installed_dir).unwrap_or_exit();
+        installed_storage.save_to(&installed_dir).unwrap_or_exit(1);
     }
 }
