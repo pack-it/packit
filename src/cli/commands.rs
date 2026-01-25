@@ -4,10 +4,15 @@ mod repositories;
 mod search;
 mod uninstall;
 
-use clap::{Parser, Subcommand};
+use std::process::exit;
+
+use clap::{builder::Styles, Parser, Subcommand};
 
 use crate::{
-    cli::commands::{install::InstallArgs, list::ListArgs, repositories::RepositoryArgs, search::SearchArgs, uninstall::UninstallArgs},
+    cli::{
+        commands::{install::InstallArgs, list::ListArgs, repositories::RepositoryArgs, search::SearchArgs, uninstall::UninstallArgs},
+        display::logging::error,
+    },
     config::Config,
     repositories::manager::RepositoryManager,
 };
@@ -40,7 +45,22 @@ enum Commands {
 
 impl Cli {
     pub fn get_instance() -> Self {
-        Cli::parse()
+        match Cli::try_parse() {
+            Ok(cli) => cli,
+            Err(e) => {
+                let styles = Styles::default();
+                let prefix = format!("{}error:{:#} ", styles.get_error(), styles.get_error());
+
+                let msg = e.render().ansi().to_string();
+                let msg = match msg.strip_prefix(&prefix) {
+                    Some(msg) => msg.to_string(),
+                    None => msg,
+                };
+
+                error!(msg: msg);
+                exit(e.exit_code())
+            },
+        }
     }
 
     /// Reads and handles the command.

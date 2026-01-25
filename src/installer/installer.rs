@@ -372,8 +372,6 @@ impl<'a> Installer<'a> {
     }
 
     fn can_write_prefix_dir(&self) -> Result<bool> {
-        return Ok(true);
-
         if !fs::exists(&self.config.prefix_directory)? {
             return Ok(false);
         }

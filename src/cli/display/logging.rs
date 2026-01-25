@@ -52,10 +52,10 @@ macro_rules! error {
     ($error:expr, $($arg:tt)*) => {
         $crate::cli::display::logging::error_with_msg_impl($error, format_args!($($arg)*))
     };
-    (msg : $message:ident) => {
+    (msg: $message:ident) => {
         $crate::cli::display::logging::error_msg_impl(format_args!("{}", $message))
     };
-    (msg : $($arg:tt)*) => {
+    (msg: $($arg:tt)*) => {
         $crate::cli::display::logging::error_msg_impl(format_args!($($arg)*))
     };
     ($error:expr) => {
