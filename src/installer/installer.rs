@@ -105,28 +105,14 @@ impl<'a> Installer<'a> {
             None => package_version.skip_symlinking,
         };
 
-        // Create symlinks for package
-        if !skip_symlinking {
-            self.create_symlinks(Path::new(&install_directory))?;
-
-            // Update symlinked state in installed storage
-            match self.installed_storage.get_package_mut(&package.name, &package_version.version, false) {
-                Some(package) => {
-                    package.symlinked = true;
-                    self.installed_storage.save_to(&InstalledPackageStorage::get_default_path())?;
-                },
-                None => warning!("Cannot get installed package from installed storage... Please check installation with 'pit list'"),
-            }
-        }
+        // If package is installed succesfully, set it to active
+        self.set_active(&package.name, &package_version.version, !skip_symlinking)?;
 
         // Download and run test script if it exists
         let script_path = package_version.get_test_script_path(TARGET_ARCHITECTURE)?;
         if let Some(script_file) = scripts::download_script(self.repository_manager, &script_path, package_name, &repository_id)? {
             scripts::run_test_script(script_file, &install_directory, self.config, &script_args)?;
         }
-
-        // If package is installed succesfully, set it to active
-        self.set_active(&package.name, &package_version.version)?;
 
         Ok(())
     }
@@ -233,6 +219,17 @@ impl<'a> Installer<'a> {
             self.remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&directory))?;
         }
 
+        // Change active package when uninstalled package is currently active
+        if installed_package.active {
+            let mut other_versions = self.installed_storage.get_package_versions(package_name);
+            other_versions.retain(|x| x.version != *version);
+            other_versions.sort_by_key(|x| &x.version);
+
+            if let Some(newest) = other_versions.last() {
+                self.set_active(package_name, &newest.version.clone(), installed_package.symlinked)?;
+            }
+        }
+
         // Delete the determined directory
         self.remove_dir_all(&directory, package_name)?;
 
@@ -279,6 +276,10 @@ impl<'a> Installer<'a> {
                 break;
             }
         }
+
+        // Remove active path symlink
+        let active_path = Path::new(&self.config.prefix_directory).join("active").join(&package_name);
+        symlink::remove_symlink(&active_path)?;
 
         self.remove_dir_all(&directory, package_name)?;
 
@@ -412,9 +413,10 @@ impl<'a> Installer<'a> {
         Ok(current_highest.ok_or(InstallerError::SupportError(dependency.to_string()))?)
     }
 
-    fn set_active(&mut self, package_name: &str, package_version: &Version) -> Result<()> {
+    /// Sets a package to active and create the appropiate symlinks for it
+    fn set_active(&mut self, package_name: &str, package_version: &Version, should_symlink: bool) -> Result<()> {
         // Get package to set to active
-        let package = match self.installed_storage.get_package_mut(&package_name, &package_version, false) {
+        let package = match self.installed_storage.get_package(&package_name, &package_version) {
             Some(package) => package,
             None => {
                 warning!("Cannot get installed package from installed storage... Please check installation with 'pit list'");
@@ -425,24 +427,29 @@ impl<'a> Installer<'a> {
         let global_active_path = Path::new(&self.config.prefix_directory).join("active");
         let active_path = global_active_path.join(&package.name);
 
+        let package_install_path = package.install_path.clone();
+
         // Create symlink
         fs::create_dir_all(global_active_path)?;
-        symlink::create_symlink(&package.install_path, &active_path)?;
+        symlink::create_symlink(&package_install_path, &active_path)?;
 
-        // Update package storage
-        package.active = true;
+        let package_directory = self.config.prefix_directory.join("packages").join(package_name);
+        self.remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&package_directory))?;
+
+        if should_symlink {
+            self.create_symlinks(Path::new(&package_install_path))?;
+        }
 
         // Set all other packages to inactive
         for installed in self.installed_storage.get_package_versions_mut(&package_name) {
-            if !installed.active {
-                continue;
-            }
-
             if installed.version == *package_version {
+                installed.active = true;
+                installed.symlinked = should_symlink;
                 continue;
             }
 
             installed.active = false;
+            installed.symlinked = false;
         }
 
         // Save package storage
