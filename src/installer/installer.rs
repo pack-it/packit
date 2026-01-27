@@ -105,8 +105,30 @@ impl<'a> Installer<'a> {
             None => package_version.skip_symlinking,
         };
 
+        let mut should_set_to_active = true;
+        let mut should_symlink = !skip_symlinking;
+
+        // Check if we have a previous active install
+        if let Some(previous_active) = self.installed_storage.get_package_versions(&package_name).iter().find(|x| x.active) {
+            // Prompt user if the installed version is newer than the version currently installing
+            if previous_active.version > *version {
+                let question = format!(
+                    "A newer version ({}) of this package is currently active, do you want to change the active version to the older version ({version})?", previous_active.version
+                );
+                should_set_to_active = ask_user(&question, QuestionResponse::No)?.is_yes();
+            }
+
+            // Prompt user if the installed version is not symlinked and we're not skipping symlinking
+            if should_set_to_active && !previous_active.symlinked && !skip_symlinking {
+                let question = format!("The current active version of this package ({}) is not symlinked, do you want to proceed with symlinking the newly installed version", previous_active.version);
+                should_symlink = ask_user(&question, QuestionResponse::No)?.is_yes();
+            }
+        }
+
         // If package is installed succesfully, set it to active
-        self.set_active(&package.name, &package_version.version, !skip_symlinking)?;
+        if should_set_to_active {
+            self.set_active(&package.name, &package_version.version, should_symlink)?;
+        }
 
         // Download and run test script if it exists
         let script_path = package_version.get_test_script_path(TARGET_ARCHITECTURE)?;
