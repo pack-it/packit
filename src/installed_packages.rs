@@ -43,6 +43,7 @@ pub struct InstalledPackage {
     pub dependencies: Vec<Dependency>,
     pub install_path: PathBuf,
     pub symlinked: bool,
+    pub active: bool,
 
     /// True when the package is found on the system but not installed by Packit, false otherwise
     pub external: bool,
@@ -102,6 +103,7 @@ impl InstalledPackageStorage {
         source_repository: &Repository,
         install_path: &PathBuf,
         symlinked: bool,
+        active: bool,
     ) {
         // Add global and target specific dependencies together
         let mut dependencies = package_version.dependencies.clone();
@@ -119,6 +121,7 @@ impl InstalledPackageStorage {
             dependencies,
             install_path: install_path.into(),
             symlinked,
+            active,
             external: false,
         };
 
@@ -143,6 +146,20 @@ impl InstalledPackageStorage {
         let mut result = Vec::new();
 
         for package in &self.installed_packages {
+            if package.name == package_name {
+                result.push(package);
+            }
+        }
+
+        result
+    }
+
+    /// Gets all installed versions of a certain package from the storage.
+    /// Returns a list containing all installed versions, which is empty if the package is not installed.
+    pub fn get_package_versions_mut(&mut self, package_name: &str) -> Vec<&mut InstalledPackage> {
+        let mut result = Vec::new();
+
+        for package in self.installed_packages.iter_mut() {
             if package.name == package_name {
                 result.push(package);
             }

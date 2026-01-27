@@ -90,7 +90,7 @@ impl<'a> Installer<'a> {
         }
 
         // Add and save package to installed storage toml
-        self.installed_storage.add_package(&package, &package_version, source_repository, &install_directory, false);
+        self.installed_storage.add_package(&package, &package_version, source_repository, &install_directory, false, false);
         self.installed_storage.save_to(&InstalledPackageStorage::get_default_path())?;
 
         // Download and run post install script if it exists
@@ -124,6 +124,9 @@ impl<'a> Installer<'a> {
         if let Some(script_file) = scripts::download_script(self.repository_manager, &script_path, package_name, &repository_id)? {
             scripts::run_test_script(script_file, &install_directory, self.config, &script_args)?;
         }
+
+        // If package is installed succesfully, set it to active
+        self.set_active(&package.name, &package_version.version)?;
 
         Ok(())
     }
@@ -407,5 +410,44 @@ impl<'a> Installer<'a> {
         }
 
         Ok(current_highest.ok_or(InstallerError::SupportError(dependency.to_string()))?)
+    }
+
+    fn set_active(&mut self, package_name: &str, package_version: &Version) -> Result<()> {
+        // Get package to set to active
+        let package = match self.installed_storage.get_package_mut(&package_name, &package_version, false) {
+            Some(package) => package,
+            None => {
+                warning!("Cannot get installed package from installed storage... Please check installation with 'pit list'");
+                return Ok(());
+            },
+        };
+
+        let global_active_path = Path::new(&self.config.prefix_directory).join("active");
+        let active_path = global_active_path.join(&package.name);
+
+        // Create symlink
+        fs::create_dir_all(global_active_path)?;
+        symlink::create_symlink(&package.install_path, &active_path)?;
+
+        // Update package storage
+        package.active = true;
+
+        // Set all other packages to inactive
+        for installed in self.installed_storage.get_package_versions_mut(&package_name) {
+            if !installed.active {
+                continue;
+            }
+
+            if installed.version == *package_version {
+                continue;
+            }
+
+            installed.active = false;
+        }
+
+        // Save package storage
+        self.installed_storage.save_to(&InstalledPackageStorage::get_default_path())?;
+
+        Ok(())
     }
 }
