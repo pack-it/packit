@@ -100,13 +100,12 @@ impl<'a> Installer<'a> {
         }
 
         // Check if symlinking should be skipped
-        let skip_symlinking = match target.skip_symlinking {
+        let mut should_symlink = !match target.skip_symlinking {
             Some(skip_symlinking) => skip_symlinking,
             None => package_version.skip_symlinking,
         };
 
         let mut should_set_to_active = true;
-        let mut should_symlink = !skip_symlinking;
 
         // Check if we have a previous active install
         if let Some(previous_active) = self.installed_storage.get_package_versions(&package_name).iter().find(|x| x.active) {
@@ -119,9 +118,14 @@ impl<'a> Installer<'a> {
             }
 
             // Prompt user if the installed version is not symlinked and we're not skipping symlinking
-            if should_set_to_active && !previous_active.symlinked && !skip_symlinking {
+            if should_set_to_active && !previous_active.symlinked && should_symlink {
                 let question = format!("The current active version of this package ({}) is not symlinked, do you want to proceed with symlinking the newly installed version", previous_active.version);
                 should_symlink = ask_user(&question, QuestionResponse::No)?.is_yes();
+            }
+
+            // Show warning if the not symlinking but package was previously symlinked
+            if should_set_to_active && previous_active.symlinked && !should_symlink {
+                warning!("The new active package version will not be symlinked, while the previously active version was symlinked. The package will not be automatically findable by your system anymore.");
             }
         }
 
