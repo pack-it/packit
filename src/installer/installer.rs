@@ -459,21 +459,25 @@ impl<'a> Installer<'a> {
         fs::create_dir_all(global_active_path)?;
         symlink::create_symlink(&package_install_path, &active_path)?;
 
+        // Remove old symlinks
         let package_directory = self.config.prefix_directory.join("packages").join(package_name);
         self.remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&package_directory))?;
 
+        // Only create new symlinks if we should symlink
         if should_symlink {
             self.create_symlinks(Path::new(&package_install_path))?;
         }
 
-        // Set all other packages to inactive
+        // Update the installed storage according to the changes
         for installed in self.installed_storage.get_package_versions_mut(&package_name) {
+            // Update new active version in storage
             if installed.version == *package_version {
                 installed.active = true;
                 installed.symlinked = should_symlink;
                 continue;
             }
 
+            // Update other packages in storage
             installed.active = false;
             installed.symlinked = false;
         }
