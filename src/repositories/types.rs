@@ -147,6 +147,7 @@ impl PackageVersion {
 #[derive(Deserialize, Debug)]
 pub struct PackageTarget {
     pub url: String,
+    pub checksum: String,
 
     #[serde(default)]
     pub dependencies: Vec<Dependency>,
