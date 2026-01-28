@@ -63,7 +63,7 @@ impl Ord for Version {
             };
 
             if num == other_num {
-                continue
+                continue;
             }
 
             if num > other_num {
