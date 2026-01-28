@@ -52,12 +52,11 @@ impl Cli {
                 let prefix = format!("{}error:{:#} ", styles.get_error(), styles.get_error());
 
                 let msg = e.render().ansi().to_string();
-                let msg = match msg.strip_prefix(&prefix) {
-                    Some(msg) => msg.to_string(),
-                    None => msg,
+                match msg.strip_prefix(&prefix) {
+                    Some(msg) => error!(msg: msg),
+                    None => println!("{msg}"),
                 };
 
-                error!(msg: msg);
                 exit(e.exit_code())
             },
         }
