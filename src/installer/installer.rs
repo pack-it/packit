@@ -13,7 +13,7 @@ use crate::{
         types::{OptionalPackageId, PackageId, PackageName, Version},
         unpack::unpack,
     },
-    platforms::{Target, symlink},
+    platforms::{Target, permissions, symlink},
     repositories::{
         error::RepositoryError,
         manager::RepositoryManager,
@@ -588,15 +588,7 @@ impl<'a> Installer<'a> {
     }
 
     fn can_write_prefix_dir(&self) -> Result<bool> {
-        if !fs::exists(&self.config.prefix_directory)? {
-            return Ok(false);
-        }
-
-        let metadata = fs::metadata(&self.config.prefix_directory)?;
-        let permissions = metadata.permissions();
-
-        // TODO: Use something else then readonly, because it can be different for super user and group
-        Ok(!permissions.readonly())
+        Ok(permissions::is_writable(&self.config.prefix_directory)?)
     }
 
     pub fn update(&mut self, optional_id: &OptionalPackageId, new_version: &Version) -> Result<()> {
