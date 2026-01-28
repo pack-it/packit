@@ -277,6 +277,9 @@ impl<'a> Installer<'a> {
             )?,
         }
 
+        // Set correct permissions for the installed package
+        // TODO: permissions::set_ownership(&install_directory, uid, gid)
+
         // Add and save package to installed storage toml
         self.register.add_package(
             &install_meta.package_metadata,

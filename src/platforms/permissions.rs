@@ -19,9 +19,15 @@ pub fn is_writable(path: &PathBuf) -> Result<bool> {
     platform::is_writable(path, metadata)
 }
 
+pub use platform::set_ownership;
+
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 mod platform {
-    use std::{fs::Metadata, os::unix::fs::MetadataExt, path::PathBuf};
+    use std::{
+        fs::Metadata,
+        os::unix::fs::{self, MetadataExt},
+        path::PathBuf,
+    };
 
     use crate::platforms::permissions::Result;
 
@@ -55,6 +61,19 @@ mod platform {
 
         Ok(false)
     }
+
+    pub fn set_ownership(path: &PathBuf, uid: u32, gid: u32) -> Result<()> {
+        // If the path is a symlink, set symlink ownership
+        if path.is_symlink() {
+            fs::lchown(path, Some(uid), Some(gid))?;
+            return Ok(());
+        }
+
+        // Set file ownership
+        fs::chown(path, Some(uid), Some(gid))?;
+
+        Ok(())
+    }
 }
 
 #[cfg(target_os = "windows")]
@@ -64,7 +83,12 @@ mod platform {
     use crate::platforms::permissions::Result;
 
     pub fn is_writable_specific(_path: &PathBuf, _metadata: Metadata) -> Result<bool> {
+        //TODO
         Ok(false)
+    }
+
+    pub fn set_ownership(path: &PathBuf, uid: u32, gid: u32) -> Result<()> {
+        todo!()
     }
 }
 
@@ -76,5 +100,9 @@ mod platform {
 
     pub fn is_writable_specific(_path: &PathBuf, _metadata: Metadata) -> Result<bool> {
         panic!("Cannot check write permissions for target, target is not supported.");
+    }
+
+    pub fn set_ownership(_path: &PathBuf, _uid: u32, _gid: u32) -> Result<()> {
+        panic!("Cannot set ownership for target, target is not supported.");
     }
 }
