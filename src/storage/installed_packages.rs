@@ -1,4 +1,5 @@
 use std::{
+    collections::HashSet,
     fs,
     path::{Path, PathBuf},
 };
@@ -7,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     config::{self, Repository},
-    installer::types::{Dependency, Version},
+    installer::types::{Dependency, PackageId, Version},
     platforms::{DEFAULT_CONFIG_DIR, TARGET_ARCHITECTURE},
     repositories::types::{Package, PackageVersion},
     storage::error::InstalledPackagesError,
@@ -41,6 +42,11 @@ pub struct InstalledPackage {
     #[serde(default)]
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub dependencies: Vec<Dependency>,
+
+    #[serde(default)]
+    #[serde(skip_serializing_if = "HashSet::is_empty")]
+    pub dependents: HashSet<PackageId>,
+
     pub install_path: PathBuf,
     pub symlinked: bool,
     pub active: bool,
@@ -103,6 +109,7 @@ impl InstalledPackageStorage {
             source_repository_provider: source_repository.provider.clone(),
             version: package_version.version.clone(),
             dependencies,
+            dependents: HashSet::new(),
             install_path: install_path.into(),
             symlinked,
             active,

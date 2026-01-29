@@ -5,7 +5,7 @@ use crate::{
         builder::Builder,
         error::{InstallerError, Result},
         scripts,
-        types::{Dependency, Version},
+        types::{Dependency, PackageId, Version},
     },
     platforms::{symlink, TARGET_ARCHITECTURE},
     repositories::{
@@ -63,8 +63,14 @@ impl<'a> Installer<'a> {
         let package_version = self.repository_manager.read_repo_package_version(&repository_id, &package_name, &version)?;
         let target = package_version.get_target(TARGET_ARCHITECTURE)?;
 
+        // Create a package id of the current package
+        let package_id = PackageId {
+            name: package_name.to_string(),
+            version: version.clone(),
+        };
+
         // Install global package dependencies and platform specific packages (if there are any, can be empty)
-        self.install_dependencies(&package_version.dependencies, &target.dependencies)?;
+        self.install_dependencies(&package_version.dependencies, &target.dependencies, &package_id)?;
 
         let install_directory = self.config.prefix_directory.join("packages").join(package_name).join(version.to_string());
 
@@ -87,7 +93,7 @@ impl<'a> Installer<'a> {
         // Get build version of package
         match self.repository_manager.get_prebuild_url(&repository_id, package_name, version) {
             Some(url) => self.download_prebuild(&url, &install_directory)?,
-            None => self.build_package(&package, &package_version, &target, &repository_id, &install_directory)?,
+            None => self.build_package(&package, &package_version, &target, &repository_id, &install_directory, &package_id)?,
         }
 
         // Add and save package to installed storage toml
@@ -144,21 +150,53 @@ impl<'a> Installer<'a> {
         Ok(())
     }
 
-    fn install_dependencies<'d>(&mut self, global_dependencies: &Vec<Dependency>, target_dependencies: &Vec<Dependency>) -> Result<()> {
+    fn install_dependencies<'d>(
+        &mut self,
+        global_dependencies: &Vec<Dependency>,
+        target_dependencies: &Vec<Dependency>,
+        dependent: &PackageId,
+    ) -> Result<()> {
         let dependencies = global_dependencies.iter().chain(target_dependencies.iter());
         for dependency in dependencies {
-            if self.installed_storage.dependency_satisfied(dependency) {
-                println!("Dependency '{}' already satisfied, continuing", dependency.get_name());
-                continue;
+            let satisfying_package = self.installed_storage.get_satisfying_package(dependency);
+            match satisfying_package {
+                Some(package) => self.add_dependent(
+                    &dependent,
+                    PackageId {
+                        name: dependency.get_name().to_string(),
+                        version: package.version.clone(),
+                    },
+                ),
+                None => {
+                    println!("Dependency '{}' already satisfied, continuing", dependency.get_name());
+                    continue;
+                },
             }
 
             // Determine the latest supported version for the dependency
             let version = self.get_latest_dependency_version(dependency)?;
 
             self.install(dependency.get_name(), &Some(version.clone()))?;
+            self.add_dependent(
+                &dependent,
+                PackageId {
+                    name: dependency.get_name().to_string(),
+                    version,
+                },
+            );
         }
 
         Ok(())
+    }
+
+    fn add_dependent(&mut self, dependent: &PackageId, dependency: PackageId) {
+        let installed_package = self.installed_storage.get_package_mut(&dependency.name, &dependency.version);
+        match installed_package {
+            Some(package) => {
+                package.dependents.insert(dependent.clone());
+            },
+            None => todo!("Give warning"),
+        }
     }
 
     fn build_package(
@@ -168,9 +206,10 @@ impl<'a> Installer<'a> {
         target: &PackageTarget,
         repository_id: &str,
         destination_dir: impl AsRef<Path>,
+        dependent: &PackageId,
     ) -> Result<()> {
         // Install global package build dependencies and platform specific build dependencies
-        self.install_dependencies(&package_version.build_dependencies, &target.build_dependencies)?;
+        self.install_dependencies(&package_version.build_dependencies, &target.build_dependencies, dependent)?;
 
         // Build package if we did not find a prebuild
         let builder = Builder::new(self.config, self.installed_storage, self.repository_manager);
