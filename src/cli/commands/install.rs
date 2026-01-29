@@ -24,12 +24,6 @@ impl HandleCommand for InstallArgs {
         let installed_dir = InstalledPackageStorage::get_default_path();
         let mut installed_storage = InstalledPackageStorage::from(&installed_dir).unwrap_or_exit(1);
 
-        // Make sure the package doesn't already exist before installing
-        if installed_storage.get_package_versions(&self.package_name).len() >= 1 {
-            println!("Package '{}' already exists.", &self.package_name);
-            return;
-        }
-
         Installer::new(&config, &mut installed_storage, &manager).install(&self.package_name, &self.version).unwrap_or_exit(1);
 
         // Save changes

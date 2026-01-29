@@ -55,7 +55,7 @@ pub enum InstallerError {
     #[error("Cannot execute script")]
     ScriptError(#[from] ScriptError),
 
-    #[error("Cannot execute symlink opperation")]
+    #[error("Cannot execute symlink operation")]
     SymlinkError(#[from] SymlinkError),
 
     #[error("Cannot build package")]
