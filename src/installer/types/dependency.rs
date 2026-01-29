@@ -83,7 +83,7 @@ impl Display for Dependency {
             }
         }
 
-        write!(f, "{}", self.name.clone() + "@" + &string_version)?;
+        write!(f, "{}@{}", &self.name, &string_version)?;
         Ok(())
     }
 }

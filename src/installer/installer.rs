@@ -158,19 +158,16 @@ impl<'a> Installer<'a> {
     ) -> Result<()> {
         let dependencies = global_dependencies.iter().chain(target_dependencies.iter());
         for dependency in dependencies {
-            let satisfying_package = self.installed_storage.get_satisfying_package(dependency);
-            match satisfying_package {
-                Some(package) => self.add_dependent(
+            if let Some(satisfying_package) = self.installed_storage.get_satisfying_package(dependency) {
+                self.add_dependent(
                     &dependent,
                     PackageId {
-                        name: dependency.get_name().to_string(),
-                        version: package.version.clone(),
+                        name: satisfying_package.name.to_string(),
+                        version: satisfying_package.version.clone(),
                     },
-                ),
-                None => {
-                    println!("Dependency '{}' already satisfied, continuing", dependency.get_name());
-                    continue;
-                },
+                );
+                println!("Dependency '{}' already satisfied, continuing", dependency.get_name());
+                continue;
             }
 
             // Determine the latest supported version for the dependency
