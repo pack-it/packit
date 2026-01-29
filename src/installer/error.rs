@@ -8,7 +8,7 @@ use crate::{
         types::{PackageId, PackageIdError, Version},
         unpack::UnpackError,
     },
-    platforms::symlink::SymlinkError,
+    platforms::{permissions::PermissionError, symlink::SymlinkError},
     repositories::error::RepositoryError,
     storage::error::RegisterError,
     utils::tree::TreeError,
@@ -95,6 +95,9 @@ pub enum InstallerError {
 
     #[error("Cannot do tree operation")]
     TreeError(#[from] TreeError),
+
+    #[error("Cannot set or get permissions")]
+    PermissionError(#[from] PermissionError),
 
     #[error("Error while interacting with filesystem")]
     IOError(#[from] std::io::Error),

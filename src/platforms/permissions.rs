@@ -1,6 +1,19 @@
 use std::{fs, path::PathBuf};
+use thiserror::Error;
 
-type Result<T> = core::result::Result<T, std::io::Error>;
+#[derive(Error, Debug)]
+pub enum PermissionError {
+    #[error("Error while fetching permissions")]
+    IOError(#[from] std::io::Error),
+
+    #[error("User does not exist")]
+    UserDoesNotExist,
+
+    #[error("Group does not exist")]
+    GroupDoesNotExist,
+}
+
+type Result<T> = core::result::Result<T, PermissionError>;
 
 pub fn is_writable(path: &PathBuf) -> Result<bool> {
     if !fs::exists(path)? {
@@ -19,25 +32,22 @@ pub fn is_writable(path: &PathBuf) -> Result<bool> {
     platform::is_writable(path, metadata)
 }
 
-pub use platform::set_ownership;
+pub use platform::set_packit_ownership;
 
 #[cfg(any(target_os = "macos", target_os = "linux"))]
-mod platform {
+pub mod platform {
     use std::{
+        ffi::CString,
         fs::Metadata,
         os::unix::fs::{self, MetadataExt},
         path::PathBuf,
     };
 
-    use crate::platforms::permissions::Result;
+    use crate::cli::display::logging::warning;
 
-    #[link(name = "c")]
-    extern "C" {
-        fn geteuid() -> u32;
-        fn getegid() -> u32;
-    }
+    use super::{PermissionError, Result};
 
-    pub fn is_writable(_path: &PathBuf, metadata: Metadata) -> Result<bool> {
+    pub(super) fn is_writable(_path: &PathBuf, metadata: Metadata) -> Result<bool> {
         let mode = metadata.mode();
 
         // Check if path is writable for everyone
@@ -46,20 +56,48 @@ mod platform {
         }
 
         // Check if path is writable for group
-        let current_group = unsafe { getegid() };
+        let current_group = unsafe { libc::getegid() };
         let group = metadata.gid();
         if current_group == group && mode & 0o020 != 0 {
             return Ok(true);
         }
 
         // Check if path is writable for user
-        let current_user = unsafe { geteuid() };
+        let current_user = unsafe { libc::geteuid() };
         let user = metadata.uid();
         if current_user == user && mode & 0o200 != 0 {
             return Ok(true);
         }
 
         Ok(false)
+    }
+
+    pub fn set_packit_ownership(path: &PathBuf) -> Result<()> {
+        let packit_user = match get_user_id("packit") {
+            Ok(uid) => uid,
+            Err(e) => {
+                if matches!(e, PermissionError::UserDoesNotExist) {
+                    warning!("The 'packit' user does not exist. Please run 'pit fix' to fix your Packit installation");
+                    // TODO: pit fix does not exist yet
+                }
+                return Err(e);
+            },
+        };
+
+        let packit_group = match get_group_id("packit") {
+            Ok(uid) => uid,
+            Err(e) => {
+                if matches!(e, PermissionError::GroupDoesNotExist) {
+                    warning!("The 'packit' group does not exist. Please run 'pit fix' to fix your Packit installation");
+                    // TODO: pit fix does not exist yet
+                }
+                return Err(e);
+            },
+        };
+
+        set_ownership(path, packit_user, packit_group)?;
+
+        Ok(())
     }
 
     pub fn set_ownership(path: &PathBuf, uid: u32, gid: u32) -> Result<()> {
@@ -74,20 +112,46 @@ mod platform {
 
         Ok(())
     }
+
+    pub fn get_user_id(name: &str) -> Result<u32> {
+        let c_name = CString::new(name).unwrap();
+        let passwd = unsafe { libc::getpwnam(c_name.as_ptr()) };
+
+        if passwd.is_null() {
+            return Err(PermissionError::UserDoesNotExist);
+        }
+
+        unsafe {
+            return Ok((*passwd).pw_uid);
+        }
+    }
+
+    pub fn get_group_id(name: &str) -> Result<u32> {
+        let c_name = CString::new(name).unwrap();
+        let group = unsafe { libc::getgrnam(c_name.as_ptr()) };
+
+        if group.is_null() {
+            return Err(PermissionError::GroupDoesNotExist);
+        }
+
+        unsafe {
+            return Ok((*group).gr_gid);
+        }
+    }
 }
 
 #[cfg(target_os = "windows")]
 mod platform {
     use std::{fs::Metadata, path::PathBuf};
 
-    use crate::platforms::permissions::Result;
+    use super::Result;
 
     pub fn is_writable_specific(_path: &PathBuf, _metadata: Metadata) -> Result<bool> {
         //TODO
         Ok(false)
     }
 
-    pub fn set_ownership(path: &PathBuf, uid: u32, gid: u32) -> Result<()> {
+    pub fn set_packit_ownership(path: &PathBuf) -> Result<()> {
         todo!()
     }
 }
@@ -96,13 +160,13 @@ mod platform {
 mod platform {
     use std::{fs::Metadata, path::PathBuf};
 
-    use crate::platforms::permissions::Result;
+    use super::Result;
 
     pub fn is_writable_specific(_path: &PathBuf, _metadata: Metadata) -> Result<bool> {
         panic!("Cannot check write permissions for target, target is not supported.");
     }
 
-    pub fn set_ownership(_path: &PathBuf, _uid: u32, _gid: u32) -> Result<()> {
+    pub fn set_packit_ownership(path: &PathBuf) -> Result<()> {
         panic!("Cannot set ownership for target, target is not supported.");
     }
 }
