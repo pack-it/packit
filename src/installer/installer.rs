@@ -38,6 +38,7 @@ impl<'a> Installer<'a> {
     }
 
     /// Installs the given package and its dependencies.
+    /// TODO: Only except explicit version, not an option (move that logic outside of the install)
     pub fn install(&mut self, package_name: &str, version: &Option<Version>) -> Result<()> {
         // Check if we can write to the prefix directory
         if !self.can_write_prefix_dir()? {
@@ -305,7 +306,10 @@ impl<'a> Installer<'a> {
 
         // Remove active path symlink
         let active_path = Path::new(&self.config.prefix_directory).join("active").join(&package_name);
-        symlink::remove_symlink(&active_path)?;
+        match active_path.exists() {
+            true => symlink::remove_symlink(&active_path)?,
+            false => warning!("Active symlink did not exist, was the package even installed succesfully?"),
+        }
 
         self.remove_dir_all(&directory, package_name)?;
 
@@ -455,13 +459,13 @@ impl<'a> Installer<'a> {
 
         let package_install_path = package.install_path.clone();
 
-        // Create symlink
-        fs::create_dir_all(global_active_path)?;
-        symlink::create_symlink(&package_install_path, &active_path)?;
-
         // Remove old symlinks
         let package_directory = self.config.prefix_directory.join("packages").join(package_name);
         self.remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&package_directory))?;
+
+        // Create active symlink
+        fs::create_dir_all(global_active_path)?;
+        symlink::create_symlink(&package_install_path, &active_path)?;
 
         // Only create new symlinks if we should symlink
         if should_symlink {
