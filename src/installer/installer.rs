@@ -64,10 +64,7 @@ impl<'a> Installer<'a> {
         let target = package_version.get_target(TARGET_ARCHITECTURE)?;
 
         // Create a package id of the current package
-        let package_id = PackageId {
-            name: package_name.to_string(),
-            version: version.clone(),
-        };
+        let package_id = PackageId::new(&package_name, &version);
 
         // Install global package dependencies and platform specific packages (if there are any, can be empty)
         self.install_dependencies(&package_version.dependencies, &target.dependencies, &package_id)?;
@@ -159,13 +156,7 @@ impl<'a> Installer<'a> {
         let dependencies = global_dependencies.iter().chain(target_dependencies.iter());
         for dependency in dependencies {
             if let Some(satisfying_package) = self.installed_storage.get_satisfying_package(dependency) {
-                self.add_dependent(
-                    &dependent,
-                    PackageId {
-                        name: satisfying_package.name.to_string(),
-                        version: satisfying_package.version.clone(),
-                    },
-                );
+                self.add_dependent(&dependent, PackageId::new(&satisfying_package.name, &satisfying_package.version));
                 println!("Dependency '{}' already satisfied, continuing", dependency.get_name());
                 continue;
             }
@@ -174,13 +165,7 @@ impl<'a> Installer<'a> {
             let version = self.get_latest_dependency_version(dependency)?;
 
             self.install(dependency.get_name(), &Some(version.clone()))?;
-            self.add_dependent(
-                &dependent,
-                PackageId {
-                    name: dependency.get_name().to_string(),
-                    version,
-                },
-            );
+            self.add_dependent(&dependent, PackageId::new(dependency.get_name(), &version));
         }
 
         Ok(())

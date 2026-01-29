@@ -10,6 +10,15 @@ pub struct PackageId {
     pub version: Version,
 }
 
+impl PackageId {
+    pub fn new(name: &str, version: &Version) -> Self {
+        Self {
+            name: name.to_string(),
+            version: version.clone(),
+        }
+    }
+}
+
 impl<'de> Deserialize<'de> for PackageId {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
