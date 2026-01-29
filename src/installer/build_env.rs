@@ -1,6 +1,6 @@
 use std::{collections::HashMap, path::PathBuf};
 
-use crate::{cli::display::logging::warning, installed_packages::InstalledPackage, utils::env::Environment};
+use crate::{cli::display::logging::warning, storage::installed_packages::InstalledPackage, utils::env::Environment};
 
 // TODO: We should probably also strip tokens from the env
 #[rustfmt::skip]

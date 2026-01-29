@@ -3,10 +3,10 @@ use crate::{cli::commands::Cli, config::Config, repositories::manager::Repositor
 mod cli;
 mod config;
 mod error_handling;
-mod installed_packages;
 mod installer;
 mod platforms;
 mod repositories;
+mod storage;
 mod utils;
 mod verifier;
 

@@ -2,10 +2,10 @@ use thiserror::Error;
 
 use crate::{
     cli::display::error::DisplayError,
-    installed_packages::InstalledPackagesError,
     installer::{builder::BuilderError, scripts::ScriptError},
     platforms::symlink::SymlinkError,
     repositories::error::RepositoryError,
+    storage::error::InstalledPackagesError,
 };
 
 /// The errors that occur during installation.

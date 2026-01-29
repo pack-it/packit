@@ -4,9 +4,9 @@ use crate::{
     cli::commands::HandleCommand,
     config::Config,
     error_handling::HandleError,
-    installed_packages::InstalledPackageStorage,
     installer::{installer::Installer, types::Version},
     repositories::manager::RepositoryManager,
+    storage::installed_packages::InstalledPackageStorage,
 };
 
 #[derive(Args, Debug)]

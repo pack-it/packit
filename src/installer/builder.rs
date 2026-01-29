@@ -7,7 +7,6 @@ use thiserror::Error;
 use crate::{
     cli::display::Spinner,
     config::Config,
-    installed_packages::InstalledPackageStorage,
     installer::{
         build_env::BuildEnv,
         scripts::{self, ScriptError},
@@ -19,6 +18,7 @@ use crate::{
         manager::RepositoryManager,
         types::{Package, PackageVersion},
     },
+    storage::installed_packages::InstalledPackageStorage,
 };
 
 /// The errors that occur during building.

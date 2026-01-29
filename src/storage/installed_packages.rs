@@ -4,13 +4,13 @@ use std::{
 };
 
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
 
 use crate::{
     config::{self, Repository},
     installer::types::{Dependency, Version},
     platforms::{DEFAULT_CONFIG_DIR, TARGET_ARCHITECTURE},
     repositories::types::{Package, PackageVersion},
+    storage::error::InstalledPackagesError,
     utils::constants::INSTALLED_FILENAME,
 };
 
@@ -44,26 +44,10 @@ pub struct InstalledPackage {
     pub install_path: PathBuf,
     pub symlinked: bool,
     pub active: bool,
-
-    /// True when the package is found on the system but not installed by Packit, false otherwise
-    pub external: bool,
 }
 
 fn is_repository_provider_default(value: &String) -> bool {
     *value == config::default_repository_provider()
-}
-
-/// The errors that occur when reading or saving the installed packages file.
-#[derive(Error, Debug)]
-pub enum InstalledPackagesError {
-    #[error("Cannot read or write installed packages file")]
-    IOError(#[from] std::io::Error),
-
-    #[error("Cannot parse installed packages file")]
-    ParseError(#[from] toml::de::Error),
-
-    #[error("Cannot serialize installed packages")]
-    SerializeError(#[from] toml::ser::Error),
 }
 
 impl InstalledPackageStorage {
@@ -122,7 +106,6 @@ impl InstalledPackageStorage {
             install_path: install_path.into(),
             symlinked,
             active,
-            external: false,
         };
 
         self.installed_packages.push(installed_package);
@@ -134,10 +117,10 @@ impl InstalledPackageStorage {
         self.installed_packages.retain(|package| package.name != package_name || package.version != *version);
     }
 
-    /// Removes an entire package from the info storage, except when it's an external package.
+    /// Removes an entire package from the info storage
     /// Please note that this does not save the storage and does not read the currently installed packages from the toml.
     pub fn remove_package(&mut self, package_name: &str) {
-        self.installed_packages.retain(|package| package.name != package_name || package.external);
+        self.installed_packages.retain(|package| package.name != package_name);
     }
 
     /// Gets all installed versions of a certain package from the storage.
@@ -200,7 +183,6 @@ impl InstalledPackageStorage {
     pub fn get_package(&self, package_name: &str, package_version: &Version) -> Option<&InstalledPackage> {
         for package in &self.installed_packages {
             if package.name == package_name && package.version == *package_version {
-                //TODO: add external check as in get_package_mut
                 return Some(package);
             }
         }
@@ -210,12 +192,9 @@ impl InstalledPackageStorage {
 
     /// Gets a specific version of a certain package from the storage.
     /// Returns a mutable reference to the package version, or None if the package version is not installed.
-    pub fn get_package_mut(&mut self, package_name: &str, package_version: &Version, external: bool) -> Option<&mut InstalledPackage> {
+    pub fn get_package_mut(&mut self, package_name: &str, package_version: &Version) -> Option<&mut InstalledPackage> {
         for installed_package in self.installed_packages.iter_mut() {
-            if installed_package.name == package_name
-                && installed_package.version == *package_version
-                && installed_package.external == external
-            {
+            if installed_package.name == package_name && installed_package.version == *package_version {
                 return Some(installed_package);
             }
         }
