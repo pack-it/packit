@@ -1,5 +1,6 @@
-use std::path::Path;
-
+use reqwest::Response;
+use sha2::{Digest, Sha256};
+use std::{path::Path, time::Duration};
 use tempfile::TempDir;
 use thiserror::Error;
 
@@ -43,6 +44,9 @@ pub enum BuilderError {
 
     #[error("Cannot find a repository for building")]
     RepositoryError(#[from] RepositoryError),
+
+    #[error("Checksum does not match")]
+    ChecksumError,
 }
 
 pub type Result<T> = core::result::Result<T, BuilderError>;
@@ -120,6 +124,14 @@ impl<'a> Builder<'a> {
 
         // Get the bytes from the response
         let bytes = response.bytes()?;
+
+        // Calculate the checksum
+        let checksum: [u8; 32] = Sha256::digest(&bytes).into();
+
+        // Check equality of checksum
+        if target.checksum.sha256 != checksum {
+            return Err(BuilderError::ChecksumError);
+        }
 
         // Finish download spinner
         spinner.finish("Downloading ".to_string() + &package.name + " successful");

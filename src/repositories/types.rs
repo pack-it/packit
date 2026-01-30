@@ -8,6 +8,7 @@ use crate::{
         types::{Dependency, Version},
     },
     repositories::error::{RepositoryError, Result},
+    utils::checksum::{self, Checksum},
 };
 
 /// Represents the repository metadata, containing repository information.
@@ -147,6 +148,7 @@ impl PackageVersion {
 #[derive(Deserialize, Debug)]
 pub struct PackageTarget {
     pub url: String,
+    pub checksum: Checksum,
 
     #[serde(default)]
     pub dependencies: Vec<Dependency>,
