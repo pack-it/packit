@@ -21,7 +21,7 @@ pub struct RepositoryMetadata {
 
 /// Represents the package metadata, containing package information.
 #[derive(Deserialize, Debug)]
-pub struct Package {
+pub struct PackageMetadata {
     pub name: String,
     pub description: String,
     pub homepage: Option<String>,
@@ -29,7 +29,7 @@ pub struct Package {
     pub latest_versions: HashMap<String, Version>,
 }
 
-impl Package {
+impl PackageMetadata {
     pub fn get_latest_version(&self, target_name: &str) -> Result<&Version> {
         Ok(self.latest_versions.get(target_name).ok_or(RepositoryError::TargetError)?)
     }

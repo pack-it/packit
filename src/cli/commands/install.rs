@@ -26,7 +26,9 @@ impl HandleCommand for InstallArgs {
 
         // TODO: Check if this exists as an external package (possibly leading to conflicts) (if so, add to external packages)
 
-        Installer::new(&config, &mut installed_storage, &manager).install(&self.package_name, &self.version).unwrap_or_exit(1);
+        Installer::new(&config, &mut installed_storage, &manager)
+            .install(&self.package_name, self.version.as_ref())
+            .unwrap_or_exit(1);
 
         // Save changes
         installed_storage.save_to(&installed_dir).unwrap_or_exit(1);

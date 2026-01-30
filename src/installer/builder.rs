@@ -16,7 +16,7 @@ use crate::{
     repositories::{
         error::RepositoryError,
         manager::RepositoryManager,
-        types::{Package, PackageVersion},
+        types::{PackageMetadata, PackageVersion},
     },
     storage::installed_packages::InstalledPackageStorage,
 };
@@ -70,7 +70,7 @@ impl<'a> Builder<'a> {
 
     pub fn build(
         &self,
-        package: &Package,
+        package: &PackageMetadata,
         package_version: &PackageVersion,
         repository_id: &str,
         destination_dir: impl AsRef<Path>,

@@ -10,7 +10,7 @@ use crate::{
     platforms::{symlink, TARGET_ARCHITECTURE},
     repositories::{
         manager::RepositoryManager,
-        types::{Package, PackageTarget, PackageVersion},
+        types::{PackageMetadata, PackageTarget, PackageVersion},
     },
     storage::installed_packages::InstalledPackageStorage,
 };
@@ -38,8 +38,7 @@ impl<'a> Installer<'a> {
     }
 
     /// Installs the given package and its dependencies.
-    /// TODO: Only except explicit version, not an option (move that logic outside of the install)
-    pub fn install(&mut self, package_name: &str, version: &Option<Version>) -> Result<()> {
+    pub fn install(&mut self, package_name: &str, version: Option<&Version>) -> Result<()> {
         // Check if we can write to the prefix directory
         if !self.can_write_prefix_dir()? {
             return Err(InstallerError::PermissionsError);
@@ -164,7 +163,7 @@ impl<'a> Installer<'a> {
             // Determine the latest supported version for the dependency
             let version = self.get_latest_dependency_version(dependency)?;
 
-            self.install(dependency.get_name(), &Some(version.clone()))?;
+            self.install(dependency.get_name(), Some(&version))?;
             self.add_dependent(&dependent, PackageId::new(dependency.get_name(), &version));
         }
 
@@ -183,7 +182,7 @@ impl<'a> Installer<'a> {
 
     fn build_package(
         &mut self,
-        package: &Package,
+        package: &PackageMetadata,
         package_version: &PackageVersion,
         target: &PackageTarget,
         repository_id: &str,

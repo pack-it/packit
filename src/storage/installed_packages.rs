@@ -10,7 +10,7 @@ use crate::{
     config::{self, Repository},
     installer::types::{Dependency, PackageId, Version},
     platforms::{DEFAULT_CONFIG_DIR, TARGET_ARCHITECTURE},
-    repositories::types::{Package, PackageVersion},
+    repositories::types::{PackageMetadata, PackageVersion},
     storage::error::InstalledPackagesError,
     utils::constants::INSTALLED_FILENAME,
 };
@@ -88,7 +88,7 @@ impl InstalledPackageStorage {
     /// Please note that this does not save the storage and does not read the currently installed packages from the toml.
     pub fn add_package(
         &mut self,
-        package: &Package,
+        package: &PackageMetadata,
         package_version: &PackageVersion,
         source_repository: &Repository,
         install_path: &PathBuf,

@@ -6,7 +6,7 @@ use crate::{
     repositories::{
         error::Result,
         provider::RepositoryProvider,
-        types::{Package, PackageVersion, RepositoryMetadata},
+        types::{PackageMetadata, PackageVersion, RepositoryMetadata},
     },
 };
 
@@ -24,7 +24,7 @@ impl RepositoryProvider for DefaultProvider {
         Ok(toml::de::from_str(&data)?)
     }
 
-    fn read_package(&self, package: &str) -> Result<Package> {
+    fn read_package(&self, package: &str) -> Result<PackageMetadata> {
         let data = reqwest::blocking::get(format!("{}/packages/{package}/package.toml", self.url))?.text()?;
 
         Ok(toml::de::from_str(&data)?)
