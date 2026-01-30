@@ -73,17 +73,6 @@ pub mod platform {
     }
 
     pub fn set_packit_ownership(path: &PathBuf) -> Result<()> {
-        let packit_user = match get_user_id("packit") {
-            Ok(uid) => uid,
-            Err(e) => {
-                if matches!(e, PermissionError::UserDoesNotExist) {
-                    warning!("The 'packit' user does not exist. Please run 'pit fix' to fix your Packit installation");
-                    // TODO: pit fix does not exist yet
-                }
-                return Err(e);
-            },
-        };
-
         let packit_group = match get_group_id("packit") {
             Ok(uid) => uid,
             Err(e) => {
@@ -95,20 +84,20 @@ pub mod platform {
             },
         };
 
-        set_ownership(path, packit_user, packit_group)?;
+        set_ownership(path, None, Some(packit_group))?;
 
         Ok(())
     }
 
-    pub fn set_ownership(path: &PathBuf, uid: u32, gid: u32) -> Result<()> {
+    pub fn set_ownership(path: &PathBuf, uid: Option<u32>, gid: Option<u32>) -> Result<()> {
         // If the path is a symlink, set symlink ownership
         if path.is_symlink() {
-            fs::lchown(path, Some(uid), Some(gid))?;
+            fs::lchown(path, uid, gid)?;
             return Ok(());
         }
 
         // Set file ownership
-        fs::chown(path, Some(uid), Some(gid))?;
+        fs::chown(path, uid, gid)?;
 
         Ok(())
     }
