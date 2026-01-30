@@ -1,5 +1,6 @@
-use std::path::Path;
-use sha2::{Sha256, Digest};
+use reqwest::Response;
+use sha2::{Digest, Sha256};
+use std::{path::Path, time::Duration};
 use tempfile::TempDir;
 use thiserror::Error;
 
@@ -124,9 +125,11 @@ impl<'a> Builder<'a> {
         // Get the bytes from the response
         let bytes = response.bytes()?;
 
-        // Check and calculate the checksum
-        let checksum = Sha256::digest(&bytes);
-        if target.checksum.as_bytes() != &checksum[..] {
+        // Calculate the checksum
+        let checksum: [u8; 32] = Sha256::digest(&bytes).into();
+
+        // Check equality of checksum
+        if target.checksum.sha256 != checksum {
             return Err(BuilderError::ChecksumError);
         }
 
