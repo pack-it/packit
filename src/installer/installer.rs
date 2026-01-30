@@ -204,7 +204,7 @@ impl<'a> Installer<'a> {
     }
 
     /// Uninstalls a package version if specified, otherwise it will uninstall the entire package directory.
-    pub fn uninstall(&mut self, package_name: &str, version: &Option<Version>) -> Result<()> {
+    pub fn uninstall(&mut self, package_name: &str, version: Option<&Version>) -> Result<()> {
         // Check if we can write to the prefix directory
         if !self.can_write_prefix_dir()? {
             return Err(InstallerError::PermissionsError);

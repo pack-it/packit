@@ -159,7 +159,7 @@ impl InstalledPackageStorage {
     }
 
     /// Checks if a certain package is a dependency by looping over all dependencies.
-    pub fn is_dependency(&self, package_name: &str, version: &Option<Version>) -> bool {
+    pub fn is_dependency(&self, package_name: &str, version: Option<&Version>) -> bool {
         for package in &self.installed_packages {
             if package.dependencies.iter().any(|d| d.satisfied(package_name, version.into())) {
                 return true;

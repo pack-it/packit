@@ -24,7 +24,9 @@ impl HandleCommand for UninstallArgs {
         let installed_dir = InstalledPackageStorage::get_default_path();
         let mut installed_storage = InstalledPackageStorage::from(&installed_dir).unwrap_or_exit(1);
 
-        Installer::new(config, &mut installed_storage, manager).uninstall(&self.package_name, &self.version).unwrap_or_exit(1);
+        Installer::new(config, &mut installed_storage, manager)
+            .uninstall(&self.package_name, self.version.as_ref())
+            .unwrap_or_exit(1);
 
         // Save changes
         installed_storage.save_to(&installed_dir).unwrap_or_exit(1);
