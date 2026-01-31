@@ -39,8 +39,8 @@ pub struct InstalledPackage {
     pub source_repository_provider: String,
 
     #[serde(default)]
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub dependencies: Vec<PackageId>, // TODO: Check to hashset
+    #[serde(skip_serializing_if = "HashSet::is_empty")]
+    pub dependencies: HashSet<PackageId>,
 
     #[serde(default)]
     #[serde(skip_serializing_if = "HashSet::is_empty")]
@@ -102,11 +102,10 @@ impl InstalledPackageStorage {
         };
 
         // Get the satisfying package for the dependencies
-        let mut dependency_ids = Vec::new();
+        let mut dependency_ids = HashSet::new();
         for dependency in dependencies {
-            match self.get_satisfying_package(dependency) {
-                Some(package) => dependency_ids.push(package.package_id.clone()),
-                None => {}, // TODO
+            if let Some(package) = self.get_satisfying_package(dependency) {
+                dependency_ids.insert(package.package_id.clone());
             }
         }
 
