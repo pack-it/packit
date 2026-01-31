@@ -23,7 +23,7 @@ impl HandleCommand for ListArgs {
             }
         } else {
             for package in &installed_storage.installed_packages {
-                println!("{} {}", package.name, package.version);
+                println!("{}", package.package_id);
             }
         }
     }

@@ -23,7 +23,7 @@ pub enum InstallerError {
         e: std::io::Error,
     },
 
-    #[error("Installed package '{package_name} {}' does not exist.", version.clone().unwrap_or_default())]
+    #[error("Installed package '{package_name}' with version '{}' does not exist.", version.clone().unwrap_or("any".to_string()))]
     InstalledExistError {
         package_name: String,
         version: Option<String>,
