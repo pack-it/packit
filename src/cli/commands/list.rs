@@ -22,8 +22,8 @@ impl HandleCommand for ListArgs {
                 println!("{}", package);
             }
         } else {
-            for package in &installed_storage.installed_packages {
-                println!("{}", package.package_id);
+            for package_id in installed_storage.installed_packages.keys() {
+                println!("{}", package_id);
             }
         }
     }
