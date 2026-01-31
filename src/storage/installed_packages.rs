@@ -122,6 +122,13 @@ impl InstalledPackageStorage {
             active,
         };
 
+        // Add the package as a dependent in its dependencies
+        for dependency in &installed_package.dependencies {
+            if let Some(package) = self.get_package_mut(&dependency) {
+                package.dependents.insert(installed_package.package_id.clone());
+            }
+        }
+
         self.installed_packages.insert(PackageId::new(&package.name, &package_version.version), installed_package);
     }
 
