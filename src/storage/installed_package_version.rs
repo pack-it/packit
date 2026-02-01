@@ -9,11 +9,10 @@ use crate::{config, installer::types::PackageId};
 pub struct InstalledPackageVersion {
     pub package_id: PackageId,
 
-    pub source_repository_url: String,
-
     #[serde(default = "config::default_repository_provider")]
     #[serde(skip_serializing_if = "is_repository_provider_default")]
     pub source_repository_provider: String,
+    pub source_repository_url: String,
 
     #[serde(default)]
     #[serde(skip_serializing_if = "HashSet::is_empty")]

@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-/// The errors that occur when reading or saving the installed packages file.
+/// The errors that occur when reading or saving the register file.
 #[derive(Error, Debug)]
 pub enum InstalledPackagesError {
     #[error("Cannot read or write installed packages file")]
