@@ -2,7 +2,7 @@ use clap::Args;
 
 use crate::{
     cli::commands::HandleCommand, config::Config, error_handling::HandleError, repositories::manager::RepositoryManager,
-    storage::installed_packages::InstalledPackageStorage, verifier::get_packages,
+    storage::package_register::PackageRegister, verifier::get_packages,
 };
 
 #[derive(Args, Debug)]
@@ -14,16 +14,16 @@ pub struct ListArgs {
 
 impl HandleCommand for ListArgs {
     fn handle(&self, config: &Config, _: &RepositoryManager) {
-        let installed_dir = InstalledPackageStorage::get_default_path();
-        let installed_storage = InstalledPackageStorage::from(&installed_dir).unwrap_or_exit(1);
+        let register_dir = PackageRegister::get_default_path();
+        let register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
         if self.use_dir {
             for package in get_packages(&config).unwrap_or_exit(1) {
                 println!("{}", package);
             }
         } else {
-            for package_id in installed_storage.installed_packages.keys() {
-                println!("{}", package_id);
+            for package in register.iterate_all() {
+                println!("{}", package.package_id);
             }
         }
     }

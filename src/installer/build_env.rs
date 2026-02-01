@@ -1,6 +1,6 @@
 use std::{collections::HashMap, path::PathBuf};
 
-use crate::{cli::display::logging::warning, storage::installed_packages::InstalledPackage, utils::env::Environment};
+use crate::{cli::display::logging::warning, storage::installed_package_version::InstalledPackageVersion, utils::env::Environment};
 
 // TODO: We should probably also strip tokens from the env
 #[rustfmt::skip]
@@ -18,8 +18,8 @@ const STRIPPED_VARS: &'static [&'static str] = &[
 
 pub struct BuildEnv<'a> {
     prefix_directory: &'a PathBuf,
-    dependencies: Vec<&'a InstalledPackage>,
-    build_dependencies: Vec<&'a InstalledPackage>,
+    dependencies: Vec<&'a InstalledPackageVersion>,
+    build_dependencies: Vec<&'a InstalledPackageVersion>,
 }
 
 impl<'a> Into<Environment> for BuildEnv<'a> {
@@ -67,8 +67,8 @@ impl<'a> Into<Environment> for BuildEnv<'a> {
 impl<'a> BuildEnv<'a> {
     pub fn new(
         prefix_directory: &'a PathBuf,
-        dependencies: Vec<&'a InstalledPackage>,
-        build_dependencies: Vec<&'a InstalledPackage>,
+        dependencies: Vec<&'a InstalledPackageVersion>,
+        build_dependencies: Vec<&'a InstalledPackageVersion>,
     ) -> Self {
         Self {
             prefix_directory,

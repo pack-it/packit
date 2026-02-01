@@ -18,7 +18,7 @@ use crate::{
         manager::RepositoryManager,
         types::{PackageMetadata, PackageVersion},
     },
-    storage::installed_packages::InstalledPackageStorage,
+    storage::package_register::PackageRegister,
 };
 
 /// The errors that occur during building.
@@ -54,16 +54,16 @@ pub type Result<T> = core::result::Result<T, BuilderError>;
 /// The builder of Packit, managing the building of packages.
 pub struct Builder<'a> {
     config: &'a Config,
-    installed_storage: &'a mut InstalledPackageStorage,
+    register: &'a mut PackageRegister,
     repository_manager: &'a RepositoryManager<'a>,
 }
 
 impl<'a> Builder<'a> {
     /// Creates new builder
-    pub fn new(config: &'a Config, installed_storage: &'a mut InstalledPackageStorage, repository_manager: &'a RepositoryManager) -> Self {
+    pub fn new(config: &'a Config, register: &'a mut PackageRegister, repository_manager: &'a RepositoryManager) -> Self {
         Self {
             config,
-            installed_storage,
+            register,
             repository_manager,
         }
     }
@@ -83,7 +83,7 @@ impl<'a> Builder<'a> {
         // Check if the normal dependencies are installed and get installed package for each dependency.
         let dependencies = package_version.dependencies.iter().chain(target.dependencies.iter());
         for dependency in dependencies {
-            if let Some(package) = self.installed_storage.get_satisfying_package(dependency) {
+            if let Some(package) = self.register.get_satisfying_package(dependency) {
                 installed_dependencies.push(package);
 
                 continue;
@@ -99,7 +99,7 @@ impl<'a> Builder<'a> {
         // Check if the build dependencies are installed and get installed package for each dependency.
         let build_dependencies = package_version.build_dependencies.iter().chain(target.build_dependencies.iter());
         for build_dependency in build_dependencies {
-            if let Some(package) = self.installed_storage.get_satisfying_package(build_dependency) {
+            if let Some(package) = self.register.get_satisfying_package(build_dependency) {
                 installed_build_dependencies.push(package);
 
                 continue;

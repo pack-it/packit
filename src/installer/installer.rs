@@ -12,7 +12,7 @@ use crate::{
         manager::RepositoryManager,
         types::{PackageMetadata, PackageTarget, PackageVersion},
     },
-    storage::installed_packages::InstalledPackageStorage,
+    storage::package_register::PackageRegister,
 };
 
 use std::{
@@ -23,16 +23,16 @@ use std::{
 /// The installer of Packit, managing the installation of packages on the system.
 pub struct Installer<'a> {
     config: &'a Config,
-    installed_storage: &'a mut InstalledPackageStorage,
+    register: &'a mut PackageRegister,
     repository_manager: &'a RepositoryManager<'a>,
 }
 
 impl<'a> Installer<'a> {
     /// Creates new installer
-    pub fn new(config: &'a Config, installed_storage: &'a mut InstalledPackageStorage, repository_manager: &'a RepositoryManager) -> Self {
+    pub fn new(config: &'a Config, register: &'a mut PackageRegister, repository_manager: &'a RepositoryManager) -> Self {
         Self {
             config,
-            installed_storage,
+            register,
             repository_manager,
         }
     }
@@ -56,7 +56,7 @@ impl<'a> Installer<'a> {
         let package_id = PackageId::new(&package_name, &version);
 
         // Check if this package version is already installed
-        if self.installed_storage.get_package(&package_id).is_some() {
+        if self.register.get_package(&package_id).is_some() {
             println!("Package '{} {}' already installed.", package_name, version);
             return Ok(());
         }
@@ -93,8 +93,8 @@ impl<'a> Installer<'a> {
         }
 
         // Add and save package to installed storage toml
-        self.installed_storage.add_package(&package, &package_version, source_repository, &install_directory, false, false);
-        self.installed_storage.save_to(&InstalledPackageStorage::get_default_path())?;
+        self.register.add_package(&package, &package_version, source_repository, &install_directory, false, false);
+        self.register.save_to(&PackageRegister::get_default_path())?;
 
         // Download and run post install script if it exists
         let script_path = package_version.get_postinstall_script_path(TARGET_ARCHITECTURE)?;
@@ -111,7 +111,7 @@ impl<'a> Installer<'a> {
         let mut should_set_active = true;
 
         // Check if we have a previous active install
-        if let Some(previous_active) = self.installed_storage.get_package_versions(&package_name).iter().find(|x| x.active) {
+        if let Some(previous_active) = self.register.get_package_versions(&package_name).iter().find(|x| x.active) {
             // Prompt user if the installed version is newer than the version currently installing
             if previous_active.package_id.version > *version {
                 let question = format!(
@@ -149,7 +149,7 @@ impl<'a> Installer<'a> {
     fn install_dependencies(&mut self, global_dependencies: &Vec<Dependency>, target_dependencies: &Vec<Dependency>) -> Result<()> {
         let dependencies = global_dependencies.iter().chain(target_dependencies.iter());
         for dependency in dependencies {
-            if self.installed_storage.get_satisfying_package(dependency).is_some() {
+            if self.register.get_satisfying_package(dependency).is_some() {
                 println!("Dependency '{}' already satisfied, continuing", dependency.get_name());
                 continue;
             }
@@ -175,7 +175,7 @@ impl<'a> Installer<'a> {
         self.install_dependencies(&package_version.build_dependencies, &target.build_dependencies)?;
 
         // Build package if we did not find a prebuild
-        let builder = Builder::new(self.config, self.installed_storage, self.repository_manager);
+        let builder = Builder::new(self.config, self.register, self.repository_manager);
         builder.build(&package, &package_version, &repository_id, &destination_dir)?;
 
         Ok(())
@@ -193,7 +193,7 @@ impl<'a> Installer<'a> {
         }
 
         // Check if the current package to delete is a dependency, if so, give dependency error
-        if self.installed_storage.is_dependency(package_name, version) {
+        if self.register.is_dependency(package_name, version) {
             return Err(InstallerError::DependencyError {
                 package_name: package_name.into(),
             });
@@ -213,7 +213,7 @@ impl<'a> Installer<'a> {
     /// Checks if the directory exists. If so, it gets the remove directory for a package version, if there only exists one
     /// version it will return the package directory.
     fn uninstall_single(&mut self, package_id: &PackageId) -> Result<()> {
-        if !self.installed_storage.package_version_exists(package_id) {
+        if !self.register.package_version_exists(package_id) {
             return Err(InstallerError::InstalledExistError {
                 package_name: package_id.name.to_string(),
                 version: Some(package_id.version.to_string()),
@@ -221,7 +221,7 @@ impl<'a> Installer<'a> {
         }
 
         // Remove entire package directory if there is only one version
-        let installed_versions = self.installed_storage.get_package_versions(&package_id.name);
+        let installed_versions = self.register.get_package_versions(&package_id.name);
         let directory: PathBuf;
         if installed_versions.len() == 1 {
             directory = self.config.prefix_directory.join("packages").join(&package_id.name);
@@ -231,18 +231,18 @@ impl<'a> Installer<'a> {
         }
 
         // Check if the package was symlinked
-        if self.installed_storage.package_is_symlinked(package_id) {
+        if self.register.package_is_symlinked(package_id) {
             self.remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&directory))?;
         }
 
         // Change active package when uninstalled package is currently active
-        if self.installed_storage.package_is_active(package_id) {
-            let mut other_versions = self.installed_storage.get_package_versions(&package_id.name);
+        if self.register.package_is_active(package_id) {
+            let mut other_versions = self.register.get_package_versions(&package_id.name);
             other_versions.retain(|x| x.package_id.version != package_id.version);
             other_versions.sort_by_key(|x| &x.package_id.version);
 
             if let Some(newest) = other_versions.last() {
-                self.set_active(package_id, self.installed_storage.package_is_symlinked(&newest.package_id))?;
+                self.set_active(package_id, self.register.package_is_symlinked(&newest.package_id))?;
             }
         }
 
@@ -250,14 +250,14 @@ impl<'a> Installer<'a> {
         self.remove_dir_all(&directory, &package_id.name)?;
 
         // Remove package from installed package toml
-        self.installed_storage.remove_package_version(package_id);
+        self.register.remove_package_version(package_id);
 
         Ok(())
     }
 
     // Checks if there exists at least one version of the specified package. If so, it returns the package directory.
     fn uninstall_all(&mut self, package_name: &str) -> Result<()> {
-        let installed_versions = self.installed_storage.get_package_versions(package_name);
+        let installed_versions = self.register.get_package_versions(package_name);
 
         // Ask the user if he/she wants to continue when version isn't specified and there are multiple versions installed
         let question = "Version is not specified, do you wish to uninstall all versions of this package?";
@@ -295,7 +295,7 @@ impl<'a> Installer<'a> {
         self.remove_dir_all(&directory, package_name)?;
 
         // Delete the installed package from toml
-        self.installed_storage.remove_package(package_name);
+        self.register.remove_package(package_name);
 
         Ok(())
     }
@@ -427,7 +427,7 @@ impl<'a> Installer<'a> {
     /// Sets a package to active and create the appropiate symlinks for it
     fn set_active(&mut self, package_id: &PackageId, should_symlink: bool) -> Result<()> {
         // Get package to set to active
-        let package = match self.installed_storage.get_package(package_id) {
+        let package = match self.register.get_package(package_id) {
             Some(package) => package,
             None => {
                 warning!("Cannot get installed package from installed storage... Please check installation with 'pit list'");
@@ -454,7 +454,7 @@ impl<'a> Installer<'a> {
         }
 
         // Update the installed storage according to the changes
-        for installed in self.installed_storage.get_package_versions_mut(&package_id.name) {
+        for installed in self.register.get_package_versions_mut(&package_id.name) {
             // Update new active version in storage
             if installed.package_id.version == package_id.version {
                 installed.active = true;
@@ -468,7 +468,7 @@ impl<'a> Installer<'a> {
         }
 
         // Save package storage
-        self.installed_storage.save_to(&InstalledPackageStorage::get_default_path())?;
+        self.register.save_to(&PackageRegister::get_default_path())?;
 
         Ok(())
     }
