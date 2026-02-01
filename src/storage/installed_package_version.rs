@@ -1,21 +1,14 @@
-use std::{
-    collections::HashSet,
-    fs,
-    path::{Path, PathBuf},
-};
+use std::{collections::HashSet, path::PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{config, installer::types::PackageId, storage::error::InstalledPackagesError};
+use crate::{config, installer::types::PackageId};
 
 /// Represents a package which is installed on the system.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct InstalledPackageVersion {
     pub package_id: PackageId,
-    pub description: String,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub homepage: Option<String>,
     pub source_repository_url: String,
 
     #[serde(default = "config::default_repository_provider")]

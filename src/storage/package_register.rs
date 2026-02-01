@@ -104,8 +104,6 @@ impl PackageRegister {
 
         let installed_package_version = InstalledPackageVersion {
             package_id: PackageId::new(&package.name, &package_version.version),
-            description: package.description.clone(),
-            homepage: package.homepage.clone(),
             source_repository_url: source_repository.path.clone(),
             source_repository_provider: source_repository.provider.clone(),
             dependencies: dependency_ids,
@@ -126,7 +124,7 @@ impl PackageRegister {
         match self.packages.get_mut(&package.name) {
             Some(package) => package.add_package_version(installed_package_version),
             None => {
-                self.packages.insert(package.name.clone(), InstalledPackage::create(installed_package_version));
+                self.packages.insert(package.name.clone(), InstalledPackage::create(installed_package_version, package));
             },
         }
     }

@@ -2,17 +2,24 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{installer::types::Version, storage::installed_package_version::InstalledPackageVersion};
+use crate::{installer::types::Version, repositories::types::PackageMetadata, storage::installed_package_version::InstalledPackageVersion};
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct InstalledPackage {
     pub versions: HashMap<Version, InstalledPackageVersion>,
+
+    pub description: String,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub homepage: Option<String>,
 }
 
 impl InstalledPackage {
-    pub fn create(package_version: InstalledPackageVersion) -> Self {
+    pub fn create(package_version: InstalledPackageVersion, package: &PackageMetadata) -> Self {
         Self {
             versions: HashMap::from([(package_version.package_id.version.clone(), package_version)]),
+            description: package.description.clone(),
+            homepage: package.homepage.clone(),
         }
     }
 
