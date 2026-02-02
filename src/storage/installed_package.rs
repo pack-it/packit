@@ -9,7 +9,7 @@ use crate::{installer::types::Version, repositories::types::PackageMetadata, sto
 pub struct InstalledPackage {
     pub versions: HashMap<Version, InstalledPackageVersion>,
     pub symlinked: bool,
-    pub active: Version,
+    pub active_version: Version,
 
     pub description: String,
 
@@ -24,7 +24,7 @@ impl InstalledPackage {
         Self {
             versions: HashMap::from([(version.clone(), package_version)]),
             symlinked,
-            active: version,
+            active_version: version,
             description: package.description.clone(),
             homepage: package.homepage.clone(),
         }
@@ -56,7 +56,7 @@ impl InstalledPackage {
     pub fn add_package_version(&mut self, package_version: InstalledPackageVersion, active: bool) {
         // Set the active version if active is true
         if active {
-            self.active = package_version.package_id.version.clone();
+            self.active_version = package_version.package_id.version.clone();
         }
 
         self.versions.insert(package_version.package_id.version.clone(), package_version);

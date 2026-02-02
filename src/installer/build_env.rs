@@ -171,7 +171,7 @@ impl<'a> BuildEnv<'a> {
 
         // Add non symlinked dependencies to CMAKE_PREFIX_PATH
         for dependency in &self.dependencies {
-            if let Some(package) = self.register.packages.get(&dependency.package_id.name) {
+            if let Some(package) = self.register.get_package(&dependency.package_id.name) {
                 if package.symlinked {
                     continue;
                 }
@@ -204,7 +204,7 @@ impl<'a> BuildEnv<'a> {
 
         // Add non symlinked dependencies to ACLOCAL_PATH
         for dependency in &self.dependencies {
-            if let Some(package) = self.register.packages.get(&dependency.package_id.name) {
+            if let Some(package) = self.register.get_package(&dependency.package_id.name) {
                 if package.symlinked {
                     continue;
                 }
