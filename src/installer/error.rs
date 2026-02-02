@@ -34,11 +34,6 @@ pub enum InstallerError {
         package_name: String,
     },
 
-    #[error("Cannot delete external package '{package_name}'.")]
-    ExternalError {
-        package_name: String,
-    },
-
     #[error("Cannot install package because the '{0}' dependency cannot be satisfied by the current package repository.")]
     SupportError(String),
 

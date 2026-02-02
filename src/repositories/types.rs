@@ -8,7 +8,7 @@ use crate::{
         types::{Dependency, Version},
     },
     repositories::error::{RepositoryError, Result},
-    utils::checksum::{self, Checksum},
+    utils::checksum::Checksum,
 };
 
 /// Represents the repository metadata, containing repository information.

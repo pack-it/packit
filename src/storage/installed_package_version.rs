@@ -23,8 +23,6 @@ pub struct InstalledPackageVersion {
     pub dependents: HashSet<PackageId>,
 
     pub install_path: PathBuf,
-    pub symlinked: bool,
-    pub active: bool,
 }
 
 fn is_repository_provider_default(value: &String) -> bool {

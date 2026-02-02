@@ -8,6 +8,9 @@ use crate::{installer::types::Version, repositories::types::PackageMetadata, sto
 #[derive(Deserialize, Serialize, Debug)]
 pub struct InstalledPackage {
     pub versions: HashMap<Version, InstalledPackageVersion>,
+    pub symlinked: bool,
+    pub active: Version,
+
     pub description: String,
 
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -16,9 +19,12 @@ pub struct InstalledPackage {
 
 impl InstalledPackage {
     /// Creates a new installed package with its first entry and package specific data.
-    pub fn new(package_version: InstalledPackageVersion, package: &PackageMetadata) -> Self {
+    pub fn new(package_version: InstalledPackageVersion, symlinked: bool, package: &PackageMetadata) -> Self {
+        let version = package_version.package_id.version.clone();
         Self {
-            versions: HashMap::from([(package_version.package_id.version.clone(), package_version)]),
+            versions: HashMap::from([(version.clone(), package_version)]),
+            symlinked,
+            active: version,
             description: package.description.clone(),
             homepage: package.homepage.clone(),
         }
@@ -47,7 +53,12 @@ impl InstalledPackage {
     }
 
     /// Adds a package version.
-    pub fn add_package_version(&mut self, package_version: InstalledPackageVersion) {
+    pub fn add_package_version(&mut self, package_version: InstalledPackageVersion, active: bool) {
+        // Set the active version if active is true
+        if active {
+            self.active = package_version.package_id.version.clone();
+        }
+
         self.versions.insert(package_version.package_id.version.clone(), package_version);
     }
 }

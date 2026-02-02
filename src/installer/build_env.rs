@@ -1,6 +1,10 @@
 use std::{collections::HashMap, path::PathBuf};
 
-use crate::{cli::display::logging::warning, storage::installed_package_version::InstalledPackageVersion, utils::env::Environment};
+use crate::{
+    cli::display::logging::warning,
+    storage::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
+    utils::env::Environment,
+};
 
 // TODO: We should probably also strip tokens from the env
 #[rustfmt::skip]
@@ -20,6 +24,7 @@ pub struct BuildEnv<'a> {
     prefix_directory: &'a PathBuf,
     dependencies: Vec<&'a InstalledPackageVersion>,
     build_dependencies: Vec<&'a InstalledPackageVersion>,
+    register: &'a PackageRegister,
 }
 
 impl<'a> Into<Environment> for BuildEnv<'a> {
@@ -69,11 +74,13 @@ impl<'a> BuildEnv<'a> {
         prefix_directory: &'a PathBuf,
         dependencies: Vec<&'a InstalledPackageVersion>,
         build_dependencies: Vec<&'a InstalledPackageVersion>,
+        register: &'a PackageRegister,
     ) -> Self {
         Self {
             prefix_directory,
             dependencies,
             build_dependencies,
+            register,
         }
     }
 
@@ -164,8 +171,10 @@ impl<'a> BuildEnv<'a> {
 
         // Add non symlinked dependencies to CMAKE_PREFIX_PATH
         for dependency in &self.dependencies {
-            if dependency.symlinked {
-                continue;
+            if let Some(package) = self.register.packages.get(&dependency.package_id.name) {
+                if package.symlinked {
+                    continue;
+                }
             }
 
             let path = &dependency.install_path;
@@ -184,9 +193,7 @@ impl<'a> BuildEnv<'a> {
         // Add prefix directory to CMAKE_PREFIX_PATH
         match self.prefix_directory.to_str() {
             Some(path) => parts.push(path.into()),
-            None => {
-                warning!("Cannot add Packit prefix directory to build env CMAKE_PREFIX_PATH: cannot convert PathBuf to string")
-            },
+            None => warning!("Cannot add Packit prefix directory to build env CMAKE_PREFIX_PATH: cannot convert PathBuf to string"),
         };
 
         parts.join(":")
@@ -197,8 +204,10 @@ impl<'a> BuildEnv<'a> {
 
         // Add non symlinked dependencies to ACLOCAL_PATH
         for dependency in &self.dependencies {
-            if dependency.symlinked {
-                continue;
+            if let Some(package) = self.register.packages.get(&dependency.package_id.name) {
+                if package.symlinked {
+                    continue;
+                }
             }
 
             let share_path = dependency.install_path.join("share").join("aclocal");
@@ -223,9 +232,7 @@ impl<'a> BuildEnv<'a> {
         // Add prefix directory to ACLOCAL_PATH
         match self.prefix_directory.join("share").join("aclocal").to_str() {
             Some(path) => parts.push(path.into()),
-            None => {
-                warning!("Cannot add Packit prefix directory to build env ACLOCAL_PATH: cannot convert PathBuf to string")
-            },
+            None => warning!("Cannot add Packit prefix directory to build env ACLOCAL_PATH: cannot convert PathBuf to string"),
         };
 
         parts.join(":")

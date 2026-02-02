@@ -109,8 +109,6 @@ impl PackageRegister {
             dependencies: dependency_ids,
             dependents: HashSet::new(),
             install_path: install_path.into(),
-            symlinked,
-            active,
         };
 
         // Add the package as a dependent in its dependencies
@@ -122,9 +120,12 @@ impl PackageRegister {
 
         // Add the new installed package version and if there are no entries for the current package yet, also create a new entry
         match self.packages.get_mut(&package.name) {
-            Some(package) => package.add_package_version(installed_package_version),
+            Some(package) => package.add_package_version(installed_package_version, active),
             None => {
-                self.packages.insert(package.name.clone(), InstalledPackage::new(installed_package_version, package));
+                self.packages.insert(
+                    package.name.clone(),
+                    InstalledPackage::new(installed_package_version, symlinked, package),
+                );
             },
         }
     }

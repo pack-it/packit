@@ -1,6 +1,5 @@
-use reqwest::Response;
 use sha2::{Digest, Sha256};
-use std::{path::Path, time::Duration};
+use std::path::Path;
 use tempfile::TempDir;
 use thiserror::Error;
 
@@ -141,7 +140,12 @@ impl<'a> Builder<'a> {
         unpack(bytes, &unpack_directory)?;
 
         // Create build env
-        let env = BuildEnv::new(&self.config.prefix_directory, installed_dependencies, installed_build_dependencies);
+        let env = BuildEnv::new(
+            &self.config.prefix_directory,
+            installed_dependencies,
+            installed_build_dependencies,
+            self.register,
+        );
 
         // Construct args for the build script
         let script_args = package_version.get_script_args(TARGET_ARCHITECTURE)?;

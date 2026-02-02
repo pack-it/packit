@@ -111,23 +111,24 @@ impl<'a> Installer<'a> {
         let mut should_set_active = true;
 
         // Check if we have a previous active install
-        if let Some(previous_active) = self.register.get_package_versions(&package_name).iter().find(|x| x.active) {
+        if let Some(installed_package) = self.register.packages.get(package_name) {
             // Prompt user if the installed version is newer than the version currently installing
-            if previous_active.package_id.version > *version {
+            // TODO: Don't ask the user if they want to symlink if should_symlink is false
+            if installed_package.active > *version {
                 let question = format!(
-                    "A newer version ({}) of this package is currently active, do you want to change the active version to the older version ({version})?", previous_active.package_id.version
+                    "A newer version ({}) of this package is currently active, do you want to change the active version to the older version ({version})?", installed_package.active
                 );
                 should_set_active = ask_user(&question, QuestionResponse::No)?.is_yes();
             }
 
             // Prompt user if the installed version is not symlinked and we're not skipping symlinking
-            if should_set_active && !previous_active.symlinked && should_symlink {
-                let question = format!("The current active version of this package ({}) is not symlinked, do you want to proceed with symlinking the newly installed version", previous_active.package_id.version);
+            if should_set_active && !installed_package.symlinked && should_symlink {
+                let question = format!("The current active version of this package ({}) is not symlinked, do you want to proceed with symlinking the newly installed version", installed_package.active);
                 should_symlink = ask_user(&question, QuestionResponse::No)?.is_yes();
             }
 
             // Show warning if the not symlinking but package was previously symlinked
-            if should_set_active && previous_active.symlinked && !should_symlink {
+            if should_set_active && installed_package.symlinked && !should_symlink {
                 warning!("The new active package version will not be symlinked, while the previously active version was symlinked. The package will not be automatically findable by your system anymore.");
             }
         }
@@ -213,15 +214,13 @@ impl<'a> Installer<'a> {
     /// Checks if the directory exists. If so, it gets the remove directory for a package version, if there only exists one
     /// version it will return the package directory.
     fn uninstall_single(&mut self, package_id: &PackageId) -> Result<()> {
-        let package = match self.register.get_package(package_id) {
-            Some(package) => package,
-            None => {
-                return Err(InstallerError::InstalledExistError {
-                    package_name: package_id.name.to_string(),
-                    version: Some(package_id.version.to_string()),
-                });
-            },
-        };
+        // Return an existError if the package to uninstall doesn't exist
+        if self.register.get_package(package_id).is_none() {
+            return Err(InstallerError::InstalledExistError {
+                package_name: package_id.name.to_string(),
+                version: Some(package_id.version.to_string()),
+            });
+        }
 
         // Remove entire package directory if there is only one version, otherwise only remove the package version directory
         let installed_versions = self.register.get_package_versions(&package_id.name);
@@ -230,19 +229,25 @@ impl<'a> Installer<'a> {
             _ => self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string()),
         };
 
+        let installed_package = match self.register.packages.get(&package_id.name) {
+            Some(package) => package,
+            None => unreachable!("Should be unreachable, checked for package version before"),
+        };
+
         // Check if the package was symlinked
-        if package.symlinked {
+        if installed_package.active == package_id.version && installed_package.symlinked {
             self.remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&directory))?;
         }
 
         // Change active package when uninstalled package is currently active
-        if package.active {
+        if installed_package.active == package_id.version {
             let mut other_versions = self.register.get_package_versions(&package_id.name);
             other_versions.retain(|x| x.package_id.version != package_id.version);
             other_versions.sort_by_key(|x| &x.package_id.version);
 
             if let Some(newest) = other_versions.last() {
-                self.set_active(package_id, newest.symlinked)?;
+                // TODO: Look at clone
+                self.set_active(&newest.package_id.clone(), installed_package.symlinked)?;
             }
         }
 
@@ -278,10 +283,9 @@ impl<'a> Installer<'a> {
         let directory = self.config.prefix_directory.join("packages").join(package_name);
 
         // Check if package was symlinked
-        for package_version in &installed_versions {
-            if package_version.symlinked {
+        if let Some(package) = self.register.packages.get(package_name) {
+            if package.symlinked {
                 self.remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&directory))?;
-                break;
             }
         }
 
@@ -427,7 +431,7 @@ impl<'a> Installer<'a> {
     /// Sets a package to active and create the appropiate symlinks for it
     fn set_active(&mut self, package_id: &PackageId, should_symlink: bool) -> Result<()> {
         // Get package to set to active
-        let package = match self.register.get_package(package_id) {
+        let package_version = match self.register.get_package(package_id) {
             Some(package) => package,
             None => {
                 warning!("Cannot get installed package from installed storage... Please check installation with 'pit list'");
@@ -436,9 +440,9 @@ impl<'a> Installer<'a> {
         };
 
         let global_active_path = Path::new(&self.config.prefix_directory).join("active");
-        let active_path = global_active_path.join(&package.package_id.name);
+        let active_path = global_active_path.join(&package_version.package_id.name);
 
-        let package_install_path = package.install_path.clone();
+        let package_install_path = package_version.install_path.clone();
 
         // Remove old symlinks
         let package_directory = self.config.prefix_directory.join("packages").join(&package_id.name);
@@ -453,18 +457,10 @@ impl<'a> Installer<'a> {
             self.create_symlinks(Path::new(&package_install_path))?;
         }
 
-        // Update the installed storage according to the changes
-        for installed in self.register.get_package_versions_mut(&package_id.name) {
-            // Update new active version in storage
-            if installed.package_id.version == package_id.version {
-                installed.active = true;
-                installed.symlinked = should_symlink;
-                continue;
-            }
-
-            // Update other packages in storage
-            installed.active = false;
-            installed.symlinked = false;
+        // Updates the active version and sets its symlinked state
+        if let Some(package) = self.register.packages.get_mut(&package_id.name) {
+            package.active = package_id.version.clone();
+            package.symlinked = should_symlink;
         }
 
         // Save package storage
