@@ -149,7 +149,7 @@ impl<'a> Installer<'a> {
     fn install_dependencies(&mut self, global_dependencies: &Vec<Dependency>, target_dependencies: &Vec<Dependency>) -> Result<()> {
         let dependencies = global_dependencies.iter().chain(target_dependencies.iter());
         for dependency in dependencies {
-            if self.register.get_satisfying_package(dependency).is_some() {
+            if self.register.dependency_satisfied(dependency) {
                 println!("Dependency '{}' already satisfied, continuing", dependency.get_name());
                 continue;
             }
@@ -220,15 +220,12 @@ impl<'a> Installer<'a> {
             });
         }
 
-        // Remove entire package directory if there is only one version
+        // Remove entire package directory if there is only one version, otherwise only remove the package version directory
         let installed_versions = self.register.get_package_versions(&package_id.name);
-        let directory: PathBuf;
-        if installed_versions.len() == 1 {
-            directory = self.config.prefix_directory.join("packages").join(&package_id.name);
-        } else {
-            // The remove directory of a specific package version
-            directory = self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
-        }
+        let directory = match installed_versions.len() {
+            1 => self.config.prefix_directory.join("packages").join(&package_id.name),
+            _ => self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string()),
+        };
 
         // Check if the package was symlinked
         if self.register.package_is_symlinked(package_id) {

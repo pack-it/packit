@@ -88,7 +88,6 @@ impl PackageRegister {
         symlinked: bool,
         active: bool,
     ) {
-        // TODO: Check if it's possible to pass the dependency ids instead
         // Add global and target specific dependencies
         let dependencies: Vec<&Dependency> = match package_version.targets.get(TARGET_ARCHITECTURE) {
             Some(target) => package_version.dependencies.iter().chain(target.dependencies.iter()).collect(),
@@ -157,7 +156,6 @@ impl PackageRegister {
     /// Please note that this does not save the storage and does not read the currently installed packages from the toml.
     pub fn remove_package(&mut self, package_name: &str) {
         // Get all package version ids
-        // TODO: look at clone
         let package_ids: Vec<PackageId> = self.get_package_versions(package_name).iter().map(|p| p.package_id.clone()).collect();
 
         for package_id in package_ids {
@@ -203,7 +201,7 @@ impl PackageRegister {
         None
     }
 
-    /// Checks if a package version exists, if so, it return true, otherwise false.
+    /// Checks if a package version exists.
     pub fn package_version_exists(&self, package_id: &PackageId) -> bool {
         self.get_package(package_id).is_some()
     }
@@ -245,7 +243,7 @@ impl PackageRegister {
         false
     }
 
-    /// Checks if the dependency is already satisfied.
+    /// Checks if the dependency is satisfied.
     pub fn dependency_satisfied(&self, dependency: &Dependency) -> bool {
         self.get_satisfying_package(dependency).is_some()
     }
