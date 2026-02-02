@@ -1,13 +1,11 @@
-use reqwest::Response;
 use sha2::{Digest, Sha256};
-use std::{path::Path, time::Duration};
+use std::path::Path;
 use tempfile::TempDir;
 use thiserror::Error;
 
 use crate::{
     cli::display::Spinner,
     config::Config,
-    installed_packages::InstalledPackageStorage,
     installer::{
         build_env::BuildEnv,
         scripts::{self, ScriptError},
@@ -17,8 +15,9 @@ use crate::{
     repositories::{
         error::RepositoryError,
         manager::RepositoryManager,
-        types::{Package, PackageVersion},
+        types::{PackageMetadata, PackageVersion},
     },
+    storage::package_register::PackageRegister,
 };
 
 /// The errors that occur during building.
@@ -54,23 +53,23 @@ pub type Result<T> = core::result::Result<T, BuilderError>;
 /// The builder of Packit, managing the building of packages.
 pub struct Builder<'a> {
     config: &'a Config,
-    installed_storage: &'a mut InstalledPackageStorage,
+    register: &'a mut PackageRegister,
     repository_manager: &'a RepositoryManager<'a>,
 }
 
 impl<'a> Builder<'a> {
     /// Creates new builder
-    pub fn new(config: &'a Config, installed_storage: &'a mut InstalledPackageStorage, repository_manager: &'a RepositoryManager) -> Self {
+    pub fn new(config: &'a Config, register: &'a mut PackageRegister, repository_manager: &'a RepositoryManager) -> Self {
         Self {
             config,
-            installed_storage,
+            register,
             repository_manager,
         }
     }
 
     pub fn build(
         &self,
-        package: &Package,
+        package: &PackageMetadata,
         package_version: &PackageVersion,
         repository_id: &str,
         destination_dir: impl AsRef<Path>,
@@ -83,7 +82,7 @@ impl<'a> Builder<'a> {
         // Check if the normal dependencies are installed and get installed package for each dependency.
         let dependencies = package_version.dependencies.iter().chain(target.dependencies.iter());
         for dependency in dependencies {
-            if let Some(package) = self.installed_storage.get_satisfying_package(dependency) {
+            if let Some(package) = self.register.get_satisfying_package(dependency) {
                 installed_dependencies.push(package);
 
                 continue;
@@ -99,7 +98,7 @@ impl<'a> Builder<'a> {
         // Check if the build dependencies are installed and get installed package for each dependency.
         let build_dependencies = package_version.build_dependencies.iter().chain(target.build_dependencies.iter());
         for build_dependency in build_dependencies {
-            if let Some(package) = self.installed_storage.get_satisfying_package(build_dependency) {
+            if let Some(package) = self.register.get_satisfying_package(build_dependency) {
                 installed_build_dependencies.push(package);
 
                 continue;
@@ -141,7 +140,12 @@ impl<'a> Builder<'a> {
         unpack(bytes, &unpack_directory)?;
 
         // Create build env
-        let env = BuildEnv::new(&self.config.prefix_directory, installed_dependencies, installed_build_dependencies);
+        let env = BuildEnv::new(
+            &self.config.prefix_directory,
+            installed_dependencies,
+            installed_build_dependencies,
+            self.register,
+        );
 
         // Construct args for the build script
         let script_args = package_version.get_script_args(TARGET_ARCHITECTURE)?;

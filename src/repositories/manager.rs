@@ -8,7 +8,7 @@ use crate::{
     repositories::{
         error::{RepositoryError, Result},
         provider::{create_repository_provider, RepositoryProvider},
-        types::{Package, PackageVersion, RepositoryMetadata},
+        types::{PackageMetadata, PackageVersion, RepositoryMetadata},
     },
 };
 
@@ -52,7 +52,7 @@ impl<'a> RepositoryManager<'a> {
 
     /// Reads package metadata of the given package, containing information about the package.
     /// Returns the id of the repository and the package metadata.
-    pub fn read_package(&self, package: &str) -> Result<(String, Package)> {
+    pub fn read_package(&self, package: &str) -> Result<(String, PackageMetadata)> {
         for repository_id in &self.config.repositories_rank {
             let provider = match self.providers.get(repository_id) {
                 Some(provider) => provider,
@@ -86,7 +86,7 @@ impl<'a> RepositoryManager<'a> {
 
     /// Reads package metadata of the given package from the given repository, containing information about the package.
     /// Does not check if the data contains the current target.
-    pub fn read_repo_package(&self, repository_id: &str, package: &str) -> Result<Package> {
+    pub fn read_repo_package(&self, repository_id: &str, package: &str) -> Result<PackageMetadata> {
         let provider = match self.providers.get(repository_id) {
             Some(provider) => provider,
             None => {

@@ -24,7 +24,7 @@ pub enum VersionError {
     ParseError(#[from] ParseIntError),
 }
 
-#[derive(Debug, Eq, Clone)]
+#[derive(Debug, Eq, Clone, Hash)]
 pub struct Version {
     numbers: Vec<usize>,
 }

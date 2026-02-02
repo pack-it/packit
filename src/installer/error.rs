@@ -2,10 +2,10 @@ use thiserror::Error;
 
 use crate::{
     cli::display::error::DisplayError,
-    installed_packages::InstalledPackagesError,
     installer::{builder::BuilderError, scripts::ScriptError},
     platforms::symlink::SymlinkError,
     repositories::error::RepositoryError,
+    storage::error::InstalledPackagesError,
 };
 
 /// The errors that occur during installation.
@@ -23,19 +23,14 @@ pub enum InstallerError {
         e: std::io::Error,
     },
 
-    #[error("Installed package '{package_name} {}' does not exist.", version.clone().unwrap_or_default())]
-    InstalledExistError {
+    #[error("Package '{package_name}' with version '{}' does not exist.", version.clone().unwrap_or("any".to_string()))]
+    PackageNotFound {
         package_name: String,
         version: Option<String>,
     },
 
     #[error("Cannot delete package, '{package_name}' is a dependency.")]
     DependencyError {
-        package_name: String,
-    },
-
-    #[error("Cannot delete external package '{package_name}'.")]
-    ExternalError {
         package_name: String,
     },
 

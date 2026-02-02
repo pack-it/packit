@@ -1,6 +1,10 @@
 use std::{collections::HashMap, path::PathBuf};
 
-use crate::{cli::display::logging::warning, installed_packages::InstalledPackage, utils::env::Environment};
+use crate::{
+    cli::display::logging::warning,
+    storage::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
+    utils::env::Environment,
+};
 
 // TODO: We should probably also strip tokens from the env
 #[rustfmt::skip]
@@ -18,8 +22,9 @@ const STRIPPED_VARS: &'static [&'static str] = &[
 
 pub struct BuildEnv<'a> {
     prefix_directory: &'a PathBuf,
-    dependencies: Vec<&'a InstalledPackage>,
-    build_dependencies: Vec<&'a InstalledPackage>,
+    dependencies: Vec<&'a InstalledPackageVersion>,
+    build_dependencies: Vec<&'a InstalledPackageVersion>,
+    register: &'a PackageRegister,
 }
 
 impl<'a> Into<Environment> for BuildEnv<'a> {
@@ -43,7 +48,7 @@ impl<'a> Into<Environment> for BuildEnv<'a> {
         }
 
         // Add M4 variable if m4 is a dependency
-        if self.build_dependencies.iter().any(|x| x.name == "m4") {
+        if self.build_dependencies.iter().any(|x| x.package_id.name == "m4") {
             let m4_path = self.prefix_directory.join("bin").join("m4");
             match m4_path.to_str() {
                 Some(path) => drop(env.insert_var("M4", path)),
@@ -67,13 +72,15 @@ impl<'a> Into<Environment> for BuildEnv<'a> {
 impl<'a> BuildEnv<'a> {
     pub fn new(
         prefix_directory: &'a PathBuf,
-        dependencies: Vec<&'a InstalledPackage>,
-        build_dependencies: Vec<&'a InstalledPackage>,
+        dependencies: Vec<&'a InstalledPackageVersion>,
+        build_dependencies: Vec<&'a InstalledPackageVersion>,
+        register: &'a PackageRegister,
     ) -> Self {
         Self {
             prefix_directory,
             dependencies,
             build_dependencies,
+            register,
         }
     }
 
@@ -97,7 +104,7 @@ impl<'a> BuildEnv<'a> {
                 None => {
                     warning!(
                         "Cannot add dependency {} to build env PATH: cannot convert PathBuf to string",
-                        dependency.name
+                        dependency.package_id
                     );
                     continue;
                 },
@@ -128,7 +135,7 @@ impl<'a> BuildEnv<'a> {
                     None => {
                         warning!(
                             "Cannot add dependency {} lib/pkgconfig to build env PKG_CONFIG_PATH: cannot convert PathBuf to string",
-                            dependency.name
+                            dependency.package_id
                         );
                         continue;
                     },
@@ -142,7 +149,7 @@ impl<'a> BuildEnv<'a> {
                     None => {
                         warning!(
                             "Cannot add dependency {} share/pkgconfig to build env PKG_CONFIG_PATH: cannot convert PathBuf to string",
-                            dependency.name
+                            dependency.package_id
                         );
                         continue;
                     },
@@ -164,8 +171,10 @@ impl<'a> BuildEnv<'a> {
 
         // Add non symlinked dependencies to CMAKE_PREFIX_PATH
         for dependency in &self.dependencies {
-            if dependency.symlinked {
-                continue;
+            if let Some(package) = self.register.get_package(&dependency.package_id.name) {
+                if package.symlinked {
+                    continue;
+                }
             }
 
             let path = &dependency.install_path;
@@ -174,7 +183,7 @@ impl<'a> BuildEnv<'a> {
                 None => {
                     warning!(
                         "Cannot add dependency {} to build env CMAKE_PREFIX_PATH: cannot convert PathBuf to string",
-                        dependency.name
+                        dependency.package_id
                     );
                     continue;
                 },
@@ -184,9 +193,7 @@ impl<'a> BuildEnv<'a> {
         // Add prefix directory to CMAKE_PREFIX_PATH
         match self.prefix_directory.to_str() {
             Some(path) => parts.push(path.into()),
-            None => {
-                warning!("Cannot add Packit prefix directory to build env CMAKE_PREFIX_PATH: cannot convert PathBuf to string")
-            },
+            None => warning!("Cannot add Packit prefix directory to build env CMAKE_PREFIX_PATH: cannot convert PathBuf to string"),
         };
 
         parts.join(":")
@@ -197,8 +204,10 @@ impl<'a> BuildEnv<'a> {
 
         // Add non symlinked dependencies to ACLOCAL_PATH
         for dependency in &self.dependencies {
-            if dependency.symlinked {
-                continue;
+            if let Some(package) = self.register.get_package(&dependency.package_id.name) {
+                if package.symlinked {
+                    continue;
+                }
             }
 
             let share_path = dependency.install_path.join("share").join("aclocal");
@@ -213,7 +222,7 @@ impl<'a> BuildEnv<'a> {
                 None => {
                     warning!(
                         "Cannot add dependency {} to build env ACLOCAL_PATH: cannot convert PathBuf to string",
-                        dependency.name
+                        dependency.package_id
                     );
                     continue;
                 },
@@ -223,9 +232,7 @@ impl<'a> BuildEnv<'a> {
         // Add prefix directory to ACLOCAL_PATH
         match self.prefix_directory.join("share").join("aclocal").to_str() {
             Some(path) => parts.push(path.into()),
-            None => {
-                warning!("Cannot add Packit prefix directory to build env ACLOCAL_PATH: cannot convert PathBuf to string")
-            },
+            None => warning!("Cannot add Packit prefix directory to build env ACLOCAL_PATH: cannot convert PathBuf to string"),
         };
 
         parts.join(":")

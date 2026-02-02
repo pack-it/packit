@@ -5,7 +5,7 @@ use crate::{
         default::{DefaultProvider, DEFAULT_PROVIDER_ID},
         error::Result,
         filesystem::{FileSystemProvider, FILESYSTEM_PROVIDER_ID},
-        types::{Package, PackageVersion, RepositoryMetadata},
+        types::{PackageMetadata, PackageVersion, RepositoryMetadata},
     },
 };
 
@@ -15,7 +15,7 @@ pub trait RepositoryProvider {
     fn read_repository_metadata(&self) -> Result<RepositoryMetadata>;
 
     /// Reads package metadata from the repository, containing information about the package.
-    fn read_package(&self, package: &str) -> Result<Package>;
+    fn read_package(&self, package: &str) -> Result<PackageMetadata>;
 
     /// Reads the metadata of a certain version of a package, containing dependencies and targets.
     fn read_package_version(&self, package: &str, version: &Version) -> Result<PackageVersion>;
