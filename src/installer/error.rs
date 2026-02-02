@@ -24,7 +24,7 @@ pub enum InstallerError {
     },
 
     #[error("Package '{package_name}' with version '{}' does not exist.", version.clone().unwrap_or("any".to_string()))]
-    InstalledExistError {
+    PackageNotFound {
         package_name: String,
         version: Option<String>,
     },

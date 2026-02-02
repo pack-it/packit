@@ -133,8 +133,8 @@ impl PackageRegister {
             None => return,
         };
 
-        // Remove the package if only one version exists.
-        if package.versions.len() == 1 {
+        // Remove the package if it's empty after the removal of one package version
+        if package.versions.is_empty() {
             self.packages.remove(&package_id.name);
         }
 

@@ -235,7 +235,7 @@ impl<'a> Installer<'a> {
     fn uninstall_single(&mut self, package_id: &PackageId) -> Result<()> {
         // Return an existError if the package to uninstall doesn't exist
         if self.register.get_package_version(package_id).is_none() {
-            return Err(InstallerError::InstalledExistError {
+            return Err(InstallerError::PackageNotFound {
                 package_name: package_id.name.to_string(),
                 version: Some(package_id.version.to_string()),
             });
@@ -294,7 +294,7 @@ impl<'a> Installer<'a> {
 
         // Make sure at least one version exists
         if installed_versions.is_empty() {
-            return Err(InstallerError::InstalledExistError {
+            return Err(InstallerError::PackageNotFound {
                 package_name: package_name.into(),
                 version: None,
             });
@@ -485,7 +485,7 @@ impl<'a> Installer<'a> {
                 package.symlinked = should_symlink;
             },
             None => {
-                return Err(InstallerError::InstalledExistError {
+                return Err(InstallerError::PackageNotFound {
                     package_name: package_id.name.clone(),
                     version: None,
                 })
