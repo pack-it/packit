@@ -50,9 +50,4 @@ impl InstalledPackage {
     pub fn add_package_version(&mut self, package_version: InstalledPackageVersion) {
         self.versions.insert(package_version.package_id.version.clone(), package_version);
     }
-
-    /// Removes a package version.
-    pub fn remove_version(&mut self, version: &Version) {
-        self.versions.remove(version);
-    }
 }

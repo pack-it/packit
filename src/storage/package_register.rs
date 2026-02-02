@@ -133,8 +133,23 @@ impl PackageRegister {
     /// Removes a package version from the register storage.
     /// Please note that this does not save the storage and does not read the currently installed packages from the toml.
     pub fn remove_package_version(&mut self, package_id: &PackageId) {
-        if let Some(package) = self.packages.get_mut(&package_id.name) {
-            package.remove_version(&package_id.version);
+        // Remove and get the package, if it doesn't exist return early.
+        let mut package = match self.packages.remove(&package_id.name) {
+            Some(package) => package,
+            None => return,
+        };
+
+        // Remove and get the package version, if it doesn't exist return early.
+        let package_version = match package.versions.remove(&package_id.version) {
+            Some(package_version) => package_version,
+            None => return,
+        };
+
+        // Loop through all the dependencies to delete the package from their dependents
+        for dependency in package_version.dependencies {
+            if let Some(dependency_version) = self.get_package_mut(&dependency) {
+                dependency_version.dependents.remove(package_id);
+            }
         }
     }
 
