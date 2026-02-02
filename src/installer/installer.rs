@@ -213,12 +213,15 @@ impl<'a> Installer<'a> {
     /// Checks if the directory exists. If so, it gets the remove directory for a package version, if there only exists one
     /// version it will return the package directory.
     fn uninstall_single(&mut self, package_id: &PackageId) -> Result<()> {
-        if !self.register.package_version_exists(package_id) {
-            return Err(InstallerError::InstalledExistError {
-                package_name: package_id.name.to_string(),
-                version: Some(package_id.version.to_string()),
-            });
-        }
+        let package = match self.register.get_package(package_id) {
+            Some(package) => package,
+            None => {
+                return Err(InstallerError::InstalledExistError {
+                    package_name: package_id.name.to_string(),
+                    version: Some(package_id.version.to_string()),
+                });
+            },
+        };
 
         // Remove entire package directory if there is only one version, otherwise only remove the package version directory
         let installed_versions = self.register.get_package_versions(&package_id.name);
@@ -228,18 +231,18 @@ impl<'a> Installer<'a> {
         };
 
         // Check if the package was symlinked
-        if self.register.package_is_symlinked(package_id) {
+        if package.symlinked {
             self.remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&directory))?;
         }
 
         // Change active package when uninstalled package is currently active
-        if self.register.package_is_active(package_id) {
+        if package.active {
             let mut other_versions = self.register.get_package_versions(&package_id.name);
             other_versions.retain(|x| x.package_id.version != package_id.version);
             other_versions.sort_by_key(|x| &x.package_id.version);
 
             if let Some(newest) = other_versions.last() {
-                self.set_active(package_id, self.register.package_is_symlinked(&newest.package_id))?;
+                self.set_active(package_id, newest.symlinked)?;
             }
         }
 

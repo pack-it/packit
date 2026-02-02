@@ -201,26 +201,6 @@ impl PackageRegister {
         None
     }
 
-    /// Checks if a package version exists.
-    pub fn package_version_exists(&self, package_id: &PackageId) -> bool {
-        self.get_package(package_id).is_some()
-    }
-
-    /// Checks if a given package is symlinked, if the package doesn't exist false is returned (since it's not symlinked).
-    pub fn package_is_symlinked(&self, package_id: &PackageId) -> bool {
-        match self.get_package(package_id) {
-            Some(package) => package.symlinked,
-            None => false,
-        }
-    }
-
-    pub fn package_is_active(&self, package_id: &PackageId) -> bool {
-        match self.get_package(package_id) {
-            Some(package) => package.active,
-            None => false,
-        }
-    }
-
     /// Checks if a certain package is a dependency by checking its dependents.
     /// If only a package name is given we check all installed versions of that
     /// package, if any of those are a dependency we return true.
