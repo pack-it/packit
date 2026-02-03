@@ -7,6 +7,7 @@ use crate::{installer::types::Version, repositories::types::PackageMetadata, sto
 /// The installed package holds package specific info and a mapping from versions to package versions.
 #[derive(Deserialize, Serialize, Debug)]
 pub struct InstalledPackage {
+    #[serde(flatten)]
     pub versions: HashMap<Version, InstalledPackageVersion>,
     pub symlinked: bool,
     pub active_version: Version,
