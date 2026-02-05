@@ -465,7 +465,7 @@ impl<'a> Installer<'a> {
     }
 
     /// Sets a package to active and create the appropiate symlinks for it
-    fn set_active(&mut self, package_id: &PackageId, should_symlink: bool) -> Result<()> {
+    pub fn set_active(&mut self, package_id: &PackageId, should_symlink: bool) -> Result<()> {
         // Get package to set to active
         let package_version = match self.register.get_package_version(package_id) {
             Some(package) => package,
