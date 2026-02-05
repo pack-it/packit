@@ -20,6 +20,14 @@ pub struct InstallArgs {
     /// True to build from source locally, false to use a prebuild version
     #[arg(long, default_value = "false")]
     pub build: bool,
+
+    /// True to skip symlinking the package, false to use defaults specified for the package
+    #[arg(long, default_value = "false")]
+    pub skip_symlinking: bool,
+
+    /// True to skip setting the package to active, false to use default behaviour
+    #[arg(long, default_value = "false")]
+    pub skip_active: bool,
 }
 
 impl HandleCommand for InstallArgs {
@@ -50,7 +58,7 @@ impl HandleCommand for InstallArgs {
 
         // Install all packages
         for (package_name, version) in packages {
-            if let Err(error) = installer.install(&package_name, version.as_ref(), self.build) {
+            if let Err(error) = installer.install(&package_name, version.as_ref(), self.build, self.skip_symlinking, self.skip_active) {
                 error!(error, "Cannot install package {package_name}");
             }
         }

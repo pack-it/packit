@@ -39,7 +39,14 @@ impl<'a> Installer<'a> {
     }
 
     /// Installs the given package and its dependencies.
-    pub fn install(&mut self, package_name: &str, version: Option<&Version>, build_source: bool) -> Result<()> {
+    pub fn install(
+        &mut self,
+        package_name: &str,
+        version: Option<&Version>,
+        build_source: bool,
+        skip_symlinking: bool,
+        skip_active: bool,
+    ) -> Result<()> {
         // Check if we can write to the prefix directory
         if !self.can_write_prefix_dir()? {
             return Err(InstallerError::PermissionsError);
@@ -118,12 +125,13 @@ impl<'a> Installer<'a> {
         }
 
         // Check if symlinking should be skipped
-        let mut should_symlink = !match target.skip_symlinking {
-            Some(skip_symlinking) => skip_symlinking,
-            None => package_version.skip_symlinking,
-        };
+        let mut should_symlink = !skip_symlinking
+            && !match target.skip_symlinking {
+                Some(skip_symlinking) => skip_symlinking,
+                None => package_version.skip_symlinking,
+            };
 
-        let mut should_set_active = true;
+        let mut should_set_active = !skip_active;
 
         // Check if we have a previous active install
         if let Some(installed_package) = self.register.get_package(package_name) {
@@ -180,8 +188,8 @@ impl<'a> Installer<'a> {
             // Determine the latest supported version for the dependency
             let version = self.get_latest_dependency_version(dependency)?;
 
-            // TODO: should we pass the build option to childs?
-            self.install(dependency.get_name(), Some(&version), false)?;
+            // TODO: should we pass the options to childs? We could add these options as struct values
+            self.install(dependency.get_name(), Some(&version), false, false, false)?;
 
             // Add the dependency id to the set
             dependency_ids.insert(PackageId::new(dependency.get_name(), &version));
