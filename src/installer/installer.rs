@@ -39,7 +39,7 @@ impl<'a> Installer<'a> {
     }
 
     /// Installs the given package and its dependencies.
-    pub fn install(&mut self, package_name: &str, version: Option<&Version>) -> Result<()> {
+    pub fn install(&mut self, package_name: &str, version: Option<&Version>, build_source: bool) -> Result<()> {
         // Check if we can write to the prefix directory
         if !self.can_write_prefix_dir()? {
             return Err(InstallerError::PermissionsError);
@@ -87,8 +87,14 @@ impl<'a> Installer<'a> {
         // Get source repository for installed storage before actually installing package
         let source_repository = self.config.repositories.get(&repository_id).expect("Expected repository in config");
 
+        // Get prebuild url, or skip if we should build from source
+        let prebuild_url = match build_source {
+            true => None,
+            false => self.repository_manager.get_prebuild_url(&repository_id, package_name, version),
+        };
+
         // Get build version of package
-        match self.repository_manager.get_prebuild_url(&repository_id, package_name, version) {
+        match prebuild_url {
             Some(url) => self.download_prebuild(&url, &install_directory)?,
             None => self.build_package(&package, &package_version, &target, &repository_id, &install_directory)?,
         }
@@ -174,7 +180,8 @@ impl<'a> Installer<'a> {
             // Determine the latest supported version for the dependency
             let version = self.get_latest_dependency_version(dependency)?;
 
-            self.install(dependency.get_name(), Some(&version))?;
+            // TODO: should we pass the build option to childs?
+            self.install(dependency.get_name(), Some(&version), false)?;
 
             // Add the dependency id to the set
             dependency_ids.insert(PackageId::new(dependency.get_name(), &version));

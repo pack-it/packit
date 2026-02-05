@@ -16,6 +16,10 @@ pub struct InstallArgs {
     /// The name of the package to install, with an optional version specified with NAME@VERSION
     #[arg(num_args(0..))]
     pub packages: Vec<String>,
+
+    /// True to build from source locally, false to use a prebuild version
+    #[arg(long, default_value = "false")]
+    pub build: bool,
 }
 
 impl HandleCommand for InstallArgs {
@@ -46,7 +50,7 @@ impl HandleCommand for InstallArgs {
 
         // Install all packages
         for (package_name, version) in packages {
-            if let Err(error) = installer.install(&package_name, version.as_ref()) {
+            if let Err(error) = installer.install(&package_name, version.as_ref(), self.build) {
                 error!(error, "Cannot install package {package_name}");
             }
         }
