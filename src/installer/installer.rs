@@ -51,7 +51,7 @@ impl<'a> Installer<'a> {
     }
 
     /// Installs the given package and its dependencies.
-    pub fn install(&mut self, package_name: &str, version: Option<&Version>) -> Result<()> {
+    pub fn install(&mut self, package_name: &str, version: Option<&Version>, keep_build: bool) -> Result<()> {
         // Check if we can write to the prefix directory
         if !self.can_write_prefix_dir()? {
             return Err(InstallerError::PermissionsError);
@@ -87,19 +87,24 @@ impl<'a> Installer<'a> {
         let mut flattened_dependencies = self.get_flattened_dependencies(&mut root)?;
         flattened_dependencies.insert(0, root);
 
-        self.install_nodes(&mut flattened_dependencies, true)?;
+        self.install_nodes(&mut flattened_dependencies, true, keep_build)?;
 
         Ok(())
     }
 
-    fn install_nodes(&mut self, nodes: &mut Vec<DependencyNode>, should_build: bool) -> Result<()> {
+    fn install_nodes(&mut self, nodes: &mut Vec<DependencyNode>, should_build: bool, keep_build: bool) -> Result<()> {
+        let mut all_dependencies = Vec::new();
+        let mut node_ids = Vec::new();
         for node in nodes {
             if !should_build {
-                if let Some(url) = self.repository_manager.get_prebuild_url(
+                let prebuild_url = self.repository_manager.get_prebuild_url(
                     &node.repository_id,
                     &node.package_metadata.name,
                     &node.version_metadata.version,
-                ) {
+                );
+
+                // Install the package with a prebuild if possible
+                if let Some(url) = prebuild_url {
                     self.install_package(node, Some(&url))?;
                     continue;
                 }
@@ -117,9 +122,17 @@ impl<'a> Installer<'a> {
                 self.install_package(build_node, None)?;
             }
 
+            // Build the current dependency node
             self.install_package(node, None)?;
 
-            // TODO: Remove build dependencies if --keep-build not used
+            // Save the current build dependencies and the current node id
+            all_dependencies.extend(build_dependencies);
+            node_ids.push(PackageId::new(&node.package_metadata.name, &node.version_metadata.version));
+        }
+
+        // Remove build dependencies if --keep-build not used
+        if !keep_build {
+            self.remove_build_dependencies(&all_dependencies, &node_ids)?;
         }
 
         Ok(())
@@ -167,7 +180,6 @@ impl<'a> Installer<'a> {
         }
 
         // Add and save package to installed storage toml
-        // TODO: Pass the node reference
         self.register.add_package(
             &node.package_metadata,
             &node.version_metadata,
@@ -331,8 +343,29 @@ impl<'a> Installer<'a> {
         Ok(())
     }
 
-    fn remove_build_dependencies(&mut self) -> Result<()> {
-        todo!()
+    fn remove_build_dependencies(&mut self, build_dependencies: &Vec<DependencyNode>, dependencies: &Vec<PackageId>) -> Result<()> {
+        for build_dependency in build_dependencies {
+            // Get name and version from the current build dependency
+            let name = &build_dependency.package_metadata.name;
+            let version = &build_dependency.version_metadata.version;
+
+            // Continue if the build dependency is also a dependency in the dependency sequence
+            if dependencies.iter().any(|d| d.name == *name && d.version == *version) {
+                continue;
+            }
+
+            // Continue if it's still a dependency somewhere else in the build dependency sequence (because of the DFS)
+            if self.register.is_dependency(name, Some(version)) {
+                continue;
+            }
+
+            self.uninstall(
+                &build_dependency.package_metadata.name,
+                Some(&build_dependency.version_metadata.version),
+            )?;
+        }
+
+        Ok(())
     }
 
     fn build_package(

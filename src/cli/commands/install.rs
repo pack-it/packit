@@ -17,6 +17,10 @@ pub struct InstallArgs {
     /// The version of the package to install
     #[arg(short, long)]
     pub version: Option<Version>,
+
+    /// Flag to keep builds after building from source
+    #[arg(long, default_value = "false")]
+    pub keep_build: bool,
 }
 
 impl HandleCommand for InstallArgs {
@@ -26,7 +30,9 @@ impl HandleCommand for InstallArgs {
 
         // TODO: Check if this exists as an external package (possibly leading to conflicts) (if so, add to external packages)
 
-        Installer::new(&config, &mut register, &manager).install(&self.package_name, self.version.as_ref()).unwrap_or_exit(1);
+        Installer::new(&config, &mut register, &manager)
+            .install(&self.package_name, self.version.as_ref(), self.keep_build)
+            .unwrap_or_exit(1);
 
         // Save changes
         register.save_to(&register_dir).unwrap_or_exit(1);
