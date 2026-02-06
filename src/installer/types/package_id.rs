@@ -2,7 +2,7 @@ use std::{fmt::Display, str::FromStr};
 
 use serde::{de, Deserialize, Serialize};
 
-use crate::installer::types::Version;
+use crate::installer::types::{Version, VersionError};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PackageId {
@@ -25,20 +25,7 @@ impl<'de> Deserialize<'de> for PackageId {
         D: serde::Deserializer<'de>,
     {
         let string: String = de::Deserialize::deserialize(deserializer)?;
-        let index = string.chars().position(|c| c == '@');
-
-        let (name, version) = match index {
-            Some(index) => string.split_at(index),
-            None => panic!("Error should have version specified"),
-        };
-
-        // Remove @ character from version number
-        let version = Version::from_str(version.strip_prefix("@").unwrap_or("")).map_err(de::Error::custom)?;
-
-        Ok(Self {
-            name: name.to_string(),
-            version,
-        })
+        Ok(Self::from_str(&string).map_err(de::Error::custom)?)
     }
 }
 
@@ -55,5 +42,26 @@ impl Display for PackageId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}@{}", &self.name, &self.version)?;
         Ok(())
+    }
+}
+
+impl FromStr for PackageId {
+    type Err = VersionError;
+
+    fn from_str(string: &str) -> Result<Self, Self::Err> {
+        let index = string.chars().position(|c| c == '@');
+
+        let (name, version) = match index {
+            Some(index) => string.split_at(index),
+            None => panic!("Error should have version specified"),
+        };
+
+        // Remove @ character from version number
+        let version = Version::from_str(version.strip_prefix("@").unwrap_or(""))?;
+
+        Ok(Self {
+            name: name.to_string(),
+            version,
+        })
     }
 }

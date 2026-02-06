@@ -39,7 +39,14 @@ impl<'a> Installer<'a> {
     }
 
     /// Installs the given package and its dependencies.
-    pub fn install(&mut self, package_name: &str, version: Option<&Version>) -> Result<()> {
+    pub fn install(
+        &mut self,
+        package_name: &str,
+        version: Option<&Version>,
+        build_source: bool,
+        skip_symlinking: bool,
+        skip_active: bool,
+    ) -> Result<()> {
         // Check if we can write to the prefix directory
         if !self.can_write_prefix_dir()? {
             return Err(InstallerError::PermissionsError);
@@ -87,8 +94,14 @@ impl<'a> Installer<'a> {
         // Get source repository for installed storage before actually installing package
         let source_repository = self.config.repositories.get(&repository_id).expect("Expected repository in config");
 
+        // Get prebuild url, or skip if we should build from source
+        let prebuild_url = match build_source {
+            true => None,
+            false => self.repository_manager.get_prebuild_url(&repository_id, package_name, version),
+        };
+
         // Get build version of package
-        match self.repository_manager.get_prebuild_url(&repository_id, package_name, version) {
+        match prebuild_url {
             Some(url) => self.download_prebuild(&url, &install_directory)?,
             None => self.build_package(&package, &package_version, &target, &repository_id, &install_directory)?,
         }
@@ -112,12 +125,13 @@ impl<'a> Installer<'a> {
         }
 
         // Check if symlinking should be skipped
-        let mut should_symlink = !match target.skip_symlinking {
-            Some(skip_symlinking) => skip_symlinking,
-            None => package_version.skip_symlinking,
-        };
+        let mut should_symlink = !skip_symlinking
+            && !match target.skip_symlinking {
+                Some(skip_symlinking) => skip_symlinking,
+                None => package_version.skip_symlinking,
+            };
 
-        let mut should_set_active = true;
+        let mut should_set_active = !skip_active;
 
         // Check if we have a previous active install
         if let Some(installed_package) = self.register.get_package(package_name) {
@@ -174,7 +188,8 @@ impl<'a> Installer<'a> {
             // Determine the latest supported version for the dependency
             let version = self.get_latest_dependency_version(dependency)?;
 
-            self.install(dependency.get_name(), Some(&version))?;
+            // TODO: should we pass the options to childs? We could add these options as struct values
+            self.install(dependency.get_name(), Some(&version), false, false, false)?;
 
             // Add the dependency id to the set
             dependency_ids.insert(PackageId::new(dependency.get_name(), &version));
@@ -336,7 +351,7 @@ impl<'a> Installer<'a> {
         }
     }
 
-    fn create_symlinks(&self, package_directory: &Path) -> Result<()> {
+    pub fn create_symlinks(&self, package_directory: &Path) -> Result<()> {
         let prefix_dir = Path::new(&self.config.prefix_directory);
 
         // Symlink directories bin, include, lib and share
@@ -450,7 +465,7 @@ impl<'a> Installer<'a> {
     }
 
     /// Sets a package to active and create the appropiate symlinks for it
-    fn set_active(&mut self, package_id: &PackageId, should_symlink: bool) -> Result<()> {
+    pub fn set_active(&mut self, package_id: &PackageId, should_symlink: bool) -> Result<()> {
         // Get package to set to active
         let package_version = match self.register.get_package_version(package_id) {
             Some(package) => package,
@@ -493,6 +508,52 @@ impl<'a> Installer<'a> {
         }
 
         // Save package storage
+        self.register.save_to(&PackageRegister::get_default_path())?;
+
+        Ok(())
+    }
+
+    pub fn unlink_package(&mut self, package_name: &str) -> Result<()> {
+        let package = self.register.get_package(&package_name).ok_or(InstallerError::PackageNotFound {
+            package_name: package_name.into(),
+            version: None,
+        })?;
+
+        // Check if the package is already symlinked
+        if !package.symlinked {
+            return Ok(());
+        }
+
+        // Get active package version
+        let package_version = package.get_package_version(&package.active_version).ok_or(InstallerError::PackageNotFound {
+            package_name: package_name.into(),
+            version: Some(package.active_version.to_string()),
+        })?;
+
+        let install_path = package_version.install_path.clone();
+
+        // Remove all symlinks except for those in the active directory
+        for entry in fs::read_dir(&self.config.prefix_directory)? {
+            let entry = entry?;
+
+            if entry.file_type()?.is_dir() && entry.file_name() != "active" {
+                self.remove_symlinks(&entry.path(), &install_path)?;
+            }
+        }
+
+        // Update symlinked state in package register
+        match self.register.get_package_mut(&package_name) {
+            Some(package) => package.symlinked = false,
+            None => {
+                warning!("Cannot get installed package after changing symlinks, please try running pit fix to fix your installation");
+                return Err(InstallerError::PackageNotFound {
+                    package_name: package_name.into(),
+                    version: None,
+                });
+            },
+        };
+
+        // Save package register
         self.register.save_to(&PackageRegister::get_default_path())?;
 
         Ok(())
