@@ -2,7 +2,7 @@ use std::{fs, path::PathBuf};
 
 use crate::{
     config::Repository,
-    installer::types::Version,
+    installer::types::PackageId,
     repositories::{
         error::Result,
         provider::RepositoryProvider,
@@ -30,8 +30,8 @@ impl RepositoryProvider for FileSystemProvider {
         Ok(toml::de::from_str(&data)?)
     }
 
-    fn read_package_version(&self, package: &str, version: &Version) -> Result<PackageVersion> {
-        let path = self.path.join("packages").join(package).join(version.to_string()).join("targets.toml");
+    fn read_package_version(&self, package_id: &PackageId) -> Result<PackageVersion> {
+        let path = self.path.join("packages").join(&package_id.name).join(package_id.version.to_string()).join("targets.toml");
         let data = fs::read_to_string(path)?;
 
         Ok(toml::de::from_str(&data)?)
