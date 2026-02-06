@@ -106,6 +106,11 @@ impl<'a> Installer<'a> {
             let install_directory =
                 self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
 
+            // Continue if the package has been installed by another node in the sequence (duplicates can exist)
+            if self.register.get_package_version(&package_id).is_some() {
+                continue;
+            }
+
             // Create install directory if it does not exist
             if !fs::exists(&install_directory)? {
                 fs::create_dir_all(&install_directory)?;
