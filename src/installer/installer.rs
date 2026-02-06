@@ -351,7 +351,7 @@ impl<'a> Installer<'a> {
         }
     }
 
-    fn create_symlinks(&self, package_directory: &Path) -> Result<()> {
+    pub fn create_symlinks(&self, package_directory: &Path) -> Result<()> {
         let prefix_dir = Path::new(&self.config.prefix_directory);
 
         // Symlink directories bin, include, lib and share
@@ -508,6 +508,52 @@ impl<'a> Installer<'a> {
         }
 
         // Save package storage
+        self.register.save_to(&PackageRegister::get_default_path())?;
+
+        Ok(())
+    }
+
+    pub fn unlink_package(&mut self, package_name: &str) -> Result<()> {
+        let package = self.register.get_package(&package_name).ok_or(InstallerError::PackageNotFound {
+            package_name: package_name.into(),
+            version: None,
+        })?;
+
+        // Check if the package is already symlinked
+        if !package.symlinked {
+            return Ok(());
+        }
+
+        // Get active package version
+        let package_version = package.get_package_version(&package.active_version).ok_or(InstallerError::PackageNotFound {
+            package_name: package_name.into(),
+            version: Some(package.active_version.to_string()),
+        })?;
+
+        let install_path = package_version.install_path.clone();
+
+        // Remove all symlinks except for those in the active directory
+        for entry in fs::read_dir(&self.config.prefix_directory)? {
+            let entry = entry?;
+
+            if entry.file_type()?.is_dir() && entry.file_name() != "active" {
+                self.remove_symlinks(&entry.path(), &install_path)?;
+            }
+        }
+
+        // Update symlinked state in package register
+        match self.register.get_package_mut(&package_name) {
+            Some(package) => package.symlinked = true,
+            None => {
+                warning!("Cannot get installed package after changing symlinks, please try running pit fix to fix your installation");
+                return Err(InstallerError::PackageNotFound {
+                    package_name: package_name.into(),
+                    version: None,
+                });
+            },
+        };
+
+        // Save package register
         self.register.save_to(&PackageRegister::get_default_path())?;
 
         Ok(())

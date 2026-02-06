@@ -1,9 +1,11 @@
 mod install;
+mod link;
 mod list;
 mod repositories;
 mod search;
 mod switch;
 mod uninstall;
+mod unlink;
 
 use std::process::exit;
 
@@ -12,8 +14,8 @@ use clap::{builder::Styles, Parser, Subcommand};
 use crate::{
     cli::{
         commands::{
-            install::InstallArgs, list::ListArgs, repositories::RepositoryArgs, search::SearchArgs, switch::SwitchArgs,
-            uninstall::UninstallArgs,
+            install::InstallArgs, link::LinkArgs, list::ListArgs, repositories::RepositoryArgs, search::SearchArgs, switch::SwitchArgs,
+            uninstall::UninstallArgs, unlink::UnlinkArgs,
         },
         display::logging::error,
     },
@@ -48,6 +50,12 @@ enum Commands {
 
     /// Switch the active version of a package
     Switch(SwitchArgs),
+
+    /// Create symlinks for a certain package
+    Link(LinkArgs),
+
+    /// Remove symlinks for a certain package
+    Unlink(UnlinkArgs),
 }
 
 impl Cli {
@@ -79,6 +87,8 @@ impl Cli {
             Commands::Repositories(args) => args,
             Commands::Search(args) => args,
             Commands::Switch(args) => args,
+            Commands::Link(args) => args,
+            Commands::Unlink(args) => args,
         };
 
         args.handle(config, manager);
