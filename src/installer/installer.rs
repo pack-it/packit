@@ -14,7 +14,7 @@ use crate::{
     platforms::{symlink, TARGET_ARCHITECTURE},
     repositories::{
         manager::RepositoryManager,
-        types::{PackageMetadata, PackageVersion},
+        types::{PackageMetadata, PackageTarget, PackageVersion},
     },
     storage::package_register::PackageRegister,
 };
@@ -87,126 +87,112 @@ impl<'a> Installer<'a> {
         let mut flattened_dependencies = self.get_flattened_dependencies(&mut root)?;
         flattened_dependencies.insert(0, root);
 
-        let mut build_dependencies = Vec::new();
-        for node in &mut flattened_dependencies {
-            build_dependencies.extend(self.get_flattened_build_dependencies(node)?);
-        }
-
-        self.build_install(build_dependencies)?;
-        self.build_install(flattened_dependencies)?;
+        self.install_nodes(&mut flattened_dependencies, true)?;
 
         Ok(())
     }
 
-    fn build_install(&mut self, packages: Vec<DependencyNode>) -> Result<()> {
-        // Install all the build dependencies before building dependencies
-        for node in packages.iter().rev() {
-            // Create the package id and install directory
-            let package_id = PackageId::new(&node.package_metadata.name, &node.version_metadata.version);
-            let install_directory =
-                self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
-
-            // Continue if the package has been installed by another node in the sequence (duplicates can exist)
-            if self.register.get_package_version(&package_id).is_some() {
-                continue;
-            }
-
-            // Create install directory if it does not exist
-            if !fs::exists(&install_directory)? {
-                fs::create_dir_all(&install_directory)?;
-            }
-
-            let script_args = node.version_metadata.get_script_args(TARGET_ARCHITECTURE)?;
-
-            // Download and run pre install script if it exists
-            let script_path = node.version_metadata.get_preinstall_script_path(TARGET_ARCHITECTURE)?;
-            let downloaded_script = scripts::download_script(self.repository_manager, &script_path, &package_id.name, &node.repository_id)?;
-            if let Some(script_file) = downloaded_script {
-                scripts::run_pre_script(script_file, &install_directory, self.config, &install_directory, &script_args)?;
-            }
-
-            // Get source repository for installed storage before actually installing package
-            let source_repository = self.config.repositories.get(&node.repository_id).expect("Expected repository in config");
-
-            // Get the target information from the package version info
-            let target = node.version_metadata.get_target(TARGET_ARCHITECTURE)?;
-
-            // Get build version of package
-            // TODO: This should probably work differently (Don't automatically switch to building from source if the prebuild isn't available) (Also if switching to building from source we should have the build dependencies installed)
-            match self.repository_manager.get_prebuild_url(&node.repository_id, &package_id.name, &node.version_metadata.version) {
-                Some(url) => self.download_prebuild(&url, &install_directory)?,
-                None => self.build_package(
-                    &node.package_metadata,
-                    &node.version_metadata,
+    fn install_nodes(&mut self, nodes: &mut Vec<DependencyNode>, should_build: bool) -> Result<()> {
+        for node in nodes {
+            if !should_build {
+                if let Some(url) = self.repository_manager.get_prebuild_url(
                     &node.repository_id,
-                    &install_directory,
-                )?,
-            }
+                    &node.package_metadata.name,
+                    &node.version_metadata.version,
+                ) {
+                    self.install_package(node, Some(&url))?;
+                    continue;
+                }
 
-            // Add and save package to installed storage toml
-            // TODO: Pass the node reference
-            self.register.add_package(
-                &node.package_metadata,
-                &node.version_metadata,
-                &node.dependencies,
-                source_repository,
-                &install_directory,
-                false,
-                false,
-            );
-            self.register.save_to(&PackageRegister::get_default_path())?;
-
-            // Download and run post install script if it exists
-            let script_path = node.version_metadata.get_postinstall_script_path(TARGET_ARCHITECTURE)?;
-            let downloaded_script = scripts::download_script(self.repository_manager, &script_path, &package_id.name, &node.repository_id)?;
-            if let Some(script_file) = downloaded_script {
-                scripts::run_post_script(script_file, &install_directory, self.config, &script_args)?;
-            }
-
-            // Check if symlinking should be skipped
-            let mut should_symlink = !match target.skip_symlinking {
-                Some(skip_symlinking) => skip_symlinking,
-                None => node.version_metadata.skip_symlinking,
-            };
-
-            let mut should_set_active = true;
-
-            // Check if we have a previous active install
-            if let Some(installed_package) = self.register.get_package(&package_id.name) {
-                if installed_package.versions.len() > 1 {
-                    // Prompt user if the installed version is newer than the version currently installing
-                    if installed_package.active_version > node.version_metadata.version {
-                        let question = format!(
-                            "A newer version ({}) of this package is currently active, do you want to change the active version to the older version ({})?", 
-                            installed_package.active_version, node.version_metadata.version
-                        );
-                        should_set_active = ask_user(&question, QuestionResponse::No)?.is_yes();
-                    }
-
-                    // Prompt user if the installed version is not symlinked and we're not skipping symlinking
-                    if should_set_active && !installed_package.symlinked && should_symlink {
-                        let question = format!("The current active version of '{}' ({}) is not symlinked, do you want to proceed with symlinking the newly installed version", package_id.name, installed_package.active_version);
-                        should_symlink = ask_user(&question, QuestionResponse::No)?.is_yes();
-                    }
-
-                    // Show warning if the not symlinking but package was previously symlinked
-                    if should_set_active && installed_package.symlinked && !should_symlink {
-                        warning!("The new active package version will not be symlinked, while the previously active version was symlinked. The package will not be automatically findable by your system anymore.");
-                    }
+                // Return early if the user doesn't want ot build from source as alternative install method
+                let question = "Prebuild package for {} cannot be found, would you like to build from source instead?";
+                if ask_user(question, QuestionResponse::Yes)?.is_no() {
+                    return Ok(());
                 }
             }
 
-            // If package is installed succesfully, set it to active
-            if should_set_active {
-                self.set_active(&package_id, should_symlink)?;
+            // Get and build the build dependencies first
+            let build_dependencies = self.get_flattened_build_dependencies(node)?;
+            for build_node in build_dependencies.iter().rev() {
+                self.install_package(build_node, None)?;
             }
 
-            // Download and run test script if it exists
-            let script_path = node.version_metadata.get_test_script_path(TARGET_ARCHITECTURE)?;
-            let downloaded_script = scripts::download_script(self.repository_manager, &script_path, &package_id.name, &node.repository_id)?;
-            if let Some(script_file) = downloaded_script {
-                scripts::run_test_script(script_file, &install_directory, self.config, &script_args)?;
-            }
+            self.install_package(node, None)?;
+
+            // TODO: Remove build dependencies if --keep-build not used
+        }
+
+        Ok(())
+    }
+
+    fn install_package(&mut self, node: &DependencyNode, url: Option<&str>) -> Result<()> {
+        // Create the package id and install directory
+        let package_id = PackageId::new(&node.package_metadata.name, &node.version_metadata.version);
+        let install_directory = self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
+
+        // Return early if the package has been installed by another node in the sequence (duplicates can exist)
+        if self.register.get_package_version(&package_id).is_some() {
+            return Ok(());
+        }
+
+        // Create install directory if it does not exist
+        if !fs::exists(&install_directory)? {
+            fs::create_dir_all(&install_directory)?;
+        }
+
+        let script_args = node.version_metadata.get_script_args(TARGET_ARCHITECTURE)?;
+
+        // Download and run pre install script if it exists
+        let script_path = node.version_metadata.get_preinstall_script_path(TARGET_ARCHITECTURE)?;
+        let downloaded_script = scripts::download_script(self.repository_manager, &script_path, &package_id.name, &node.repository_id)?;
+        if let Some(script_file) = downloaded_script {
+            scripts::run_pre_script(script_file, &install_directory, self.config, &install_directory, &script_args)?;
+        }
+
+        // Get source repository for installed storage before actually installing package
+        let source_repository = self.config.repositories.get(&node.repository_id).expect("Expected repository in config");
+
+        // Get the target information from the package version info
+        let target = node.version_metadata.get_target(TARGET_ARCHITECTURE)?;
+
+        // Get build version of package
+        match url {
+            Some(url) => self.download_prebuild(&url, &install_directory)?,
+            None => self.build_package(
+                &node.package_metadata,
+                &node.version_metadata,
+                &node.repository_id,
+                &install_directory,
+            )?,
+        }
+
+        // Add and save package to installed storage toml
+        // TODO: Pass the node reference
+        self.register.add_package(
+            &node.package_metadata,
+            &node.version_metadata,
+            &node.dependencies,
+            source_repository,
+            &install_directory,
+            false,
+            false,
+        );
+        self.register.save_to(&PackageRegister::get_default_path())?;
+
+        // Download and run post install script if it exists
+        let script_path = node.version_metadata.get_postinstall_script_path(TARGET_ARCHITECTURE)?;
+        let downloaded_script = scripts::download_script(self.repository_manager, &script_path, &package_id.name, &node.repository_id)?;
+        if let Some(script_file) = downloaded_script {
+            scripts::run_post_script(script_file, &install_directory, self.config, &script_args)?;
+        }
+
+        self.determine_active(node, &package_id, target)?;
+
+        // Download and run test script if it exists
+        let script_path = node.version_metadata.get_test_script_path(TARGET_ARCHITECTURE)?;
+        let downloaded_script = scripts::download_script(self.repository_manager, &script_path, &package_id.name, &node.repository_id)?;
+        if let Some(script_file) = downloaded_script {
+            scripts::run_test_script(script_file, &install_directory, self.config, &script_args)?;
         }
 
         Ok(())
@@ -301,6 +287,52 @@ impl<'a> Installer<'a> {
         }
 
         Ok(dependencies)
+    }
+
+    fn determine_active(&mut self, node: &DependencyNode, package_id: &PackageId, target: &PackageTarget) -> Result<()> {
+        // Check if symlinking should be skipped
+        let mut should_symlink = !match target.skip_symlinking {
+            Some(skip_symlinking) => skip_symlinking,
+            None => node.version_metadata.skip_symlinking,
+        };
+
+        let mut should_set_active = true;
+
+        // Check if we have a previous active install
+        if let Some(installed_package) = self.register.get_package(&package_id.name) {
+            if installed_package.versions.len() > 1 {
+                // Prompt user if the installed version is newer than the version currently installing
+                if installed_package.active_version > node.version_metadata.version {
+                    let question = format!(
+                            "A newer version ({}) of this package is currently active, do you want to change the active version to the older version ({})?", 
+                            installed_package.active_version, node.version_metadata.version
+                        );
+                    should_set_active = ask_user(&question, QuestionResponse::No)?.is_yes();
+                }
+
+                // Prompt user if the installed version is not symlinked and we're not skipping symlinking
+                if should_set_active && !installed_package.symlinked && should_symlink {
+                    let question = format!("The current active version of '{}' ({}) is not symlinked, do you want to proceed with symlinking the newly installed version", package_id.name, installed_package.active_version);
+                    should_symlink = ask_user(&question, QuestionResponse::No)?.is_yes();
+                }
+
+                // Show warning if the not symlinking but package was previously symlinked
+                if should_set_active && installed_package.symlinked && !should_symlink {
+                    warning!("The new active package version will not be symlinked, while the previously active version was symlinked. The package will not be automatically findable by your system anymore.");
+                }
+            }
+        }
+
+        // If package is installed succesfully, set it to active
+        if should_set_active {
+            self.set_active(&package_id, should_symlink)?;
+        }
+
+        Ok(())
+    }
+
+    fn remove_build_dependencies(&mut self) -> Result<()> {
+        todo!()
     }
 
     fn build_package(
