@@ -28,3 +28,24 @@ impl<T, E: Error> HandleError<T> for Result<T, E> {
         }
     }
 }
+
+impl<T> HandleError<T> for Option<T> {
+    fn unwrap_or_exit_msg(self, msg: &str, exit_code: i32) -> T {
+        match self {
+            Some(value) => value,
+            None => {
+                error!(msg: msg);
+                exit(exit_code);
+            },
+        }
+    }
+
+    fn unwrap_or_exit(self, exit_code: i32) -> T {
+        match self {
+            Some(value) => value,
+            None => {
+                exit(exit_code);
+            },
+        }
+    }
+}
