@@ -543,7 +543,7 @@ impl<'a> Installer<'a> {
 
         // Update symlinked state in package register
         match self.register.get_package_mut(&package_name) {
-            Some(package) => package.symlinked = true,
+            Some(package) => package.symlinked = false,
             None => {
                 warning!("Cannot get installed package after changing symlinks, please try running pit fix to fix your installation");
                 return Err(InstallerError::PackageNotFound {
