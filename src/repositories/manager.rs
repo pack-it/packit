@@ -111,7 +111,7 @@ impl<'a> RepositoryManager<'a> {
                 },
             };
 
-            let package = match provider.read_package_version(package_id) {
+            let package = match provider.read_package_version(&package_id.name, &package_id.version) {
                 Ok(package) => package,
                 Err(_) => {
                     debug!("Cannot find package {package_id} in repository {repository_id}, continuing.");
@@ -151,7 +151,7 @@ impl<'a> RepositoryManager<'a> {
         };
 
         // Validate the package before returning
-        let package = provider.read_package_version(package_id)?;
+        let package = provider.read_package_version(&package_id.name, &package_id.version)?;
         if package.has_conflicts() {
             return Err(RepositoryError::ValidationError("Package has dependency conflicts.".to_string()));
         }

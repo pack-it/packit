@@ -1,6 +1,6 @@
 use crate::{
     config::Repository,
-    installer::types::PackageId,
+    installer::types::Version,
     repositories::{
         default::{DefaultProvider, DEFAULT_PROVIDER_ID},
         error::Result,
@@ -18,7 +18,7 @@ pub trait RepositoryProvider {
     fn read_package(&self, package: &str) -> Result<PackageMetadata>;
 
     /// Reads the metadata of a certain version of a package, containing dependencies and targets.
-    fn read_package_version(&self, package_id: &PackageId) -> Result<PackageVersion>;
+    fn read_package_version(&self, package: &str, version: &Version) -> Result<PackageVersion>;
 
     /// Reads the requested script from the repository.
     fn read_script(&self, package: &str, script_path: &str) -> Result<Option<String>>;
