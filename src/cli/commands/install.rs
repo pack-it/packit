@@ -18,7 +18,7 @@ pub struct InstallArgs {
     #[arg(short, long)]
     pub version: Option<Version>,
 
-    /// Flag to keep builds after building from source
+    /// Flag to keep build dependencies after building from source
     #[arg(long, default_value = "false")]
     pub keep_build: bool,
 }

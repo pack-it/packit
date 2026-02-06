@@ -94,7 +94,7 @@ impl<'a> Installer<'a> {
 
     fn install_nodes(&mut self, nodes: &mut Vec<DependencyNode>, should_build: bool, keep_build: bool) -> Result<()> {
         let mut all_dependencies = Vec::new();
-        let mut node_ids = Vec::new();
+        let mut dependency_ids = Vec::new();
         for node in nodes {
             if !should_build {
                 let prebuild_url = self.repository_manager.get_prebuild_url(
@@ -109,14 +109,14 @@ impl<'a> Installer<'a> {
                     continue;
                 }
 
-                // Return early if the user doesn't want ot build from source as alternative install method
+                // Return early if the user doesn't want to build from source as alternative install method
                 let question = "Prebuild package for {} cannot be found, would you like to build from source instead?";
                 if ask_user(question, QuestionResponse::Yes)?.is_no() {
                     return Ok(());
                 }
             }
 
-            // Get and build the build dependencies first
+            // Get and install the build dependencies first
             let build_dependencies = self.get_flattened_build_dependencies(node)?;
             for build_node in build_dependencies.iter().rev() {
                 self.install_package(build_node, None)?;
@@ -127,12 +127,12 @@ impl<'a> Installer<'a> {
 
             // Save the current build dependencies and the current node id
             all_dependencies.extend(build_dependencies);
-            node_ids.push(PackageId::new(&node.package_metadata.name, &node.version_metadata.version));
+            dependency_ids.push(PackageId::new(&node.package_metadata.name, &node.version_metadata.version));
         }
 
         // Remove build dependencies if --keep-build not used
         if !keep_build {
-            self.remove_build_dependencies(&all_dependencies, &node_ids)?;
+            self.remove_build_dependencies(&all_dependencies, &dependency_ids)?;
         }
 
         Ok(())
@@ -226,10 +226,10 @@ impl<'a> Installer<'a> {
             let version = self.get_latest_dependency_version(&dependency)?;
             let dependency_id = PackageId::new(dependency.get_name(), &version);
             let (repository_id, package_metadata) = self.repository_manager.read_package(dependency.get_name())?;
-            let dependency_package = self.repository_manager.read_repo_package_version(&repository_id, &dependency_id)?;
+            let version_metadata = self.repository_manager.read_repo_package_version(&repository_id, &dependency_id)?;
             let mut node = DependencyNode {
                 package_metadata,
-                version_metadata: dependency_package,
+                version_metadata,
                 repository_id,
                 dependencies: HashSet::new(),
             };
@@ -259,15 +259,15 @@ impl<'a> Installer<'a> {
             .chain(parent_node.version_metadata.dependencies.iter())
             .chain(target.dependencies.iter());
 
-        // Get the index where build dependencies and dependencies are devided
-        let devide = parent_node.version_metadata.build_dependencies.len() + target.build_dependencies.len();
+        // Get the index where build dependencies and dependencies are divided
+        let boundary_index = parent_node.version_metadata.build_dependencies.len() + target.build_dependencies.len();
 
         // Loop over all (build) dependencies
         for (index, dependency) in all_dependencies.enumerate() {
             if let Some(package) = self.register.get_satisfying_package(dependency) {
                 // First add the package as a dependency to the parent node
                 // Only add if the package is a 'normal' dependency
-                if index >= devide {
+                if index >= boundary_index {
                     parent_node.dependencies.insert(package.package_id.clone());
                 }
 
@@ -293,7 +293,7 @@ impl<'a> Installer<'a> {
 
             // Add the dependency id to the parent node (if the dependency is not a build dependency)
             // Only add if the package is a 'normal' dependency
-            if index >= devide {
+            if index >= boundary_index {
                 parent_node.dependencies.insert(dependency_id.clone());
             }
         }
