@@ -111,12 +111,9 @@ impl<'a> Installer<'a> {
         let mut all_dependencies = Vec::new();
         let mut dependency_ids = Vec::new();
         for node in nodes {
+            let package_id = PackageId::new(&node.package_metadata.name, &node.version_metadata.version);
             if !should_build {
-                let prebuild_url = self.repository_manager.get_prebuild_url(
-                    &node.repository_id,
-                    &node.package_metadata.name,
-                    &node.version_metadata.version,
-                );
+                let prebuild_url = self.repository_manager.get_prebuild_url(&node.repository_id, &package_id);
 
                 // Install the package with a prebuild if possible
                 if let Some(url) = prebuild_url {
@@ -125,8 +122,8 @@ impl<'a> Installer<'a> {
                 }
 
                 // Return early if the user doesn't want to build from source as alternative install method
-                let question = "Prebuild package for {} cannot be found, would you like to build from source instead?";
-                if ask_user(question, QuestionResponse::Yes)?.is_no() {
+                let question = format!("Prebuild package for {package_id} cannot be found, would you like to build from source instead?");
+                if ask_user(&question, QuestionResponse::Yes)?.is_no() {
                     return Ok(());
                 }
             }
@@ -142,7 +139,7 @@ impl<'a> Installer<'a> {
 
             // Save the current build dependencies and the current node id
             all_dependencies.extend(build_dependencies);
-            dependency_ids.push(PackageId::new(&node.package_metadata.name, &node.version_metadata.version));
+            dependency_ids.push(package_id);
         }
 
         // Remove build dependencies if --keep-build not used

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{
     cli::display::logging::{debug, warning},
     config::Config,
-    installer::types::{PackageId, Version},
+    installer::types::PackageId,
     platforms::TARGET_ARCHITECTURE,
     repositories::{
         error::{RepositoryError, Result},
@@ -174,7 +174,7 @@ impl<'a> RepositoryManager<'a> {
         Ok(provider.read_script(package, script_path)?)
     }
 
-    pub fn get_prebuild_url(&self, repository_id: &str, package_name: &str, version: &Version) -> Option<String> {
+    pub fn get_prebuild_url(&self, repository_id: &str, package_id: &PackageId) -> Option<String> {
         //TODO: implement
         None
     }
