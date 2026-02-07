@@ -8,6 +8,7 @@ use crate::{
     installer::{
         builder::Builder,
         error::{InstallerError, Result},
+        options::InstallerOptions,
         scripts,
         types::{Dependency, PackageId, Version},
     },
@@ -30,6 +31,7 @@ pub struct Installer<'a> {
     config: &'a Config,
     register: &'a mut PackageRegister,
     repository_manager: &'a RepositoryManager<'a>,
+    options: InstallerOptions,
 }
 
 /// A helper struct for the installer to move around nodes from the dependency trees
@@ -42,24 +44,22 @@ struct DependencyNode {
 
 impl<'a> Installer<'a> {
     /// Creates new installer
-    pub fn new(config: &'a Config, register: &'a mut PackageRegister, repository_manager: &'a RepositoryManager) -> Self {
+    pub fn new(
+        config: &'a Config,
+        register: &'a mut PackageRegister,
+        repository_manager: &'a RepositoryManager,
+        options: InstallerOptions,
+    ) -> Self {
         Self {
             config,
             register,
             repository_manager,
+            options,
         }
     }
 
     /// Installs the given package and its dependencies.
-    pub fn install(
-        &mut self,
-        package_name: &str,
-        version: Option<&Version>,
-        build_source: bool,
-        skip_symlinking: bool,
-        skip_active: bool,
-        keep_build: bool,
-    ) -> Result<()> {
+    pub fn install(&mut self, package_name: &str, version: Option<&Version>) -> Result<()> {
         // Check if we can write to the prefix directory
         if !self.can_write_prefix_dir()? {
             return Err(InstallerError::PermissionsError);
@@ -95,29 +95,22 @@ impl<'a> Installer<'a> {
         let mut flattened_dependencies = self.get_flattened_dependencies(&mut root)?;
         flattened_dependencies.insert(0, root);
 
-        self.install_nodes(&mut flattened_dependencies, build_source, skip_symlinking, skip_active, keep_build)?;
+        self.install_nodes(&mut flattened_dependencies)?;
 
         Ok(())
     }
 
-    fn install_nodes(
-        &mut self,
-        nodes: &mut Vec<DependencyNode>,
-        should_build: bool,
-        skip_symlinking: bool,
-        skip_active: bool,
-        keep_build: bool,
-    ) -> Result<()> {
+    fn install_nodes(&mut self, nodes: &mut Vec<DependencyNode>) -> Result<()> {
         let mut all_dependencies = Vec::new();
         let mut dependency_ids = Vec::new();
         for node in nodes {
             let package_id = PackageId::new(&node.package_metadata.name, &node.version_metadata.version);
-            if !should_build {
+            if !self.options.build_source {
                 let prebuild_url = self.repository_manager.get_prebuild_url(&node.repository_id, &package_id);
 
                 // Install the package with a prebuild if possible
                 if let Some(url) = prebuild_url {
-                    self.install_package(node, Some(&url), skip_symlinking, skip_active)?;
+                    self.install_package(node, Some(&url))?;
                     continue;
                 }
 
@@ -131,11 +124,11 @@ impl<'a> Installer<'a> {
             // Get and install the build dependencies first
             let build_dependencies = self.get_flattened_build_dependencies(node)?;
             for build_node in build_dependencies.iter().rev() {
-                self.install_package(build_node, None, skip_symlinking, skip_active)?;
+                self.install_package(build_node, None)?;
             }
 
             // Build the current dependency node
-            self.install_package(node, None, skip_symlinking, skip_active)?;
+            self.install_package(node, None)?;
 
             // Save the current build dependencies and the current node id
             all_dependencies.extend(build_dependencies);
@@ -143,14 +136,14 @@ impl<'a> Installer<'a> {
         }
 
         // Remove build dependencies if --keep-build not used
-        if !keep_build {
+        if !self.options.keep_build {
             self.remove_build_dependencies(&all_dependencies, &dependency_ids)?;
         }
 
         Ok(())
     }
 
-    fn install_package(&mut self, node: &DependencyNode, url: Option<&str>, skip_symlinking: bool, skip_active: bool) -> Result<()> {
+    fn install_package(&mut self, node: &DependencyNode, url: Option<&str>) -> Result<()> {
         // Create the package id and install directory
         let package_id = PackageId::new(&node.package_metadata.name, &node.version_metadata.version);
         let install_directory = self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
@@ -210,7 +203,7 @@ impl<'a> Installer<'a> {
             scripts::run_post_script(script_file, &install_directory, self.config, &script_args)?;
         }
 
-        self.determine_active(node, &package_id, target, skip_symlinking, skip_active)?;
+        self.determine_active(node, &package_id, target)?;
 
         // Download and run test script if it exists
         let script_path = node.version_metadata.get_test_script_path(TARGET_ARCHITECTURE)?;
@@ -313,22 +306,15 @@ impl<'a> Installer<'a> {
         Ok(dependencies)
     }
 
-    fn determine_active(
-        &mut self,
-        node: &DependencyNode,
-        package_id: &PackageId,
-        target: &PackageTarget,
-        skip_symlinking: bool,
-        skip_active: bool,
-    ) -> Result<()> {
+    fn determine_active(&mut self, node: &DependencyNode, package_id: &PackageId, target: &PackageTarget) -> Result<()> {
         // Check if symlinking should be skipped
-        let mut should_symlink = !skip_symlinking
+        let mut should_symlink = !self.options.skip_symlinking
             && !match target.skip_symlinking {
                 Some(skip_symlinking) => skip_symlinking,
                 None => node.version_metadata.skip_symlinking,
             };
 
-        let mut should_set_active = !skip_active;
+        let mut should_set_active = !self.options.skip_active;
 
         // Check if we have a previous active install
         if let Some(installed_package) = self.register.get_package(&package_id.name) {

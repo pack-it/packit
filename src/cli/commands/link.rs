@@ -4,7 +4,7 @@ use crate::{
     cli::{commands::HandleCommand, display::logging::warning},
     config::{Config, Repository},
     error_handling::HandleError,
-    installer::Installer,
+    installer::{Installer, InstallerOptions},
     platforms::TARGET_ARCHITECTURE,
     repositories::{manager::RepositoryManager, provider},
     storage::package_register::PackageRegister,
@@ -84,7 +84,7 @@ impl HandleCommand for LinkArgs {
         let install_path = package_version.install_path.clone();
 
         // Create symlinks
-        Installer::new(config, &mut register, manager)
+        Installer::new(config, &mut register, manager, InstallerOptions::default())
             .create_symlinks(&install_path)
             .unwrap_or_exit_msg("Unable to link package", 1);
 

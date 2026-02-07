@@ -4,7 +4,7 @@ use crate::{
     cli::{commands::HandleCommand, display::logging::warning},
     config::Config,
     error_handling::HandleError,
-    installer::{types::Version, Installer},
+    installer::{types::Version, Installer, InstallerOptions},
     repositories::manager::RepositoryManager,
     storage::package_register::PackageRegister,
 };
@@ -53,7 +53,7 @@ impl HandleCommand for SwitchArgs {
         let should_symlink = !self.skip_symlinking && package.symlinked;
 
         // Set package version to active
-        let mut installer = Installer::new(&config, &mut register, &manager);
+        let mut installer = Installer::new(&config, &mut register, &manager, InstallerOptions::default());
         installer.set_active(&package_id, should_symlink).unwrap_or_exit_msg("Cannot switch active package", 1);
 
         // Save package register

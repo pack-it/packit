@@ -1,8 +1,12 @@
 use clap::Args;
 
 use crate::{
-    cli::commands::HandleCommand, config::Config, error_handling::HandleError, installer::Installer,
-    repositories::manager::RepositoryManager, storage::package_register::PackageRegister,
+    cli::commands::HandleCommand,
+    config::Config,
+    error_handling::HandleError,
+    installer::{Installer, InstallerOptions},
+    repositories::manager::RepositoryManager,
+    storage::package_register::PackageRegister,
 };
 
 #[derive(Args, Debug)]
@@ -28,7 +32,7 @@ impl HandleCommand for UnlinkArgs {
         }
 
         // Unlink package
-        Installer::new(config, &mut register, manager)
+        Installer::new(config, &mut register, manager, InstallerOptions::default())
             .unlink_package(&self.package_name)
             .unwrap_or_exit_msg("Unable to unlink package", 1);
 
