@@ -176,7 +176,7 @@ impl<'a> Installer<'a> {
         // Get build version of package
         match url {
             Some(url) => self.download_prebuild(&url, &install_directory)?,
-            None => self.build_package(
+            None => Builder::new(self.config, self.register, self.repository_manager).build(
                 &node.package_metadata,
                 &node.version_metadata,
                 &node.repository_id,
@@ -370,20 +370,6 @@ impl<'a> Installer<'a> {
                 Some(&build_dependency.version_metadata.version),
             )?;
         }
-
-        Ok(())
-    }
-
-    fn build_package(
-        &mut self,
-        package: &PackageMetadata,
-        package_version: &PackageVersion,
-        repository_id: &str,
-        destination_dir: impl AsRef<Path>,
-    ) -> Result<()> {
-        // Build package if we did not find a prebuild
-        let builder = Builder::new(self.config, self.register, self.repository_manager);
-        builder.build(&package, &package_version, &repository_id, &destination_dir)?;
 
         Ok(())
     }
