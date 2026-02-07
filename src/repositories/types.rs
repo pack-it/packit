@@ -13,7 +13,7 @@ use crate::{
 
 /// Represents the repository metadata, containing repository information.
 #[derive(Deserialize, Debug)]
-pub struct RepositoryMetadata {
+pub struct RepositoryMeta {
     pub name: String,
     pub description: String,
     pub maintainers: Vec<String>,
@@ -21,7 +21,7 @@ pub struct RepositoryMetadata {
 
 /// Represents the package metadata, containing package information.
 #[derive(Deserialize, Debug)]
-pub struct PackageMetadata {
+pub struct PackageMeta {
     pub name: String,
     pub description: String,
     pub homepage: Option<String>,
@@ -29,7 +29,7 @@ pub struct PackageMetadata {
     pub latest_versions: HashMap<String, Version>,
 }
 
-impl PackageMetadata {
+impl PackageMeta {
     pub fn get_latest_version(&self, target_name: &str) -> Result<&Version> {
         Ok(self.latest_versions.get(target_name).ok_or(RepositoryError::TargetError)?)
     }
@@ -37,33 +37,36 @@ impl PackageMetadata {
 
 /// Represents the package version metadata, containing dependencies and targets.
 #[derive(Deserialize, Debug)]
-pub struct PackageVersion {
+pub struct PackageVersionMeta {
     pub version: Version,
 
     pub dependencies: Vec<Dependency>,
     pub build_dependencies: Vec<Dependency>,
     pub targets: HashMap<String, PackageTarget>,
 
-    #[serde(default = "PackageVersion::default_skip_symlinking")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub license: Option<String>,
+
+    #[serde(default = "PackageVersionMeta::default_skip_symlinking")]
     pub skip_symlinking: bool,
 
     #[serde(default)]
     pub script_args: HashMap<String, String>,
 
-    #[serde(default = "PackageVersion::default_use_version_specific")]
+    #[serde(default = "PackageVersionMeta::default_use_version_specific")]
     pub use_version_specific_build: bool,
 
-    #[serde(default = "PackageVersion::default_use_version_specific")]
+    #[serde(default = "PackageVersionMeta::default_use_version_specific")]
     pub use_version_specific_preinstall: bool,
 
-    #[serde(default = "PackageVersion::default_use_version_specific")]
+    #[serde(default = "PackageVersionMeta::default_use_version_specific")]
     pub use_version_specific_postinstall: bool,
 
-    #[serde(default = "PackageVersion::default_use_version_specific")]
+    #[serde(default = "PackageVersionMeta::default_use_version_specific")]
     pub use_version_specific_test: bool,
 }
 
-impl PackageVersion {
+impl PackageVersionMeta {
     fn get_script_path(&self, use_version_specific: bool, script: &Option<Script>, default_script_name: &str) -> String {
         match script {
             Some(Script::NameOnly(name)) => format!("{name}.{SCRIPT_EXTENSION}"),

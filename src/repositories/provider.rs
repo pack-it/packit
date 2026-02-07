@@ -5,20 +5,20 @@ use crate::{
         default::{DefaultProvider, DEFAULT_PROVIDER_ID},
         error::Result,
         filesystem::{FileSystemProvider, FILESYSTEM_PROVIDER_ID},
-        types::{PackageMetadata, PackageVersion, RepositoryMetadata},
+        types::{PackageMeta, PackageVersionMeta, RepositoryMeta},
     },
 };
 
 /// Generic repository provider trait, reading package metadata from a repository.
 pub trait RepositoryProvider {
     /// Reads repository metadata from the repository, containing information about the repository.
-    fn read_repository_metadata(&self) -> Result<RepositoryMetadata>;
+    fn read_repository_metadata(&self) -> Result<RepositoryMeta>;
 
     /// Reads package metadata from the repository, containing information about the package.
-    fn read_package(&self, package: &str) -> Result<PackageMetadata>;
+    fn read_package(&self, package: &str) -> Result<PackageMeta>;
 
     /// Reads the metadata of a certain version of a package, containing dependencies and targets.
-    fn read_package_version(&self, package: &str, version: &Version) -> Result<PackageVersion>;
+    fn read_package_version(&self, package: &str, version: &Version) -> Result<PackageVersionMeta>;
 
     /// Reads the requested script from the repository.
     fn read_script(&self, package: &str, script_path: &str) -> Result<Option<String>>;

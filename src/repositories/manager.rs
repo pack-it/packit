@@ -8,7 +8,7 @@ use crate::{
     repositories::{
         error::{RepositoryError, Result},
         provider::{create_repository_provider, RepositoryProvider},
-        types::{PackageMetadata, PackageVersion, RepositoryMetadata},
+        types::{PackageMeta, PackageVersionMeta, RepositoryMeta},
     },
 };
 
@@ -37,7 +37,7 @@ impl<'a> RepositoryManager<'a> {
     }
 
     /// Reads repository metadata of the given repository, containing information about the repository.
-    pub fn read_repository_metadata(&self, repository_id: &str) -> Result<RepositoryMetadata> {
+    pub fn read_repository_metadata(&self, repository_id: &str) -> Result<RepositoryMeta> {
         let provider = match self.providers.get(repository_id) {
             Some(provider) => provider,
             None => {
@@ -52,7 +52,7 @@ impl<'a> RepositoryManager<'a> {
 
     /// Reads package metadata of the given package, containing information about the package.
     /// Returns the id of the repository and the package metadata.
-    pub fn read_package(&self, package: &str) -> Result<(String, PackageMetadata)> {
+    pub fn read_package(&self, package: &str) -> Result<(String, PackageMeta)> {
         for repository_id in &self.config.repositories_rank {
             let provider = match self.providers.get(repository_id) {
                 Some(provider) => provider,
@@ -86,7 +86,7 @@ impl<'a> RepositoryManager<'a> {
 
     /// Reads package metadata of the given package from the given repository, containing information about the package.
     /// Does not check if the data contains the current target.
-    pub fn read_repo_package(&self, repository_id: &str, package: &str) -> Result<PackageMetadata> {
+    pub fn read_repo_package(&self, repository_id: &str, package: &str) -> Result<PackageMeta> {
         let provider = match self.providers.get(repository_id) {
             Some(provider) => provider,
             None => {
@@ -101,7 +101,7 @@ impl<'a> RepositoryManager<'a> {
 
     /// Reads package version metadata of the given package, containing dependencies and targets.
     /// Returns the id of the repository and the package version metadata.
-    pub fn read_package_version(&self, package_id: &PackageId) -> Result<(String, PackageVersion)> {
+    pub fn read_package_version(&self, package_id: &PackageId) -> Result<(String, PackageVersionMeta)> {
         for repository_id in &self.config.repositories_rank {
             let provider = match self.providers.get(repository_id) {
                 Some(provider) => provider,
@@ -140,7 +140,7 @@ impl<'a> RepositoryManager<'a> {
 
     /// Reads package version metadata of the given package from the given repository, containing dependencies and targets.
     /// Does not check if the data contains the current target.
-    pub fn read_repo_package_version(&self, repository_id: &str, package_id: &PackageId) -> Result<PackageVersion> {
+    pub fn read_repo_package_version(&self, repository_id: &str, package_id: &PackageId) -> Result<PackageVersionMeta> {
         let provider = match self.providers.get(repository_id) {
             Some(provider) => provider,
             None => {
