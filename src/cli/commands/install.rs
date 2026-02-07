@@ -28,6 +28,10 @@ pub struct InstallArgs {
     /// True to skip setting the package to active, false to use default behaviour
     #[arg(long, default_value = "false")]
     pub skip_active: bool,
+
+    /// Flag to keep build dependencies after building from source
+    #[arg(long, default_value = "false")]
+    pub keep_build: bool,
 }
 
 impl HandleCommand for InstallArgs {
@@ -58,7 +62,14 @@ impl HandleCommand for InstallArgs {
 
         // Install all packages
         for (package_name, version) in packages {
-            if let Err(error) = installer.install(&package_name, version.as_ref(), self.build, self.skip_symlinking, self.skip_active) {
+            if let Err(error) = installer.install(
+                &package_name,
+                version.as_ref(),
+                self.build,
+                self.skip_symlinking,
+                self.skip_active,
+                self.keep_build,
+            ) {
                 error!(error, "Cannot install package {package_name}");
             }
         }

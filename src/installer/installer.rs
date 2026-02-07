@@ -1,5 +1,9 @@
 use crate::{
-    cli::display::{ask_user, logging::warning, QuestionResponse},
+    cli::display::{
+        ask_user,
+        logging::{debug, warning},
+        QuestionResponse,
+    },
     config::Config,
     installer::{
         builder::Builder,
@@ -28,6 +32,14 @@ pub struct Installer<'a> {
     repository_manager: &'a RepositoryManager<'a>,
 }
 
+/// A helper struct for the installer to move around nodes from the dependency trees
+struct DependencyNode {
+    package_metadata: PackageMetadata,
+    version_metadata: PackageVersion,
+    repository_id: String,
+    dependencies: HashSet<PackageId>,
+}
+
 impl<'a> Installer<'a> {
     /// Creates new installer
     pub fn new(config: &'a Config, register: &'a mut PackageRegister, repository_manager: &'a RepositoryManager) -> Self {
@@ -46,18 +58,19 @@ impl<'a> Installer<'a> {
         build_source: bool,
         skip_symlinking: bool,
         skip_active: bool,
+        keep_build: bool,
     ) -> Result<()> {
         // Check if we can write to the prefix directory
         if !self.can_write_prefix_dir()? {
             return Err(InstallerError::PermissionsError);
         }
 
-        let (repository_id, package) = self.repository_manager.read_package(package_name)?;
+        let (repository_id, package_metadata) = self.repository_manager.read_package(package_name)?;
 
         // Use the latest version if the version isn't specified
         let version = match version {
             Some(version) => version,
-            None => package.get_latest_version(TARGET_ARCHITECTURE)?,
+            None => package_metadata.get_latest_version(TARGET_ARCHITECTURE)?,
         };
 
         // Create a package id of the current package
@@ -65,52 +78,124 @@ impl<'a> Installer<'a> {
 
         // Check if this package version is already installed
         if self.register.get_package_version(&package_id).is_some() {
-            println!("Package '{} {}' already installed.", package_name, version);
+            println!("Package '{}' already installed.", package_id);
             return Ok(());
         }
 
-        // Get package version info for its target
-        let package_version = self.repository_manager.read_repo_package_version(&repository_id, &package_name, &version)?;
-        let target = package_version.get_target(TARGET_ARCHITECTURE)?;
+        // Get package version info
+        let version_metadata = self.repository_manager.read_repo_package_version(&repository_id, &package_id)?;
 
-        // Install global package dependencies and platform specific packages (if there are any, can be empty)
-        let dependency_ids = self.install_dependencies(&package_version.dependencies, &target.dependencies)?;
+        // Create flattend dependency sequence
+        let mut root = DependencyNode {
+            package_metadata,
+            version_metadata,
+            repository_id,
+            dependencies: HashSet::new(),
+        };
+        let mut flattened_dependencies = self.get_flattened_dependencies(&mut root)?;
+        flattened_dependencies.insert(0, root);
 
-        let install_directory = self.config.prefix_directory.join("packages").join(package_name).join(version.to_string());
+        self.install_nodes(&mut flattened_dependencies, build_source, skip_symlinking, skip_active, keep_build)?;
+
+        Ok(())
+    }
+
+    fn install_nodes(
+        &mut self,
+        nodes: &mut Vec<DependencyNode>,
+        should_build: bool,
+        skip_symlinking: bool,
+        skip_active: bool,
+        keep_build: bool,
+    ) -> Result<()> {
+        let mut all_dependencies = Vec::new();
+        let mut dependency_ids = Vec::new();
+        for node in nodes {
+            let package_id = PackageId::new(&node.package_metadata.name, &node.version_metadata.version);
+            if !should_build {
+                let prebuild_url = self.repository_manager.get_prebuild_url(&node.repository_id, &package_id);
+
+                // Install the package with a prebuild if possible
+                if let Some(url) = prebuild_url {
+                    self.install_package(node, Some(&url), skip_symlinking, skip_active)?;
+                    continue;
+                }
+
+                // Return early if the user doesn't want to build from source as alternative install method
+                let question = format!("Prebuild package for {package_id} cannot be found, would you like to build from source instead?");
+                if ask_user(&question, QuestionResponse::Yes)?.is_no() {
+                    return Ok(());
+                }
+            }
+
+            // Get and install the build dependencies first
+            let build_dependencies = self.get_flattened_build_dependencies(node)?;
+            for build_node in build_dependencies.iter().rev() {
+                self.install_package(build_node, None, skip_symlinking, skip_active)?;
+            }
+
+            // Build the current dependency node
+            self.install_package(node, None, skip_symlinking, skip_active)?;
+
+            // Save the current build dependencies and the current node id
+            all_dependencies.extend(build_dependencies);
+            dependency_ids.push(package_id);
+        }
+
+        // Remove build dependencies if --keep-build not used
+        if !keep_build {
+            self.remove_build_dependencies(&all_dependencies, &dependency_ids)?;
+        }
+
+        Ok(())
+    }
+
+    fn install_package(&mut self, node: &DependencyNode, url: Option<&str>, skip_symlinking: bool, skip_active: bool) -> Result<()> {
+        // Create the package id and install directory
+        let package_id = PackageId::new(&node.package_metadata.name, &node.version_metadata.version);
+        let install_directory = self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
+
+        // Return early if the package has been installed by another node in the sequence (duplicates can exist)
+        if self.register.get_package_version(&package_id).is_some() {
+            return Ok(());
+        }
 
         // Create install directory if it does not exist
         if !fs::exists(&install_directory)? {
             fs::create_dir_all(&install_directory)?;
         }
 
-        let script_args = package_version.get_script_args(TARGET_ARCHITECTURE)?;
+        let script_args = node.version_metadata.get_script_args(TARGET_ARCHITECTURE)?;
 
         // Download and run pre install script if it exists
-        let script_path = package_version.get_preinstall_script_path(TARGET_ARCHITECTURE)?;
-        if let Some(script_file) = scripts::download_script(self.repository_manager, &script_path, package_name, &repository_id)? {
+        let script_path = node.version_metadata.get_preinstall_script_path(TARGET_ARCHITECTURE)?;
+        let downloaded_script = scripts::download_script(self.repository_manager, &script_path, &package_id.name, &node.repository_id)?;
+        if let Some(script_file) = downloaded_script {
             scripts::run_pre_script(script_file, &install_directory, self.config, &install_directory, &script_args)?;
         }
 
         // Get source repository for installed storage before actually installing package
-        let source_repository = self.config.repositories.get(&repository_id).expect("Expected repository in config");
+        let source_repository = self.config.repositories.get(&node.repository_id).expect("Expected repository in config");
 
-        // Get prebuild url, or skip if we should build from source
-        let prebuild_url = match build_source {
-            true => None,
-            false => self.repository_manager.get_prebuild_url(&repository_id, package_name, version),
-        };
+        // Get the target information from the package version info
+        let target = node.version_metadata.get_target(TARGET_ARCHITECTURE)?;
 
         // Get build version of package
-        match prebuild_url {
+        match url {
             Some(url) => self.download_prebuild(&url, &install_directory)?,
-            None => self.build_package(&package, &package_version, &target, &repository_id, &install_directory)?,
+            None => self.build_package(
+                &node.package_metadata,
+                &node.version_metadata,
+                &node.repository_id,
+                &install_directory,
+            )?,
         }
 
         // Add and save package to installed storage toml
         self.register.add_package(
-            &package,
-            &package_version,
-            dependency_ids,
+            &node.package_metadata,
+            &node.version_metadata,
+            &node.dependencies,
             source_repository,
             &install_directory,
             false,
@@ -119,34 +204,147 @@ impl<'a> Installer<'a> {
         self.register.save_to(&PackageRegister::get_default_path())?;
 
         // Download and run post install script if it exists
-        let script_path = package_version.get_postinstall_script_path(TARGET_ARCHITECTURE)?;
-        if let Some(script_file) = scripts::download_script(self.repository_manager, &script_path, package_name, &repository_id)? {
+        let script_path = node.version_metadata.get_postinstall_script_path(TARGET_ARCHITECTURE)?;
+        let downloaded_script = scripts::download_script(self.repository_manager, &script_path, &package_id.name, &node.repository_id)?;
+        if let Some(script_file) = downloaded_script {
             scripts::run_post_script(script_file, &install_directory, self.config, &script_args)?;
         }
 
+        self.determine_active(node, &package_id, target, skip_symlinking, skip_active)?;
+
+        // Download and run test script if it exists
+        let script_path = node.version_metadata.get_test_script_path(TARGET_ARCHITECTURE)?;
+        let downloaded_script = scripts::download_script(self.repository_manager, &script_path, &package_id.name, &node.repository_id)?;
+        if let Some(script_file) = downloaded_script {
+            scripts::run_test_script(script_file, &install_directory, self.config, &script_args)?;
+        }
+
+        Ok(())
+    }
+
+    fn get_flattened_dependencies(&self, parent_node: &mut DependencyNode) -> Result<Vec<DependencyNode>> {
+        let mut dependencies: Vec<DependencyNode> = Vec::new();
+        let target = parent_node.version_metadata.get_target(TARGET_ARCHITECTURE)?;
+        for dependency in parent_node.version_metadata.dependencies.iter().chain(target.dependencies.iter()) {
+            if let Some(package) = self.register.get_satisfying_package(dependency) {
+                // First add the package as a dependency to the parent node
+                parent_node.dependencies.insert(package.package_id.clone());
+
+                debug!("Dependency '{}' already satisfied, continuing", dependency.get_name());
+                continue;
+            }
+
+            // Get all the data to create a dependency node
+            let version = self.get_latest_dependency_version(&dependency)?;
+            let dependency_id = PackageId::new(dependency.get_name(), &version);
+            let (repository_id, package_metadata) = self.repository_manager.read_package(dependency.get_name())?;
+            let version_metadata = self.repository_manager.read_repo_package_version(&repository_id, &dependency_id)?;
+            let mut node = DependencyNode {
+                package_metadata,
+                version_metadata,
+                repository_id,
+                dependencies: HashSet::new(),
+            };
+
+            // Get all the sub dependencies and add them to the current dependencies as well (after the current node)
+            let sub_dependencies = self.get_flattened_dependencies(&mut node)?;
+            dependencies.push(node);
+            dependencies.extend(sub_dependencies);
+
+            // Add the dependency id to the parent node
+            parent_node.dependencies.insert(dependency_id.clone());
+        }
+
+        Ok(dependencies)
+    }
+
+    fn get_flattened_build_dependencies(&self, parent_node: &mut DependencyNode) -> Result<Vec<DependencyNode>> {
+        let mut dependencies = Vec::new();
+        let target = parent_node.version_metadata.get_target(TARGET_ARCHITECTURE)?;
+
+        // Get all dependencies from the parent (dependencies from build dependencies are build dependencies from the original package to install)
+        let all_dependencies = parent_node
+            .version_metadata
+            .build_dependencies
+            .iter()
+            .chain(target.build_dependencies.iter())
+            .chain(parent_node.version_metadata.dependencies.iter())
+            .chain(target.dependencies.iter());
+
+        // Get the index where build dependencies and dependencies are divided
+        let boundary_index = parent_node.version_metadata.build_dependencies.len() + target.build_dependencies.len();
+
+        // Loop over all (build) dependencies
+        for (index, dependency) in all_dependencies.enumerate() {
+            if let Some(package) = self.register.get_satisfying_package(dependency) {
+                // First add the package as a dependency to the parent node
+                // Only add if the package is a 'normal' dependency
+                if index >= boundary_index {
+                    parent_node.dependencies.insert(package.package_id.clone());
+                }
+
+                debug!("Dependency '{}' already satisfied, continuing", dependency.get_name());
+                continue;
+            }
+
+            // Get all the data to create a dependency node
+            let version = self.get_latest_dependency_version(&dependency)?;
+            let dependency_id = PackageId::new(dependency.get_name(), &version);
+            let (repository_id, package_metadata) = self.repository_manager.read_package(dependency.get_name())?;
+            let dependency_package = self.repository_manager.read_repo_package_version(&repository_id, &dependency_id)?;
+            let mut node = DependencyNode {
+                package_metadata,
+                version_metadata: dependency_package,
+                repository_id,
+                dependencies: HashSet::new(),
+            };
+
+            let sub_dependencies = self.get_flattened_build_dependencies(&mut node)?;
+            dependencies.push(node);
+            dependencies.extend(sub_dependencies);
+
+            // Add the dependency id to the parent node (if the dependency is not a build dependency)
+            // Only add if the package is a 'normal' dependency
+            if index >= boundary_index {
+                parent_node.dependencies.insert(dependency_id.clone());
+            }
+        }
+
+        Ok(dependencies)
+    }
+
+    fn determine_active(
+        &mut self,
+        node: &DependencyNode,
+        package_id: &PackageId,
+        target: &PackageTarget,
+        skip_symlinking: bool,
+        skip_active: bool,
+    ) -> Result<()> {
         // Check if symlinking should be skipped
         let mut should_symlink = !skip_symlinking
             && !match target.skip_symlinking {
                 Some(skip_symlinking) => skip_symlinking,
-                None => package_version.skip_symlinking,
+                None => node.version_metadata.skip_symlinking,
             };
 
         let mut should_set_active = !skip_active;
 
         // Check if we have a previous active install
-        if let Some(installed_package) = self.register.get_package(package_name) {
+        if let Some(installed_package) = self.register.get_package(&package_id.name) {
             if installed_package.versions.len() > 1 {
                 // Prompt user if the installed version is newer than the version currently installing
-                if installed_package.active_version > *version {
+                if installed_package.active_version > node.version_metadata.version {
                     let question = format!(
-                    "A newer version ({}) of this package is currently active, do you want to change the active version to the older version ({version})?", installed_package.active_version
-                );
+                            "A newer version ({}) of this package is currently active, do you want to change the active version to the older version ({})?", 
+                            installed_package.active_version, node.version_metadata.version
+                        );
                     should_set_active = ask_user(&question, QuestionResponse::No)?.is_yes();
                 }
 
                 // Prompt user if the installed version is not symlinked and we're not skipping symlinking
                 if should_set_active && !installed_package.symlinked && should_symlink {
-                    let question = format!("The current active version of '{}' ({}) is not symlinked, do you want to proceed with symlinking the newly installed version", package_name, installed_package.active_version);
+                    let question = format!("The current active version of '{}' ({}) is not symlinked, do you want to proceed with symlinking the newly installed version", package_id.name, installed_package.active_version);
                     should_symlink = ask_user(&question, QuestionResponse::No)?.is_yes();
                 }
 
@@ -162,53 +360,41 @@ impl<'a> Installer<'a> {
             self.set_active(&package_id, should_symlink)?;
         }
 
-        // Download and run test script if it exists
-        let script_path = package_version.get_test_script_path(TARGET_ARCHITECTURE)?;
-        if let Some(script_file) = scripts::download_script(self.repository_manager, &script_path, package_name, &repository_id)? {
-            scripts::run_test_script(script_file, &install_directory, self.config, &script_args)?;
-        }
-
         Ok(())
     }
 
-    fn install_dependencies(
-        &mut self,
-        global_dependencies: &Vec<Dependency>,
-        target_dependencies: &Vec<Dependency>,
-    ) -> Result<HashSet<PackageId>> {
-        let mut dependency_ids = HashSet::new();
+    fn remove_build_dependencies(&mut self, build_dependencies: &Vec<DependencyNode>, dependencies: &Vec<PackageId>) -> Result<()> {
+        for build_dependency in build_dependencies {
+            // Get name and version from the current build dependency
+            let name = &build_dependency.package_metadata.name;
+            let version = &build_dependency.version_metadata.version;
 
-        let dependencies = global_dependencies.iter().chain(target_dependencies.iter());
-        for dependency in dependencies {
-            if self.register.dependency_satisfied(dependency) {
-                println!("Dependency '{}' already satisfied, continuing", dependency.get_name());
+            // Continue if the build dependency is also a dependency in the dependency sequence
+            if dependencies.iter().any(|d| d.name == *name && d.version == *version) {
                 continue;
             }
 
-            // Determine the latest supported version for the dependency
-            let version = self.get_latest_dependency_version(dependency)?;
+            // Continue if it's still a dependency somewhere else in the build dependency sequence (because of the DFS)
+            if self.register.is_dependency(name, Some(version)) {
+                continue;
+            }
 
-            // TODO: should we pass the options to childs? We could add these options as struct values
-            self.install(dependency.get_name(), Some(&version), false, false, false)?;
-
-            // Add the dependency id to the set
-            dependency_ids.insert(PackageId::new(dependency.get_name(), &version));
+            self.uninstall(
+                &build_dependency.package_metadata.name,
+                Some(&build_dependency.version_metadata.version),
+            )?;
         }
 
-        Ok(dependency_ids)
+        Ok(())
     }
 
     fn build_package(
         &mut self,
         package: &PackageMetadata,
         package_version: &PackageVersion,
-        target: &PackageTarget,
         repository_id: &str,
         destination_dir: impl AsRef<Path>,
     ) -> Result<()> {
-        // Install global package build dependencies and platform specific build dependencies
-        self.install_dependencies(&package_version.build_dependencies, &target.build_dependencies)?;
-
         // Build package if we did not find a prebuild
         let builder = Builder::new(self.config, self.register, self.repository_manager);
         builder.build(&package, &package_version, &repository_id, &destination_dir)?;

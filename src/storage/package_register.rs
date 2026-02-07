@@ -86,7 +86,7 @@ impl PackageRegister {
         &mut self,
         package: &PackageMetadata,
         package_version: &PackageVersion,
-        dependency_ids: HashSet<PackageId>,
+        dependency_ids: &HashSet<PackageId>,
         source_repository: &Repository,
         install_path: &PathBuf,
         symlinked: bool,
@@ -96,7 +96,7 @@ impl PackageRegister {
             package_id: PackageId::new(&package.name, &package_version.version),
             source_repository_url: source_repository.path.clone(),
             source_repository_provider: source_repository.provider.clone(),
-            dependencies: dependency_ids,
+            dependencies: dependency_ids.clone(),
             dependents: HashSet::new(),
             install_path: install_path.into(),
         };

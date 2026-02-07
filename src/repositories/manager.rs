@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{
     cli::display::logging::{debug, warning},
     config::Config,
-    installer::types::Version,
+    installer::types::PackageId,
     platforms::TARGET_ARCHITECTURE,
     repositories::{
         error::{RepositoryError, Result},
@@ -101,7 +101,7 @@ impl<'a> RepositoryManager<'a> {
 
     /// Reads package version metadata of the given package, containing dependencies and targets.
     /// Returns the id of the repository and the package version metadata.
-    pub fn read_package_version(&self, package: &str, version: &Version) -> Result<(String, PackageVersion)> {
+    pub fn read_package_version(&self, package_id: &PackageId) -> Result<(String, PackageVersion)> {
         for repository_id in &self.config.repositories_rank {
             let provider = match self.providers.get(repository_id) {
                 Some(provider) => provider,
@@ -111,10 +111,10 @@ impl<'a> RepositoryManager<'a> {
                 },
             };
 
-            let package = match provider.read_package_version(package, version) {
+            let package = match provider.read_package_version(&package_id.name, &package_id.version) {
                 Ok(package) => package,
                 Err(_) => {
-                    debug!("Cannot find package {package} {version} in repository {repository_id}, continuing.");
+                    debug!("Cannot find package {package_id} in repository {repository_id}, continuing.");
                     continue;
                 },
             };
@@ -133,14 +133,14 @@ impl<'a> RepositoryManager<'a> {
         }
 
         Err(RepositoryError::PackageNotFoundError {
-            package_name: package.into(),
-            version: Some(version.to_string()),
+            package_name: package_id.name.to_string(),
+            version: Some(package_id.version.to_string()),
         })
     }
 
     /// Reads package version metadata of the given package from the given repository, containing dependencies and targets.
     /// Does not check if the data contains the current target.
-    pub fn read_repo_package_version(&self, repository_id: &str, package: &str, version: &Version) -> Result<PackageVersion> {
+    pub fn read_repo_package_version(&self, repository_id: &str, package_id: &PackageId) -> Result<PackageVersion> {
         let provider = match self.providers.get(repository_id) {
             Some(provider) => provider,
             None => {
@@ -151,7 +151,7 @@ impl<'a> RepositoryManager<'a> {
         };
 
         // Validate the package before returning
-        let package = provider.read_package_version(package, version)?;
+        let package = provider.read_package_version(&package_id.name, &package_id.version)?;
         if package.has_conflicts() {
             return Err(RepositoryError::ValidationError("Package has dependency conflicts.".to_string()));
         }
@@ -174,7 +174,7 @@ impl<'a> RepositoryManager<'a> {
         Ok(provider.read_script(package, script_path)?)
     }
 
-    pub fn get_prebuild_url(&self, repository_id: &str, package_name: &str, version: &Version) -> Option<String> {
+    pub fn get_prebuild_url(&self, repository_id: &str, package_id: &PackageId) -> Option<String> {
         //TODO: implement
         None
     }

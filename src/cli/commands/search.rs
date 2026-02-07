@@ -4,7 +4,7 @@ use colored::Colorize;
 use crate::{
     cli::commands::HandleCommand,
     config::Config,
-    installer::types::Version,
+    installer::types::{PackageId, Version},
     platforms::TARGET_ARCHITECTURE,
     repositories::{error::RepositoryError, manager::RepositoryManager},
 };
@@ -49,8 +49,11 @@ impl HandleCommand for SearchArgs {
             None => &latest_version,
         };
 
+        // Create a package id
+        let package_id = PackageId::new(&self.package_name, version);
+
         // Get package version info for its target
-        let package_version = match manager.read_repo_package_version(&repository_id, &package.name, &version) {
+        let package_version = match manager.read_repo_package_version(&repository_id, &package_id) {
             Ok(package_version) => package_version,
             Err(e) => {
                 println!("Cannot read {} version {version} from repository {repository_id}", package.name);
