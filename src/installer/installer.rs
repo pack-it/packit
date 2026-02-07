@@ -10,6 +10,7 @@ use crate::{
         error::{InstallerError, Result},
         options::InstallerOptions,
         scripts,
+        symlinker::Symlinker,
         types::{Dependency, PackageId, Version},
     },
     platforms::{symlink, TARGET_ARCHITECTURE},
@@ -343,7 +344,7 @@ impl<'a> Installer<'a> {
 
         // If package is installed succesfully, set it to active
         if should_set_active {
-            self.set_active(&package_id, should_symlink)?;
+            Symlinker::new(self.config).set_active(self.register, &package_id, should_symlink)?;
         }
 
         Ok(())
@@ -431,7 +432,7 @@ impl<'a> Installer<'a> {
 
         // Check if the package was symlinked
         if installed_package.active_version == package_id.version && installed_package.symlinked {
-            self.remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&directory))?;
+            Symlinker::new(self.config).remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&directory))?;
         }
 
         // Change active package when uninstalled package is currently active
@@ -441,7 +442,7 @@ impl<'a> Installer<'a> {
             other_versions.sort_by_key(|x| &x.package_id.version);
 
             if let Some(newest) = other_versions.last() {
-                self.set_active(&newest.package_id.clone(), installed_package.symlinked)?;
+                Symlinker::new(self.config).set_active(self.register, &newest.package_id.clone(), installed_package.symlinked)?;
             }
         }
 
@@ -479,7 +480,7 @@ impl<'a> Installer<'a> {
         // Check if package was symlinked
         if let Some(package) = self.register.get_package(package_name) {
             if package.symlinked {
-                self.remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&directory))?;
+                Symlinker::new(self.config).remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&directory))?;
             }
         }
 
@@ -509,98 +510,6 @@ impl<'a> Installer<'a> {
         }
     }
 
-    pub fn create_symlinks(&self, package_directory: &Path) -> Result<()> {
-        let prefix_dir = Path::new(&self.config.prefix_directory);
-
-        // Symlink directories bin, include, lib and share
-        for dir_name in vec!["bin", "include", "lib", "share"] {
-            let package_dir_path = package_directory.join(dir_name);
-            let prefix_dir_path = prefix_dir.join(dir_name);
-
-            self.create_folder_symlinks(&package_dir_path, &prefix_dir_path, true)?;
-        }
-
-        Ok(())
-    }
-
-    fn create_folder_symlinks(&self, source_dir: &Path, destination_dir: &Path, keep_subdirectories: bool) -> Result<()> {
-        // Create destination if it does not exist
-        if !destination_dir.exists() {
-            fs::create_dir_all(&destination_dir)?;
-        }
-
-        // Skip symlinking if source does not exist
-        if !source_dir.exists() {
-            return Ok(());
-        }
-
-        // Symlink files
-        for file in fs::read_dir(source_dir)? {
-            let file = file?;
-
-            let destination = destination_dir.join(file.file_name());
-
-            // Handle directories
-            if file.file_type()?.is_dir() {
-                // If we want to keep subdirectories, create the symlinks for the subdirectory
-                // TODO: Handle subdirectories properly
-                if keep_subdirectories {
-                    self.create_folder_symlinks(&file.path(), &destination, true)?;
-                } else {
-                    dbg!("Skipping subdirectory", file);
-                }
-
-                continue;
-            }
-
-            // Check if file already exists
-            if fs::exists(&destination)? {
-                warning!("Symlink {:?} already exists in {:?}", file.file_name(), destination_dir);
-                continue;
-            }
-
-            // Symlink file in destination directory
-            symlink::create_symlink(&file.path(), &destination)?;
-        }
-
-        Ok(())
-    }
-
-    /// Searches for symlinks with a certain destination (destinations inside of the destination are also a match).
-    fn remove_symlinks(&self, search_dir: &Path, destination_dir: &Path) -> Result<()> {
-        for file in fs::read_dir(search_dir)? {
-            let file = file?;
-            let file_type = file.file_type()?;
-
-            if file_type.is_dir() {
-                self.remove_symlinks(&file.path(), destination_dir)?;
-
-                // Remove the directory if it is empty after removing symlinks
-                if fs::read_dir(file.path())?.next().is_none() {
-                    fs::remove_dir(file.path())?;
-                }
-            }
-
-            if file_type.is_symlink() && fs::read_link(file.path())?.starts_with(destination_dir) {
-                symlink::remove_symlink(&file.path())?
-            }
-        }
-
-        Ok(())
-    }
-
-    fn can_write_prefix_dir(&self) -> Result<bool> {
-        if !fs::exists(&self.config.prefix_directory)? {
-            return Ok(false);
-        }
-
-        let metadata = fs::metadata(&self.config.prefix_directory)?;
-        let permissions = metadata.permissions();
-
-        // TODO: Use something else then readonly, because it can be different for super user and group
-        Ok(!permissions.readonly())
-    }
-
     fn get_latest_dependency_version(&self, dependency: &Dependency) -> Result<Version> {
         // Get all supported versions for the dependency
         let (_, package) = self.repository_manager.read_package(&dependency.get_name())?;
@@ -622,98 +531,15 @@ impl<'a> Installer<'a> {
         Ok(current_highest.ok_or(InstallerError::SupportError(dependency.to_string()))?)
     }
 
-    /// Sets a package to active and create the appropiate symlinks for it
-    pub fn set_active(&mut self, package_id: &PackageId, should_symlink: bool) -> Result<()> {
-        // Get package to set to active
-        let package_version = match self.register.get_package_version(package_id) {
-            Some(package) => package,
-            None => {
-                warning!("Cannot get installed package from installed storage... Please check installation with 'pit list'");
-                return Ok(());
-            },
-        };
-
-        let global_active_path = Path::new(&self.config.prefix_directory).join("active");
-        let active_path = global_active_path.join(&package_version.package_id.name);
-
-        let package_install_path = package_version.install_path.clone();
-
-        // Remove old symlinks
-        let package_directory = self.config.prefix_directory.join("packages").join(&package_id.name);
-        self.remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&package_directory))?;
-
-        // Create active symlink
-        fs::create_dir_all(global_active_path)?;
-        symlink::create_symlink(&package_install_path, &active_path)?;
-
-        // Only create new symlinks if we should symlink
-        if should_symlink {
-            self.create_symlinks(Path::new(&package_install_path))?;
+    fn can_write_prefix_dir(&self) -> Result<bool> {
+        if !fs::exists(&self.config.prefix_directory)? {
+            return Ok(false);
         }
 
-        // Updates the active version and sets its symlinked state
-        match self.register.get_package_mut(&package_id.name) {
-            Some(package) => {
-                package.active_version = package_id.version.clone();
-                package.symlinked = should_symlink;
-            },
-            None => {
-                return Err(InstallerError::PackageNotFound {
-                    package_name: package_id.name.clone(),
-                    version: None,
-                })
-            },
-        }
+        let metadata = fs::metadata(&self.config.prefix_directory)?;
+        let permissions = metadata.permissions();
 
-        // Save package storage
-        self.register.save_to(&PackageRegister::get_default_path())?;
-
-        Ok(())
-    }
-
-    pub fn unlink_package(&mut self, package_name: &str) -> Result<()> {
-        let package = self.register.get_package(&package_name).ok_or(InstallerError::PackageNotFound {
-            package_name: package_name.into(),
-            version: None,
-        })?;
-
-        // Check if the package is already symlinked
-        if !package.symlinked {
-            return Ok(());
-        }
-
-        // Get active package version
-        let package_version = package.get_package_version(&package.active_version).ok_or(InstallerError::PackageNotFound {
-            package_name: package_name.into(),
-            version: Some(package.active_version.to_string()),
-        })?;
-
-        let install_path = package_version.install_path.clone();
-
-        // Remove all symlinks except for those in the active directory
-        for entry in fs::read_dir(&self.config.prefix_directory)? {
-            let entry = entry?;
-
-            if entry.file_type()?.is_dir() && entry.file_name() != "active" {
-                self.remove_symlinks(&entry.path(), &install_path)?;
-            }
-        }
-
-        // Update symlinked state in package register
-        match self.register.get_package_mut(&package_name) {
-            Some(package) => package.symlinked = false,
-            None => {
-                warning!("Cannot get installed package after changing symlinks, please try running pit fix to fix your installation");
-                return Err(InstallerError::PackageNotFound {
-                    package_name: package_name.into(),
-                    version: None,
-                });
-            },
-        };
-
-        // Save package register
-        self.register.save_to(&PackageRegister::get_default_path())?;
-
-        Ok(())
+        // TODO: Use something else then readonly, because it can be different for super user and group
+        Ok(!permissions.readonly())
     }
 }
