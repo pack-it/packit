@@ -6,7 +6,7 @@ use crate::{
     cli::{commands::HandleCommand, display::logging::error},
     config::Config,
     error_handling::HandleError,
-    installer::{installer::Installer, types::PackageId},
+    installer::{types::PackageId, Installer},
     repositories::manager::RepositoryManager,
     storage::package_register::PackageRegister,
 };

@@ -1,7 +1,7 @@
 use clap::Args;
 
 use crate::{
-    cli::commands::HandleCommand, config::Config, error_handling::HandleError, installer::installer::Installer,
+    cli::commands::HandleCommand, config::Config, error_handling::HandleError, installer::Installer,
     repositories::manager::RepositoryManager, storage::package_register::PackageRegister,
 };
 

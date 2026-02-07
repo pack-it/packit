@@ -4,7 +4,7 @@ use crate::{
     cli::{commands::HandleCommand, display::logging::warning},
     config::{Config, Repository},
     error_handling::HandleError,
-    installer::installer::Installer,
+    installer::Installer,
     platforms::TARGET_ARCHITECTURE,
     repositories::{manager::RepositoryManager, provider},
     storage::package_register::PackageRegister,
