@@ -3,11 +3,11 @@ use clap::Args;
 use crate::{
     cli::{commands::HandleCommand, display::logging::warning},
     config::{Config, Repository},
-    error_handling::HandleError,
     installer::Symlinker,
     platforms::TARGET_ARCHITECTURE,
     repositories::{manager::RepositoryManager, provider},
     storage::package_register::PackageRegister,
+    utils::unwrap_or_exit::UnwrapOrExit,
 };
 
 #[derive(Args, Debug)]

@@ -2,7 +2,6 @@ use crate::{cli::commands::Cli, config::Config, repositories::manager::Repositor
 
 mod cli;
 mod config;
-mod error_handling;
 mod installer;
 mod platforms;
 mod repositories;

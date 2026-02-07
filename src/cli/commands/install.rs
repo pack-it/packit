@@ -5,10 +5,10 @@ use clap::Args;
 use crate::{
     cli::{commands::HandleCommand, display::logging::error},
     config::Config,
-    error_handling::HandleError,
     installer::{types::PackageId, Installer, InstallerOptions},
     repositories::manager::RepositoryManager,
     storage::package_register::PackageRegister,
+    utils::unwrap_or_exit::UnwrapOrExit,
 };
 
 #[derive(Args, Debug)]

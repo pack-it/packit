@@ -2,12 +2,12 @@ use std::{error::Error, process::exit};
 
 use crate::cli::display::logging::error;
 
-pub trait HandleError<T> {
+pub trait UnwrapOrExit<T> {
     fn unwrap_or_exit_msg(self, msg: &str, exit_code: i32) -> T;
     fn unwrap_or_exit(self, exit_code: i32) -> T;
 }
 
-impl<T, E: Error> HandleError<T> for Result<T, E> {
+impl<T, E: Error> UnwrapOrExit<T> for Result<T, E> {
     fn unwrap_or_exit_msg(self, msg: &str, exit_code: i32) -> T {
         match self {
             Ok(value) => value,
@@ -29,7 +29,7 @@ impl<T, E: Error> HandleError<T> for Result<T, E> {
     }
 }
 
-impl<T> HandleError<T> for Option<T> {
+impl<T> UnwrapOrExit<T> for Option<T> {
     fn unwrap_or_exit_msg(self, msg: &str, exit_code: i32) -> T {
         match self {
             Some(value) => value,

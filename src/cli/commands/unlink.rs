@@ -1,8 +1,8 @@
 use clap::Args;
 
 use crate::{
-    cli::commands::HandleCommand, config::Config, error_handling::HandleError, installer::Symlinker,
-    repositories::manager::RepositoryManager, storage::package_register::PackageRegister,
+    cli::commands::HandleCommand, config::Config, installer::Symlinker, repositories::manager::RepositoryManager,
+    storage::package_register::PackageRegister, utils::unwrap_or_exit::UnwrapOrExit,
 };
 
 #[derive(Args, Debug)]
