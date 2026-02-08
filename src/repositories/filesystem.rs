@@ -6,7 +6,7 @@ use crate::{
     repositories::{
         error::Result,
         provider::RepositoryProvider,
-        types::{PackageMetadata, PackageVersion, RepositoryMetadata},
+        types::{PackageMeta, PackageVersionMeta, RepositoryMeta},
     },
 };
 
@@ -18,19 +18,19 @@ pub struct FileSystemProvider {
 }
 
 impl RepositoryProvider for FileSystemProvider {
-    fn read_repository_metadata(&self) -> Result<RepositoryMetadata> {
+    fn read_repository_metadata(&self) -> Result<RepositoryMeta> {
         let data = fs::read_to_string(self.path.join("repository.toml"))?;
 
         Ok(toml::de::from_str(&data)?)
     }
 
-    fn read_package(&self, package: &str) -> Result<PackageMetadata> {
+    fn read_package(&self, package: &str) -> Result<PackageMeta> {
         let data = fs::read_to_string(self.path.join("packages").join(package).join("package.toml"))?;
 
         Ok(toml::de::from_str(&data)?)
     }
 
-    fn read_package_version(&self, package: &str, version: &Version) -> Result<PackageVersion> {
+    fn read_package_version(&self, package: &str, version: &Version) -> Result<PackageVersionMeta> {
         let path = self.path.join("packages").join(package).join(version.to_string()).join("targets.toml");
         let data = fs::read_to_string(path)?;
 

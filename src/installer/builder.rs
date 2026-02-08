@@ -15,7 +15,7 @@ use crate::{
     repositories::{
         error::RepositoryError,
         manager::RepositoryManager,
-        types::{PackageMetadata, PackageVersion},
+        types::{PackageMeta, PackageVersionMeta},
     },
     storage::package_register::PackageRegister,
 };
@@ -69,8 +69,8 @@ impl<'a> Builder<'a> {
 
     pub fn build(
         &self,
-        package: &PackageMetadata,
-        package_version: &PackageVersion,
+        package: &PackageMeta,
+        package_version: &PackageVersionMeta,
         repository_id: &str,
         destination_dir: impl AsRef<Path>,
     ) -> Result<()> {

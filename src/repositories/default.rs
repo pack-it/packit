@@ -6,7 +6,7 @@ use crate::{
     repositories::{
         error::Result,
         provider::RepositoryProvider,
-        types::{PackageMetadata, PackageVersion, RepositoryMetadata},
+        types::{PackageMeta, PackageVersionMeta, RepositoryMeta},
     },
 };
 
@@ -18,19 +18,19 @@ pub struct DefaultProvider {
 }
 
 impl RepositoryProvider for DefaultProvider {
-    fn read_repository_metadata(&self) -> Result<RepositoryMetadata> {
+    fn read_repository_metadata(&self) -> Result<RepositoryMeta> {
         let data = reqwest::blocking::get(format!("{}/repository.toml", self.url))?.text()?;
 
         Ok(toml::de::from_str(&data)?)
     }
 
-    fn read_package(&self, package: &str) -> Result<PackageMetadata> {
+    fn read_package(&self, package: &str) -> Result<PackageMeta> {
         let data = reqwest::blocking::get(format!("{}/packages/{package}/package.toml", self.url))?.text()?;
 
         Ok(toml::de::from_str(&data)?)
     }
 
-    fn read_package_version(&self, package: &str, version: &Version) -> Result<PackageVersion> {
+    fn read_package_version(&self, package: &str, version: &Version) -> Result<PackageVersionMeta> {
         let data = reqwest::blocking::get(format!("{}/packages/{package}/{version}/targets.toml", self.url))?.text()?;
 
         Ok(toml::de::from_str(&data)?)

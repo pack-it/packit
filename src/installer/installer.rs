@@ -16,7 +16,7 @@ use crate::{
     platforms::{symlink, TARGET_ARCHITECTURE},
     repositories::{
         manager::RepositoryManager,
-        types::{PackageMetadata, PackageTarget, PackageVersion},
+        types::{PackageMeta, PackageTarget, PackageVersionMeta},
     },
     storage::package_register::PackageRegister,
 };
@@ -37,8 +37,8 @@ pub struct Installer<'a> {
 
 /// A helper struct for the installer to move around nodes from the dependency trees
 struct DependencyNode {
-    package_metadata: PackageMetadata,
-    version_metadata: PackageVersion,
+    package_metadata: PackageMeta,
+    version_metadata: PackageVersionMeta,
     repository_id: String,
     dependencies: HashSet<PackageId>,
 }

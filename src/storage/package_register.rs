@@ -11,7 +11,7 @@ use crate::{
     config::Repository,
     installer::types::{Dependency, PackageId, Version},
     platforms::DEFAULT_CONFIG_DIR,
-    repositories::types::{PackageMetadata, PackageVersion},
+    repositories::types::{PackageMeta, PackageVersionMeta},
     storage::{error::InstalledPackagesError, installed_package::InstalledPackage, installed_package_version::InstalledPackageVersion},
     utils::constants::REGISTER_FILENAME,
 };
@@ -84,8 +84,8 @@ impl PackageRegister {
     /// Please note that this does not save the storage and does not read the currently installed packages from the toml.
     pub fn add_package(
         &mut self,
-        package: &PackageMetadata,
-        package_version: &PackageVersion,
+        package: &PackageMeta,
+        package_version: &PackageVersionMeta,
         dependency_ids: &HashSet<PackageId>,
         source_repository: &Repository,
         install_path: &PathBuf,
