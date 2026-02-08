@@ -5,9 +5,9 @@ use thiserror::Error;
 
 use crate::installer::types::{Version, VersionBounds, VersionError};
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum DependencyParserError {
-    #[error("Caused by: Cannot parse version number")]
+    #[error("Cannot parse version number")]
     VersionNumberError(#[from] VersionError),
 
     #[error("No bounds specified while requested with '@'")]
@@ -41,6 +41,7 @@ impl<'de> Deserialize<'de> for Dependency {
         // Remove @ character from version number
         let version = version.strip_prefix("@").unwrap_or("");
 
+        // TODO: Check for impossible requirements, like: >3.1|<3.1
         let version_ranges = VersionBounds::from_str_ranges(version).map_err(de::Error::custom)?;
 
         Ok(Self {

@@ -138,7 +138,7 @@ mod tests {
 
         match Version::from_str("3.4.1") {
             Ok(version) => assert_eq!(version, correct_version),
-            Err(err) => panic!("Expected Ok(Version (numbers: [3, 4, 1])), got Err({err:?})"),
+            Err(e) => panic!("Expected Ok(Version (numbers: [3, 4, 1])), got Err({e:?})"),
         }
     }
 
