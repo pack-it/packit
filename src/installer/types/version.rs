@@ -9,7 +9,7 @@ use serde::{de, Deserialize, Serialize};
 use thiserror::Error;
 
 /// Errors that occur when requesting metadata from a repository.
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum VersionError {
     #[error("Version number is none while version is requested.")]
     NoneError,
@@ -17,8 +17,8 @@ pub enum VersionError {
     #[error("Version number contains a character which is not a digit or a dot.")]
     IllegalCharacterError,
 
-    #[error("Multiple consecutive dots are not allowed in version number.")]
-    ConsecutiveDotsError,
+    #[error("Multiple leading, trailing or consecutive dots are not allowed in version number.")]
+    DotsError,
 
     #[error("Couldn't parse version number")]
     ParseError(#[from] ParseIntError),
@@ -26,7 +26,7 @@ pub enum VersionError {
 
 #[derive(Debug, Eq, Clone, Hash)]
 pub struct Version {
-    numbers: Vec<usize>,
+    numbers: Vec<u32>,
 }
 
 impl<'de> Deserialize<'de> for Version {
@@ -113,17 +113,101 @@ impl FromStr for Version {
         let mut version_parts = Vec::new();
         for num in version_num.split('.') {
             if num.is_empty() {
-                return Err(VersionError::ConsecutiveDotsError);
+                return Err(VersionError::DotsError);
             }
 
             if !num.chars().all(|c| c.is_digit(10)) {
                 return Err(VersionError::IllegalCharacterError);
             }
 
-            let parsed_num = num.parse::<usize>()?;
+            let parsed_num = num.parse::<u32>()?;
             version_parts.push(parsed_num);
         }
 
         Ok(Version { numbers: version_parts })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn valid_from_str() {
+        let correct_version = Version { numbers: vec![3, 4, 1] };
+
+        match Version::from_str("3.4.1") {
+            Ok(version) => assert_eq!(version, correct_version),
+            Err(err) => panic!("Expected Ok(Version (numbers: [3, 4, 1])), got Err({err:?})"),
+        }
+    }
+
+    #[test]
+    fn from_str_dubble_dot() {
+        assert_eq!(Version::from_str("3.4..1"), Err(VersionError::DotsError));
+    }
+
+    #[test]
+    fn from_str_trailing_dot() {
+        assert_eq!(Version::from_str("3.4.1."), Err(VersionError::DotsError));
+    }
+
+    #[test]
+    fn from_str_leading_dot() {
+        assert_eq!(Version::from_str(".3.4.1"), Err(VersionError::DotsError));
+    }
+
+    #[test]
+    fn from_str_no_input() {
+        assert_eq!(Version::from_str(""), Err(VersionError::NoneError));
+    }
+
+    #[test]
+    fn from_str_no_digit() {
+        assert_eq!(Version::from_str("3.a.1"), Err(VersionError::IllegalCharacterError));
+    }
+
+    #[test]
+    fn from_str_negative_digit() {
+        assert_eq!(Version::from_str("3.-1.1"), Err(VersionError::IllegalCharacterError));
+    }
+
+    #[test]
+    fn compare_equal() {
+        let version_left = Version { numbers: vec![3, 4, 1] };
+        let version_right = Version { numbers: vec![3, 4, 1] };
+
+        assert_eq!(version_left == version_right, true);
+    }
+
+    #[test]
+    fn compare_less_than() {
+        let version_left = Version { numbers: vec![0, 5, 10] };
+        let version_right = Version { numbers: vec![3, 4, 1] };
+
+        assert_eq!(version_left < version_right, true);
+    }
+
+    #[test]
+    fn compare_greater_than() {
+        let version_left = Version { numbers: vec![0, 5, 10] };
+        let version_right = Version { numbers: vec![3, 4, 1] };
+
+        assert_eq!(version_left > version_right, false);
+    }
+
+    #[test]
+    fn compare_different_length() {
+        let version_left = Version { numbers: vec![5] };
+        let version_right = Version { numbers: vec![3, 4, 1] };
+
+        assert_eq!(version_left < version_right, false);
+    }
+
+    #[test]
+    fn valid_format() {
+        let version = Version { numbers: vec![3, 4, 1] };
+
+        assert_eq!(version.to_string(), "3.4.1");
     }
 }
