@@ -83,5 +83,10 @@ impl HandleCommand for SearchArgs {
         println!("Latest version: {}", latest_version.to_string().red());
         println!("Dependencies: {}", dependencies.join(", ").red());
         println!("License: {}", package_version.license.unwrap_or("None".to_string()).red());
+
+        // Also print revisions if there are any
+        if package.revisions > 0 {
+            println!("Revisions: {}", package.revisions.to_string().red());
+        }
     }
 }
