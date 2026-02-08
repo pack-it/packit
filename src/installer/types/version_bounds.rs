@@ -50,7 +50,7 @@ impl VersionBounds {
     pub fn from_str_ranges(ranges: &str) -> Result<Vec<VersionBounds>, DependencyParserError> {
         // Check for empty input
         if ranges.is_empty() {
-            return Err(DependencyParserError::EmptyBoundsError);
+            return Ok(Vec::new());
         }
 
         let ranges = ranges.split('|');
@@ -147,11 +147,8 @@ mod tests {
         let version_bounds = VersionBounds::from_str_ranges("");
 
         match version_bounds {
-            Ok(bounds) => panic!("Expected Err(DependencyParserError::EmptyBoundsError), got Ok({bounds:?})"),
-            Err(e) if e != DependencyParserError::EmptyBoundsError => {
-                panic!("Expected Err(DependencyParserError::EmptyBoundsError), got Err({e:?})")
-            },
-            Err(_) => {},
+            Ok(bounds) => assert!(bounds.len() == 0),
+            Err(e) => panic!("Expected Ok([]), got Err({e:?})"),
         }
     }
 }

@@ -143,17 +143,9 @@ mod tests {
     }
 
     #[test]
-    fn from_str_dubble_dot() {
+    fn from_str_dot_errors() {
         assert_eq!(Version::from_str("3.4..1"), Err(VersionError::DotsError));
-    }
-
-    #[test]
-    fn from_str_trailing_dot() {
         assert_eq!(Version::from_str("3.4.1."), Err(VersionError::DotsError));
-    }
-
-    #[test]
-    fn from_str_leading_dot() {
         assert_eq!(Version::from_str(".3.4.1"), Err(VersionError::DotsError));
     }
 
@@ -163,45 +155,71 @@ mod tests {
     }
 
     #[test]
-    fn from_str_no_digit() {
+    fn from_str_illegal_char() {
         assert_eq!(Version::from_str("3.a.1"), Err(VersionError::IllegalCharacterError));
-    }
-
-    #[test]
-    fn from_str_negative_digit() {
         assert_eq!(Version::from_str("3.-1.1"), Err(VersionError::IllegalCharacterError));
     }
 
     #[test]
     fn compare_equal() {
-        let version_left = Version { numbers: vec![3, 4, 1] };
-        let version_right = Version { numbers: vec![3, 4, 1] };
+        let version_a = Version { numbers: vec![3, 4, 1] };
+        let version_b = Version { numbers: vec![3, 4, 2] };
 
-        assert_eq!(version_left == version_right, true);
+        assert_eq!(version_a == version_a, true);
+        assert_eq!(version_a == version_b, false);
     }
 
     #[test]
     fn compare_less_than() {
-        let version_left = Version { numbers: vec![0, 5, 10] };
-        let version_right = Version { numbers: vec![3, 4, 1] };
+        let version_a = Version { numbers: vec![3, 4, 0] };
+        let version_b = Version { numbers: vec![3, 4, 1] };
 
-        assert_eq!(version_left < version_right, true);
+        assert_eq!(version_a < version_b, true);
+        assert_eq!(version_a < version_a, false);
+    }
+
+    #[test]
+    fn compare_less_than_equals() {
+        let version_a = Version { numbers: vec![3, 4, 2] };
+        let version_b = Version { numbers: vec![3, 4, 1] };
+
+        assert_eq!(version_a <= version_a, true);
+        assert_eq!(version_a <= version_b, false);
     }
 
     #[test]
     fn compare_greater_than() {
-        let version_left = Version { numbers: vec![0, 5, 10] };
-        let version_right = Version { numbers: vec![3, 4, 1] };
+        let version_a = Version { numbers: vec![3, 4, 2] };
+        let version_b = Version { numbers: vec![3, 4, 1] };
 
-        assert_eq!(version_left > version_right, false);
+        assert_eq!(version_a > version_b, true);
+        assert_eq!(version_a > version_a, false);
+    }
+
+    #[test]
+    fn compare_greater_than_equal() {
+        let version_a = Version { numbers: vec![3, 4, 0] };
+        let version_b = Version { numbers: vec![3, 4, 1] };
+
+        assert_eq!(version_a >= version_a, true);
+        assert_eq!(version_a >= version_b, false);
+    }
+
+    #[test]
+    fn compare_not_greater_than_equals() {
+        let version_a = Version { numbers: vec![3, 4, 0] };
+        let version_b = Version { numbers: vec![3, 4, 1] };
+
+        assert_eq!(version_a >= version_b, false);
     }
 
     #[test]
     fn compare_different_length() {
-        let version_left = Version { numbers: vec![5] };
-        let version_right = Version { numbers: vec![3, 4, 1] };
+        let version_a = Version { numbers: vec![5] };
+        let version_b = Version { numbers: vec![3, 4, 1] };
 
-        assert_eq!(version_left < version_right, false);
+        assert_eq!(version_a < version_b, false);
+        assert_eq!(version_a > version_b, true);
     }
 
     #[test]
