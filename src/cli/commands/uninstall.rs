@@ -3,10 +3,10 @@ use clap::Args;
 use crate::{
     cli::commands::HandleCommand,
     config::Config,
-    error_handling::HandleError,
-    installer::{installer::Installer, types::Version},
+    installer::{types::Version, Installer, InstallerOptions},
     repositories::manager::RepositoryManager,
     storage::package_register::PackageRegister,
+    utils::unwrap_or_exit::UnwrapOrExit,
 };
 
 #[derive(Args, Debug)]
@@ -24,7 +24,9 @@ impl HandleCommand for UninstallArgs {
         let register_dir = PackageRegister::get_default_path();
         let mut register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
-        Installer::new(config, &mut register, manager).uninstall(&self.package_name, self.version.as_ref()).unwrap_or_exit(1);
+        Installer::new(config, &mut register, manager, InstallerOptions::default())
+            .uninstall(&self.package_name, self.version.as_ref())
+            .unwrap_or_exit(1);
 
         // Save changes
         register.save_to(&register_dir).unwrap_or_exit(1);

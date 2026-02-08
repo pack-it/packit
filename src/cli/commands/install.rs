@@ -5,10 +5,10 @@ use clap::Args;
 use crate::{
     cli::{commands::HandleCommand, display::logging::error},
     config::Config,
-    error_handling::HandleError,
-    installer::{installer::Installer, types::PackageId},
+    installer::{types::PackageId, Installer, InstallerOptions},
     repositories::manager::RepositoryManager,
     storage::package_register::PackageRegister,
+    utils::unwrap_or_exit::UnwrapOrExit,
 };
 
 #[derive(Args, Debug)]
@@ -39,7 +39,12 @@ impl HandleCommand for InstallArgs {
         let register_dir = PackageRegister::get_default_path();
         let mut register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
-        let mut installer = Installer::new(&config, &mut register, &manager);
+        let installer_options = InstallerOptions::default()
+            .build_source(self.build)
+            .skip_symlinking(self.skip_symlinking)
+            .skip_active(self.skip_active)
+            .keep_build(self.keep_build);
+        let mut installer = Installer::new(&config, &mut register, &manager, installer_options);
 
         // TODO: Check if this exists as an external package (possibly leading to conflicts) (if so, add to external packages)
 
@@ -62,14 +67,7 @@ impl HandleCommand for InstallArgs {
 
         // Install all packages
         for (package_name, version) in packages {
-            if let Err(error) = installer.install(
-                &package_name,
-                version.as_ref(),
-                self.build,
-                self.skip_symlinking,
-                self.skip_active,
-                self.keep_build,
-            ) {
+            if let Err(error) = installer.install(&package_name, version.as_ref()) {
                 error!(error, "Cannot install package {package_name}");
             }
         }
