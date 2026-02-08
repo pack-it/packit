@@ -29,7 +29,7 @@ pub struct PackageMeta {
     pub latest_versions: HashMap<String, Version>,
 
     #[serde(default)]
-    pub revisions: i32,
+    pub revisions: Vec<String>,
 }
 
 impl PackageMeta {
