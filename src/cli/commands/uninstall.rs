@@ -20,6 +20,7 @@ pub struct UninstallArgs {
 }
 
 impl HandleCommand for UninstallArgs {
+    // TODO: Add <package>@<version> notation for uninstall as well to be more consistant
     fn handle(&self, config: &Config, manager: &RepositoryManager) {
         let register_dir = PackageRegister::get_default_path();
         let mut register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
