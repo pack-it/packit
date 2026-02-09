@@ -8,7 +8,7 @@ use crate::{
     config::Config,
     installer::{
         build_env::BuildEnv,
-        scripts::{self, ScriptError},
+        scripts::{self, ScriptData, ScriptError},
         unpack::unpack,
     },
     platforms::TARGET_ARCHITECTURE,
@@ -157,7 +157,9 @@ impl<'a> Builder<'a> {
         let script_path = package_version.get_build_script_path(TARGET_ARCHITECTURE)?;
         let script_path = scripts::download_script(self.repository_manager, &script_path, &package.name, &repository_id)?
             .ok_or(ScriptError::ScriptNotFound("build".into()))?;
-        scripts::run_build_script(script_path, &unpack_directory, self.config, &destination_dir, env, &script_args)?;
+        let script_data = ScriptData::new(&script_path, &destination_dir, &package_version.version, self.config, &script_args);
+
+        scripts::run_build_script(&script_data, &unpack_directory, env)?;
 
         Ok(())
     }
