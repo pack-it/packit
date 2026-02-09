@@ -62,13 +62,17 @@ impl HandleCommand for SearchArgs {
         };
 
         // Get current target
-        let target = match package_version.targets.get(TARGET_ARCHITECTURE) {
-            Some(target) => target,
-            None => {
+        let target = match package_version.get_target(TARGET_ARCHITECTURE) {
+            Ok(target) => target,
+            Err(RepositoryError::TargetError) => {
                 println!(
                     "Package {} version {version} from repository {repository_id} does not exist for current target",
                     package.name
                 );
+                return;
+            },
+            Err(e) => {
+                error!(e, "Cannot read {} version {version} from repository {repository_id}", package.name);
                 return;
             },
         };

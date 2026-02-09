@@ -7,6 +7,7 @@ use crate::{
         scripts::SCRIPT_EXTENSION,
         types::{Dependency, Version},
     },
+    platforms,
     repositories::{
         error::{RepositoryError, Result},
         types::{
@@ -23,7 +24,7 @@ pub struct PackageVersionMeta {
 
     pub dependencies: Vec<Dependency>,
     pub build_dependencies: Vec<Dependency>,
-    pub targets: HashMap<String, PackageTarget>,
+    targets: HashMap<String, PackageTarget>,
 
     #[serde(rename = "source")]
     pub sources: Sources,
@@ -74,8 +75,33 @@ impl PackageVersionMeta {
         }
     }
 
+    pub fn has_target(&self, target_name: &str) -> Result<bool> {
+        match self.get_target(target_name) {
+            Ok(_) => Ok(true),
+            Err(RepositoryError::TargetError) => Ok(false),
+            Err(e) => Err(e),
+        }
+    }
+
     pub fn get_target(&self, target_name: &str) -> Result<&PackageTarget> {
-        Ok(self.targets.get(target_name).ok_or(RepositoryError::TargetError)?)
+        // Read target specific target
+        if let Some(target) = self.targets.get(target_name) {
+            return Ok(target);
+        }
+
+        // Read OS group target
+        if let Some(target) = self.targets.get(platforms::get_os_name(target_name)) {
+            return Ok(target);
+        }
+
+        // If the platform is unix, reade the unix target
+        if platforms::is_unix(target_name) {
+            if let Some(target) = self.targets.get("unix") {
+                return Ok(target);
+            }
+        }
+
+        Err(RepositoryError::TargetError)
     }
 
     pub fn get_build_script_path(&self, target_name: &str) -> Result<String> {
