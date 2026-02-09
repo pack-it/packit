@@ -257,7 +257,7 @@ impl PackageRegister {
 pub mod tests {
     use std::str::FromStr;
 
-    use crate::installer::types::dependency::tests::create_dependency;
+    use crate::installer::types::dependency_tests::create_dependency;
     use crate::platforms::TARGET_ARCHITECTURE;
 
     use super::*;
@@ -293,7 +293,7 @@ pub mod tests {
         }
     }
 
-    pub fn create_regiser() -> PackageRegister {
+    pub fn create_register() -> PackageRegister {
         let package_a = PackageId::new("A", &Version::from_str("3.4.1").expect("Expected Version."));
         let package_b = PackageId::new("B", &Version::from_str("2.72").expect("Expected Version."));
         let package_c = PackageId::new("C", &Version::from_str("1.18.1").expect("Expected Version."));
@@ -360,7 +360,7 @@ pub mod tests {
 
     #[test]
     fn add_package() {
-        let mut register = create_regiser();
+        let mut register = create_register();
         let package_id = PackageId::new("New package", &Version::from_str("2.90").expect("Expected Version."));
         let package_meta = create_package_meta(&package_id);
         let mut dependency_ids = HashSet::new();
@@ -395,7 +395,7 @@ pub mod tests {
 
     #[test]
     fn remove_package_version() {
-        let mut register = create_regiser();
+        let mut register = create_register();
 
         let package_b = PackageId::new("B", &Version::from_str("2.72").expect("Expected Version."));
         register.remove_package_version(&package_b);
@@ -413,7 +413,7 @@ pub mod tests {
 
     #[test]
     fn remove_package_version_one_of_two() {
-        let mut register = create_regiser();
+        let mut register = create_register();
 
         let package_f5 = PackageId::new("F", &Version::from_str("5").expect("Expected Version."));
         let package_f6 = PackageId::new("F", &Version::from_str("6").expect("Expected Version."));
@@ -424,7 +424,7 @@ pub mod tests {
 
     #[test]
     fn remove_package() {
-        let mut register = create_regiser();
+        let mut register = create_register();
 
         let package_f = PackageId::new("F", &Version::from_str("5").expect("Expected Version."));
         register.remove_package(&package_f.name);
@@ -437,7 +437,7 @@ pub mod tests {
 
     #[test]
     fn is_dependency() {
-        let register = create_regiser();
+        let register = create_register();
 
         let package_f5 = PackageId::new("F", &Version::from_str("5").expect("Expected Version."));
         assert!(register.is_dependency(&package_f5.name, Some(&package_f5.version)));
@@ -446,7 +446,7 @@ pub mod tests {
 
     #[test]
     fn is_not_dependency() {
-        let register = create_regiser();
+        let register = create_register();
 
         let package_f6 = PackageId::new("F", &Version::from_str("6").expect("Expected Version."));
         assert!(!register.is_dependency(&package_f6.name, Some(&package_f6.version)));
@@ -457,22 +457,20 @@ pub mod tests {
 
     #[test]
     fn get_satisfying_package() {
-        let register = create_regiser();
+        let register = create_register();
         let package_a_id = PackageId::new("A", &Version::from_str("3.4.1").expect("Expected Version."));
         let dependency = create_dependency("A", "3.4.1");
         let package_a = register.get_package_version(&package_a_id).expect("Expected package A.");
 
         match register.get_satisfying_package(&dependency) {
-            Some(package) => {
-                assert_eq!(package.package_id, package_a.package_id);
-            },
+            Some(package) => assert_eq!(package.package_id, package_a.package_id),
             None => panic!("Expected Some(InstalledPackageVersion (..)), got None"),
         }
     }
 
     #[test]
     fn satisfying_package_not_found() {
-        let register = create_regiser();
+        let register = create_register();
         let dependency = create_dependency("A", ">3.4.1");
 
         assert!(register.get_satisfying_package(&dependency).is_none());
