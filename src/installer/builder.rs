@@ -111,12 +111,15 @@ impl<'a> Builder<'a> {
             });
         }
 
+        // Get source from the package version
+        let source = package_version.get_source(TARGET_ARCHITECTURE)?;
+
         // Show download spinner
         let spinner = Spinner::new();
         spinner.show("Downloading ".to_string() + &package.name);
 
         // Download the build files
-        let response = reqwest::blocking::get(&target.url)?;
+        let response = reqwest::blocking::get(&source.url)?;
         if !response.status().is_success() {
             return Err(BuilderError::RequestUnsuccessful(response.status()));
         }
@@ -128,7 +131,7 @@ impl<'a> Builder<'a> {
         let checksum: [u8; 32] = Sha256::digest(&bytes).into();
 
         // Check equality of checksum
-        if target.checksum.sha256 != checksum {
+        if source.checksum.sha256 != checksum {
             return Err(BuilderError::ChecksumError);
         }
 

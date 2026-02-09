@@ -2,13 +2,12 @@ use std::collections::HashMap;
 
 use serde::Deserialize;
 
-use crate::{installer::types::Dependency, repositories::types::Script, utils::checksum::Checksum};
+use crate::{installer::types::Dependency, repositories::types::Script};
 
 /// Represents the package target data, containing the download url and installer type.
 #[derive(Deserialize, Debug)]
 pub struct PackageTarget {
-    pub url: String,
-    pub checksum: Checksum,
+    pub source: Option<String>,
 
     #[serde(default)]
     pub dependencies: Vec<Dependency>,

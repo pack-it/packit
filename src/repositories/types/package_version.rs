@@ -9,7 +9,10 @@ use crate::{
     },
     repositories::{
         error::{RepositoryError, Result},
-        types::{PackageTarget, Script},
+        types::{
+            common::{Source, Sources},
+            PackageTarget, Script,
+        },
     },
 };
 
@@ -21,6 +24,9 @@ pub struct PackageVersionMeta {
     pub dependencies: Vec<Dependency>,
     pub build_dependencies: Vec<Dependency>,
     pub targets: HashMap<String, PackageTarget>,
+
+    #[serde(rename = "source")]
+    pub sources: Sources,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub license: Option<String>,
@@ -45,6 +51,19 @@ pub struct PackageVersionMeta {
 }
 
 impl PackageVersionMeta {
+    pub fn get_source(&self, target_name: &str) -> Result<&Source> {
+        match &self.sources {
+            Sources::Single(source) => Ok(source),
+            Sources::Named(sources) => {
+                let target = self.targets.get(target_name).ok_or(RepositoryError::TargetError)?;
+                let source =
+                    target.source.as_ref().ok_or(RepositoryError::ValidationError("Package target does not specify source".into()))?;
+
+                Ok(sources.get(source).ok_or(RepositoryError::ValidationError("Package references an unknown source".into()))?)
+            },
+        }
+    }
+
     fn get_script_path(&self, use_version_specific: bool, script: &Option<Script>, default_script_name: &str) -> String {
         match script {
             Some(Script::NameOnly(name)) => format!("{name}.{SCRIPT_EXTENSION}"),

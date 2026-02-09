@@ -1,4 +1,5 @@
 use serde::{de, Deserialize};
+
 #[derive(Debug)]
 pub struct Checksum {
     pub sha256: [u8; 32],

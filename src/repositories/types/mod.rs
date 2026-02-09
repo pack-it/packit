@@ -1,3 +1,4 @@
+mod checksum;
 mod common;
 mod package;
 mod package_target;
@@ -11,4 +12,5 @@ pub use self::package::PackageMeta;
 pub use self::package_target::PackageTarget;
 pub use self::package_version::PackageVersionMeta;
 
+pub use self::checksum::Checksum;
 pub use self::common::Script;
