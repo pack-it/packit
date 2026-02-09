@@ -1,4 +1,4 @@
-mod dependency;
+pub mod dependency;
 mod package_id;
 mod version;
 mod version_bounds;

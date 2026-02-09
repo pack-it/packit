@@ -122,21 +122,21 @@ impl Dependency {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use std::str::FromStr;
 
     use super::*;
 
-    fn create_dependency(version_ranges: &str) -> Dependency {
+    pub fn create_dependency(name: &str, version_ranges: &str) -> Dependency {
         Dependency {
-            name: "Test".into(),
+            name: name.into(),
             version_ranges: VersionBounds::from_str_ranges(version_ranges).expect("Expected VersionBounds"),
         }
     }
 
     #[test]
     fn satisfied_name_only() {
-        let dependency = create_dependency("3.4.1");
+        let dependency = create_dependency("Test", "3.4.1");
 
         assert!(dependency.satisfied("Test", None));
         assert!(!dependency.satisfied("Test Wrong", None));
@@ -144,7 +144,7 @@ mod tests {
 
     #[test]
     fn satisfied_range() {
-        let dependency = create_dependency("3.4.1-3.4.8");
+        let dependency = create_dependency("Test", "3.4.1-3.4.8");
 
         assert!(dependency.satisfied("Test", Some(&Version::from_str("3.4.8").expect("Expected Version."))));
         assert!(!dependency.satisfied("Test", Some(&Version::from_str("3.4.0").expect("Expected version"))));
@@ -153,7 +153,7 @@ mod tests {
 
     #[test]
     fn satisfied_lower() {
-        let dependency = create_dependency("<3.4.1");
+        let dependency = create_dependency("Test", "<3.4.1");
 
         assert!(dependency.satisfied("Test", Some(&Version::from_str("3.4.0").expect("Expected Version."))));
         assert!(!dependency.satisfied("Test", Some(&Version::from_str("3.4.1").expect("Expected Version."))));
@@ -161,7 +161,7 @@ mod tests {
 
     #[test]
     fn satisfied_lower_equals() {
-        let dependency = create_dependency("<=3.4.1");
+        let dependency = create_dependency("Test", "<=3.4.1");
 
         assert!(dependency.satisfied("Test", Some(&Version::from_str("3.4.1").expect("Expected Version."))));
         assert!(!dependency.satisfied("Test", Some(&Version::from_str("3.4.2").expect("Expected Version."))));
@@ -169,7 +169,7 @@ mod tests {
 
     #[test]
     fn satisfied_higher() {
-        let dependency = create_dependency(">3.4.1");
+        let dependency = create_dependency("Test", ">3.4.1");
 
         assert!(dependency.satisfied("Test", Some(&Version::from_str("3.4.2").expect("Expected Version."))));
         assert!(!dependency.satisfied("Test", Some(&Version::from_str("3.4.1").expect("Expected Version."))));
@@ -177,7 +177,7 @@ mod tests {
 
     #[test]
     fn satisfied_higher_equals() {
-        let dependency = create_dependency(">=3.4.1");
+        let dependency = create_dependency("Test", ">=3.4.1");
 
         assert!(dependency.satisfied("Test", Some(&Version::from_str("3.4.1").expect("Expected Version."))));
         assert!(!dependency.satisfied("Test", Some(&Version::from_str("3.4.0").expect("Expected Version."))));
@@ -185,7 +185,7 @@ mod tests {
 
     #[test]
     fn satisfied_equals() {
-        let dependency = create_dependency("3.4.1");
+        let dependency = create_dependency("Test", "3.4.1");
 
         assert!(dependency.satisfied("Test", Some(&Version::from_str("3.4.1").expect("Expected Version."))));
         assert!(!dependency.satisfied("Test", Some(&Version::from_str("5").expect("Expected Version."))));

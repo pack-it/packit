@@ -42,6 +42,15 @@ pub struct Repository {
     pub provider: String,
 }
 
+impl Repository {
+    pub fn new(path: &str, provider: &str) -> Self {
+        Self {
+            path: path.to_string(),
+            provider: provider.to_string(),
+        }
+    }
+}
+
 fn default_prompt_repo_conflicts() -> bool {
     false
 }
