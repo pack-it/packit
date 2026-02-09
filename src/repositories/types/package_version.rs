@@ -136,8 +136,9 @@ impl PackageVersionMeta {
         Ok(self.script_args.iter().chain(target.script_args.iter()).map(|(key, value)| (key.as_str(), value.as_str())).collect())
     }
 
-    /// Checks if there are conflicts between the global and target specific dependencies
+    /// Checks if there are conflicts in the package version metadata
     pub fn has_conflicts(&self) -> bool {
+        // Check if a global dependency is also specified as target specific dependency
         for dependency in &self.dependencies {
             for (_, target) in &self.targets {
                 for target_dependency in &target.dependencies {
@@ -148,12 +149,31 @@ impl PackageVersionMeta {
             }
         }
 
+        // Check if a global build dependency is also specified as target specific build dependency
         for dependency in &self.build_dependencies {
             for (_, target) in &self.targets {
                 for target_dependency in &target.build_dependencies {
                     if dependency.get_name() == target_dependency.get_name() {
                         return true;
                     }
+                }
+            }
+        }
+
+        // If we have a single source, we don't allow referencing sources in the targets
+        if let Sources::Single(_) = self.sources {
+            if self.targets.iter().any(|(_, target)| target.source.is_some()) {
+                return true;
+            }
+        }
+
+        // If we have named sources, we check for valid referencing in the targets
+        if let Sources::Named(sources) = &self.sources {
+            for (_, target) in &self.targets {
+                match &target.source {
+                    Some(source) if !sources.contains_key(source) => return true,
+                    None => return true,
+                    _ => continue,
                 }
             }
         }
