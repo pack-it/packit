@@ -7,36 +7,11 @@ use crate::{
         scripts::SCRIPT_EXTENSION,
         types::{Dependency, Version},
     },
-    repositories::error::{RepositoryError, Result},
-    utils::checksum::Checksum,
+    repositories::{
+        error::{RepositoryError, Result},
+        types::{PackageTarget, Script},
+    },
 };
-
-/// Represents the repository metadata, containing repository information.
-#[derive(Deserialize, Debug)]
-pub struct RepositoryMeta {
-    pub name: String,
-    pub description: String,
-    pub maintainers: Vec<String>,
-}
-
-/// Represents the package metadata, containing package information.
-#[derive(Deserialize, Debug)]
-pub struct PackageMeta {
-    pub name: String,
-    pub description: String,
-    pub homepage: Option<String>,
-    pub versions: Vec<Version>,
-    pub latest_versions: HashMap<String, Version>,
-
-    #[serde(default)]
-    pub revisions: Vec<String>,
-}
-
-impl PackageMeta {
-    pub fn get_latest_version(&self, target_name: &str) -> Result<&Version> {
-        Ok(self.latest_versions.get(target_name).ok_or(RepositoryError::TargetError)?)
-    }
-}
 
 /// Represents the package version metadata, containing dependencies and targets.
 #[derive(Deserialize, Debug)]
@@ -148,37 +123,4 @@ impl PackageVersionMeta {
     fn default_use_version_specific() -> bool {
         false
     }
-}
-
-/// Represents the package target data, containing the download url and installer type.
-#[derive(Deserialize, Debug)]
-pub struct PackageTarget {
-    pub url: String,
-    pub checksum: Checksum,
-
-    #[serde(default)]
-    pub dependencies: Vec<Dependency>,
-
-    #[serde(default)]
-    pub build_dependencies: Vec<Dependency>,
-
-    pub skip_symlinking: Option<bool>,
-
-    #[serde(default)]
-    pub script_args: HashMap<String, String>,
-
-    pub build_script: Option<Script>,
-    pub preinstall_script: Option<Script>,
-    pub postinstall_script: Option<Script>,
-    pub test_script: Option<Script>,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(untagged)]
-pub enum Script {
-    NameOnly(String),
-    Expanded {
-        name: String,
-        version_specific: bool,
-    },
 }
