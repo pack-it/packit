@@ -56,7 +56,7 @@ impl PackageVersionMeta {
         match &self.sources {
             Sources::Single(source) => Ok(source),
             Sources::Named(sources) => {
-                let target = self.targets.get(target_name).ok_or(RepositoryError::TargetError)?;
+                let target = self.get_target(target_name)?;
                 let source =
                     target.source.as_ref().ok_or(RepositoryError::ValidationError("Package target does not specify source".into()))?;
 
