@@ -1,4 +1,8 @@
-use std::{fs::File, io, path::PathBuf};
+use std::{
+    fs::File,
+    io::{self, Write},
+    path::PathBuf,
+};
 
 use flate2::{write::GzEncoder, Compression};
 use tar::Builder;
@@ -8,7 +12,7 @@ use crate::{
     config::Config,
     installer::types::PackageId,
     platforms::TARGET_ARCHITECTURE,
-    repositories::{error::RepositoryError, manager::RepositoryManager},
+    repositories::{error::RepositoryError, manager::RepositoryManager, types::Checksum},
 };
 
 /// The errors that occur during installation.
@@ -35,9 +39,10 @@ pub fn package(config: &Config, package_id: &PackageId, destination: &PathBuf, m
 
     // Create pre-package filename
     let filename = format!("{package_id}-{revisions}-{TARGET_ARCHITECTURE}.tar.gz");
-    let prepackage_dir = destination.join(filename);
+    let compressed_filename = format!("{filename}.tar.gz");
+    let prepackage_dir = destination.join(compressed_filename);
 
-    let result = File::create(prepackage_dir)?;
+    let result = File::create(&prepackage_dir)?;
     let encoder = GzEncoder::new(result, Compression::default());
 
     // Add the whole directory recursively
@@ -47,5 +52,15 @@ pub fn package(config: &Config, package_id: &PackageId, destination: &PathBuf, m
     // Finish writing
     let encoder = tar.into_inner()?;
     encoder.finish()?;
+
+    // Calculate checksum for the compressed
+    let mut compressed = File::open(&prepackage_dir)?;
+    let checksum = Checksum::calculate_checksum(&mut compressed)?;
+
+    // Store checksum
+    let checksum_filename = format!("{filename}.sha256");
+    let mut checksum_file = File::create(checksum_filename)?;
+    checksum_file.write_all(checksum.as_bytes())?;
+
     Ok(())
 }
