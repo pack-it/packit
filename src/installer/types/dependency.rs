@@ -5,13 +5,10 @@ use thiserror::Error;
 
 use crate::installer::types::{Version, VersionBounds, VersionError};
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum DependencyParserError {
-    #[error("Caused by: Cannot parse version number")]
+    #[error("Cannot parse version number")]
     VersionNumberError(#[from] VersionError),
-
-    #[error("No bounds specified while requested with '@'")]
-    EmptyBoundsError,
 }
 
 #[derive(Debug, Clone)]
@@ -41,6 +38,7 @@ impl<'de> Deserialize<'de> for Dependency {
         // Remove @ character from version number
         let version = version.strip_prefix("@").unwrap_or("");
 
+        // TODO: Check for impossible requirements, like: >3.1|<3.1
         let version_ranges = VersionBounds::from_str_ranges(version).map_err(de::Error::custom)?;
 
         Ok(Self {
@@ -120,5 +118,76 @@ impl Dependency {
         }
 
         false
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use std::str::FromStr;
+
+    use super::*;
+
+    pub fn create_dependency(name: &str, version_ranges: &str) -> Dependency {
+        Dependency {
+            name: name.into(),
+            version_ranges: VersionBounds::from_str_ranges(version_ranges).expect("Expected VersionBounds"),
+        }
+    }
+
+    #[test]
+    fn satisfied_name_only() {
+        let dependency = create_dependency("Test", "3.4.1");
+
+        assert!(dependency.satisfied("Test", None));
+        assert!(!dependency.satisfied("Test Wrong", None));
+    }
+
+    #[test]
+    fn satisfied_range() {
+        let dependency = create_dependency("Test", "3.4.1-3.4.8");
+
+        assert!(dependency.satisfied("Test", Some(&Version::from_str("3.4.8").expect("Expected Version."))));
+        assert!(!dependency.satisfied("Test", Some(&Version::from_str("3.4.0").expect("Expected version"))));
+        assert!(!dependency.satisfied("Test", Some(&Version::from_str("3.4.9").expect("Expected version"))));
+    }
+
+    #[test]
+    fn satisfied_lower() {
+        let dependency = create_dependency("Test", "<3.4.1");
+
+        assert!(dependency.satisfied("Test", Some(&Version::from_str("3.4.0").expect("Expected Version."))));
+        assert!(!dependency.satisfied("Test", Some(&Version::from_str("3.4.1").expect("Expected Version."))));
+    }
+
+    #[test]
+    fn satisfied_lower_equals() {
+        let dependency = create_dependency("Test", "<=3.4.1");
+
+        assert!(dependency.satisfied("Test", Some(&Version::from_str("3.4.1").expect("Expected Version."))));
+        assert!(!dependency.satisfied("Test", Some(&Version::from_str("3.4.2").expect("Expected Version."))));
+    }
+
+    #[test]
+    fn satisfied_higher() {
+        let dependency = create_dependency("Test", ">3.4.1");
+
+        assert!(dependency.satisfied("Test", Some(&Version::from_str("3.4.2").expect("Expected Version."))));
+        assert!(!dependency.satisfied("Test", Some(&Version::from_str("3.4.1").expect("Expected Version."))));
+    }
+
+    #[test]
+    fn satisfied_higher_equals() {
+        let dependency = create_dependency("Test", ">=3.4.1");
+
+        assert!(dependency.satisfied("Test", Some(&Version::from_str("3.4.1").expect("Expected Version."))));
+        assert!(!dependency.satisfied("Test", Some(&Version::from_str("3.4.0").expect("Expected Version."))));
+    }
+
+    #[test]
+    fn satisfied_equals() {
+        let dependency = create_dependency("Test", "3.4.1");
+
+        assert!(dependency.satisfied("Test", Some(&Version::from_str("3.4.1").expect("Expected Version."))));
+        assert!(!dependency.satisfied("Test", Some(&Version::from_str("5").expect("Expected Version."))));
     }
 }

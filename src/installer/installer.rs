@@ -191,7 +191,7 @@ impl<'a> Installer<'a> {
         // Add and save package to installed storage toml
         self.register.add_package(
             &node.package_metadata,
-            &version_meta,
+            &node.version_metadata.version,
             &node.dependencies,
             source_repository,
             &install_directory,

@@ -12,3 +12,6 @@ pub use version::Version;
 pub use version::VersionError;
 
 pub use version_bounds::VersionBounds;
+
+#[cfg(test)]
+pub use dependency::tests as dependency_tests;

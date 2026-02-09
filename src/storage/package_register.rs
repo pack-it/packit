@@ -11,7 +11,7 @@ use crate::{
     config::Repository,
     installer::types::{Dependency, PackageId, Version},
     platforms::DEFAULT_CONFIG_DIR,
-    repositories::types::{PackageMeta, PackageVersionMeta},
+    repositories::types::PackageMeta,
     storage::{error::InstalledPackagesError, installed_package::InstalledPackage, installed_package_version::InstalledPackageVersion},
     utils::constants::REGISTER_FILENAME,
 };
@@ -85,7 +85,7 @@ impl PackageRegister {
     pub fn add_package(
         &mut self,
         package: &PackageMeta,
-        package_version: &PackageVersionMeta,
+        version: &Version,
         dependency_ids: &HashSet<PackageId>,
         source_repository: &Repository,
         install_path: &PathBuf,
@@ -93,7 +93,7 @@ impl PackageRegister {
         active: bool,
     ) {
         let installed_package_version = InstalledPackageVersion {
-            package_id: PackageId::new(&package.name, &package_version.version),
+            package_id: PackageId::new(&package.name, version),
             source_repository_url: source_repository.path.clone(),
             source_repository_provider: source_repository.provider.clone(),
             dependencies: dependency_ids.clone(),
@@ -250,5 +250,229 @@ impl PackageRegister {
     /// Returns an iterator, which iterates over all nested installed package version values.
     pub fn iterate_all(&self) -> impl Iterator<Item = &InstalledPackageVersion> {
         self.packages.values().flat_map(|p| p.versions.values())
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use std::str::FromStr;
+
+    use crate::installer::types::dependency_tests::create_dependency;
+    use crate::platforms::TARGET_ARCHITECTURE;
+
+    use super::*;
+
+    fn create_package_version(
+        package_id: PackageId,
+        dependencies: HashSet<PackageId>,
+        dependents: HashSet<PackageId>,
+    ) -> InstalledPackageVersion {
+        InstalledPackageVersion {
+            package_id,
+            source_repository_provider: "-".to_string(),
+            source_repository_url: "-".to_string(),
+            dependencies,
+            dependents,
+            install_path: "-".into(),
+        }
+    }
+
+    fn create_package(package_versions: Vec<InstalledPackageVersion>) -> InstalledPackage {
+        let active_version = package_versions[0].package_id.version.clone();
+        let mut versions = HashMap::new();
+        for package_version in package_versions {
+            versions.insert(package_version.package_id.version.clone(), package_version);
+        }
+
+        InstalledPackage {
+            versions,
+            symlinked: true,
+            active_version,
+            description: "-".to_string(),
+            homepage: None,
+        }
+    }
+
+    pub fn create_register() -> PackageRegister {
+        let package_a = PackageId::new("A", &Version::from_str("3.4.1").expect("Expected Version."));
+        let package_b = PackageId::new("B", &Version::from_str("2.72").expect("Expected Version."));
+        let package_c = PackageId::new("C", &Version::from_str("1.18.1").expect("Expected Version."));
+        let package_d = PackageId::new("D", &Version::from_str("2.5.4").expect("Expected Version."));
+        let package_e = PackageId::new("E", &Version::from_str("10.4").expect("Expected Version."));
+        let package_f5 = PackageId::new("F", &Version::from_str("5").expect("Expected Version."));
+        let package_f6 = PackageId::new("F", &Version::from_str("6").expect("Expected Version."));
+
+        let mut packages = HashMap::new();
+        let package_versions = vec![create_package_version(
+            package_a.clone(),
+            HashSet::from([package_b.clone(), package_c.clone()]),
+            HashSet::new(),
+        )];
+        packages.insert(package_a.name.to_string(), create_package(package_versions));
+
+        let package_versions = vec![create_package_version(
+            package_b.clone(),
+            HashSet::from([package_e.clone()]),
+            HashSet::from([package_a.clone()]),
+        )];
+        packages.insert(package_b.name.to_string(), create_package(package_versions));
+
+        let package_versions = vec![create_package_version(
+            package_c.clone(),
+            HashSet::from([package_d.clone(), package_e.clone()]),
+            HashSet::from([package_a.clone()]),
+        )];
+        packages.insert(package_c.name.to_string(), create_package(package_versions));
+
+        let package_versions = vec![create_package_version(
+            package_d.clone(),
+            HashSet::from([package_f5.clone()]),
+            HashSet::from([package_c.clone()]),
+        )];
+        packages.insert(package_d.name.to_string(), create_package(package_versions));
+
+        let package_versions = vec![create_package_version(
+            package_e.clone(),
+            HashSet::new(),
+            HashSet::from([package_b, package_c]),
+        )];
+        packages.insert(package_e.name.to_string(), create_package(package_versions));
+
+        let package_versions = vec![
+            create_package_version(package_f5.clone(), HashSet::new(), HashSet::from([package_d])),
+            create_package_version(package_f6, HashSet::new(), HashSet::new()),
+        ];
+        packages.insert(package_f5.name.to_string(), create_package(package_versions));
+
+        PackageRegister { packages }
+    }
+
+    pub fn create_package_meta(package_id: &PackageId) -> PackageMeta {
+        PackageMeta {
+            name: package_id.name.to_string(),
+            description: "-".to_string(),
+            homepage: None,
+            versions: vec![package_id.version.clone()],
+            latest_versions: HashMap::from([(TARGET_ARCHITECTURE.to_string(), package_id.version.clone())]),
+            revisions: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn add_package() {
+        let mut register = create_register();
+        let package_id = PackageId::new("New package", &Version::from_str("2.90").expect("Expected Version."));
+        let package_meta = create_package_meta(&package_id);
+        let mut dependency_ids = HashSet::new();
+        dependency_ids.insert(PackageId::new("B", &Version::from_str("2.72").expect("Expected Version.")));
+
+        register.add_package(
+            &package_meta,
+            &package_id.version,
+            &dependency_ids,
+            &Repository::new("-", "-"),
+            &PathBuf::from("-"),
+            false,
+            false,
+        );
+
+        let package = match register.get_package_version(&package_id) {
+            Some(package) => package,
+            None => panic!("Expected Some(InstalledPackageVersion (..)), got None"),
+        };
+
+        let package_b_id = PackageId::new("B", &Version::from_str("2.72").expect("Expected Version."));
+        let package_b = match register.get_package_version(&package_b_id) {
+            Some(package) => package,
+            None => panic!("Expected Some(InstalledPackageVersion (..)), got None"),
+        };
+
+        assert_eq!(package.package_id.name, package_id.name);
+        assert_eq!(package.package_id.version, package_id.version);
+        assert_eq!(package.dependencies.get(&package_b_id), Some(&package_b_id));
+        assert_eq!(package_b.dependents.get(&package_id), Some(&package_id));
+    }
+
+    #[test]
+    fn remove_package_version() {
+        let mut register = create_register();
+
+        let package_b = PackageId::new("B", &Version::from_str("2.72").expect("Expected Version."));
+        register.remove_package_version(&package_b);
+
+        assert!(register.get_package_version(&package_b).is_none());
+
+        // Check if package A still has B as a dependency (B shouldn't be removed)
+        let package_a = PackageId::new("A", &Version::from_str("3.4.1").expect("Expected Version."));
+        assert!(register.get_package_version(&package_a).expect("Expected package A").dependencies.get(&package_b).is_some());
+
+        // Check that B is deleted as a dependent
+        let package_a = PackageId::new("E", &Version::from_str("10.4").expect("Expected Version."));
+        assert!(register.get_package_version(&package_a).expect("Expected package C").dependents.get(&package_b).is_none());
+    }
+
+    #[test]
+    fn remove_package_version_one_of_two() {
+        let mut register = create_register();
+
+        let package_f5 = PackageId::new("F", &Version::from_str("5").expect("Expected Version."));
+        let package_f6 = PackageId::new("F", &Version::from_str("6").expect("Expected Version."));
+        register.remove_package_version(&package_f5);
+        assert!(register.get_package_version(&package_f5).is_none());
+        assert!(register.get_package_version(&package_f6).is_some());
+    }
+
+    #[test]
+    fn remove_package() {
+        let mut register = create_register();
+
+        let package_f = PackageId::new("F", &Version::from_str("5").expect("Expected Version."));
+        register.remove_package(&package_f.name);
+        assert!(register.get_package(&package_f.name).is_none());
+
+        // Check if package D still has B as a dependency (B shouldn't be removed)
+        let package_d = PackageId::new("D", &Version::from_str("2.5.4").expect("Expected Version."));
+        assert!(register.get_package_version(&package_d).expect("Expected package D").dependencies.get(&package_f).is_some());
+    }
+
+    #[test]
+    fn is_dependency() {
+        let register = create_register();
+
+        let package_f5 = PackageId::new("F", &Version::from_str("5").expect("Expected Version."));
+        assert!(register.is_dependency(&package_f5.name, Some(&package_f5.version)));
+        assert!(register.is_dependency(&package_f5.name, None));
+    }
+
+    #[test]
+    fn is_not_dependency() {
+        let register = create_register();
+
+        let package_f6 = PackageId::new("F", &Version::from_str("6").expect("Expected Version."));
+        assert!(!register.is_dependency(&package_f6.name, Some(&package_f6.version)));
+
+        let package_a = PackageId::new("A", &Version::from_str("3.4.1").expect("Expected Version."));
+        assert!(!register.is_dependency(&package_a.name, Some(&package_a.version)));
+    }
+
+    #[test]
+    fn get_satisfying_package() {
+        let register = create_register();
+        let package_a_id = PackageId::new("A", &Version::from_str("3.4.1").expect("Expected Version."));
+        let dependency = create_dependency("A", "3.4.1");
+        let package_a = register.get_package_version(&package_a_id).expect("Expected package A.");
+
+        match register.get_satisfying_package(&dependency) {
+            Some(package) => assert_eq!(package.package_id, package_a.package_id),
+            None => panic!("Expected Some(InstalledPackageVersion (..)), got None"),
+        }
+    }
+
+    #[test]
+    fn satisfying_package_not_found() {
+        let register = create_register();
+        let dependency = create_dependency("A", ">3.4.1");
+
+        assert!(register.get_satisfying_package(&dependency).is_none());
     }
 }
