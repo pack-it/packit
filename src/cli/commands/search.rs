@@ -2,7 +2,7 @@ use clap::Args;
 use colored::Colorize;
 
 use crate::{
-    cli::commands::HandleCommand,
+    cli::{commands::HandleCommand, display::logging::error},
     config::Config,
     installer::types::{PackageId, Version},
     platforms::TARGET_ARCHITECTURE,
@@ -29,7 +29,7 @@ impl HandleCommand for SearchArgs {
                 return;
             },
             Err(e) => {
-                println!("Cannot read package: {e:?}");
+                error!(e, "Cannot read package");
                 return;
             },
         };
@@ -56,20 +56,23 @@ impl HandleCommand for SearchArgs {
         let package_version = match manager.read_repo_package_version(&repository_id, &package_id) {
             Ok(package_version) => package_version,
             Err(e) => {
-                println!("Cannot read {} version {version} from repository {repository_id}", package.name);
-                println!("{e}");
+                error!(e, "Cannot read {} version {version} from repository {repository_id}", package.name);
                 return;
             },
         };
 
         // Get current target
-        let target = match package_version.targets.get(TARGET_ARCHITECTURE) {
-            Some(target) => target,
-            None => {
+        let target = match package_version.get_target(TARGET_ARCHITECTURE) {
+            Ok(target) => target,
+            Err(RepositoryError::TargetError) => {
                 println!(
                     "Package {} version {version} from repository {repository_id} does not exist for current target",
                     package.name
                 );
+                return;
+            },
+            Err(e) => {
+                error!(e, "Cannot read {} version {version} from repository {repository_id}", package.name);
                 return;
             },
         };

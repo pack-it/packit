@@ -120,7 +120,7 @@ impl<'a> RepositoryManager<'a> {
             };
 
             // Check if package contains the target
-            if !package.targets.contains_key(TARGET_ARCHITECTURE) {
+            if !package.has_target(TARGET_ARCHITECTURE)? {
                 continue;
             }
 

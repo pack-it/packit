@@ -9,7 +9,7 @@ use crate::{
         builder::Builder,
         error::{InstallerError, Result},
         options::InstallerOptions,
-        scripts,
+        scripts::{self, ScriptData},
         symlinker::Symlinker,
         types::{Dependency, PackageId, Version},
     },
@@ -159,27 +159,30 @@ impl<'a> Installer<'a> {
             fs::create_dir_all(&install_directory)?;
         }
 
-        let script_args = node.version_metadata.get_script_args(TARGET_ARCHITECTURE)?;
+        let version_meta = &node.version_metadata;
+
+        let script_args = version_meta.get_script_args(TARGET_ARCHITECTURE)?;
 
         // Download and run pre install script if it exists
-        let script_path = node.version_metadata.get_preinstall_script_path(TARGET_ARCHITECTURE)?;
+        let script_path = version_meta.get_preinstall_script_path(TARGET_ARCHITECTURE)?;
         let downloaded_script = scripts::download_script(self.repository_manager, &script_path, &package_id.name, &node.repository_id)?;
         if let Some(script_file) = downloaded_script {
-            scripts::run_pre_script(script_file, &install_directory, self.config, &install_directory, &script_args)?;
+            let script_data = ScriptData::new(&script_file, &install_directory, &version_meta.version, self.config, &script_args);
+            scripts::run_pre_script(&script_data, &install_directory)?;
         }
 
         // Get source repository for installed storage before actually installing package
         let source_repository = self.config.repositories.get(&node.repository_id).expect("Expected repository in config");
 
         // Get the target information from the package version info
-        let target = node.version_metadata.get_target(TARGET_ARCHITECTURE)?;
+        let target = version_meta.get_target(TARGET_ARCHITECTURE)?;
 
         // Get build version of package
         match url {
             Some(url) => self.download_prebuild(&url, &install_directory)?,
             None => Builder::new(self.config, self.register, self.repository_manager).build(
                 &node.package_metadata,
-                &node.version_metadata,
+                &version_meta,
                 &node.repository_id,
                 &install_directory,
             )?,
@@ -188,7 +191,7 @@ impl<'a> Installer<'a> {
         // Add and save package to installed storage toml
         self.register.add_package(
             &node.package_metadata,
-            &node.version_metadata,
+            &version_meta,
             &node.dependencies,
             source_repository,
             &install_directory,
@@ -198,19 +201,21 @@ impl<'a> Installer<'a> {
         self.register.save_to(&PackageRegister::get_default_path())?;
 
         // Download and run post install script if it exists
-        let script_path = node.version_metadata.get_postinstall_script_path(TARGET_ARCHITECTURE)?;
+        let script_path = version_meta.get_postinstall_script_path(TARGET_ARCHITECTURE)?;
         let downloaded_script = scripts::download_script(self.repository_manager, &script_path, &package_id.name, &node.repository_id)?;
         if let Some(script_file) = downloaded_script {
-            scripts::run_post_script(script_file, &install_directory, self.config, &script_args)?;
+            let script_data = ScriptData::new(&script_file, &install_directory, &version_meta.version, self.config, &script_args);
+            scripts::run_post_script(&script_data)?;
         }
 
         self.determine_active(node, &package_id, target)?;
 
         // Download and run test script if it exists
-        let script_path = node.version_metadata.get_test_script_path(TARGET_ARCHITECTURE)?;
+        let script_path = version_meta.get_test_script_path(TARGET_ARCHITECTURE)?;
         let downloaded_script = scripts::download_script(self.repository_manager, &script_path, &package_id.name, &node.repository_id)?;
         if let Some(script_file) = downloaded_script {
-            scripts::run_test_script(script_file, &install_directory, self.config, &script_args)?;
+            let script_data = ScriptData::new(&script_file, &install_directory, &version_meta.version, self.config, &script_args);
+            scripts::run_test_script(&script_data)?;
         }
 
         Ok(())

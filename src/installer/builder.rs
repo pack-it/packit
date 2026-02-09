@@ -8,7 +8,7 @@ use crate::{
     config::Config,
     installer::{
         build_env::BuildEnv,
-        scripts::{self, ScriptError},
+        scripts::{self, ScriptData, ScriptError},
         unpack::unpack,
     },
     platforms::TARGET_ARCHITECTURE,
@@ -111,12 +111,15 @@ impl<'a> Builder<'a> {
             });
         }
 
+        // Get source from the package version
+        let source = package_version.get_source(TARGET_ARCHITECTURE)?;
+
         // Show download spinner
         let spinner = Spinner::new();
         spinner.show("Downloading ".to_string() + &package.name);
 
         // Download the build files
-        let response = reqwest::blocking::get(&target.url)?;
+        let response = reqwest::blocking::get(&source.url)?;
         if !response.status().is_success() {
             return Err(BuilderError::RequestUnsuccessful(response.status()));
         }
@@ -128,7 +131,7 @@ impl<'a> Builder<'a> {
         let checksum: [u8; 32] = Sha256::digest(&bytes).into();
 
         // Check equality of checksum
-        if target.checksum.sha256 != checksum {
+        if source.checksum.sha256 != checksum {
             return Err(BuilderError::ChecksumError);
         }
 
@@ -154,7 +157,9 @@ impl<'a> Builder<'a> {
         let script_path = package_version.get_build_script_path(TARGET_ARCHITECTURE)?;
         let script_path = scripts::download_script(self.repository_manager, &script_path, &package.name, &repository_id)?
             .ok_or(ScriptError::ScriptNotFound("build".into()))?;
-        scripts::run_build_script(script_path, &unpack_directory, self.config, &destination_dir, env, &script_args)?;
+        let script_data = ScriptData::new(&script_path, &destination_dir, &package_version.version, self.config, &script_args);
+
+        scripts::run_build_script(&script_data, &unpack_directory, env)?;
 
         Ok(())
     }
