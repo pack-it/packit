@@ -24,7 +24,7 @@ pub struct PackageVersionMeta {
 
     pub dependencies: Vec<Dependency>,
     pub build_dependencies: Vec<Dependency>,
-    targets: HashMap<String, PackageTarget>,
+    pub targets: HashMap<String, PackageTarget>,
 
     #[serde(rename = "source")]
     pub sources: Sources,
@@ -49,6 +49,9 @@ pub struct PackageVersionMeta {
 
     #[serde(default = "PackageVersionMeta::default_use_version_specific")]
     pub use_version_specific_test: bool,
+
+    #[serde(default)]
+    pub revisions: Vec<String>,
 }
 
 impl PackageVersionMeta {

@@ -9,6 +9,9 @@ use crate::{config, installer::types::PackageId};
 pub struct InstalledPackageVersion {
     pub package_id: PackageId,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub license: Option<String>,
+
     #[serde(default = "config::default_repository_provider")]
     #[serde(skip_serializing_if = "is_repository_provider_default")]
     pub source_repository_provider: String,
@@ -23,6 +26,9 @@ pub struct InstalledPackageVersion {
     pub dependents: HashSet<PackageId>,
 
     pub install_path: PathBuf,
+
+    #[serde(default)]
+    pub revisions: Vec<String>,
 }
 
 fn is_repository_provider_default(value: &String) -> bool {

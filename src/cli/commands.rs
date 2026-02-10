@@ -2,6 +2,7 @@ mod fix;
 mod install;
 mod link;
 mod list;
+mod package;
 mod repositories;
 mod search;
 mod switch;
@@ -15,8 +16,8 @@ use clap::{builder::Styles, Parser, Subcommand};
 use crate::{
     cli::{
         commands::{
-            fix::FixArgs, install::InstallArgs, link::LinkArgs, list::ListArgs, repositories::RepositoryArgs, search::SearchArgs,
-            switch::SwitchArgs, uninstall::UninstallArgs, unlink::UnlinkArgs,
+            fix::FixArgs, install::InstallArgs, link::LinkArgs, list::ListArgs, package::PackageArgs, repositories::RepositoryArgs,
+            search::SearchArgs, switch::SwitchArgs, uninstall::UninstallArgs, unlink::UnlinkArgs,
         },
         display::logging::error,
     },
@@ -60,6 +61,9 @@ enum Commands {
 
     /// Check the installation and fix problems
     Fix(FixArgs),
+
+    /// Package a package version
+    Package(PackageArgs),
 }
 
 impl Cli {
@@ -94,6 +98,7 @@ impl Cli {
             Commands::Link(args) => args,
             Commands::Unlink(args) => args,
             Commands::Fix(args) => args,
+            Commands::Package(args) => args,
         };
 
         args.handle(config, manager);
