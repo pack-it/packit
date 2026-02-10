@@ -1,3 +1,4 @@
+mod check;
 mod fix;
 mod install;
 mod link;
@@ -16,8 +17,8 @@ use clap::{builder::Styles, Parser, Subcommand};
 use crate::{
     cli::{
         commands::{
-            fix::FixArgs, install::InstallArgs, link::LinkArgs, list::ListArgs, package::PackageArgs, repositories::RepositoryArgs,
-            search::SearchArgs, switch::SwitchArgs, uninstall::UninstallArgs, unlink::UnlinkArgs,
+            check::CheckArgs, fix::FixArgs, install::InstallArgs, link::LinkArgs, list::ListArgs, package::PackageArgs,
+            repositories::RepositoryArgs, search::SearchArgs, switch::SwitchArgs, uninstall::UninstallArgs, unlink::UnlinkArgs,
         },
         display::logging::error,
     },
@@ -59,7 +60,10 @@ enum Commands {
     /// Remove symlinks for a certain package
     Unlink(UnlinkArgs),
 
-    /// Check the installation and fix problems
+    /// Check the installation and only show the issues
+    Check(CheckArgs),
+
+    /// Check the installation and fix issues
     Fix(FixArgs),
 
     /// Package a package version
@@ -97,6 +101,7 @@ impl Cli {
             Commands::Switch(args) => args,
             Commands::Link(args) => args,
             Commands::Unlink(args) => args,
+            Commands::Check(args) => args,
             Commands::Fix(args) => args,
             Commands::Package(args) => args,
         };

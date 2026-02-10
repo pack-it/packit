@@ -2,7 +2,7 @@ use clap::Args;
 
 use crate::{
     cli::commands::HandleCommand, config::Config, repositories::manager::RepositoryManager, storage::package_register::PackageRegister,
-    utils::unwrap_or_exit::UnwrapOrExit, verifier::get_packages,
+    utils::unwrap_or_exit::UnwrapOrExit,
 };
 
 #[derive(Args, Debug)]
@@ -18,9 +18,9 @@ impl HandleCommand for ListArgs {
         let register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
         if self.use_dir {
-            for package in get_packages(&config).unwrap_or_exit(1) {
-                println!("{}", package);
-            }
+            // for package in get_packages(&config).unwrap_or_exit(1) {
+            //     println!("{}", package);
+            // }
         } else {
             for package in register.iterate_all() {
                 println!("{}", package.package_id);

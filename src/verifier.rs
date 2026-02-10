@@ -1,7 +1,8 @@
-use std::{fs, path::Path};
+use std::fs;
+
 use thiserror::Error;
 
-use crate::config::Config;
+use crate::{config::Config, installer::types::PackageId, issue::Issue, storage::package_register::PackageRegister};
 
 #[derive(Error, Debug)]
 pub enum VerifierError {
@@ -9,43 +10,95 @@ pub enum VerifierError {
     IOError(#[from] std::io::Error),
 }
 
-/// TODO: Verifies if a specific package works
-pub fn verify_package() {}
-
-/// Checks if a package exists with the specified version (by checking the directory itself, not from information storage).
-/// If the version is none, it checks if there is at least one package version with the specified name.
-/// TODO: Implement
-pub fn package_exists(package_name: &String, version: &Option<String>) -> bool {
-    true
+pub struct Verifier<'a> {
+    config: &'a Config,
+    register: &'a PackageRegister,
 }
 
-/// Gets the installed packages, by actually checking the install directory.
-pub fn get_packages(config: &Config) -> Result<Vec<String>, VerifierError> {
-    let packages_dir = Path::new(&config.prefix_directory).join("packages");
+impl<'a> Verifier<'a> {
+    pub fn new(config: &'a Config, register: &'a PackageRegister) -> Self {
+        Self { config, register }
+    }
 
-    // Look inside the packit install directory for package installations
-    let mut packages: Vec<String> = Vec::new();
-    let directory = fs::read_dir(packages_dir)?;
-    for package_entry in directory {
-        let package_entry = package_entry?;
-        let path = package_entry.path();
-        if path.is_file() {
-            continue;
+    pub fn find_issues(&self) -> Result<Vec<Issue>, VerifierError> {
+        let mut issues = Vec::new();
+
+        //self.check_packit_files();
+
+        if let Some(issue) = self.check_consistency()? {
+            issues.push(issue);
         }
 
-        // Look inside the package installation for multiple versions
-        let package_name = package_entry.file_name();
-        for version_entry in fs::read_dir(path)? {
-            let version_entry = version_entry?;
-            if version_entry.path().is_file() {
+        if let Some(issue) = self.check_dependency_tree() {
+            issues.push(issue);
+        }
+
+        Ok(issues)
+    }
+
+    pub fn find_package_issue(&self) {
+        // Find issues with a specific package, maybe even package it and compare it with checksum
+        // (Not sure if checksum stays the same for a package or that data can be changed/added)
+    }
+
+    fn check_packit_files(&self) {
+        // TODO: Check if all packit files (config, installed.toml, etc) are present and in the correct place
+        // Can't check config because error is returned before find_issues is ran
+    }
+
+    fn check_consistency(&self) -> Result<Option<Issue>, VerifierError> {
+        let mut missing = Vec::new();
+        for package in self.register.iterate_all() {
+            let package_directory = self
+                .config
+                .prefix_directory
+                .join("packages")
+                .join(&package.package_id.name)
+                .join(package.package_id.version.to_string());
+
+            // Check if the directory exists, if not add it to the missing packages
+            if !fs::exists(package_directory)? {
+                missing.push(package.package_id.clone());
+            }
+        }
+
+        if missing.is_empty() {
+            return Ok(None);
+        }
+
+        Ok(Some(Issue::InconsistentStorage(missing)))
+    }
+
+    fn check_dependency_tree(&self) -> Option<Issue> {
+        let mut all_missing = Vec::new();
+        for package in self.register.iterate_all() {
+            all_missing.extend(self.check_package_dependency_tree(&package.package_id));
+        }
+
+        if all_missing.is_empty() {
+            return None;
+        }
+
+        Some(Issue::BrokenTree(all_missing))
+    }
+
+    fn check_package_dependency_tree(&self, package_id: &PackageId) -> Vec<(PackageId, PackageId)> {
+        let package = match self.register.get_package_version(package_id) {
+            Some(package) => package,
+            None => todo!("Some error"),
+        };
+
+        let mut missing = Vec::new();
+        for dependency in &package.dependencies {
+            if self.register.get_package_version(dependency).is_none() {
+                missing.push((package_id.clone(), dependency.clone()));
                 continue;
             }
 
-            packages.push(package_name.to_str().unwrap().to_string() + " " + version_entry.file_name().to_str().unwrap());
+            // Recursively check if all the dependencies are installed
+            missing.extend(self.check_package_dependency_tree(dependency));
         }
+
+        missing
     }
-
-    Ok(packages)
 }
-
-// TODO: Make a method that syncs info.toml and actuall directory (in case of out of sync)
