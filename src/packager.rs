@@ -12,7 +12,7 @@ use crate::{
     config::Config,
     installer::types::PackageId,
     platforms::TARGET_ARCHITECTURE,
-    repositories::{error::RepositoryError, manager::RepositoryManager, types::Checksum},
+    repositories::{error::RepositoryError, types::Checksum},
 };
 
 /// The errors that occur during installation.
@@ -25,17 +25,13 @@ pub enum PackagerError {
     IOError(#[from] std::io::Error),
 }
 
-pub fn package(config: &Config, package_id: &PackageId, destination: &PathBuf, manager: &RepositoryManager) -> Result<(), PackagerError> {
+pub fn package(config: &Config, package_id: &PackageId, destination: &PathBuf, revisions: usize) -> Result<(), PackagerError> {
     let install_directory = config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
 
-    // Return an error if the destination is a directory
+    // Return an error if the destination is not a directory
     if !destination.is_dir() {
         return Err(io::Error::new(io::ErrorKind::NotADirectory, "Destination is not a directory."))?;
     }
-
-    // Get the number of revisions of the package
-    let (_, package_meta) = manager.read_package(&package_id.name)?;
-    let revisions = package_meta.revisions.len();
 
     // Create pre-package filename
     let filename = format!("{package_id}-{revisions}-{TARGET_ARCHITECTURE}.tar.gz");

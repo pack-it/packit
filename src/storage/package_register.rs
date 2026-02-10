@@ -11,7 +11,7 @@ use crate::{
     config::Repository,
     installer::types::{Dependency, PackageId, Version},
     platforms::DEFAULT_CONFIG_DIR,
-    repositories::types::PackageMeta,
+    repositories::types::{PackageMeta, PackageVersionMeta},
     storage::{error::InstalledPackagesError, installed_package::InstalledPackage, installed_package_version::InstalledPackageVersion},
     utils::constants::REGISTER_FILENAME,
 };
@@ -85,7 +85,7 @@ impl PackageRegister {
     pub fn add_package(
         &mut self,
         package: &PackageMeta,
-        version: &Version,
+        package_version: &PackageVersionMeta,
         dependency_ids: &HashSet<PackageId>,
         source_repository: &Repository,
         install_path: &PathBuf,
@@ -93,12 +93,14 @@ impl PackageRegister {
         active: bool,
     ) {
         let installed_package_version = InstalledPackageVersion {
-            package_id: PackageId::new(&package.name, version),
+            package_id: PackageId::new(&package.name, &package_version.version),
+            license: package_version.license.clone(),
             source_repository_url: source_repository.path.clone(),
             source_repository_provider: source_repository.provider.clone(),
             dependencies: dependency_ids.clone(),
             dependents: HashSet::new(),
             install_path: install_path.into(),
+            revisions: package_version.revisions.clone(),
         };
 
         // Add the package as a dependent in its dependencies
@@ -259,6 +261,7 @@ pub mod tests {
 
     use crate::installer::types::dependency_tests::create_dependency;
     use crate::platforms::TARGET_ARCHITECTURE;
+    use crate::repositories::types::{Checksum, Source, Sources};
 
     use super::*;
 
@@ -269,11 +272,13 @@ pub mod tests {
     ) -> InstalledPackageVersion {
         InstalledPackageVersion {
             package_id,
+            license: None,
             source_repository_provider: "-".to_string(),
             source_repository_url: "-".to_string(),
             dependencies,
             dependents,
             install_path: "-".into(),
+            revisions: Vec::new(),
         }
     }
 
@@ -293,7 +298,7 @@ pub mod tests {
         }
     }
 
-    pub fn create_register() -> PackageRegister {
+    fn create_register() -> PackageRegister {
         let package_a = PackageId::new("A", &Version::from_str("3.4.1").expect("Expected Version."));
         let package_b = PackageId::new("B", &Version::from_str("2.72").expect("Expected Version."));
         let package_c = PackageId::new("C", &Version::from_str("1.18.1").expect("Expected Version."));
@@ -347,13 +352,33 @@ pub mod tests {
         PackageRegister { packages }
     }
 
-    pub fn create_package_meta(package_id: &PackageId) -> PackageMeta {
+    fn create_package_meta(package_id: &PackageId) -> PackageMeta {
         PackageMeta {
             name: package_id.name.to_string(),
             description: "-".to_string(),
             homepage: None,
             versions: vec![package_id.version.clone()],
             latest_versions: HashMap::from([(TARGET_ARCHITECTURE.to_string(), package_id.version.clone())]),
+        }
+    }
+
+    fn create_package_version_meta(package_id: &PackageId) -> PackageVersionMeta {
+        PackageVersionMeta {
+            version: package_id.version.clone(),
+            dependencies: Vec::new(),
+            build_dependencies: Vec::new(),
+            targets: HashMap::new(),
+            sources: Sources::Single(Source {
+                url: "-".to_string(),
+                checksum: Checksum { sha256: [0; 32] },
+            }),
+            license: None,
+            skip_symlinking: false,
+            script_args: HashMap::new(),
+            use_version_specific_build: false,
+            use_version_specific_preinstall: false,
+            use_version_specific_postinstall: false,
+            use_version_specific_test: false,
             revisions: Vec::new(),
         }
     }
@@ -363,12 +388,13 @@ pub mod tests {
         let mut register = create_register();
         let package_id = PackageId::new("New package", &Version::from_str("2.90").expect("Expected Version."));
         let package_meta = create_package_meta(&package_id);
+        let package_version_meta = create_package_version_meta(&package_id);
         let mut dependency_ids = HashSet::new();
         dependency_ids.insert(PackageId::new("B", &Version::from_str("2.72").expect("Expected Version.")));
 
         register.add_package(
             &package_meta,
-            &package_id.version,
+            &package_version_meta,
             &dependency_ids,
             &Repository::new("-", "-"),
             &PathBuf::from("-"),

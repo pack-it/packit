@@ -15,9 +15,6 @@ pub struct PackageMeta {
     pub homepage: Option<String>,
     pub versions: Vec<Version>,
     pub latest_versions: HashMap<String, Version>,
-
-    #[serde(default)]
-    pub revisions: Vec<String>,
 }
 
 impl PackageMeta {

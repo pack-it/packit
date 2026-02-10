@@ -14,3 +14,6 @@ pub use self::package_version::PackageVersionMeta;
 
 pub use self::checksum::Checksum;
 pub use self::common::Script;
+
+pub use self::common::Source;
+pub use self::common::Sources;
