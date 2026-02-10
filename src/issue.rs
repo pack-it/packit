@@ -24,13 +24,21 @@ impl Display for Issue {
                 write!(f, "The following dependencies are missing:\n")?;
 
                 for (parent, missing_package) in missing {
-                    write!(
-                        f,
+                    let item = format!(
                         "  - {} missing {}\n",
                         parent.to_string().bold().blue(),
                         missing_package.to_string().bold().blue()
-                    )?;
+                    );
+                    write!(f, "{}", item)?;
                 }
+            },
+            Issue::InconsistentStorage(package_ids) if package_ids.len() == 1 => {
+                write!(f, "Inconsistent storage\n")?;
+                let issue_explanation = format!(
+                    "{} was found in Installed.toml, but not in the Packit package directory.\n",
+                    package_ids.first().expect("Expected one package id.").to_string().bold().blue()
+                );
+                write!(f, "{issue_explanation}")?;
             },
             Issue::InconsistentStorage(package_ids) => {
                 write!(f, "Inconsistent storage\n")?;

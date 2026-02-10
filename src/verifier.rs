@@ -2,7 +2,9 @@ use std::fs;
 
 use thiserror::Error;
 
-use crate::{config::Config, installer::types::PackageId, issue::Issue, storage::package_register::PackageRegister};
+use crate::{
+    cli::display::logging::warning, config::Config, installer::types::PackageId, issue::Issue, storage::package_register::PackageRegister,
+};
 
 #[derive(Error, Debug)]
 pub enum VerifierError {
@@ -104,7 +106,10 @@ impl<'a> Verifier<'a> {
     fn check_package_dependency_tree(&self, package_id: &PackageId) -> Vec<(PackageId, PackageId)> {
         let package = match self.register.get_package_version(package_id) {
             Some(package) => package,
-            None => todo!("Some error"),
+            None => {
+                warning!("Parent node '{package_id}' doesn't exist, while checking dependency tree.");
+                return Vec::new();
+            },
         };
 
         let mut missing = Vec::new();

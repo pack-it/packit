@@ -27,7 +27,7 @@ impl HandleCommand for CheckArgs {
         }
 
         for issue in issues {
-            print!("{}\n", issue);
+            print!("{issue}\n");
         }
 
         println!("Consider running `pit fix` to resolve the issues above.")
