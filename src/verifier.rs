@@ -23,8 +23,6 @@ impl<'a> Verifier<'a> {
     pub fn find_issues(&self) -> Result<Vec<Issue>, VerifierError> {
         let mut issues = Vec::new();
 
-        //self.check_packit_files();
-
         if let Some(issue) = self.check_consistency()? {
             issues.push(issue);
         }
@@ -36,14 +34,24 @@ impl<'a> Verifier<'a> {
         Ok(issues)
     }
 
-    pub fn find_package_issue(&self) {
-        // Find issues with a specific package, maybe even package it and compare it with checksum
-        // (Not sure if checksum stays the same for a package or that data can be changed/added)
+    pub fn find_package_issue(&self, package_id: &PackageId) -> Result<Vec<Issue>, VerifierError> {
+        let mut issues = Vec::new();
+
+        if let Some(issue) = self.check_package_consistency(package_id)? {
+            issues.push(issue);
+        }
+
+        let missing_dependencies = self.check_package_dependency_tree(package_id);
+        if !missing_dependencies.is_empty() {
+            issues.push(Issue::BrokenTree(missing_dependencies));
+        }
+
+        Ok(issues)
     }
 
-    fn check_packit_files(&self) {
-        // TODO: Check if all packit files (config, installed.toml, etc) are present and in the correct place
-        // Can't check config because error is returned before find_issues is ran
+    fn check_alterations(&self) {
+        // Find issues with a package, maybe even package it and compare it with checksum
+        // (Not sure if checksum stays the same for a package or that data can be changed/added)
     }
 
     fn check_consistency(&self) -> Result<Option<Issue>, VerifierError> {
@@ -67,6 +75,17 @@ impl<'a> Verifier<'a> {
         }
 
         Ok(Some(Issue::InconsistentStorage(missing)))
+    }
+
+    fn check_package_consistency(&self, package_id: &PackageId) -> Result<Option<Issue>, VerifierError> {
+        let package_directory = self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
+
+        // Check if the directory exists, if so return None
+        if fs::exists(package_directory)? {
+            return Ok(None);
+        }
+
+        Ok(Some(Issue::InconsistentStorage(vec![package_id.clone()])))
     }
 
     fn check_dependency_tree(&self) -> Option<Issue> {
