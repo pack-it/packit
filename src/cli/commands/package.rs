@@ -26,9 +26,6 @@ impl HandleCommand for PackageArgs {
         let register_dir = PackageRegister::get_default_path();
         let register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
-        // Throw an error if the specified package doesn't exist
-        if register.get_package_version(&self.package_id).is_none() {}
-
         let package_version = match register.get_package_version(&self.package_id) {
             Some(package_version) => package_version,
             None => {
