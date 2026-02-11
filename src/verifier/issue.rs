@@ -3,9 +3,7 @@ use std::fmt::Display;
 
 use crate::installer::types::PackageId;
 
-/// This holds a single issue.
-/// TODO:
-///     - Display which has a separate display method for each issue type
+/// This holds a single issue and the data regarding that issue.
 pub enum Issue {
     /// A list of parents and their missing dependencies <parent> : <missing>
     BrokenTree(Vec<(PackageId, PackageId)>),

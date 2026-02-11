@@ -1,16 +1,9 @@
-use std::fs;
-
-use thiserror::Error;
+use std::{fs, io};
 
 use crate::{
-    cli::display::logging::warning, config::Config, installer::types::PackageId, issue::Issue, storage::package_register::PackageRegister,
+    cli::display::logging::warning, config::Config, installer::types::PackageId, storage::package_register::PackageRegister,
+    verifier::Issue,
 };
-
-#[derive(Error, Debug)]
-pub enum VerifierError {
-    #[error("Cannot read install directory")]
-    IOError(#[from] std::io::Error),
-}
 
 pub struct Verifier<'a> {
     config: &'a Config,
@@ -22,7 +15,7 @@ impl<'a> Verifier<'a> {
         Self { config, register }
     }
 
-    pub fn find_issues(&self) -> Result<Vec<Issue>, VerifierError> {
+    pub fn find_issues(&self) -> Result<Vec<Issue>, io::Error> {
         let mut issues = Vec::new();
 
         if let Some(issue) = self.check_consistency()? {
@@ -36,7 +29,7 @@ impl<'a> Verifier<'a> {
         Ok(issues)
     }
 
-    pub fn find_package_issue(&self, package_id: &PackageId) -> Result<Vec<Issue>, VerifierError> {
+    pub fn find_package_issue(&self, package_id: &PackageId) -> Result<Vec<Issue>, io::Error> {
         let mut issues = Vec::new();
 
         if let Some(issue) = self.check_package_consistency(package_id)? {
@@ -56,7 +49,8 @@ impl<'a> Verifier<'a> {
         // (Not sure if checksum stays the same for a package or that data can be changed/added)
     }
 
-    fn check_consistency(&self) -> Result<Option<Issue>, VerifierError> {
+    // TODO: Also check if package are in the Packit package directory, but not in the Installed.toml
+    fn check_consistency(&self) -> Result<Option<Issue>, io::Error> {
         let mut missing = Vec::new();
         for package in self.register.iterate_all() {
             let package_directory = self
@@ -79,7 +73,7 @@ impl<'a> Verifier<'a> {
         Ok(Some(Issue::InconsistentStorage(missing)))
     }
 
-    fn check_package_consistency(&self, package_id: &PackageId) -> Result<Option<Issue>, VerifierError> {
+    fn check_package_consistency(&self, package_id: &PackageId) -> Result<Option<Issue>, io::Error> {
         let package_directory = self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
 
         // Check if the directory exists, if so return None
