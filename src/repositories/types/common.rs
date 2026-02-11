@@ -18,6 +18,9 @@ pub enum Script {
 pub struct Source {
     pub url: String,
     pub checksum: Checksum,
+
+    #[serde(default)]
+    pub mirrors: Vec<String>,
 }
 
 #[derive(Deserialize, Debug)]
