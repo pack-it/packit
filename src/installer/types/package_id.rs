@@ -88,6 +88,22 @@ pub struct OptionalPackageId {
     pub version: Option<Version>,
 }
 
+impl OptionalPackageId {
+    pub fn new(name: &str, version: Option<&Version>) -> Self {
+        Self {
+            name: name.to_string(),
+            version: version.cloned(),
+        }
+    }
+
+    pub fn new_versioned(name: &str, version: &Version) -> Self {
+        Self {
+            name: name.to_string(),
+            version: Some(version.clone()),
+        }
+    }
+}
+
 impl FromStr for OptionalPackageId {
     type Err = PackageIdError;
 
@@ -171,21 +187,13 @@ mod tests {
 
     #[test]
     fn from_str_optional() {
-        let correct_version = OptionalPackageId {
-            name: "Test".into(),
-            version: Some(Version::from_str("3.4.1").expect("Expected Version.")),
-        };
-
+        let correct_version = OptionalPackageId::new_versioned("Test", &Version::from_str("3.4.1").expect("Expected Version."));
         match OptionalPackageId::from_str("Test@3.4.1") {
             Ok(id) => assert_eq!(id, correct_version),
             Err(e) => panic!("Expected Ok(OptionalPackageId(name: 'Test', version: Some(Version(..)))), got Err({e:?})"),
         }
 
-        let correct_version = OptionalPackageId {
-            name: "Test".into(),
-            version: None,
-        };
-
+        let correct_version = OptionalPackageId::new("Test", None);
         match OptionalPackageId::from_str("Test") {
             Ok(id) => assert_eq!(id, correct_version),
             Err(e) => panic!("Expected Ok(OptionalPackageId(name: 'Test', version: None)), got Err({e:?})"),

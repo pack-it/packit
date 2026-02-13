@@ -25,7 +25,7 @@ impl HandleCommand for UninstallArgs {
 
         // Uninstall all specified packages
         for package_id in &self.packages {
-            if let Err(error) = installer.uninstall(&package_id.name, package_id.version.as_ref()) {
+            if let Err(error) = installer.uninstall(&package_id) {
                 error!(error, "Cannot uninstall package {package_id}");
             }
         }
