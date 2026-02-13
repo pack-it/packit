@@ -9,7 +9,7 @@ use crate::{
     installer::{
         build_env::BuildEnv,
         scripts::{self, ScriptData, ScriptError},
-        unpack::unpack,
+        unpack::{unpack, UnpackError},
     },
     platforms::TARGET_ARCHITECTURE,
     repositories::{
@@ -29,14 +29,17 @@ pub enum BuilderError {
     #[error("Cannot request files for building")]
     RequestError(#[from] reqwest::Error),
 
-    #[error("Cannot unpack response")]
-    UnpackError(#[from] std::io::Error),
+    #[error("Error while interacting with filesystem")]
+    IOError(#[from] std::io::Error),
 
     #[error("Dependency '{package_name}' of type '{dependency_type}' is not installed.")]
     MissingDependencyError {
         dependency_type: String,
         package_name: String,
     },
+
+    #[error("Cannot unpack response")]
+    UnpackError(#[from] UnpackError),
 
     #[error("Cannot execute build script")]
     ScriptError(#[from] ScriptError),
@@ -140,7 +143,7 @@ impl<'a> Builder<'a> {
 
         // Unpack the package to the temp directory
         let unpack_directory = TempDir::new()?;
-        unpack(bytes, &unpack_directory)?;
+        unpack(&source.url, bytes, &unpack_directory)?;
 
         // Create build env
         let env = BuildEnv::new(
