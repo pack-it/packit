@@ -11,7 +11,7 @@ use crate::{
         options::InstallerOptions,
         scripts::{self, ScriptData},
         symlinker::Symlinker,
-        types::{Dependency, PackageId, Version},
+        types::{Dependency, OptionalPackageId, PackageId, Version},
     },
     platforms::{symlink, TARGET_ARCHITECTURE},
     repositories::{
@@ -60,22 +60,22 @@ impl<'a> Installer<'a> {
     }
 
     /// Installs the given package and its dependencies.
-    pub fn install(&mut self, package_name: &str, version: Option<&Version>) -> Result<()> {
+    pub fn install(&mut self, package_id: &OptionalPackageId) -> Result<()> {
         // Check if we can write to the prefix directory
         if !self.can_write_prefix_dir()? {
             return Err(InstallerError::PermissionsError);
         }
 
-        let (repository_id, package_metadata) = self.repository_manager.read_package(package_name)?;
+        let (repository_id, package_metadata) = self.repository_manager.read_package(&package_id.name)?;
 
         // Use the latest version if the version isn't specified
-        let version = match version {
+        let version = match &package_id.version {
             Some(version) => version,
             None => package_metadata.get_latest_version(TARGET_ARCHITECTURE)?,
         };
 
         // Create a package id of the current package
-        let package_id = PackageId::new(&package_name, &version);
+        let package_id = PackageId::new(&package_id.name, &version);
 
         // Check if this package version is already installed
         if self.register.get_package_version(&package_id).is_some() {
