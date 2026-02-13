@@ -3,6 +3,7 @@ use flate2::read::GzDecoder;
 use std::{io::Cursor, path::Path};
 use tar::Archive;
 use thiserror::Error;
+use zip::ZipArchive;
 
 use crate::cli::display::ReaderWithProgress;
 
@@ -11,6 +12,9 @@ use crate::cli::display::ReaderWithProgress;
 pub enum UnpackError {
     #[error("Error while interacting with filesystem")]
     IOError(#[from] std::io::Error),
+
+    #[error("Error while unpacking")]
+    ZipError(#[from] zip::result::ZipError),
 
     #[error("The file extension is not supported")]
     ExtensionNotSupported,
@@ -21,7 +25,7 @@ pub enum UnpackError {
 
 type Result<T> = core::result::Result<T, UnpackError>;
 
-// Unpacks tar files and saves them to a provided destination directory
+// Unpacks files and saves them to the provided destination directory
 pub fn unpack<P: AsRef<Path>>(source_path: &str, bytes: Bytes, destination_directory: P) -> Result<()> {
     let size = bytes.len();
     let cursor = Cursor::new(bytes);
@@ -35,6 +39,7 @@ pub fn unpack<P: AsRef<Path>>(source_path: &str, bytes: Bytes, destination_direc
 
     match extension {
         "gz" => unpack_gz(reader, destination_directory),
+        "zip" | "xz" => unpack_zip_xz(reader, destination_directory),
         _ => Err(UnpackError::ExtensionNotSupported),
     }
 }
@@ -42,6 +47,15 @@ pub fn unpack<P: AsRef<Path>>(source_path: &str, bytes: Bytes, destination_direc
 fn unpack_gz<P: AsRef<Path>>(reader: ReaderWithProgress<Cursor<Bytes>>, destination_directory: P) -> Result<()> {
     let tar = GzDecoder::new(reader);
     let mut archive = Archive::new(tar);
+
     archive.unpack(destination_directory)?;
+
+    Ok(())
+}
+
+fn unpack_zip_xz<P: AsRef<Path>>(reader: ReaderWithProgress<Cursor<Bytes>>, destination_directory: P) -> Result<()> {
+    let mut archive = ZipArchive::new(reader)?;
+    archive.extract(destination_directory)?;
+
     Ok(())
 }
