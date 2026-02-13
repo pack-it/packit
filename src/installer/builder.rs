@@ -125,6 +125,11 @@ impl<'a> Builder<'a> {
             response = reqwest::blocking::get(mirrors.next().expect("Expected mirror URL"))?;
         }
 
+        // Check if download is succesfull
+        if !response.status().is_success() {
+            return Err(BuilderError::RequestUnsuccessful(response.status()));
+        }
+
         // Get the bytes from the response
         let bytes = response.bytes()?;
 

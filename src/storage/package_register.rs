@@ -371,6 +371,7 @@ pub mod tests {
             sources: Sources::Single(Source {
                 url: "-".to_string(),
                 checksum: Checksum { sha256: [0; 32] },
+                mirrors: Vec::new(),
             }),
             license: None,
             skip_symlinking: false,
