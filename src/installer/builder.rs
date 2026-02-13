@@ -1,5 +1,5 @@
 use sha2::{Digest, Sha256};
-use std::{iter, path::Path};
+use std::path::Path;
 use tempfile::TempDir;
 use thiserror::Error;
 
