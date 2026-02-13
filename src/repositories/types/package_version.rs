@@ -50,6 +50,9 @@ pub struct PackageVersionMeta {
     #[serde(default = "PackageVersionMeta::default_use_version_specific")]
     pub use_version_specific_test: bool,
 
+    #[serde(default = "PackageVersionMeta::default_use_version_specific")]
+    pub use_version_specific_uninstall: bool,
+
     #[serde(default)]
     pub revisions: Vec<String>,
 }
@@ -129,6 +132,12 @@ impl PackageVersionMeta {
         let target = self.get_target(target_name)?;
 
         Ok(self.get_script_path(self.use_version_specific_test, &target.test_script, "test"))
+    }
+
+    pub fn get_uninstall_script_path(&self, target_name: &str) -> Result<String> {
+        let target = self.get_target(target_name)?;
+
+        Ok(self.get_script_path(self.use_version_specific_uninstall, &target.uninstall_script, "uninstall"))
     }
 
     /// Gets the script arguments for the given target.

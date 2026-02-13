@@ -24,4 +24,5 @@ pub struct PackageTarget {
     pub preinstall_script: Option<Script>,
     pub postinstall_script: Option<Script>,
     pub test_script: Option<Script>,
+    pub uninstall_script: Option<Script>,
 }

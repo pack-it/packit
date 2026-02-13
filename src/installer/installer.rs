@@ -1,10 +1,10 @@
 use crate::{
     cli::display::{
         ask_user,
-        logging::{debug, warning},
+        logging::{debug, error, warning},
         QuestionResponse,
     },
-    config::Config,
+    config::{Config, Repository},
     installer::{
         builder::Builder,
         error::{InstallerError, Result},
@@ -16,6 +16,7 @@ use crate::{
     platforms::{symlink, TARGET_ARCHITECTURE},
     repositories::{
         manager::RepositoryManager,
+        provider,
         types::{PackageMeta, PackageTarget, PackageVersionMeta},
     },
     storage::package_register::PackageRegister,
@@ -435,6 +436,18 @@ impl<'a> Installer<'a> {
             },
         };
 
+        // Load source repository
+        let repository = match installed_package.get_package_version(&package_id.version) {
+            Some(package_version) => Repository::new(&package_version.source_repository_url, &package_version.source_repository_provider),
+            None => {
+                warning!("Package version not found eventhough package version was found, should be unreachable.");
+                return Ok(());
+            },
+        };
+
+        // Run uninstall script
+        self.run_uninstall_script(&repository, package_id, &directory)?;
+
         // Check if the package was symlinked
         if installed_package.active_version == package_id.version && installed_package.symlinked {
             Symlinker::new(self.config).remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&directory))?;
@@ -496,10 +509,54 @@ impl<'a> Installer<'a> {
             false => warning!("Active symlink did not exist, was the package even installed succesfully?"),
         }
 
+        // Run uninstall scripts for all versions
+        for package_version in installed_versions {
+            // Load source repository
+            let repository = Repository::new(&package_version.source_repository_url, &package_version.source_repository_provider);
+
+            // Run uninstall script
+            self.run_uninstall_script(&repository, &package_version.package_id, &directory)?;
+        }
+
         self.remove_dir_all(&directory, package_name)?;
 
         // Delete the installed package from toml
         self.register.remove_package(package_name);
+
+        Ok(())
+    }
+
+    fn run_uninstall_script(&self, repository: &Repository, package_id: &PackageId, install_directory: &PathBuf) -> Result<()> {
+        // Create repository provider for source repository
+        let provider = match provider::create_repository_provider(&repository) {
+            Some(provider) => provider,
+            None => {
+                warning!("Unable to create repository provider to retrieve uninstall script");
+                return Ok(());
+            },
+        };
+
+        // Load package version from source repository
+        let package_version = match provider.read_package_version(&package_id.name, &package_id.version) {
+            Ok(package_version) => package_version,
+            Err(e) => {
+                error!(e, "Unable to read package version from source repository");
+                return Ok(());
+            },
+        };
+
+        // Get script data from package version metadata
+        let script_path = package_version.get_uninstall_script_path(TARGET_ARCHITECTURE)?;
+
+        // Download and run script
+        if let Some(script_text) = provider.read_script(&package_id.name, &script_path)? {
+            let script_path = scripts::write_script_to_tempfile(&script_text)?;
+
+            // Run script
+            let script_args = package_version.get_script_args(TARGET_ARCHITECTURE)?;
+            let script_data = ScriptData::new(&script_path, &install_directory, &package_id.version, self.config, &script_args);
+            scripts::run_uninstall_script(&script_data)?
+        }
 
         Ok(())
     }
