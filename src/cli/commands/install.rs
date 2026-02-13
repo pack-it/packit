@@ -11,7 +11,7 @@ use crate::{
 
 #[derive(Args, Debug)]
 pub struct InstallArgs {
-    /// The name of the package to install, with an optional version specified with NAME@VERSION
+    /// The name of the packages to install, with an optional version specified with NAME@VERSION
     #[arg(num_args(0..))]
     pub packages: Vec<OptionalPackageId>,
 
