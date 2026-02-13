@@ -119,7 +119,13 @@ impl<'a> Builder<'a> {
         spinner.show("Downloading ".to_string() + &package.name);
 
         // Download the build files
-        let response = reqwest::blocking::get(&source.url)?;
+        let mut response = reqwest::blocking::get(&source.url)?;
+        let mut mirrors = source.mirrors.iter();
+        while !response.status().is_success() && mirrors.len() > 0 {
+            response = reqwest::blocking::get(mirrors.next().expect("Expected mirror URL"))?;
+        }
+
+        // Check if download is succesfull
         if !response.status().is_success() {
             return Err(BuilderError::RequestUnsuccessful(response.status()));
         }
