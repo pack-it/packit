@@ -12,6 +12,7 @@ pub struct CheckArgs {
 }
 
 impl HandleCommand for CheckArgs {
+    // TODO: We can never verify Packit files, because they are loaded before the command execution
     fn handle(&self, config: &Config, _: &RepositoryManager) {
         let register_dir = PackageRegister::get_default_path();
         let register = PackageRegister::from(&register_dir).unwrap_or_exit(1);

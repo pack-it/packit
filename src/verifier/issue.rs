@@ -10,6 +10,9 @@ pub enum Issue {
 
     /// A list of packages which are present in the Installed.toml, but not in the packit package directory
     InconsistentStorage(Vec<PackageId>),
+
+    /// A list of packages which are changed (when they shouldn't be)
+    AlteredPackage(Vec<PackageId>),
 }
 
 impl Display for Issue {
@@ -44,6 +47,15 @@ impl Display for Issue {
                 write!(f, "{issue_explanation}")?;
 
                 for package in package_ids {
+                    write!(f, "  - {}\n", package.to_string().bold().blue())?;
+                }
+            },
+            Issue::AlteredPackage(altered) => {
+                write!(f, "Altered packages\n")?;
+                let issue_explanation = "The following packages were found to be changed when they shouldn't be:\n";
+                write!(f, "{issue_explanation}")?;
+
+                for package in altered {
                     write!(f, "  - {}\n", package.to_string().bold().blue())?;
                 }
             },

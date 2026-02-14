@@ -1,6 +1,6 @@
 use std::{
     fs::File,
-    io::{self, Write},
+    io::{self, Cursor, Write},
     path::PathBuf,
 };
 
@@ -33,30 +33,39 @@ pub fn package(config: &Config, package_id: &PackageId, destination: &PathBuf, r
         return Err(io::Error::new(io::ErrorKind::NotADirectory, "Destination is not a directory."))?;
     }
 
-    // Create pre-package filename
-    let filename = format!("{package_id}-{revisions}-{TARGET_ARCHITECTURE}.tar.gz");
-    let compressed_filename = format!("{filename}.tar.gz");
-    let prepackage_dir = destination.join(compressed_filename);
-
-    let result = File::create(&prepackage_dir)?;
-    let encoder = GzEncoder::new(result, Compression::default());
-
-    // Add the whole directory recursively
-    let mut tar = Builder::new(encoder);
-    tar.append_dir_all(".", install_directory)?;
-
-    // Finish writing
-    let encoder = tar.into_inner()?;
-    encoder.finish()?;
+    // Compress the package
+    let mut compressed = compress(&install_directory)?;
 
     // Calculate checksum for the compressed
-    let mut compressed = File::open(&prepackage_dir)?;
     let checksum = Checksum::calculate_checksum(&mut compressed)?;
 
-    // Store checksum
+    // Create the file names
+    let filename = format!("{package_id}-{revisions}-{TARGET_ARCHITECTURE}");
+    let compressed_filename = format!("{filename}.tar.gz");
+    let prepackage_dir = destination.join(compressed_filename);
     let checksum_filename = format!("{filename}.sha256");
+
+    // Store the compressed package and checksum
+    let mut compressed_file = File::create(prepackage_dir)?;
     let mut checksum_file = File::create(checksum_filename)?;
+    compressed_file.write_all(compressed.get_ref())?;
     checksum_file.write_all(checksum.as_bytes())?;
 
     Ok(())
+}
+
+pub fn compress(source_directory: &PathBuf) -> Result<Cursor<Vec<u8>>, PackagerError> {
+    let buffer = Vec::new();
+    let cursor = Cursor::new(buffer);
+    let encoder = GzEncoder::new(cursor, Compression::default());
+
+    // Add the whole directory recursively
+    let mut tar = Builder::new(encoder);
+    tar.append_dir_all(".", source_directory)?;
+
+    // Finish writing
+    let encoder = tar.into_inner()?;
+    let encoded = encoder.finish()?;
+
+    Ok(encoded)
 }

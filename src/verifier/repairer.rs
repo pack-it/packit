@@ -30,6 +30,9 @@ impl<'a> Repairer<'a> {
             match issue {
                 Issue::BrokenTree(missing) => self.fix_broken_tree(missing)?,
                 Issue::InconsistentStorage(missing) => self.fix_inconsistent_storage(missing)?,
+                _ => {
+                    warning!("Issue fix not yet implemented")
+                },
             }
         }
 
