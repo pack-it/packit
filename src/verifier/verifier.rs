@@ -80,7 +80,7 @@ impl<'a> Verifier<'a> {
         let checksum = Checksum::calculate_checksum(&mut compressed)?;
 
         // TODO: Actually search for the correct checksum
-        let correct_checksum = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+        let correct_checksum = "904723e939e42c4cfa16b2cc8bf9f7d637a6f56b568975b0b97cb897ce5fff15";
 
         Ok(checksum != correct_checksum)
     }

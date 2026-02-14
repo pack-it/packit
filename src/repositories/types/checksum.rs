@@ -1,4 +1,4 @@
-use std::io::{self, Cursor, Read};
+use std::io;
 
 use serde::{de, Deserialize};
 use sha2::{Digest, Sha256};
@@ -22,10 +22,8 @@ impl<'de> Deserialize<'de> for Checksum {
 }
 
 impl Checksum {
-    pub fn calculate_checksum(cursor: &mut Cursor<Vec<u8>>) -> Result<String, io::Error> {
-        let mut bytes = Vec::new();
-        cursor.read_to_end(&mut bytes)?;
-        let checksum: [u8; 32] = Sha256::digest(bytes).into();
+    pub fn calculate_checksum(buffer: &mut Vec<u8>) -> Result<String, io::Error> {
+        let checksum: [u8; 32] = Sha256::digest(buffer).into();
         Ok(hex::encode(checksum))
     }
 }

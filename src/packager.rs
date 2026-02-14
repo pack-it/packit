@@ -1,6 +1,6 @@
 use std::{
     fs::File,
-    io::{self, Cursor, Write},
+    io::{self, Write},
     path::PathBuf,
 };
 
@@ -48,16 +48,15 @@ pub fn package(config: &Config, package_id: &PackageId, destination: &PathBuf, r
     // Store the compressed package and checksum
     let mut compressed_file = File::create(prepackage_dir)?;
     let mut checksum_file = File::create(checksum_filename)?;
-    compressed_file.write_all(compressed.get_ref())?;
+    compressed_file.write_all(&compressed)?;
     checksum_file.write_all(checksum.as_bytes())?;
 
     Ok(())
 }
 
-pub fn compress(source_directory: &PathBuf) -> Result<Cursor<Vec<u8>>, PackagerError> {
+pub fn compress(source_directory: &PathBuf) -> Result<Vec<u8>, PackagerError> {
     let buffer = Vec::new();
-    let cursor = Cursor::new(buffer);
-    let encoder = GzEncoder::new(cursor, Compression::default());
+    let encoder = GzEncoder::new(buffer, Compression::default());
 
     // Add the whole directory recursively
     let mut tar = Builder::new(encoder);
