@@ -18,10 +18,10 @@ use crate::{
 /// The errors that occur during installation.
 #[derive(Error, Debug)]
 pub enum PackagerError {
-    #[error("Cannot get revisions from repository manager.")]
+    #[error("Cannot get revisions from repository manager")]
     RepositoryError(#[from] RepositoryError),
 
-    #[error("Error while packaging.")]
+    #[error("Error while packaging")]
     IOError(#[from] std::io::Error),
 }
 

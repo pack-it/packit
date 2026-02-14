@@ -1,12 +1,19 @@
 use thiserror::Error;
 
-use crate::{cli::display::error::DisplayError, installer::error::InstallerError, packager::PackagerError};
+use crate::{
+    cli::display::error::DisplayError,
+    installer::{error::InstallerError, types::VersionError},
+    packager::PackagerError,
+};
 
 /// The errors that occur during verification.
 #[derive(Error, Debug)]
 pub enum VerifierError {
     #[error("Could not verify")]
     IOError(#[from] std::io::Error),
+
+    #[error("Cannot parse filename, because it contains invalid unicode")]
+    InvalidUnicodeError,
 
     #[error("Could not display issues")]
     DisplayError(#[from] DisplayError),
@@ -16,4 +23,7 @@ pub enum VerifierError {
 
     #[error("Could not verify, because of an issue in the packager")]
     PackagerError(#[from] PackagerError),
+
+    #[error("Could not verify, because the version number couldn't be parsed")]
+    VersionError(#[from] VersionError),
 }

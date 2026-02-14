@@ -11,6 +11,9 @@ pub enum Issue {
     /// A list of packages which are present in the Installed.toml, but not in the packit package directory
     InconsistentStorage(Vec<PackageId>),
 
+    /// A list of packages which are present in the packit package directory, but not in the Installed.toml
+    InconsistentRegister(Vec<PackageId>),
+
     /// A list of packages which are changed (when they shouldn't be)
     AlteredPackage(Vec<PackageId>),
 }
@@ -44,6 +47,15 @@ impl Display for Issue {
             Issue::InconsistentStorage(package_ids) => {
                 write!(f, "Inconsistent storage\n")?;
                 let issue_explanation = "The following packages were found in Installed.toml, but not in the Packit package directory:\n";
+                write!(f, "{issue_explanation}")?;
+
+                for package in package_ids {
+                    write!(f, "  - {}\n", package.to_string().bold().blue())?;
+                }
+            },
+            Issue::InconsistentRegister(package_ids) => {
+                write!(f, "Inconsistent register\n")?;
+                let issue_explanation = "The following packages were found in the Packit packages directory, but not in the register:\n";
                 write!(f, "{issue_explanation}")?;
 
                 for package in package_ids {
