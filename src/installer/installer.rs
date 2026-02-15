@@ -360,9 +360,10 @@ impl<'a> Installer<'a> {
             // Get name and version from the current build dependency
             let name = &build_dependency.package_metadata.name;
             let version = &build_dependency.version_metadata.version;
+            let package_id = PackageId::new(name, version);
 
             // Continue if the build dependency is also a dependency in the dependency sequence
-            if dependencies.iter().any(|d| d.name == *name && d.version == *version) {
+            if dependencies.iter().any(|d| *d == package_id) {
                 continue;
             }
 
@@ -371,7 +372,7 @@ impl<'a> Installer<'a> {
                 continue;
             }
 
-            self.uninstall(&PackageId::new(&build_dependency.package_metadata.name, &build_dependency.version_metadata.version).into())?;
+            self.uninstall(&package_id.into())?;
         }
 
         Ok(())
