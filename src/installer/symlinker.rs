@@ -78,7 +78,7 @@ impl<'a> Symlinker<'a> {
     }
 
     /// Searches for symlinks with a certain destination (destinations inside of the destination are also a match).
-    pub(super) fn remove_symlinks(&self, search_dir: &Path, destination_dir: &Path) -> Result<()> {
+    pub fn remove_symlinks(&self, search_dir: &Path, destination_dir: &Path) -> Result<()> {
         for file in fs::read_dir(search_dir)? {
             let file = file?;
             let file_type = file.file_type()?;

@@ -561,13 +561,12 @@ impl<'a> Installer<'a> {
 
     /// Wraps around the fs::remove_dir_all to map its error.
     fn remove_dir_all(&self, directory: &PathBuf, package_name: &str) -> Result<()> {
-        match fs::remove_dir_all(directory) {
-            Ok(_) => Ok(()), // TODO: Log succes with display
-            Err(e) => Err(InstallerError::UninstallError {
-                package_name: package_name.into(),
-                e,
-            }),
-        }
+        fs::remove_dir_all(directory).map_err(|e| InstallerError::UninstallError {
+            package_name: package_name.into(),
+            e,
+        })?;
+
+        Ok(())
     }
 
     fn get_latest_dependency_version(&self, dependency: &Dependency) -> Result<Version> {

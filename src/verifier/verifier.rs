@@ -35,9 +35,9 @@ impl<'a> Verifier<'a> {
             issues.push(issue);
         }
 
-        if let Some(issue) = self.check_alterations()? {
-            issues.push(issue);
-        }
+        // if let Some(issue) = self.check_alterations()? {
+        //     issues.push(issue);
+        // }
 
         Ok(issues)
     }
@@ -59,9 +59,9 @@ impl<'a> Verifier<'a> {
             issues.push(Issue::BrokenTree(missing_dependencies));
         }
 
-        if self.check_package_alterations(package_id)? {
-            issues.push(Issue::AlteredPackage(vec![package_id.clone()]));
-        }
+        // if self.check_package_alterations(package_id)? {
+        //     issues.push(Issue::AlteredPackage(vec![package_id.clone()]));
+        // }
 
         Ok(issues)
     }
@@ -109,10 +109,10 @@ impl<'a> Verifier<'a> {
     }
 
     fn package_storage_is_consistent(&self, package_id: &PackageId) -> Result<bool, VerifierError> {
-        let package_directory = self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
+        let installed_directory = self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
 
         // Check if the directory exists, if so return true
-        if fs::exists(package_directory)? {
+        if fs::exists(installed_directory)? {
             return Ok(true);
         }
 
@@ -147,6 +147,10 @@ impl<'a> Verifier<'a> {
                     missing.push(package_id);
                 }
             }
+        }
+
+        if missing.is_empty() {
+            return Ok(None);
         }
 
         Ok(Some(Issue::InconsistentRegister(missing)))

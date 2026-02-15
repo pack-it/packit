@@ -1,7 +1,12 @@
+use std::{fs, path::Path, str::FromStr};
+
 use crate::{
     cli::display::{ask_user, logging::warning, QuestionResponse},
     config::Config,
-    installer::{types::PackageId, Installer, InstallerOptions},
+    installer::{
+        types::{PackageId, Version},
+        Installer, InstallerOptions, Symlinker,
+    },
     repositories::manager::RepositoryManager,
     storage::package_register::PackageRegister,
     verifier::{error::VerifierError, Issue},
@@ -30,6 +35,7 @@ impl<'a> Repairer<'a> {
             match issue {
                 Issue::BrokenTree(missing) => self.fix_broken_tree(missing)?,
                 Issue::InconsistentStorage(missing) => self.fix_inconsistent_storage(missing)?,
+                Issue::InconsistentRegister(missing) => self.fix_inconsistent_register(missing)?,
                 _ => {
                     warning!("Issue fix not yet implemented")
                 },
@@ -40,7 +46,7 @@ impl<'a> Repairer<'a> {
     }
 
     fn fix_broken_tree(&mut self, missing: Vec<(PackageId, PackageId)>) -> Result<(), VerifierError> {
-        let installer_options = InstallerOptions::default().build_source(false).skip_symlinking(true).skip_active(true).keep_build(false);
+        let installer_options = InstallerOptions::default().skip_symlinking(true);
         let mut installer = Installer::new(&self.config, self.register, &self.manager, installer_options);
 
         for (_, missing_package) in missing {
@@ -65,11 +71,47 @@ impl<'a> Repairer<'a> {
             // Temporarily remove the package from the register
             self.register.remove_package_version(&missing_package);
 
-            let installer_options =
-                InstallerOptions::default().build_source(false).skip_symlinking(symlink).skip_active(!active).keep_build(false);
+            let installer_options = InstallerOptions::default().skip_symlinking(!symlink).skip_active(!active);
             let mut installer = Installer::new(&self.config, self.register, &self.manager, installer_options);
 
             installer.install(&missing_package.name, Some(&missing_package.version))?;
+        }
+
+        Ok(())
+    }
+
+    fn fix_inconsistent_register(&mut self, missing: Vec<PackageId>) -> Result<(), VerifierError> {
+        let active_directory = self.config.prefix_directory.join("active");
+        let bin_directory = self.config.prefix_directory.join("bin");
+        let package_directory = self.config.prefix_directory.join("packages");
+        for package_id in missing {
+            // Figure out the active version
+            let active_target = fs::read_link(active_directory.join(&package_id.name))?;
+            let target_name = active_target.file_name().ok_or(VerifierError::InvalidSymlink)?;
+            let version = Version::from_str(target_name.to_str().ok_or(VerifierError::InvalidUnicodeError)?)?;
+
+            // Check if the package should be the active package when installed
+            let active = package_id.version == version;
+
+            // Figure out if symlinked
+            let symlinked = !fs::symlink_metadata(bin_directory.join(&package_id.name)).is_err();
+
+            // Temporarily remove the package from the storage
+            // We have to uninstall and install, because we can't know the repository source otherwise
+            // Remove the symlinks first
+            // TODO: Use uninstall scripts here in the future
+            if symlinked {
+                Symlinker::new(self.config).remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&package_directory))?;
+            }
+
+            // Remove the packages
+            fs::remove_dir_all(&package_directory.join(&package_id.name).join(package_id.version.to_string()))?;
+
+            // Re-install the package
+            let installer_options = InstallerOptions::default().skip_symlinking(!symlinked).skip_active(!active);
+            let mut installer = Installer::new(&self.config, self.register, &self.manager, installer_options);
+
+            installer.install(&package_id.name, Some(&package_id.version))?;
         }
 
         Ok(())

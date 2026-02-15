@@ -26,4 +26,7 @@ pub enum VerifierError {
 
     #[error("Could not verify, because the version number couldn't be parsed")]
     VersionError(#[from] VersionError),
+
+    #[error("Cannot parse symlink name, because it doesn't end properly")]
+    InvalidSymlink,
 }
