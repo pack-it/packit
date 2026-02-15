@@ -431,7 +431,7 @@ impl<'a> Installer<'a> {
         let installed_package = match self.register.get_package(&package_id.name) {
             Some(package) => package,
             None => {
-                warning!("Package not found eventhough package version was found, should be unreachable.");
+                warning!("Package cannot be found eventhough it was found before, should be unreachable.");
                 return Ok(());
             },
         };
@@ -440,7 +440,7 @@ impl<'a> Installer<'a> {
         let repository = match installed_package.get_package_version(&package_id.version) {
             Some(package_version) => Repository::new(&package_version.source_repository_url, &package_version.source_repository_provider),
             None => {
-                warning!("Package version not found eventhough package version was found, should be unreachable.");
+                warning!("Package version cannot be found eventhough it was found before, should be unreachable.");
                 return Ok(());
             },
         };
@@ -531,7 +531,7 @@ impl<'a> Installer<'a> {
         let provider = match provider::create_repository_provider(&repository) {
             Some(provider) => provider,
             None => {
-                warning!("Unable to create repository provider to retrieve uninstall script");
+                error!(msg: "Unable to create repository provider to retrieve uninstall script");
                 return Ok(());
             },
         };
