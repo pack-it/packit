@@ -88,18 +88,11 @@ pub struct OptionalPackageId {
     pub version: Option<Version>,
 }
 
-impl OptionalPackageId {
-    pub fn new(name: &str, version: Option<&Version>) -> Self {
+impl From<PackageId> for OptionalPackageId {
+    fn from(value: PackageId) -> Self {
         Self {
-            name: name.to_string(),
-            version: version.cloned(),
-        }
-    }
-
-    pub fn new_versioned(name: &str, version: &Version) -> Self {
-        Self {
-            name: name.to_string(),
-            version: Some(version.clone()),
+            name: value.name,
+            version: Some(value.version),
         }
     }
 }
@@ -126,16 +119,6 @@ impl FromStr for OptionalPackageId {
             name: string.into(),
             version: None,
         })
-    }
-}
-
-impl<'de> Deserialize<'de> for OptionalPackageId {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let string: String = de::Deserialize::deserialize(deserializer)?;
-        Ok(Self::from_str(&string).map_err(de::Error::custom)?)
     }
 }
 
@@ -187,13 +170,16 @@ mod tests {
 
     #[test]
     fn from_str_optional() {
-        let correct_version = OptionalPackageId::new_versioned("Test", &Version::from_str("3.4.1").expect("Expected Version."));
+        let correct_version = PackageId::new("Test", &Version::from_str("3.4.1").expect("Expected Version.")).into();
         match OptionalPackageId::from_str("Test@3.4.1") {
             Ok(id) => assert_eq!(id, correct_version),
             Err(e) => panic!("Expected Ok(OptionalPackageId(name: 'Test', version: Some(Version(..)))), got Err({e:?})"),
         }
 
-        let correct_version = OptionalPackageId::new("Test", None);
+        let correct_version = OptionalPackageId {
+            name: "Test".into(),
+            version: None,
+        };
         match OptionalPackageId::from_str("Test") {
             Ok(id) => assert_eq!(id, correct_version),
             Err(e) => panic!("Expected Ok(OptionalPackageId(name: 'Test', version: None)), got Err({e:?})"),

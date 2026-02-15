@@ -371,10 +371,7 @@ impl<'a> Installer<'a> {
                 continue;
             }
 
-            self.uninstall(&OptionalPackageId::new_versioned(
-                &build_dependency.package_metadata.name,
-                &build_dependency.version_metadata.version,
-            ))?;
+            self.uninstall(&PackageId::new(&build_dependency.package_metadata.name, &build_dependency.version_metadata.version).into())?;
         }
 
         Ok(())
