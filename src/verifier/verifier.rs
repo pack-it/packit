@@ -10,66 +10,115 @@ use crate::{
     verifier::{error::VerifierError, Issue},
 };
 
+// An enum which represents a specific check
+enum Check {
+    StorageConsistency,
+    RegisterConsistency,
+    DependencyTree,
+    Alterations,
+}
+
+// Define the correct order to do checks
+const VERIFY_ORDER: &[Check] = &[
+    Check::StorageConsistency,
+    Check::RegisterConsistency,
+    Check::Alterations,
+    Check::DependencyTree,
+];
+
 pub struct Verifier<'a> {
     config: &'a Config,
-    register: &'a PackageRegister,
+    current_issue: usize,
+    issues_found: bool,
 }
 
 impl<'a> Verifier<'a> {
-    pub fn new(config: &'a Config, register: &'a PackageRegister) -> Self {
-        Self { config, register }
+    pub fn new(config: &'a Config) -> Self {
+        Self {
+            config,
+            current_issue: 0,
+            issues_found: false,
+        }
     }
 
-    pub fn find_issues(&self) -> Result<Vec<Issue>, VerifierError> {
-        let mut issues = Vec::new();
+    /// Gets the next issue in the correct order, defined in VERIFY_ORDER.
+    /// None is returned if there are no more issues to return.
+    pub fn next_issue(&mut self, register: &PackageRegister) -> Result<Option<Issue>, VerifierError> {
+        loop {
+            let check = match VERIFY_ORDER.get(self.current_issue) {
+                Some(check) => check,
+                None => return Ok(None),
+            };
 
-        if let Some(issue) = self.check_storage_consistency()? {
-            issues.push(issue);
+            // Increase curren issue
+            self.current_issue += 1;
+
+            let issue = match check {
+                Check::StorageConsistency => self.check_storage_consistency(register)?,
+                Check::RegisterConsistency => self.check_register_consistency(register)?,
+                Check::DependencyTree => self.check_dependency_tree(register),
+                Check::Alterations => self.check_alterations(register)?,
+            };
+
+            if let Some(issue) = issue {
+                self.issues_found = true;
+                return Ok(Some(issue));
+            }
         }
-
-        if let Some(issue) = self.check_register_consistency()? {
-            issues.push(issue);
-        }
-
-        if let Some(issue) = self.check_dependency_tree() {
-            issues.push(issue);
-        }
-
-        // if let Some(issue) = self.check_alterations()? {
-        //     issues.push(issue);
-        // }
-
-        Ok(issues)
     }
 
-    pub fn find_package_issue(&self, package_id: &PackageId) -> Result<Vec<Issue>, VerifierError> {
-        let mut issues = Vec::new();
+    pub fn next_package_issue(&mut self, package_id: &PackageId, register: &PackageRegister) -> Result<Option<Issue>, VerifierError> {
+        loop {
+            let check = match VERIFY_ORDER.get(self.current_issue) {
+                Some(check) => check,
+                None => return Ok(None),
+            };
 
-        // TODO: What if an error in the checks prevents full finding of package issues which might be causing the error? (Check everything in the correct order)
-        if !self.package_storage_is_consistent(package_id)? {
-            issues.push(Issue::InconsistentStorage(vec![package_id.clone()]));
+            // Increase curren issue
+            self.current_issue += 1;
+
+            let issue = match check {
+                Check::StorageConsistency if self.package_storage_is_consistent(package_id)? => continue,
+                Check::StorageConsistency => Issue::InconsistentStorage(vec![package_id.clone()]),
+                Check::RegisterConsistency if self.register_package_is_consistent(package_id, register)? => continue,
+                Check::RegisterConsistency => Issue::InconsistentRegister(vec![package_id.clone()]),
+                Check::DependencyTree => {
+                    let missing_dependencies = self.check_package_dependency_tree(package_id, register);
+                    if missing_dependencies.is_empty() {
+                        continue;
+                    }
+
+                    Issue::BrokenTree(missing_dependencies)
+                },
+                Check::Alterations if !self.check_package_alterations(package_id)? => continue,
+                Check::Alterations => Issue::AlteredPackage(vec![package_id.clone()]),
+            };
+
+            self.issues_found = true;
+            return Ok(Some(issue));
         }
-
-        if !self.register_package_is_consistent(package_id)? {
-            issues.push(Issue::InconsistentRegister(vec![package_id.clone()]));
-        }
-
-        let missing_dependencies = self.check_package_dependency_tree(package_id);
-        if !missing_dependencies.is_empty() {
-            issues.push(Issue::BrokenTree(missing_dependencies));
-        }
-
-        // if self.check_package_alterations(package_id)? {
-        //     issues.push(Issue::AlteredPackage(vec![package_id.clone()]));
-        // }
-
-        Ok(issues)
     }
 
-    fn check_alterations(&self) -> Result<Option<Issue>, VerifierError> {
+    pub fn show_all_issues(&mut self, register: &PackageRegister) -> Result<(), VerifierError> {
+        while let Some(issue) = self.next_issue(register)? {
+            print!("{issue}\n");
+        }
+
+        Ok(())
+    }
+
+    pub fn show_all_package_issues(&mut self, package_id: &PackageId, register: &PackageRegister) -> Result<(), VerifierError> {
+        while let Some(issue) = self.next_package_issue(package_id, register)? {
+            print!("{issue}\n");
+        }
+
+        Ok(())
+    }
+
+    fn check_alterations(&self, register: &PackageRegister) -> Result<Option<Issue>, VerifierError> {
         // Find issues with a package, maybe even package it and compare it with checksum
         let mut altered = Vec::new();
-        for package in self.register.iterate_all() {
+        for package in register.iterate_all() {
             if self.check_package_alterations(&package.package_id)? {
                 altered.push(package.package_id.clone());
             }
@@ -93,9 +142,9 @@ impl<'a> Verifier<'a> {
         Ok(checksum != correct_checksum)
     }
 
-    fn check_storage_consistency(&self) -> Result<Option<Issue>, VerifierError> {
+    fn check_storage_consistency(&self, register: &PackageRegister) -> Result<Option<Issue>, VerifierError> {
         let mut missing = Vec::new();
-        for package in self.register.iterate_all() {
+        for package in register.iterate_all() {
             if !self.package_storage_is_consistent(&package.package_id)? {
                 missing.push(package.package_id.clone());
             }
@@ -119,7 +168,7 @@ impl<'a> Verifier<'a> {
         Ok(false)
     }
 
-    fn check_register_consistency(&self) -> Result<Option<Issue>, VerifierError> {
+    fn check_register_consistency(&self, register: &PackageRegister) -> Result<Option<Issue>, VerifierError> {
         let package_directory = self.config.prefix_directory.join("packages");
         let mut missing = Vec::new();
         for file_package in fs::read_dir(package_directory)? {
@@ -143,7 +192,7 @@ impl<'a> Verifier<'a> {
                 let package_id = PackageId::new(package_name, &version);
 
                 // Check if the package version also exists in the register, if not add it to missing
-                if self.register.get_package_version(&package_id).is_none() {
+                if register.get_package_version(&package_id).is_none() {
                     missing.push(package_id);
                 }
             }
@@ -156,7 +205,7 @@ impl<'a> Verifier<'a> {
         Ok(Some(Issue::InconsistentRegister(missing)))
     }
 
-    fn register_package_is_consistent(&self, package_id: &PackageId) -> Result<bool, VerifierError> {
+    fn register_package_is_consistent(&self, package_id: &PackageId, register: &PackageRegister) -> Result<bool, VerifierError> {
         let install_directory = self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
 
         // Return no issue if the package exists in storage
@@ -165,7 +214,7 @@ impl<'a> Verifier<'a> {
         }
 
         // Return no issue if the package exists in the register
-        if self.register.get_package_version(package_id).is_some() {
+        if register.get_package_version(package_id).is_some() {
             return Ok(true);
         }
 
@@ -173,10 +222,10 @@ impl<'a> Verifier<'a> {
         Ok(false)
     }
 
-    fn check_dependency_tree(&self) -> Option<Issue> {
+    fn check_dependency_tree(&self, register: &PackageRegister) -> Option<Issue> {
         let mut all_missing = Vec::new();
-        for package in self.register.iterate_all() {
-            all_missing.extend(self.check_package_dependency_tree(&package.package_id));
+        for package in register.iterate_all() {
+            all_missing.extend(self.check_package_dependency_tree(&package.package_id, register));
         }
 
         if all_missing.is_empty() {
@@ -186,8 +235,8 @@ impl<'a> Verifier<'a> {
         Some(Issue::BrokenTree(all_missing))
     }
 
-    fn check_package_dependency_tree(&self, package_id: &PackageId) -> Vec<(PackageId, PackageId)> {
-        let package = match self.register.get_package_version(package_id) {
+    fn check_package_dependency_tree(&self, package_id: &PackageId, register: &PackageRegister) -> Vec<(PackageId, PackageId)> {
+        let package = match register.get_package_version(package_id) {
             Some(package) => package,
             None => {
                 warning!("Parent node '{package_id}' doesn't exist, while checking dependency tree.");
@@ -197,15 +246,19 @@ impl<'a> Verifier<'a> {
 
         let mut missing = Vec::new();
         for dependency in &package.dependencies {
-            if self.register.get_package_version(dependency).is_none() {
+            if register.get_package_version(&dependency).is_none() {
                 missing.push((package_id.clone(), dependency.clone()));
                 continue;
             }
 
             // Recursively check if all the dependencies are installed
-            missing.extend(self.check_package_dependency_tree(dependency));
+            missing.extend(self.check_package_dependency_tree(dependency, register));
         }
 
         missing
+    }
+
+    pub fn issues_found(&self) -> bool {
+        self.issues_found
     }
 }

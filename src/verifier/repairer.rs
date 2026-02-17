@@ -9,22 +9,22 @@ use crate::{
     },
     repositories::manager::RepositoryManager,
     storage::package_register::PackageRegister,
-    verifier::{error::VerifierError, Issue},
+    verifier::{error::VerifierError, Issue, Verifier},
 };
 
 pub struct Repairer<'a> {
     config: &'a Config,
-    register: &'a mut PackageRegister,
     manager: &'a RepositoryManager<'a>,
 }
 
 impl<'a> Repairer<'a> {
-    pub fn new(config: &'a Config, register: &'a mut PackageRegister, manager: &'a RepositoryManager) -> Self {
-        Self { config, register, manager }
+    pub fn new(config: &'a Config, manager: &'a RepositoryManager) -> Self {
+        Self { config, manager }
     }
 
-    pub fn fix(&mut self, issues: Vec<Issue>) -> Result<(), VerifierError> {
-        for issue in issues {
+    pub fn fix(&mut self, register: &mut PackageRegister) -> Result<(), VerifierError> {
+        let mut verifier = Verifier::new(self.config);
+        while let Some(issue) = verifier.next_issue(register)? {
             print!("{issue}\n");
 
             let question = "Would you like to automatically fix the above issue with `pit fix`?";
@@ -33,21 +33,19 @@ impl<'a> Repairer<'a> {
             }
 
             match issue {
-                Issue::BrokenTree(missing) => self.fix_broken_tree(missing)?,
-                Issue::InconsistentStorage(missing) => self.fix_inconsistent_storage(missing)?,
-                Issue::InconsistentRegister(missing) => self.fix_inconsistent_register(missing)?,
-                _ => {
-                    warning!("Issue fix not yet implemented")
-                },
+                Issue::BrokenTree(missing) => self.fix_broken_tree(missing, register)?,
+                Issue::InconsistentStorage(missing) => self.fix_inconsistent_storage(missing, register)?,
+                Issue::InconsistentRegister(missing) => self.fix_inconsistent_register(missing, register)?,
+                _ => warning!("Issue fix not yet implemented"),
             }
         }
 
         Ok(())
     }
 
-    fn fix_broken_tree(&mut self, missing: Vec<(PackageId, PackageId)>) -> Result<(), VerifierError> {
+    fn fix_broken_tree(&mut self, missing: Vec<(PackageId, PackageId)>, register: &mut PackageRegister) -> Result<(), VerifierError> {
         let installer_options = InstallerOptions::default().skip_symlinking(true);
-        let mut installer = Installer::new(&self.config, self.register, &self.manager, installer_options);
+        let mut installer = Installer::new(&self.config, register, &self.manager, installer_options);
 
         for (_, missing_package) in missing {
             // TODO: Do we want to check for already existing packages? (there could be duplicates in the missing dependencies)
@@ -57,10 +55,10 @@ impl<'a> Repairer<'a> {
         Ok(())
     }
 
-    fn fix_inconsistent_storage(&mut self, missing: Vec<PackageId>) -> Result<(), VerifierError> {
+    fn fix_inconsistent_storage(&mut self, missing: Vec<PackageId>, register: &mut PackageRegister) -> Result<(), VerifierError> {
         for missing_package in missing {
             // Gather the package settings before remove the package from the register
-            let (symlink, active) = match self.register.get_package(&missing_package.name) {
+            let (symlink, active) = match register.get_package(&missing_package.name) {
                 Some(package) => (package.symlinked, package.active_version == missing_package.version),
                 None => {
                     warning!("Inconsistent package cannot be found in Installed.toml anymore.");
@@ -69,10 +67,10 @@ impl<'a> Repairer<'a> {
             };
 
             // Temporarily remove the package from the register
-            self.register.remove_package_version(&missing_package);
+            register.remove_package_version(&missing_package);
 
             let installer_options = InstallerOptions::default().skip_symlinking(!symlink).skip_active(!active);
-            let mut installer = Installer::new(&self.config, self.register, &self.manager, installer_options);
+            let mut installer = Installer::new(&self.config, register, &self.manager, installer_options);
 
             installer.install(&missing_package.name, Some(&missing_package.version))?;
         }
@@ -80,7 +78,7 @@ impl<'a> Repairer<'a> {
         Ok(())
     }
 
-    fn fix_inconsistent_register(&mut self, missing: Vec<PackageId>) -> Result<(), VerifierError> {
+    fn fix_inconsistent_register(&mut self, missing: Vec<PackageId>, register: &mut PackageRegister) -> Result<(), VerifierError> {
         let active_directory = self.config.prefix_directory.join("active");
         let bin_directory = self.config.prefix_directory.join("bin");
         let package_directory = self.config.prefix_directory.join("packages");
@@ -109,7 +107,7 @@ impl<'a> Repairer<'a> {
 
             // Re-install the package
             let installer_options = InstallerOptions::default().skip_symlinking(!symlinked).skip_active(!active);
-            let mut installer = Installer::new(&self.config, self.register, &self.manager, installer_options);
+            let mut installer = Installer::new(&self.config, register, &self.manager, installer_options);
 
             installer.install(&package_id.name, Some(&package_id.version))?;
         }

@@ -16,21 +16,23 @@ impl HandleCommand for CheckArgs {
     fn handle(&self, config: &Config, _: &RepositoryManager) {
         let register_dir = PackageRegister::get_default_path();
         let register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
-        let verifier = Verifier::new(config, &register);
-        let issues = match &self.package {
-            Some(id) => verifier.find_package_issue(id).unwrap_or_exit(1),
-            None => verifier.find_issues().unwrap_or_exit(1),
+        let mut verifier = Verifier::new(config);
+
+        // Show all issues
+        let result = match &self.package {
+            Some(id) => verifier.show_all_package_issues(id, &register),
+            None => verifier.show_all_issues(&register),
         };
 
-        if issues.is_empty() {
+        // Return early with message if no issues were found
+        if verifier.issues_found() {
             println!("No issues were found");
             return;
         }
 
-        for issue in issues {
-            print!("{issue}\n");
-        }
+        println!("Consider running `pit fix` to resolve the issues above.");
 
-        println!("Consider running `pit fix` to resolve the issues above.")
+        // Handle the result
+        result.unwrap_or_exit_msg("An error occured during the check, this error could be caused by one of the issues above and might still be fixed by `pit fix`. It's possible that not all issues were found.", 1);
     }
 }
