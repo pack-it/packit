@@ -99,22 +99,6 @@ impl<'a> Verifier<'a> {
         }
     }
 
-    pub fn show_all_issues(&mut self, register: &PackageRegister) -> Result<(), VerifierError> {
-        while let Some(issue) = self.next_issue(register)? {
-            print!("{issue}\n");
-        }
-
-        Ok(())
-    }
-
-    pub fn show_all_package_issues(&mut self, package_id: &PackageId, register: &PackageRegister) -> Result<(), VerifierError> {
-        while let Some(issue) = self.next_package_issue(package_id, register)? {
-            print!("{issue}\n");
-        }
-
-        Ok(())
-    }
-
     fn check_alterations(&self, register: &PackageRegister) -> Result<Option<Issue>, VerifierError> {
         // Find issues with a package, maybe even package it and compare it with checksum
         let mut altered = Vec::new();

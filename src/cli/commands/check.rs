@@ -18,14 +18,20 @@ impl HandleCommand for CheckArgs {
         let register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
         let mut verifier = Verifier::new(config);
 
-        // Show all issues
-        let result = match &self.package {
-            Some(id) => verifier.show_all_package_issues(id, &register),
-            None => verifier.show_all_issues(&register),
-        };
-
-        // Handle the result
-        result.unwrap_or_exit_msg("An error occured during the check, this error could be caused by one of the issues above and might still be fixed by `pit fix`. It's possible that not all issues were found.", 1);
+        // Get all issues
+        let error_message = "An error occured during the check, this error could be caused by one of the issues above and might still be fixed by `pit fix`. It's possible that not all issues were found.";
+        match &self.package {
+            Some(id) => {
+                while let Some(issue) = verifier.next_package_issue(id, &register).unwrap_or_exit_msg(error_message, 1) {
+                    print!("{issue}\n")
+                }
+            },
+            None => {
+                while let Some(issue) = verifier.next_issue(&register).unwrap_or_exit_msg(error_message, 1) {
+                    print!("{issue}\n")
+                }
+            },
+        }
 
         // Return correct message based on found issues
         if verifier.issues_found() {

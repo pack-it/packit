@@ -23,9 +23,7 @@ impl HandleCommand for FixArgs {
         repairer.fix(&mut verifier, &mut register).unwrap_or_exit(1);
 
         // Return correct message based on found issues
-        if verifier.issues_found() {
-            println!("Consider running `pit fix` to resolve the issues above.");
-        } else {
+        if !verifier.issues_found() {
             println!("No issues were found");
         }
 
