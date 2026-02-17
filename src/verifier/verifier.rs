@@ -50,7 +50,7 @@ impl<'a> Verifier<'a> {
                 None => return Ok(None),
             };
 
-            // Increase curren issue
+            // Increase current issue
             self.current_issue += 1;
 
             let issue = match check {

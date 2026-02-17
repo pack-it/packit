@@ -24,15 +24,14 @@ impl HandleCommand for CheckArgs {
             None => verifier.show_all_issues(&register),
         };
 
-        // Return early with message if no issues were found
-        if verifier.issues_found() {
-            println!("No issues were found");
-            return;
-        }
-
-        println!("Consider running `pit fix` to resolve the issues above.");
-
         // Handle the result
         result.unwrap_or_exit_msg("An error occured during the check, this error could be caused by one of the issues above and might still be fixed by `pit fix`. It's possible that not all issues were found.", 1);
+
+        // Return correct message based on found issues
+        if verifier.issues_found() {
+            println!("Consider running `pit fix` to resolve the issues above.");
+        } else {
+            println!("No issues were found");
+        }
     }
 }

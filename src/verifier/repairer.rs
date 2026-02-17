@@ -22,8 +22,7 @@ impl<'a> Repairer<'a> {
         Self { config, manager }
     }
 
-    pub fn fix(&mut self, register: &mut PackageRegister) -> Result<(), VerifierError> {
-        let mut verifier = Verifier::new(self.config);
+    pub fn fix(&mut self, verifier: &mut Verifier, register: &mut PackageRegister) -> Result<(), VerifierError> {
         while let Some(issue) = verifier.next_issue(register)? {
             print!("{issue}\n");
 
