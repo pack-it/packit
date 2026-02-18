@@ -108,7 +108,9 @@ impl<'a> Installer<'a> {
         for node in nodes {
             let package_id = PackageId::new(&node.package_metadata.name, &node.version_metadata.version);
             if !self.options.build_source {
-                let prebuild_url = self.repository_manager.get_prebuild_url(&node.repository_id, &package_id);
+                let revision = node.version_metadata.revisions.len();
+                let prebuild_url =
+                    self.repository_manager.get_prebuild_url(&node.repository_id, &package_id, revision, TARGET_ARCHITECTURE);
 
                 // Install the package with a prebuild if possible
                 if let Some(url) = prebuild_url {

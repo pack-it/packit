@@ -13,11 +13,11 @@ pub struct FileSystemPrebuildProvider {
 }
 
 impl PrebuildProvider for FileSystemPrebuildProvider {
-    fn get_prebuild_url(&self, package: &str, version: &Version, revision: u64, target: &str) -> Option<String> {
+    fn get_prebuild_url(&self, package: &str, version: &Version, revision: usize, target: &str) -> Option<String> {
         todo!()
     }
 
-    fn get_prebuild_checksum(&self, package: &str, version: &Version, revision: u64, target: &str) -> Option<Checksum> {
+    fn get_prebuild_checksum(&self, package: &str, version: &Version, revision: usize, target: &str) -> Option<Checksum> {
         todo!()
     }
 }

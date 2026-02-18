@@ -29,10 +29,10 @@ pub trait RepositoryProvider {
 /// Generic prebuild provider trait, reading prebuild packages from a repository.
 pub trait PrebuildProvider {
     /// Gets the url of a prebuild package, returns None if the prebuild package does not exist
-    fn get_prebuild_url(&self, package: &str, version: &Version, revision: u64, target: &str) -> Option<String>;
+    fn get_prebuild_url(&self, package: &str, version: &Version, revision: usize, target: &str) -> Option<String>;
 
     /// Gets the checksum of a prebuild package, returns None if the prebuild package does not exist
-    fn get_prebuild_checksum(&self, package: &str, version: &Version, revision: u64, target: &str) -> Option<Checksum>;
+    fn get_prebuild_checksum(&self, package: &str, version: &Version, revision: usize, target: &str) -> Option<Checksum>;
 }
 
 /// Creates a repository provider for the given repository.

@@ -8,7 +8,7 @@ use crate::{
     repositories::{
         error::{RepositoryError, Result},
         provider::{self, PrebuildProvider, RepositoryProvider},
-        types::{PackageMeta, PackageVersionMeta, RepositoryMeta},
+        types::{Checksum, PackageMeta, PackageVersionMeta, RepositoryMeta},
     },
 };
 
@@ -199,8 +199,21 @@ impl<'a> RepositoryManager<'a> {
         Ok(provider.read_script(package, script_path)?)
     }
 
-    pub fn get_prebuild_url(&self, repository_id: &str, package_id: &PackageId) -> Option<String> {
-        //TODO: implement
-        None
+    pub fn get_prebuild_url(&self, repository_id: &str, package_id: &PackageId, revision: usize, target: &str) -> Option<String> {
+        let provider = match self.prebuild_providers.get(repository_id) {
+            Some(provider) => provider,
+            None => return None,
+        };
+
+        provider.get_prebuild_url(&package_id.name, &package_id.version, revision, target)
+    }
+
+    pub fn get_prebuild_checksum(&self, repository_id: &str, package_id: &PackageId, revision: usize, target: &str) -> Option<Checksum> {
+        let provider = match self.prebuild_providers.get(repository_id) {
+            Some(provider) => provider,
+            None => return None,
+        };
+
+        provider.get_prebuild_checksum(&package_id.name, &package_id.version, revision, target)
     }
 }
