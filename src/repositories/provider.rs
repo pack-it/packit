@@ -2,10 +2,12 @@ use crate::{
     config::Repository,
     installer::types::Version,
     repositories::{
-        default::{DefaultProvider, DEFAULT_PROVIDER_ID},
         error::Result,
-        filesystem::{FileSystemProvider, FILESYSTEM_PROVIDER_ID},
-        types::{PackageMeta, PackageVersionMeta, RepositoryMeta},
+        providers::{
+            prebuild::{FileSystemPrebuildProvider, FILESYSTEM_PREBUILD_PROVIDER_ID},
+            repository::{DefaultProvider, FileSystemProvider, DEFAULT_PROVIDER_ID, FILESYSTEM_PROVIDER_ID},
+        },
+        types::{Checksum, PackageMeta, PackageVersionMeta, RepositoryMeta},
     },
 };
 
@@ -24,6 +26,15 @@ pub trait RepositoryProvider {
     fn read_script(&self, package: &str, script_path: &str) -> Result<Option<String>>;
 }
 
+/// Generic prebuild provider trait, reading prebuild packages from a repository.
+pub trait PrebuildProvider {
+    /// Gets the url of a prebuild package, returns None if the prebuild package does not exist
+    fn get_prebuild_url(&self, package: &str, version: &Version, revision: u64, target: &str) -> Option<String>;
+
+    /// Gets the checksum of a prebuild package, returns None if the prebuild package does not exist
+    fn get_prebuild_checksum(&self, package: &str, version: &Version, revision: u64, target: &str) -> Option<Checksum>;
+}
+
 /// Creates a repository provider for the given repository.
 pub fn create_repository_provider(repository: &Repository) -> Option<Box<dyn RepositoryProvider>> {
     match repository.provider.as_str() {
@@ -33,7 +44,38 @@ pub fn create_repository_provider(repository: &Repository) -> Option<Box<dyn Rep
     }
 }
 
+/// Creates a prebuild provider for the given repository.
+pub fn create_prebuild_provider(repository: &Repository, repo_metadata: RepositoryMeta) -> Option<Box<dyn PrebuildProvider>> {
+    // TODO: refactor
+    let (url, provider) = match &repository.prebuilds_url {
+        Some(url) => (
+            url,
+            repository.prebuilds_provider.clone().unwrap_or(FILESYSTEM_PREBUILD_PROVIDER_ID.into()),
+        ),
+        None => {
+            if let Some(url) = &repo_metadata.prebuilds_url {
+                (
+                    url,
+                    repo_metadata.prebuilds_provider.unwrap_or(FILESYSTEM_PREBUILD_PROVIDER_ID.into()),
+                )
+            } else {
+                return None;
+            }
+        },
+    };
+
+    match provider.as_str() {
+        FILESYSTEM_PREBUILD_PROVIDER_ID => boxed_prebuild(FileSystemPrebuildProvider::from_url(&url)),
+        _ => None,
+    }
+}
+
 /// Maps an `Option<RepositoryProvider>` to `Option<Box<RepositoryProvider>>`.
 fn boxed(provider: Option<impl RepositoryProvider + 'static>) -> Option<Box<dyn RepositoryProvider>> {
     provider.map(|provider| Box::new(provider) as Box<dyn RepositoryProvider>)
+}
+
+/// Maps an `Option<PrebuildProvider>` to `Option<Box<PrebuildProvider>>`.
+fn boxed_prebuild(provider: Option<impl PrebuildProvider + 'static>) -> Option<Box<dyn PrebuildProvider>> {
+    provider.map(|provider| Box::new(provider) as Box<dyn PrebuildProvider>)
 }

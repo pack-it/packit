@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
 use crate::{
-    cli::display::logging::{debug, warning},
+    cli::display::logging::{debug, error, warning},
     config::Config,
     installer::types::PackageId,
     platforms::TARGET_ARCHITECTURE,
     repositories::{
         error::{RepositoryError, Result},
-        provider::{create_repository_provider, RepositoryProvider},
+        provider::{self, PrebuildProvider, RepositoryProvider},
         types::{PackageMeta, PackageVersionMeta, RepositoryMeta},
     },
 };
@@ -16,24 +16,49 @@ use crate::{
 pub struct RepositoryManager<'a> {
     config: &'a Config,
     providers: HashMap<String, Box<dyn RepositoryProvider>>,
+    prebuild_providers: HashMap<String, Box<dyn PrebuildProvider>>,
 }
 
 impl<'a> RepositoryManager<'a> {
     /// Creates a new RepositoryManager.
     pub fn new(config: &'a Config) -> Self {
         let mut providers = HashMap::new();
+        let mut prebuild_providers = HashMap::new();
 
         for (id, repository) in &config.repositories {
-            let provider = create_repository_provider(repository);
+            let provider = provider::create_repository_provider(repository);
             if provider.is_none() {
                 warning!("Cannot create repository provider for repository {id}.");
                 continue;
             }
 
-            providers.insert(id.clone(), provider.expect("Expected some provider at this point"));
+            let provider = provider.expect("Expected some provider at this point");
+            let repository_meta = match provider.read_repository_metadata() {
+                Ok(repository_meta) => Some(repository_meta),
+                Err(e) => {
+                    error!(e, "Cannot retrieve repository metadata of repository {id}");
+                    None
+                },
+            };
+
+            providers.insert(id.clone(), provider);
+
+            if let Some(repository_meta) = repository_meta {
+                let prebuild_provider = provider::create_prebuild_provider(repository, repository_meta);
+                if prebuild_provider.is_none() {
+                    warning!("Cannot create prebuild provider for repository {id}.");
+                    continue;
+                }
+
+                prebuild_providers.insert(id.clone(), prebuild_provider.expect("Expected prebuild provider at this point"));
+            }
         }
 
-        Self { config, providers }
+        Self {
+            config,
+            providers,
+            prebuild_providers,
+        }
     }
 
     /// Reads repository metadata of the given repository, containing information about the repository.
