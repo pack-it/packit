@@ -28,6 +28,12 @@ pub enum RepositoryError {
 
     #[error("Cannot find target for package.")]
     TargetError,
+
+    #[error("The given package name is empty")]
+    EmptyPackageName,
+
+    #[error("Cannot parse checksum from bytes")]
+    ChecksumParseError,
 }
 
 pub(super) type Result<T> = std::result::Result<T, RepositoryError>;

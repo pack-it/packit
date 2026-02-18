@@ -32,7 +32,7 @@ pub trait PrebuildProvider {
     fn get_prebuild_url(&self, package: &str, version: &Version, revision: usize, target: &str) -> Option<String>;
 
     /// Gets the checksum of a prebuild package, returns None if the prebuild package does not exist
-    fn get_prebuild_checksum(&self, package: &str, version: &Version, revision: usize, target: &str) -> Option<Checksum>;
+    fn get_prebuild_checksum(&self, package: &str, version: &Version, revision: usize, target: &str) -> Result<Option<Checksum>>;
 }
 
 /// Creates a repository provider for the given repository.

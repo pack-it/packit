@@ -208,10 +208,21 @@ impl<'a> RepositoryManager<'a> {
         provider.get_prebuild_url(&package_id.name, &package_id.version, revision, target)
     }
 
-    pub fn get_prebuild_checksum(&self, repository_id: &str, package_id: &PackageId, revision: usize, target: &str) -> Option<Checksum> {
+    // TODO: change revision to u64
+    pub fn get_prebuild_checksum(
+        &self,
+        repository_id: &str,
+        package_id: &PackageId,
+        revision: usize,
+        target: &str,
+    ) -> Result<Option<Checksum>> {
         let provider = match self.prebuild_providers.get(repository_id) {
             Some(provider) => provider,
-            None => return None,
+            None => {
+                return Err(RepositoryError::RepositoryNotFoundError {
+                    repository_id: repository_id.into(),
+                })
+            },
         };
 
         provider.get_prebuild_checksum(&package_id.name, &package_id.version, revision, target)
