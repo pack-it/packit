@@ -82,6 +82,58 @@ impl FromStr for PackageId {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OptionalPackageId {
+    pub name: String,
+    pub version: Option<Version>,
+}
+
+impl From<PackageId> for OptionalPackageId {
+    fn from(value: PackageId) -> Self {
+        Self {
+            name: value.name,
+            version: Some(value.version),
+        }
+    }
+}
+
+impl FromStr for OptionalPackageId {
+    type Err = PackageIdError;
+
+    fn from_str(string: &str) -> Result<Self, Self::Err> {
+        // Name must have some value
+        if string.is_empty() {
+            return Err(PackageIdError::NoNameError);
+        }
+
+        if string.contains("@") {
+            let package_id = PackageId::from_str(&string)?;
+
+            return Ok(Self {
+                name: package_id.name,
+                version: Some(package_id.version),
+            });
+        }
+
+        Ok(Self {
+            name: string.into(),
+            version: None,
+        })
+    }
+}
+
+impl Display for OptionalPackageId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", &self.name)?;
+
+        if let Some(version) = &self.version {
+            write!(f, "@{}", version)?;
+        }
+
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -114,5 +166,28 @@ mod tests {
         let correct_version = PackageId::new("Test", &Version::from_str("3.4.1").expect("Expected Version."));
 
         assert_eq!(correct_version.to_string(), "Test@3.4.1");
+    }
+
+    #[test]
+    fn from_str_optional() {
+        let correct_version = PackageId::new("Test", &Version::from_str("3.4.1").expect("Expected Version.")).into();
+        match OptionalPackageId::from_str("Test@3.4.1") {
+            Ok(id) => assert_eq!(id, correct_version),
+            Err(e) => panic!("Expected Ok(OptionalPackageId(name: 'Test', version: Some(Version(..)))), got Err({e:?})"),
+        }
+
+        let correct_version = OptionalPackageId {
+            name: "Test".into(),
+            version: None,
+        };
+        match OptionalPackageId::from_str("Test") {
+            Ok(id) => assert_eq!(id, correct_version),
+            Err(e) => panic!("Expected Ok(OptionalPackageId(name: 'Test', version: None)), got Err({e:?})"),
+        }
+    }
+
+    #[test]
+    fn from_str_empty_optional() {
+        assert_eq!(OptionalPackageId::from_str(""), Err(PackageIdError::NoNameError));
     }
 }

@@ -1,11 +1,9 @@
-use std::str::FromStr;
-
 use clap::Args;
 
 use crate::{
     cli::{commands::HandleCommand, display::logging::error},
     config::Config,
-    installer::{types::PackageId, Installer, InstallerOptions},
+    installer::{types::OptionalPackageId, Installer, InstallerOptions},
     repositories::manager::RepositoryManager,
     storage::package_register::PackageRegister,
     utils::unwrap_or_exit::UnwrapOrExit,
@@ -13,9 +11,9 @@ use crate::{
 
 #[derive(Args, Debug)]
 pub struct InstallArgs {
-    /// The name of the package to install, with an optional version specified with NAME@VERSION
+    /// The name of the packages to install, with an optional version specified with NAME@VERSION
     #[arg(num_args(0..))]
-    pub packages: Vec<String>,
+    pub packages: Vec<OptionalPackageId>,
 
     /// True to build from source locally, false to use a prebuild version
     #[arg(long, default_value = "false")]
@@ -47,28 +45,12 @@ impl HandleCommand for InstallArgs {
         let mut installer = Installer::new(&config, &mut register, &manager, installer_options);
 
         // TODO: Check if this exists as an external package (possibly leading to conflicts) (if so, add to external packages)
-
-        let mut packages = Vec::new();
-
-        // Convert packages into package name and version
-        for package in &self.packages {
-            if package.contains("@") {
-                let package_id =
-                    PackageId::from_str(&package).unwrap_or_exit_msg(&format!("Package '{package}' is not a valid package identifier."), 1);
-
-                packages.push((package_id.name, Some(package_id.version)));
-                continue;
-            }
-
-            packages.push((package.into(), None));
-        }
-
         // TODO: check for duplicate packages in Vec
 
         // Install all packages
-        for (package_name, version) in packages {
-            if let Err(error) = installer.install(&package_name, version.as_ref()) {
-                error!(error, "Cannot install package {package_name}");
+        for package_id in &self.packages {
+            if let Err(error) = installer.install(&package_id) {
+                error!(error, "Cannot install package {package_id}");
             }
         }
 

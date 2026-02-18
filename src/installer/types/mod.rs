@@ -6,6 +6,7 @@ mod version_bounds;
 pub use dependency::Dependency;
 pub use dependency::DependencyParserError;
 
+pub use package_id::OptionalPackageId;
 pub use package_id::PackageId;
 
 pub use version::Version;

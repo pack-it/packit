@@ -1,9 +1,9 @@
 use clap::Args;
 
 use crate::{
-    cli::commands::HandleCommand,
+    cli::{commands::HandleCommand, display::logging::error},
     config::Config,
-    installer::{types::Version, Installer, InstallerOptions},
+    installer::{types::OptionalPackageId, Installer, InstallerOptions},
     repositories::manager::RepositoryManager,
     storage::package_register::PackageRegister,
     utils::unwrap_or_exit::UnwrapOrExit,
@@ -11,23 +11,24 @@ use crate::{
 
 #[derive(Args, Debug)]
 pub struct UninstallArgs {
-    /// The name of the package to uninstall
-    pub package_name: String,
-
-    /// The version of the package to uninstall
-    #[arg(short, long)]
-    pub version: Option<Version>,
+    /// The name of the packages to install, with an optional version specified with NAME@VERSION
+    #[arg(num_args(0..))]
+    pub packages: Vec<OptionalPackageId>,
 }
 
 impl HandleCommand for UninstallArgs {
-    // TODO: Add <package>@<version> notation for uninstall as well to be more consistant
     fn handle(&self, config: &Config, manager: &RepositoryManager) {
         let register_dir = PackageRegister::get_default_path();
         let mut register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
-        Installer::new(config, &mut register, manager, InstallerOptions::default())
-            .uninstall(&self.package_name, self.version.as_ref())
-            .unwrap_or_exit(1);
+        let mut installer = Installer::new(config, &mut register, manager, InstallerOptions::default());
+
+        // Uninstall all specified packages
+        for package_id in &self.packages {
+            if let Err(error) = installer.uninstall(&package_id) {
+                error!(error, "Cannot uninstall package {package_id}");
+            }
+        }
 
         // Save changes
         register.save_to(&register_dir).unwrap_or_exit(1);

@@ -11,7 +11,7 @@ use crate::{
         options::InstallerOptions,
         scripts::{self, ScriptData},
         symlinker::Symlinker,
-        types::{Dependency, PackageId, Version},
+        types::{Dependency, OptionalPackageId, PackageId, Version},
     },
     platforms::{symlink, TARGET_ARCHITECTURE},
     repositories::{
@@ -61,22 +61,22 @@ impl<'a> Installer<'a> {
     }
 
     /// Installs the given package and its dependencies.
-    pub fn install(&mut self, package_name: &str, version: Option<&Version>) -> Result<()> {
+    pub fn install(&mut self, package_id: &OptionalPackageId) -> Result<()> {
         // Check if we can write to the prefix directory
         if !self.can_write_prefix_dir()? {
             return Err(InstallerError::PermissionsError);
         }
 
-        let (repository_id, package_metadata) = self.repository_manager.read_package(package_name)?;
+        let (repository_id, package_metadata) = self.repository_manager.read_package(&package_id.name)?;
 
         // Use the latest version if the version isn't specified
-        let version = match version {
+        let version = match &package_id.version {
             Some(version) => version,
             None => package_metadata.get_latest_version(TARGET_ARCHITECTURE)?,
         };
 
         // Create a package id of the current package
-        let package_id = PackageId::new(&package_name, &version);
+        let package_id = PackageId::new(&package_id.name, &version);
 
         // Check if this package version is already installed
         if self.register.get_package_version(&package_id).is_some() {
@@ -361,9 +361,10 @@ impl<'a> Installer<'a> {
             // Get name and version from the current build dependency
             let name = &build_dependency.package_metadata.name;
             let version = &build_dependency.version_metadata.version;
+            let package_id = PackageId::new(name, version);
 
             // Continue if the build dependency is also a dependency in the dependency sequence
-            if dependencies.iter().any(|d| d.name == *name && d.version == *version) {
+            if dependencies.iter().any(|d| *d == package_id) {
                 continue;
             }
 
@@ -372,10 +373,7 @@ impl<'a> Installer<'a> {
                 continue;
             }
 
-            self.uninstall(
-                &build_dependency.package_metadata.name,
-                Some(&build_dependency.version_metadata.version),
-            )?;
+            self.uninstall(&package_id.into())?;
         }
 
         Ok(())
@@ -386,25 +384,25 @@ impl<'a> Installer<'a> {
     }
 
     /// Uninstalls a package version if specified, otherwise it will uninstall the entire package directory.
-    pub fn uninstall(&mut self, package_name: &str, version: Option<&Version>) -> Result<()> {
+    pub fn uninstall(&mut self, package_id: &OptionalPackageId) -> Result<()> {
         // Check if we can write to the prefix directory
         if !self.can_write_prefix_dir()? {
             return Err(InstallerError::PermissionsError);
         }
 
         // Check if the current package to delete is a dependency, if so, give dependency error
-        if self.register.is_dependency(package_name, version) {
+        if self.register.is_dependency(&package_id.name, package_id.version.as_ref()) {
             return Err(InstallerError::DependencyError {
-                package_name: package_name.into(),
+                package_name: package_id.name.clone(),
             });
         }
 
         // This determines the directory to remove. If there are multiple versions and the version is
         // specified only the specified version directory will be deleted. The entire package directory
         // is deleted if the version isn't specified or if the package directory only contains one version.
-        match version {
-            Some(version) => self.uninstall_single(&PackageId::new(package_name, &version))?,
-            None => self.uninstall_all(package_name)?,
+        match &package_id.version {
+            Some(version) => self.uninstall_single(&PackageId::new(&package_id.name, &version))?,
+            None => self.uninstall_all(&package_id.name)?,
         };
 
         Ok(())
