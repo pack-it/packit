@@ -94,6 +94,12 @@ pub fn run_test_script(script_data: &ScriptData) -> Result<()> {
     run_script(script_data, script_data.package_install_path, Environment::new())
 }
 
+/// Runs the given uninstall script, in the package install directory.
+/// Note that the script should be a `.sh` script on Linux and macOS and a `.bat` on Windows.
+pub fn run_uninstall_script(script_data: &ScriptData) -> Result<()> {
+    run_script(script_data, script_data.package_install_path, Environment::new())
+}
+
 /// Runs the script at the given path, in the given directory.
 /// Note that the script should be a `.sh` script on Linux and macOS and a `.bat` on Windows.
 fn run_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, env: Environment) -> Result<()> {
@@ -161,11 +167,17 @@ pub fn download_script(
     };
 
     // Write script to file
+    Ok(Some(write_script_to_tempfile(&script_text)?))
+}
+
+/// Downloads a script and saves it as a temp file.
+pub fn write_script_to_tempfile(script_text: &str) -> Result<NamedTempFile> {
+    // Write script to file
     let file = NamedTempFile::new().map_err(ScriptError::SaveError)?;
     fs::write(&file, &script_text).map_err(ScriptError::SaveError)?;
 
-    // Script succesfully downloaded, so return created tempfile
-    Ok(Some(file))
+    // Return created tempfile
+    Ok(file)
 }
 
 fn to_absolute_path<P: AsRef<Path>>(path: P) -> Result<PathBuf> {

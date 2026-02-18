@@ -178,7 +178,7 @@ impl<'a> Symlinker<'a> {
         }
 
         // Update symlinked state in package register
-        match register.get_package_mut(&package_name) {
+        match register.get_package_mut(package_name) {
             Some(package) => package.symlinked = false,
             None => {
                 warning!("Cannot get installed package after changing symlinks, please try running pit fix to fix your installation");

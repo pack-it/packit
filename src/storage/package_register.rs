@@ -380,6 +380,7 @@ pub mod tests {
             use_version_specific_preinstall: false,
             use_version_specific_postinstall: false,
             use_version_specific_test: false,
+            use_version_specific_uninstall: false,
             revisions: Vec::new(),
         }
     }
