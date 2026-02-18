@@ -4,8 +4,8 @@ use crate::{
     repositories::{
         error::Result,
         providers::{
-            prebuild::{FileSystemPrebuildProvider, FILESYSTEM_PREBUILD_PROVIDER_ID},
-            repository::{DefaultProvider, FileSystemProvider, DEFAULT_PROVIDER_ID, FILESYSTEM_PROVIDER_ID},
+            prebuild::{FileSystemPrebuildProvider, DEFAULT_PREBUILD_PROVIDER_ID, FILESYSTEM_PREBUILD_PROVIDER_ID},
+            repository::{FileSystemProvider, WebProvider, FILESYSTEM_PROVIDER_ID, WEB_PROVIDER_ID},
         },
         types::{Checksum, PackageMeta, PackageVersionMeta, RepositoryMeta},
     },
@@ -39,7 +39,7 @@ pub trait PrebuildProvider {
 pub fn create_repository_provider(repository: &Repository) -> Option<Box<dyn RepositoryProvider>> {
     match repository.provider.as_str() {
         FILESYSTEM_PROVIDER_ID => boxed(FileSystemProvider::from_repository(repository)),
-        DEFAULT_PROVIDER_ID => boxed(DefaultProvider::from_repository(repository)),
+        WEB_PROVIDER_ID => boxed(WebProvider::from_repository(repository)),
         _ => None,
     }
 }
@@ -56,13 +56,13 @@ pub fn create_prebuild_provider(repository: &Repository, repo_metadata: Reposito
 
 fn get_prebuild_repository_info(repository: &Repository, repo_metadata: RepositoryMeta) -> Option<(String, String)> {
     if let Some(url) = &repository.prebuilds_url {
-        let provider = repository.prebuilds_provider.clone().unwrap_or(FILESYSTEM_PREBUILD_PROVIDER_ID.into());
+        let provider = repository.prebuilds_provider.clone().unwrap_or(DEFAULT_PREBUILD_PROVIDER_ID.into());
 
         return Some((url.clone(), provider));
     }
 
     if let Some(url) = &repo_metadata.prebuilds_url {
-        let provider = repo_metadata.prebuilds_provider.clone().unwrap_or(FILESYSTEM_PREBUILD_PROVIDER_ID.into());
+        let provider = repo_metadata.prebuilds_provider.clone().unwrap_or(DEFAULT_PREBUILD_PROVIDER_ID.into());
 
         return Some((url.clone(), provider));
     }
