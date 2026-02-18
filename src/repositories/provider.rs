@@ -46,28 +46,28 @@ pub fn create_repository_provider(repository: &Repository) -> Option<Box<dyn Rep
 
 /// Creates a prebuild provider for the given repository.
 pub fn create_prebuild_provider(repository: &Repository, repo_metadata: RepositoryMeta) -> Option<Box<dyn PrebuildProvider>> {
-    // TODO: refactor
-    let (url, provider) = match &repository.prebuilds_url {
-        Some(url) => (
-            url,
-            repository.prebuilds_provider.clone().unwrap_or(FILESYSTEM_PREBUILD_PROVIDER_ID.into()),
-        ),
-        None => {
-            if let Some(url) = &repo_metadata.prebuilds_url {
-                (
-                    url,
-                    repo_metadata.prebuilds_provider.unwrap_or(FILESYSTEM_PREBUILD_PROVIDER_ID.into()),
-                )
-            } else {
-                return None;
-            }
-        },
-    };
+    let (url, provider) = get_prebuild_repository_info(repository, repo_metadata)?;
 
     match provider.as_str() {
         FILESYSTEM_PREBUILD_PROVIDER_ID => boxed_prebuild(FileSystemPrebuildProvider::from_url(&url)),
         _ => None,
     }
+}
+
+fn get_prebuild_repository_info(repository: &Repository, repo_metadata: RepositoryMeta) -> Option<(String, String)> {
+    if let Some(url) = &repository.prebuilds_url {
+        let provider = repository.prebuilds_provider.clone().unwrap_or(FILESYSTEM_PREBUILD_PROVIDER_ID.into());
+
+        return Some((url.clone(), provider));
+    }
+
+    if let Some(url) = &repo_metadata.prebuilds_url {
+        let provider = repo_metadata.prebuilds_provider.clone().unwrap_or(FILESYSTEM_PREBUILD_PROVIDER_ID.into());
+
+        return Some((url.clone(), provider));
+    }
+
+    None
 }
 
 /// Maps an `Option<RepositoryProvider>` to `Option<Box<RepositoryProvider>>`.
