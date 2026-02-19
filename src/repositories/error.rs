@@ -12,6 +12,9 @@ pub enum RepositoryError {
     #[error("Cannot parse repository file")]
     ParseError(#[from] toml::de::Error),
 
+    #[error("Cannot parse checksum from hex")]
+    ChecksumParseError(#[from] hex::FromHexError),
+
     #[error("Cannot find repository '{repository_id}'")]
     RepositoryNotFoundError {
         repository_id: String,
@@ -31,9 +34,6 @@ pub enum RepositoryError {
 
     #[error("The given package name is empty")]
     EmptyPackageName,
-
-    #[error("Cannot parse checksum from bytes")]
-    ChecksumParseError,
 }
 
 pub(super) type Result<T> = std::result::Result<T, RepositoryError>;

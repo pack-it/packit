@@ -1,4 +1,4 @@
-use std::{fs, path::PathBuf};
+use std::{fs, path::PathBuf, str::FromStr};
 
 use crate::{
     installer::types::Version,
@@ -36,10 +36,9 @@ impl PrebuildProvider for FileSystemPrebuildProvider {
             return Ok(None);
         }
 
-        let file_bytes = fs::read(path)?;
-        let sha256 = file_bytes.try_into().map_err(|_| RepositoryError::ChecksumParseError)?;
+        let checksum_string = fs::read_to_string(path)?;
 
-        Ok(Some(Checksum { sha256 }))
+        Ok(Some(Checksum::from_str(&checksum_string)?))
     }
 }
 
