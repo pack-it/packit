@@ -57,7 +57,10 @@ impl<'a> Verifier<'a> {
                 Check::StorageConsistency => self.check_storage_consistency(register)?,
                 Check::RegisterConsistency => self.check_register_consistency(register)?,
                 Check::DependencyTree => self.check_dependency_tree(register),
-                Check::Alterations => self.check_alterations(register)?,
+                Check::Alterations => {
+                    warning!("This is an experimental check, issues from this check could be inaccurate.");
+                    self.check_alterations(register)?
+                },
             };
 
             if let Some(issue) = issue {
