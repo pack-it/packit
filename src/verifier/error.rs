@@ -2,10 +2,7 @@ use thiserror::Error;
 
 use crate::{
     cli::display::error::DisplayError,
-    installer::{
-        error::InstallerError,
-        types::{PackageId, VersionError},
-    },
+    installer::{error::InstallerError, types::VersionError},
     packager::PackagerError,
 };
 

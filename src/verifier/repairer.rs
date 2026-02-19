@@ -52,7 +52,7 @@ impl<'a> Repairer<'a> {
 
         for (_, missing_package) in missing {
             // TODO: Do we want to check for already existing packages? (there could be duplicates in the missing dependencies)
-            installer.install(&missing_package.name, Some(&missing_package.version))?;
+            installer.install(&missing_package.into())?;
         }
 
         Ok(())
@@ -76,7 +76,7 @@ impl<'a> Repairer<'a> {
             let installer_options = InstallerOptions::default().skip_symlinking(!symlinked).skip_active(!active);
             let mut installer = Installer::new(&self.config, register, &self.manager, installer_options);
 
-            installer.install(&missing_package.name, Some(&missing_package.version))?;
+            installer.install(&missing_package.into())?;
         }
 
         Ok(())
@@ -115,7 +115,7 @@ impl<'a> Repairer<'a> {
             let installer_options = InstallerOptions::default().skip_symlinking(!symlinked).skip_active(!active);
             let mut installer = Installer::new(&self.config, register, &self.manager, installer_options);
 
-            installer.install(&package_id.name, Some(&package_id.version))?;
+            installer.install(&package_id.into())?;
         }
 
         Ok(())
