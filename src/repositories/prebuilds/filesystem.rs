@@ -20,27 +20,17 @@ pub struct FileSystemPrebuildProvider {
 
 impl PrebuildProvider for FileSystemPrebuildProvider {
     fn get_prebuild_url(&self, package_id: &PackageId, revision: u64, target: &str) -> Result<Option<String>> {
-        let prefix = package_id.name.chars().next().ok_or(RepositoryError::EmptyPackageName)?.to_string();
-        let prebuild_name = format!("{package_id}-{revision}-{target}.tar.gz");
-
-        let path = self.path.join("packages").join(prefix).join(&package_id.name).join(package_id.version.to_string()).join(prebuild_name);
-
-        if !fs::exists(&path)? {
-            return Ok(None);
+        match self.get_file_path(package_id, revision, target, "tar.gz")? {
+            Some(path) => Ok(path.as_os_str().to_str().map(|x| x.into())),
+            None => Ok(None),
         }
-
-        Ok(path.as_os_str().to_str().map(|x| x.into()))
     }
 
     fn get_prebuild_checksum(&self, package_id: &PackageId, revision: u64, target: &str) -> Result<Option<Checksum>> {
-        let prefix = package_id.name.chars().next().ok_or(RepositoryError::EmptyPackageName)?.to_string();
-        let prebuild_name = format!("{package_id}-{revision}-{target}.sha256");
-
-        let path = self.path.join("packages").join(prefix).join(&package_id.name).join(package_id.version.to_string()).join(prebuild_name);
-
-        if !fs::exists(&path)? {
-            return Ok(None);
-        }
+        let path = match self.get_file_path(package_id, revision, target, "sha256")? {
+            Some(path) => path,
+            None => return Ok(None),
+        };
 
         let checksum_string = fs::read_to_string(path)?;
 
@@ -66,5 +56,18 @@ impl FileSystemPrebuildProvider {
     /// Returns None if the url is invalid
     pub fn from_url(url: &str) -> Option<Self> {
         Some(Self { path: PathBuf::from(url) })
+    }
+
+    fn get_file_path(&self, package_id: &PackageId, revision: u64, target: &str, extension: &str) -> Result<Option<PathBuf>> {
+        let prefix = package_id.name.chars().next().ok_or(RepositoryError::EmptyPackageName)?.to_string();
+        let prebuild_name = format!("{package_id}-{revision}-{target}.{extension}");
+
+        let path = self.path.join("packages").join(prefix).join(&package_id.name).join(package_id.version.to_string()).join(prebuild_name);
+
+        if !fs::exists(&path)? {
+            return Ok(None);
+        }
+
+        Ok(Some(path))
     }
 }
