@@ -205,7 +205,7 @@ impl<'a> RepositoryManager<'a> {
             None => return None,
         };
 
-        provider.get_prebuild_url(&package_id.name, &package_id.version, revision, target)
+        provider.get_prebuild_url(&package_id, revision, target)
     }
 
     // TODO: change revision to u64
@@ -225,6 +225,6 @@ impl<'a> RepositoryManager<'a> {
             },
         };
 
-        provider.get_prebuild_checksum(&package_id.name, &package_id.version, revision, target)
+        provider.get_prebuild_checksum(&package_id, revision, target)
     }
 }

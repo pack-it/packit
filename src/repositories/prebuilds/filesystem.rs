@@ -1,7 +1,7 @@
 use std::{fs, path::PathBuf, str::FromStr};
 
 use crate::{
-    installer::types::Version,
+    installer::types::PackageId,
     repositories::{
         error::{RepositoryError, Result},
         provider::PrebuildProvider,
@@ -17,20 +17,20 @@ pub struct FileSystemPrebuildProvider {
 }
 
 impl PrebuildProvider for FileSystemPrebuildProvider {
-    fn get_prebuild_url(&self, package: &str, version: &Version, revision: usize, target: &str) -> Option<String> {
-        let prefix = package.chars().next()?.to_string();
-        let prebuild_name = format!("{package}@{version}-{revision}-{target}.tar.gz");
+    fn get_prebuild_url(&self, package_id: &PackageId, revision: usize, target: &str) -> Option<String> {
+        let prefix = package_id.name.chars().next()?.to_string();
+        let prebuild_name = format!("{package_id}-{revision}-{target}.tar.gz");
 
-        let path = self.path.join("packages").join(prefix).join(package).join(version.to_string()).join(prebuild_name);
+        let path = self.path.join("packages").join(prefix).join(&package_id.name).join(package_id.version.to_string()).join(prebuild_name);
 
         path.as_os_str().to_str().map(|x| x.into())
     }
 
-    fn get_prebuild_checksum(&self, package: &str, version: &Version, revision: usize, target: &str) -> Result<Option<Checksum>> {
-        let prefix = package.chars().next().ok_or(RepositoryError::EmptyPackageName)?.to_string();
-        let prebuild_name = format!("{package}@{version}-{revision}-{target}.sha256");
+    fn get_prebuild_checksum(&self, package_id: &PackageId, revision: usize, target: &str) -> Result<Option<Checksum>> {
+        let prefix = package_id.name.chars().next().ok_or(RepositoryError::EmptyPackageName)?.to_string();
+        let prebuild_name = format!("{package_id}-{revision}-{target}.sha256");
 
-        let path = self.path.join("packages").join(prefix).join(package).join(version.to_string()).join(prebuild_name);
+        let path = self.path.join("packages").join(prefix).join(&package_id.name).join(package_id.version.to_string()).join(prebuild_name);
 
         if !fs::exists(&path)? {
             return Ok(None);
