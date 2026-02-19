@@ -12,16 +12,19 @@ use crate::{
     verifier::{error::VerifierError, Issue, Verifier},
 };
 
+/// Repairer which gets issues with the verifier and fixes them.
 pub struct Repairer<'a> {
     config: &'a Config,
     manager: &'a RepositoryManager<'a>,
 }
 
 impl<'a> Repairer<'a> {
+    /// Creates a new repairer.
     pub fn new(config: &'a Config, manager: &'a RepositoryManager) -> Self {
         Self { config, manager }
     }
 
+    /// Gets the issues one by one with the verifier and fixes them.
     pub fn fix(&mut self, verifier: &mut Verifier, register: &mut PackageRegister) -> Result<(), VerifierError> {
         while let Some(issue) = verifier.next_issue(register)? {
             print!("{issue}\n");
@@ -42,6 +45,7 @@ impl<'a> Repairer<'a> {
         Ok(())
     }
 
+    /// Fixes broken dependency trees by installing the missing packages.
     fn fix_broken_tree(&mut self, missing: Vec<(PackageId, PackageId)>, register: &mut PackageRegister) -> Result<(), VerifierError> {
         let installer_options = InstallerOptions::default().skip_symlinking(true);
         let mut installer = Installer::new(&self.config, register, &self.manager, installer_options);
@@ -54,13 +58,14 @@ impl<'a> Repairer<'a> {
         Ok(())
     }
 
+    /// Fixes inconsistent storage by temporarily removing the missing package from the register and then re-installing the packages.
     fn fix_inconsistent_storage(&mut self, missing: Vec<PackageId>, register: &mut PackageRegister) -> Result<(), VerifierError> {
         for missing_package in missing {
-            // Gather the package settings before remove the package from the register
-            let (symlink, active) = match register.get_package(&missing_package.name) {
+            // Gather the package settings before removing the package from the register
+            let (symlinked, active) = match register.get_package(&missing_package.name) {
                 Some(package) => (package.symlinked, package.active_version == missing_package.version),
                 None => {
-                    warning!("Inconsistent package cannot be found in Installed.toml anymore.");
+                    warning!("Inconsistent package cannot be found in Installed.toml anymore, eventhough it could be found before.");
                     (false, false)
                 },
             };
@@ -68,7 +73,7 @@ impl<'a> Repairer<'a> {
             // Temporarily remove the package from the register
             register.remove_package_version(&missing_package);
 
-            let installer_options = InstallerOptions::default().skip_symlinking(!symlink).skip_active(!active);
+            let installer_options = InstallerOptions::default().skip_symlinking(!symlinked).skip_active(!active);
             let mut installer = Installer::new(&self.config, register, &self.manager, installer_options);
 
             installer.install(&missing_package.name, Some(&missing_package.version))?;
@@ -77,6 +82,8 @@ impl<'a> Repairer<'a> {
         Ok(())
     }
 
+    /// Fixes an inconsistent register by temporarily removing the missing packages from storage and then re-installing the packages.
+    /// Note that it's not possible to recreate the register entries, because some entries like the source repository cannot be defered from the package storage.
     fn fix_inconsistent_register(&mut self, missing: Vec<PackageId>, register: &mut PackageRegister) -> Result<(), VerifierError> {
         let active_directory = self.config.prefix_directory.join("active");
         let bin_directory = self.config.prefix_directory.join("bin");

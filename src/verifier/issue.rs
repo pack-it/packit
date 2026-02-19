@@ -5,22 +5,21 @@ use crate::installer::types::PackageId;
 
 /// This holds a single issue and the data regarding that issue.
 pub enum Issue {
-    /// A list of parents and their missing dependencies <parent> : <missing>
+    /// A list of parents and their missing dependencies `<parent> : <missing>`.
     BrokenTree(Vec<(PackageId, PackageId)>),
 
-    /// A list of packages which are present in the Installed.toml, but not in the packit package directory
+    /// A list of packages which are present in the Installed.toml, but not in the packit package directory.
     InconsistentStorage(Vec<PackageId>),
 
-    /// A list of packages which are present in the packit package directory, but not in the Installed.toml
+    /// A list of packages which are present in the packit package directory, but not in the Installed.toml.
     InconsistentRegister(Vec<PackageId>),
 
-    /// A list of packages which are changed (when they shouldn't be)
+    /// A list of packages which are changed (when they shouldn't be).
     AlteredPackage(Vec<PackageId>),
 }
 
 impl Display for Issue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // TODO: Do we want to show suggestions on how to fix the issues manually?
         write!(f, "{}", "ISSUE: ".bold().yellow())?;
         match self {
             Issue::BrokenTree(missing) => {
