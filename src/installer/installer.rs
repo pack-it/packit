@@ -1,3 +1,5 @@
+use sha2::{Digest, Sha256};
+
 use crate::{
     cli::display::{
         ask_user,
@@ -12,9 +14,11 @@ use crate::{
         scripts::{self, ScriptData},
         symlinker::Symlinker,
         types::{Dependency, OptionalPackageId, PackageId, Version},
+        unpack::unpack,
     },
     platforms::{symlink, TARGET_ARCHITECTURE},
     repositories::{
+        error::RepositoryError,
         manager::RepositoryManager,
         provider,
         types::{PackageMeta, PackageTarget, PackageVersionMeta},
@@ -109,13 +113,15 @@ impl<'a> Installer<'a> {
             let package_id = PackageId::new(&node.package_metadata.name, &node.version_metadata.version);
             if !self.options.build_source {
                 let revision = node.version_metadata.revisions.len() as u64;
-                let prebuild_url =
-                    self.repository_manager.get_prebuild_url(&node.repository_id, &package_id, revision, TARGET_ARCHITECTURE);
 
                 // Install the package with a prebuild if possible
-                if let Some(url) = prebuild_url {
-                    self.install_package(node, Some(&url))?;
-                    continue;
+                match self.repository_manager.get_prebuild_url(&node.repository_id, &package_id, revision, TARGET_ARCHITECTURE) {
+                    Ok(Some(_)) => {
+                        self.install_package(node, true)?;
+                        continue;
+                    },
+                    Ok(None) | Err(RepositoryError::RepositoryNotFoundError { .. }) => (),
+                    Err(e) => error!(e),
                 }
 
                 // Return early if the user doesn't want to build from source as alternative install method
@@ -128,11 +134,11 @@ impl<'a> Installer<'a> {
             // Get and install the build dependencies first
             let build_dependencies = self.get_flattened_build_dependencies(node)?;
             for build_node in build_dependencies.iter().rev() {
-                self.install_package(build_node, None)?;
+                self.install_package(build_node, false)?;
             }
 
             // Build the current dependency node
-            self.install_package(node, None)?;
+            self.install_package(node, false)?;
 
             // Save the current build dependencies and the current node id
             all_dependencies.extend(build_dependencies);
@@ -147,7 +153,7 @@ impl<'a> Installer<'a> {
         Ok(())
     }
 
-    fn install_package(&mut self, node: &DependencyNode, url: Option<&str>) -> Result<()> {
+    fn install_package(&mut self, node: &DependencyNode, use_prebuild: bool) -> Result<()> {
         // Create the package id and install directory
         let package_id = PackageId::new(&node.package_metadata.name, &node.version_metadata.version);
         let install_directory = self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
@@ -181,9 +187,12 @@ impl<'a> Installer<'a> {
         let target = version_meta.get_target(TARGET_ARCHITECTURE)?;
 
         // Get build version of package
-        match url {
-            Some(url) => self.download_prebuild(&url, &install_directory)?,
-            None => Builder::new(self.config, self.register, self.repository_manager).build(
+        match use_prebuild {
+            true => {
+                let revision = node.version_metadata.revisions.len() as u64;
+                self.download_prebuild(&node.repository_id, &package_id, revision, &install_directory)?
+            },
+            false => Builder::new(self.config, self.register, self.repository_manager).build(
                 &node.package_metadata,
                 &version_meta,
                 &node.repository_id,
@@ -381,8 +390,23 @@ impl<'a> Installer<'a> {
         Ok(())
     }
 
-    fn download_prebuild(&self, prebuild_url: &str, destination_dir: impl AsRef<Path>) -> Result<()> {
-        todo!()
+    fn download_prebuild(&self, repository_id: &str, package: &PackageId, revision: u64, destination_dir: impl AsRef<Path>) -> Result<()> {
+        let (url, bytes) = self.repository_manager.read_prebuild(repository_id, package, revision, TARGET_ARCHITECTURE)?;
+        let checksum = self.repository_manager.get_prebuild_checksum(repository_id, package, revision, TARGET_ARCHITECTURE)?;
+
+        // Calculate the checksum
+        let calculated_checksum: [u8; 32] = Sha256::digest(&bytes).into();
+
+        // Check equality of checksum
+        match checksum {
+            Some(checksum) if checksum.sha256 == calculated_checksum => (),
+            _ => return Err(InstallerError::ChecksumError),
+        }
+
+        // Unpack the prebuild to the destination
+        unpack(&url, bytes, &destination_dir)?;
+
+        Ok(())
     }
 
     /// Uninstalls a package version if specified, otherwise it will uninstall the entire package directory.

@@ -26,6 +26,13 @@ pub enum RepositoryError {
         version: Option<String>,
     },
 
+    #[error("Cannot find prebuild of package '{package_name}@{version}' revision {revision}")]
+    PrebuildNotFound {
+        package_name: String,
+        version: String,
+        revision: u64,
+    },
+
     #[error("Package is not valid")]
     ValidationError(String),
 

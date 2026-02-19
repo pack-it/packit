@@ -1,3 +1,5 @@
+use bytes::Bytes;
+
 use crate::{
     config::Repository,
     installer::types::{PackageId, Version},
@@ -26,11 +28,14 @@ pub trait MetadataProvider {
 
 /// Generic prebuild repository provider trait, reading prebuild packages from a repository.
 pub trait PrebuildProvider {
-    /// Gets the url of a prebuild package, returns None if the prebuild package does not exist
-    fn get_prebuild_url(&self, package_id: &PackageId, revision: u64, target: &str) -> Option<String>;
+    /// Gets the url of a prebuild package, returns None if the prebuild package does not exist.
+    fn get_prebuild_url(&self, package_id: &PackageId, revision: u64, target: &str) -> Result<Option<String>>;
 
-    /// Gets the checksum of a prebuild package, returns None if the prebuild package does not exist
+    /// Gets the checksum of a prebuild package, returns None if the prebuild package does not exist.
     fn get_prebuild_checksum(&self, package_id: &PackageId, revision: u64, target: &str) -> Result<Option<Checksum>>;
+
+    /// Reads the prebuild package as bytes, returns a tuple containing the origin url and the bytes.
+    fn read_prebuild(&self, package_id: &PackageId, revision: u64, target: &str) -> Result<(String, Bytes)>;
 }
 
 /// Creates a metadata repository provider for the given repository.

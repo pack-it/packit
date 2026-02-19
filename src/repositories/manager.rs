@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use bytes::Bytes;
+
 use crate::{
     cli::display::logging::{debug, error, warning},
     config::Config,
@@ -201,10 +203,14 @@ impl<'a> RepositoryManager<'a> {
 
     /// Retrieves the prebuild url for the given package version.
     /// Returns the url, or None if a prebuild is not available for the package.
-    pub fn get_prebuild_url(&self, repository_id: &str, package: &PackageId, revision: u64, target: &str) -> Option<String> {
+    pub fn get_prebuild_url(&self, repository_id: &str, package: &PackageId, revision: u64, target: &str) -> Result<Option<String>> {
         let provider = match self.prebuild_providers.get(repository_id) {
             Some(provider) => provider,
-            None => return None,
+            None => {
+                return Err(RepositoryError::RepositoryNotFoundError {
+                    repository_id: repository_id.into(),
+                })
+            },
         };
 
         provider.get_prebuild_url(&package, revision, target)
@@ -223,5 +229,19 @@ impl<'a> RepositoryManager<'a> {
         };
 
         provider.get_prebuild_checksum(&package, revision, target)
+    }
+
+    /// Reads the prebuild of the given package version as bytes, returns a tuple containing the origin url and the bytes.
+    pub fn read_prebuild(&self, repository_id: &str, package: &PackageId, revision: u64, target: &str) -> Result<(String, Bytes)> {
+        let provider = match self.prebuild_providers.get(repository_id) {
+            Some(provider) => provider,
+            None => {
+                return Err(RepositoryError::RepositoryNotFoundError {
+                    repository_id: repository_id.into(),
+                })
+            },
+        };
+
+        provider.read_prebuild(package, revision, target)
     }
 }

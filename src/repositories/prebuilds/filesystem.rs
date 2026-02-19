@@ -1,5 +1,7 @@
 use std::{fs, path::PathBuf, str::FromStr};
 
+use bytes::Bytes;
+
 use crate::{
     installer::types::PackageId,
     repositories::{
@@ -17,13 +19,17 @@ pub struct FileSystemPrebuildProvider {
 }
 
 impl PrebuildProvider for FileSystemPrebuildProvider {
-    fn get_prebuild_url(&self, package_id: &PackageId, revision: u64, target: &str) -> Option<String> {
-        let prefix = package_id.name.chars().next()?.to_string();
+    fn get_prebuild_url(&self, package_id: &PackageId, revision: u64, target: &str) -> Result<Option<String>> {
+        let prefix = package_id.name.chars().next().ok_or(RepositoryError::EmptyPackageName)?.to_string();
         let prebuild_name = format!("{package_id}-{revision}-{target}.tar.gz");
 
         let path = self.path.join("packages").join(prefix).join(&package_id.name).join(package_id.version.to_string()).join(prebuild_name);
 
-        path.as_os_str().to_str().map(|x| x.into())
+        if !fs::exists(&path)? {
+            return Ok(None);
+        }
+
+        Ok(path.as_os_str().to_str().map(|x| x.into()))
     }
 
     fn get_prebuild_checksum(&self, package_id: &PackageId, revision: u64, target: &str) -> Result<Option<Checksum>> {
@@ -39,6 +45,19 @@ impl PrebuildProvider for FileSystemPrebuildProvider {
         let checksum_string = fs::read_to_string(path)?;
 
         Ok(Some(Checksum::from_str(&checksum_string)?))
+    }
+
+    fn read_prebuild(&self, package_id: &PackageId, revision: u64, target: &str) -> Result<(String, Bytes)> {
+        let url = self.get_prebuild_url(package_id, revision, target)?.ok_or(RepositoryError::PrebuildNotFound {
+            package_name: package_id.name.clone(),
+            version: package_id.version.to_string(),
+            revision,
+        })?;
+
+        // TODO: improve efficiency of file reading
+        let bytes = fs::read(&url)?;
+
+        Ok((url, Bytes::from(bytes)))
     }
 }
 
