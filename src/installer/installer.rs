@@ -528,7 +528,7 @@ impl<'a> Installer<'a> {
 
     fn run_uninstall_script(&self, repository: &Repository, package_id: &PackageId, install_directory: &PathBuf) -> Result<()> {
         // Create repository provider for source repository
-        let provider = match provider::create_repository_provider(&repository) {
+        let provider = match provider::create_metadata_provider(&repository) {
             Some(provider) => provider,
             None => {
                 error!(msg: "Unable to create repository provider to retrieve uninstall script");

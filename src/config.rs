@@ -10,7 +10,7 @@ use thiserror::Error;
 use crate::{
     cli::display::logging::warning,
     platforms::{DEFAULT_CONFIG_DIR, DEFAULT_PREFIX},
-    repositories::providers::repository::DEFAULT_PROVIDER_ID,
+    repositories::metadata::DEFAULT_METADATA_PROVIDER_ID,
     utils::constants::CONFIG_FILENAME,
 };
 
@@ -59,7 +59,7 @@ impl Repository {
     }
 
     pub fn default_repository_provider() -> String {
-        DEFAULT_PROVIDER_ID.into()
+        DEFAULT_METADATA_PROVIDER_ID.into()
     }
 }
 

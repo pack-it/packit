@@ -3,16 +3,14 @@ use crate::{
     installer::types::Version,
     repositories::{
         error::Result,
-        providers::{
-            prebuild::{FileSystemPrebuildProvider, DEFAULT_PREBUILD_PROVIDER_ID, FILESYSTEM_PREBUILD_PROVIDER_ID},
-            repository::{FileSystemProvider, WebProvider, FILESYSTEM_PROVIDER_ID, WEB_PROVIDER_ID},
-        },
+        metadata::{FileSystemMetadataProvider, WebMetadataProvider, FILESYSTEM_METADATA_PROVIDER_ID, WEB_METADATA_PROVIDER_ID},
+        prebuilds::{FileSystemPrebuildProvider, DEFAULT_PREBUILD_PROVIDER_ID, FILESYSTEM_PREBUILD_PROVIDER_ID},
         types::{Checksum, PackageMeta, PackageVersionMeta, RepositoryMeta},
     },
 };
 
-/// Generic repository provider trait, reading package metadata from a repository.
-pub trait RepositoryProvider {
+/// Generic metadata repository provider trait, reading package metadata from a repository.
+pub trait MetadataProvider {
     /// Reads repository metadata from the repository, containing information about the repository.
     fn read_repository_metadata(&self) -> Result<RepositoryMeta>;
 
@@ -26,7 +24,7 @@ pub trait RepositoryProvider {
     fn read_script(&self, package: &str, script_path: &str) -> Result<Option<String>>;
 }
 
-/// Generic prebuild provider trait, reading prebuild packages from a repository.
+/// Generic prebuild repository provider trait, reading prebuild packages from a repository.
 pub trait PrebuildProvider {
     /// Gets the url of a prebuild package, returns None if the prebuild package does not exist
     fn get_prebuild_url(&self, package: &str, version: &Version, revision: usize, target: &str) -> Option<String>;
@@ -35,16 +33,16 @@ pub trait PrebuildProvider {
     fn get_prebuild_checksum(&self, package: &str, version: &Version, revision: usize, target: &str) -> Result<Option<Checksum>>;
 }
 
-/// Creates a repository provider for the given repository.
-pub fn create_repository_provider(repository: &Repository) -> Option<Box<dyn RepositoryProvider>> {
+/// Creates a metadata repository provider for the given repository.
+pub fn create_metadata_provider(repository: &Repository) -> Option<Box<dyn MetadataProvider>> {
     match repository.provider.as_str() {
-        FILESYSTEM_PROVIDER_ID => boxed(FileSystemProvider::from_repository(repository)),
-        WEB_PROVIDER_ID => boxed(WebProvider::from_repository(repository)),
+        FILESYSTEM_METADATA_PROVIDER_ID => boxed(FileSystemMetadataProvider::from_repository(repository)),
+        WEB_METADATA_PROVIDER_ID => boxed(WebMetadataProvider::from_repository(repository)),
         _ => None,
     }
 }
 
-/// Creates a prebuild provider for the given repository.
+/// Creates a prebuild repository provider for the given repository.
 pub fn create_prebuild_provider(repository: &Repository, repo_metadata: RepositoryMeta) -> Option<Box<dyn PrebuildProvider>> {
     let (url, provider) = get_prebuild_repository_info(repository, repo_metadata)?;
 
@@ -70,9 +68,9 @@ fn get_prebuild_repository_info(repository: &Repository, repo_metadata: Reposito
     None
 }
 
-/// Maps an `Option<RepositoryProvider>` to `Option<Box<RepositoryProvider>>`.
-fn boxed(provider: Option<impl RepositoryProvider + 'static>) -> Option<Box<dyn RepositoryProvider>> {
-    provider.map(|provider| Box::new(provider) as Box<dyn RepositoryProvider>)
+/// Maps an `Option<MetadataProvider>` to `Option<Box<MetadataProvider>>`.
+fn boxed(provider: Option<impl MetadataProvider + 'static>) -> Option<Box<dyn MetadataProvider>> {
+    provider.map(|provider| Box::new(provider) as Box<dyn MetadataProvider>)
 }
 
 /// Maps an `Option<PrebuildProvider>` to `Option<Box<PrebuildProvider>>`.

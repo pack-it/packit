@@ -5,19 +5,19 @@ use crate::{
     installer::types::Version,
     repositories::{
         error::Result,
-        provider::RepositoryProvider,
+        provider::MetadataProvider,
         types::{PackageMeta, PackageVersionMeta, RepositoryMeta},
     },
 };
 
-pub const WEB_PROVIDER_ID: &str = "web";
+pub const WEB_METADATA_PROVIDER_ID: &str = "web";
 
 /// The web packit repository provider, reading package metadata from an external repository.
-pub struct WebProvider {
+pub struct WebMetadataProvider {
     url: String,
 }
 
-impl RepositoryProvider for WebProvider {
+impl MetadataProvider for WebMetadataProvider {
     fn read_repository_metadata(&self) -> Result<RepositoryMeta> {
         let data = reqwest::blocking::get(format!("{}/repository.toml", self.url))?.text()?;
 
@@ -47,11 +47,11 @@ impl RepositoryProvider for WebProvider {
     }
 }
 
-impl WebProvider {
+impl WebMetadataProvider {
     /// Creates a new web repository provider for the given repository.
     /// Returns None if the repository is not of the correct type.
     pub fn from_repository(repository: &Repository) -> Option<Self> {
-        if repository.provider != WEB_PROVIDER_ID {
+        if repository.provider != WEB_METADATA_PROVIDER_ID {
             return None;
         }
 

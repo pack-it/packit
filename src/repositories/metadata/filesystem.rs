@@ -5,19 +5,19 @@ use crate::{
     installer::types::Version,
     repositories::{
         error::Result,
-        provider::RepositoryProvider,
+        provider::MetadataProvider,
         types::{PackageMeta, PackageVersionMeta, RepositoryMeta},
     },
 };
 
-pub const FILESYSTEM_PROVIDER_ID: &str = "fs";
+pub const FILESYSTEM_METADATA_PROVIDER_ID: &str = "fs";
 
 /// The filesystem repository provider, reading package metadata from a local repository on the filesystem.
-pub struct FileSystemProvider {
+pub struct FileSystemMetadataProvider {
     path: PathBuf,
 }
 
-impl RepositoryProvider for FileSystemProvider {
+impl MetadataProvider for FileSystemMetadataProvider {
     fn read_repository_metadata(&self) -> Result<RepositoryMeta> {
         let data = fs::read_to_string(self.path.join("repository.toml"))?;
 
@@ -48,15 +48,15 @@ impl RepositoryProvider for FileSystemProvider {
     }
 }
 
-impl FileSystemProvider {
+impl FileSystemMetadataProvider {
     /// Creates a new filesystem repository provider for the given repository.
     /// Returns None if the repository is not of the correct type.
     pub fn from_repository(repository: &Repository) -> Option<Self> {
-        if repository.provider != FILESYSTEM_PROVIDER_ID {
+        if repository.provider != FILESYSTEM_METADATA_PROVIDER_ID {
             return None;
         }
 
-        Some(FileSystemProvider {
+        Some(Self {
             path: PathBuf::from(repository.path.clone()),
         })
     }

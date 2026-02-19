@@ -7,7 +7,7 @@ use crate::{
     platforms::TARGET_ARCHITECTURE,
     repositories::{
         error::{RepositoryError, Result},
-        provider::{self, PrebuildProvider, RepositoryProvider},
+        provider::{self, MetadataProvider, PrebuildProvider},
         types::{Checksum, PackageMeta, PackageVersionMeta, RepositoryMeta},
     },
 };
@@ -15,18 +15,18 @@ use crate::{
 /// Manages all requests to the repositories.
 pub struct RepositoryManager<'a> {
     config: &'a Config,
-    providers: HashMap<String, Box<dyn RepositoryProvider>>,
+    metadata_providers: HashMap<String, Box<dyn MetadataProvider>>,
     prebuild_providers: HashMap<String, Box<dyn PrebuildProvider>>,
 }
 
 impl<'a> RepositoryManager<'a> {
     /// Creates a new RepositoryManager.
     pub fn new(config: &'a Config) -> Self {
-        let mut providers = HashMap::new();
+        let mut metadata_providers = HashMap::new();
         let mut prebuild_providers = HashMap::new();
 
         for (id, repository) in &config.repositories {
-            let provider = provider::create_repository_provider(repository);
+            let provider = provider::create_metadata_provider(repository);
             if provider.is_none() {
                 warning!("Cannot create repository provider for repository {id}.");
                 continue;
@@ -41,7 +41,7 @@ impl<'a> RepositoryManager<'a> {
                 },
             };
 
-            providers.insert(id.clone(), provider);
+            metadata_providers.insert(id.clone(), provider);
 
             if let Some(repository_meta) = repository_meta {
                 let prebuild_provider = provider::create_prebuild_provider(repository, repository_meta);
@@ -56,14 +56,14 @@ impl<'a> RepositoryManager<'a> {
 
         Self {
             config,
-            providers,
+            metadata_providers,
             prebuild_providers,
         }
     }
 
     /// Reads repository metadata of the given repository, containing information about the repository.
     pub fn read_repository_metadata(&self, repository_id: &str) -> Result<RepositoryMeta> {
-        let provider = match self.providers.get(repository_id) {
+        let provider = match self.metadata_providers.get(repository_id) {
             Some(provider) => provider,
             None => {
                 return Err(RepositoryError::RepositoryNotFoundError {
@@ -79,7 +79,7 @@ impl<'a> RepositoryManager<'a> {
     /// Returns the id of the repository and the package metadata.
     pub fn read_package(&self, package: &str) -> Result<(String, PackageMeta)> {
         for repository_id in &self.config.repositories_rank {
-            let provider = match self.providers.get(repository_id) {
+            let provider = match self.metadata_providers.get(repository_id) {
                 Some(provider) => provider,
                 None => {
                     warning!("Cannot find provider for {repository_id}, while it should exist.");
@@ -112,7 +112,7 @@ impl<'a> RepositoryManager<'a> {
     /// Reads package metadata of the given package from the given repository, containing information about the package.
     /// Does not check if the data contains the current target.
     pub fn read_repo_package(&self, repository_id: &str, package: &str) -> Result<PackageMeta> {
-        let provider = match self.providers.get(repository_id) {
+        let provider = match self.metadata_providers.get(repository_id) {
             Some(provider) => provider,
             None => {
                 return Err(RepositoryError::RepositoryNotFoundError {
@@ -128,7 +128,7 @@ impl<'a> RepositoryManager<'a> {
     /// Returns the id of the repository and the package version metadata.
     pub fn read_package_version(&self, package_id: &PackageId) -> Result<(String, PackageVersionMeta)> {
         for repository_id in &self.config.repositories_rank {
-            let provider = match self.providers.get(repository_id) {
+            let provider = match self.metadata_providers.get(repository_id) {
                 Some(provider) => provider,
                 None => {
                     warning!("Cannot find provider for {repository_id}, while it should exist.");
@@ -166,7 +166,7 @@ impl<'a> RepositoryManager<'a> {
     /// Reads package version metadata of the given package from the given repository, containing dependencies and targets.
     /// Does not check if the data contains the current target.
     pub fn read_repo_package_version(&self, repository_id: &str, package_id: &PackageId) -> Result<PackageVersionMeta> {
-        let provider = match self.providers.get(repository_id) {
+        let provider = match self.metadata_providers.get(repository_id) {
             Some(provider) => provider,
             None => {
                 return Err(RepositoryError::RepositoryNotFoundError {
@@ -187,7 +187,7 @@ impl<'a> RepositoryManager<'a> {
     /// Reads a script of the given package from the given repository.
     /// Returns the script as a string.
     pub fn read_script(&self, repository_id: &str, package: &str, script_path: &str) -> Result<Option<String>> {
-        let provider = match self.providers.get(repository_id) {
+        let provider = match self.metadata_providers.get(repository_id) {
             Some(provider) => provider,
             None => {
                 return Err(RepositoryError::RepositoryNotFoundError {
