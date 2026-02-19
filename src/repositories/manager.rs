@@ -199,23 +199,20 @@ impl<'a> RepositoryManager<'a> {
         Ok(provider.read_script(package, script_path)?)
     }
 
-    pub fn get_prebuild_url(&self, repository_id: &str, package_id: &PackageId, revision: usize, target: &str) -> Option<String> {
+    /// Retrieves the prebuild url for the given package version.
+    /// Returns the url, or None if a prebuild is not available for the package.
+    pub fn get_prebuild_url(&self, repository_id: &str, package: &PackageId, revision: u64, target: &str) -> Option<String> {
         let provider = match self.prebuild_providers.get(repository_id) {
             Some(provider) => provider,
             None => return None,
         };
 
-        provider.get_prebuild_url(&package_id, revision, target)
+        provider.get_prebuild_url(&package, revision, target)
     }
 
-    // TODO: change revision to u64
-    pub fn get_prebuild_checksum(
-        &self,
-        repository_id: &str,
-        package_id: &PackageId,
-        revision: usize,
-        target: &str,
-    ) -> Result<Option<Checksum>> {
+    /// Retrieves the prebuild checksum for the given package version.
+    /// Returns the checksum, or None if a prebuild is not available for the package.
+    pub fn get_prebuild_checksum(&self, repository_id: &str, package: &PackageId, revision: u64, target: &str) -> Result<Option<Checksum>> {
         let provider = match self.prebuild_providers.get(repository_id) {
             Some(provider) => provider,
             None => {
@@ -225,6 +222,6 @@ impl<'a> RepositoryManager<'a> {
             },
         };
 
-        provider.get_prebuild_checksum(&package_id, revision, target)
+        provider.get_prebuild_checksum(&package, revision, target)
     }
 }

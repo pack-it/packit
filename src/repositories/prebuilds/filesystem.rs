@@ -17,7 +17,7 @@ pub struct FileSystemPrebuildProvider {
 }
 
 impl PrebuildProvider for FileSystemPrebuildProvider {
-    fn get_prebuild_url(&self, package_id: &PackageId, revision: usize, target: &str) -> Option<String> {
+    fn get_prebuild_url(&self, package_id: &PackageId, revision: u64, target: &str) -> Option<String> {
         let prefix = package_id.name.chars().next()?.to_string();
         let prebuild_name = format!("{package_id}-{revision}-{target}.tar.gz");
 
@@ -26,7 +26,7 @@ impl PrebuildProvider for FileSystemPrebuildProvider {
         path.as_os_str().to_str().map(|x| x.into())
     }
 
-    fn get_prebuild_checksum(&self, package_id: &PackageId, revision: usize, target: &str) -> Result<Option<Checksum>> {
+    fn get_prebuild_checksum(&self, package_id: &PackageId, revision: u64, target: &str) -> Result<Option<Checksum>> {
         let prefix = package_id.name.chars().next().ok_or(RepositoryError::EmptyPackageName)?.to_string();
         let prebuild_name = format!("{package_id}-{revision}-{target}.sha256");
 

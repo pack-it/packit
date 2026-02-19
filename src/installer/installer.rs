@@ -108,7 +108,7 @@ impl<'a> Installer<'a> {
         for node in nodes {
             let package_id = PackageId::new(&node.package_metadata.name, &node.version_metadata.version);
             if !self.options.build_source {
-                let revision = node.version_metadata.revisions.len();
+                let revision = node.version_metadata.revisions.len() as u64;
                 let prebuild_url =
                     self.repository_manager.get_prebuild_url(&node.repository_id, &package_id, revision, TARGET_ARCHITECTURE);
 
