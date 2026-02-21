@@ -1,5 +1,6 @@
 use std::{fmt::Display, str::FromStr};
 
+use regex::Regex;
 use serde::{de, Deserialize, Serialize};
 use thiserror::Error;
 
@@ -8,11 +9,11 @@ use crate::installer::types::{Version, VersionError};
 /// Errors that occur when creating or using the package id.
 #[derive(Error, Debug, PartialEq)]
 pub enum PackageIdError {
-    #[error("No name found, package id requires a name.")]
-    NoNameError,
-
     #[error("Couldn't parse package id, because of an invalid version.")]
     VersionError(#[from] VersionError),
+
+    #[error("Invalid package name, a package name cannot be empty and can only contain characters: 'a-z', '0-9', '-' and '_'")]
+    InvalidPackageName,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -21,12 +22,23 @@ pub struct PackageId {
     pub version: Version,
 }
 
+const VALID_PACKAGE_NAME: &str = r"^[a-z0-9\-_]+$";
+
 impl PackageId {
     pub fn new(name: &str, version: &Version) -> Self {
         Self {
             name: name.to_string(),
             version: version.clone(),
         }
+    }
+
+    pub fn is_valid_name(name: &str) -> bool {
+        let re = Regex::new(VALID_PACKAGE_NAME).expect("Expected valid regex");
+        if !re.is_match(name) {
+            return false;
+        }
+
+        true
     }
 }
 
@@ -70,9 +82,9 @@ impl FromStr for PackageId {
         // Remove @ character from version number before converting to Version
         let version = Version::from_str(&version[1..])?;
 
-        // Name must have some value
-        if name.is_empty() {
-            return Err(PackageIdError::NoNameError);
+        // Check name validity
+        if !PackageId::is_valid_name(name) {
+            return Err(PackageIdError::InvalidPackageName);
         }
 
         Ok(Self {
@@ -82,112 +94,50 @@ impl FromStr for PackageId {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct OptionalPackageId {
-    pub name: String,
-    pub version: Option<Version>,
-}
-
-impl From<PackageId> for OptionalPackageId {
-    fn from(value: PackageId) -> Self {
-        Self {
-            name: value.name,
-            version: Some(value.version),
-        }
-    }
-}
-
-impl FromStr for OptionalPackageId {
-    type Err = PackageIdError;
-
-    fn from_str(string: &str) -> Result<Self, Self::Err> {
-        // Name must have some value
-        if string.is_empty() {
-            return Err(PackageIdError::NoNameError);
-        }
-
-        if string.contains("@") {
-            let package_id = PackageId::from_str(&string)?;
-
-            return Ok(Self {
-                name: package_id.name,
-                version: Some(package_id.version),
-            });
-        }
-
-        Ok(Self {
-            name: string.into(),
-            version: None,
-        })
-    }
-}
-
-impl Display for OptionalPackageId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", &self.name)?;
-
-        if let Some(version) = &self.version {
-            write!(f, "@{}", version)?;
-        }
-
-        Ok(())
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn from_str() {
-        let correct_version = PackageId::new("Test", &Version::from_str("3.4.1").expect("Expected Version."));
+        let version = Version::from_str("3.4.1").expect("Expected Version.");
+        let correct_version = PackageId::new("test", &version);
 
-        match PackageId::from_str("Test@3.4.1") {
+        match PackageId::from_str("test@3.4.1") {
             Ok(id) => assert_eq!(id, correct_version),
-            Err(e) => panic!("Expected Ok(PackageId(name: 'Test', version: Version(..))), got Err({e:?})"),
+            Err(e) => panic!("Expected Ok(PackageId(name: 'test', version: Version(..))), got Err({e:?})"),
         }
     }
 
     #[test]
     fn from_str_no_version() {
         assert_eq!(
-            PackageId::from_str("Test"),
+            PackageId::from_str("test"),
             Err(PackageIdError::VersionError(VersionError::NoneError))
         );
     }
 
     #[test]
     fn from_str_no_name() {
-        assert_eq!(PackageId::from_str("@3.4.1"), Err(PackageIdError::NoNameError));
+        assert_eq!(PackageId::from_str("@3.4.1"), Err(PackageIdError::InvalidPackageName));
+    }
+
+    #[test]
+    fn from_str_invalid_chars() {
+        let invalid_chars = "!#$%^&*()ABCDEFGHIJKLMNOPQRSTUVWXYZ~:;{}[]<>,.?/|\\\"\'`+=";
+        for char in invalid_chars.chars() {
+            assert_eq!(
+                PackageId::from_str(format!("{char}@3.4.1").as_str()),
+                Err(PackageIdError::InvalidPackageName)
+            );
+        }
     }
 
     #[test]
     fn valid_format() {
-        let correct_version = PackageId::new("Test", &Version::from_str("3.4.1").expect("Expected Version."));
+        let version = Version::from_str("3.4.1").expect("Expected Version.");
+        let correct_version = PackageId::new("test", &version);
 
-        assert_eq!(correct_version.to_string(), "Test@3.4.1");
-    }
-
-    #[test]
-    fn from_str_optional() {
-        let correct_version = PackageId::new("Test", &Version::from_str("3.4.1").expect("Expected Version.")).into();
-        match OptionalPackageId::from_str("Test@3.4.1") {
-            Ok(id) => assert_eq!(id, correct_version),
-            Err(e) => panic!("Expected Ok(OptionalPackageId(name: 'Test', version: Some(Version(..)))), got Err({e:?})"),
-        }
-
-        let correct_version = OptionalPackageId {
-            name: "Test".into(),
-            version: None,
-        };
-        match OptionalPackageId::from_str("Test") {
-            Ok(id) => assert_eq!(id, correct_version),
-            Err(e) => panic!("Expected Ok(OptionalPackageId(name: 'Test', version: None)), got Err({e:?})"),
-        }
-    }
-
-    #[test]
-    fn from_str_empty_optional() {
-        assert_eq!(OptionalPackageId::from_str(""), Err(PackageIdError::NoNameError));
+        assert_eq!(correct_version.to_string(), "test@3.4.1");
     }
 }

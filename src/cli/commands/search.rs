@@ -12,16 +12,16 @@ use crate::{
 #[derive(Args, Debug)]
 pub struct SearchArgs {
     /// The name of the package to install, with an optional version specified with NAME@VERSION
-    package_id: OptionalPackageId,
+    optional_id: OptionalPackageId,
 }
 
 impl HandleCommand for SearchArgs {
     /// Handles the search command, searching a certain package.
     fn handle(&self, _: &Config, manager: &RepositoryManager) {
-        let (repository_id, package) = match manager.read_package(&self.package_id.name) {
+        let (repository_id, package) = match manager.read_package(&self.optional_id.name) {
             Ok(package) => package,
             Err(RepositoryError::PackageNotFoundError { .. }) => {
-                println!("Cannot find package {}", self.package_id.name);
+                println!("Cannot find package {}", self.optional_id.name);
                 return;
             },
             Err(e) => {
@@ -40,13 +40,13 @@ impl HandleCommand for SearchArgs {
         };
 
         // Use the latest version if the version isn't specified
-        let version = match &self.package_id.version {
+        let version = match &self.optional_id.version {
             Some(version) => version,
             None => &latest_version,
         };
 
         // Create a package id
-        let package_id = PackageId::new(&self.package_id.name, version);
+        let package_id = PackageId::new(&self.optional_id.name, version);
 
         // Get package version info for its target
         let package_version = match manager.read_repo_package_version(&repository_id, &package_id) {

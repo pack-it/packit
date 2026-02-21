@@ -1,4 +1,5 @@
 mod dependency;
+mod optional_id;
 mod package_id;
 mod version;
 mod version_bounds;
@@ -6,7 +7,8 @@ mod version_bounds;
 pub use dependency::Dependency;
 pub use dependency::DependencyParserError;
 
-pub use package_id::OptionalPackageId;
+pub use optional_id::OptionalPackageId;
+
 pub use package_id::PackageId;
 
 pub use version::Version;

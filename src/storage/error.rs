@@ -2,7 +2,7 @@ use thiserror::Error;
 
 /// The errors that occur when reading or saving the register file.
 #[derive(Error, Debug)]
-pub enum InstalledPackagesError {
+pub enum RegisterError {
     #[error("Cannot read or write installed packages file")]
     IOError(#[from] std::io::Error),
 

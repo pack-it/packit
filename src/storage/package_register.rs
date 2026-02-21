@@ -12,7 +12,7 @@ use crate::{
     installer::types::{Dependency, PackageId, Version},
     platforms::DEFAULT_CONFIG_DIR,
     repositories::types::{PackageMeta, PackageVersionMeta},
-    storage::{error::InstalledPackagesError, installed_package::InstalledPackage, installed_package_version::InstalledPackageVersion},
+    storage::{error::RegisterError, installed_package::InstalledPackage, installed_package_version::InstalledPackageVersion},
     utils::constants::REGISTER_FILENAME,
 };
 
@@ -32,7 +32,7 @@ impl PackageRegister {
     /// # Errors
     ///
     /// This function will return an error if the file cannot be opened or if the content is invalid.
-    pub fn from(path: &Path) -> Result<Self, InstalledPackagesError> {
+    pub fn from(path: &Path) -> Result<Self, RegisterError> {
         // If the file does not exist, we return an empty storage
         if !fs::exists(path)? {
             return Ok(PackageRegister { packages: HashMap::new() });
@@ -55,7 +55,7 @@ impl PackageRegister {
     /// # Errors
     ///
     /// This function will return an error if the data cannot be serialized or if the file cannot be written.
-    pub fn save_to(&self, path: &Path) -> Result<(), InstalledPackagesError> {
+    pub fn save_to(&self, path: &Path) -> Result<(), RegisterError> {
         let data = toml::to_string(self)?;
 
         // Add header text to data
@@ -260,6 +260,7 @@ pub mod tests {
     use std::str::FromStr;
 
     use crate::installer::types::dependency_tests::create_dependency;
+    use crate::installer::types::Version;
     use crate::platforms::TARGET_ARCHITECTURE;
     use crate::repositories::types::{Checksum, Source, Sources};
 

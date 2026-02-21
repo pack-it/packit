@@ -5,7 +5,7 @@ use crate::{
     installer::{builder::BuilderError, scripts::ScriptError, unpack::UnpackError},
     platforms::symlink::SymlinkError,
     repositories::error::RepositoryError,
-    storage::error::InstalledPackagesError,
+    storage::error::RegisterError,
 };
 
 /// The errors that occur during installation.
@@ -45,7 +45,7 @@ pub enum InstallerError {
     RepositoryError(#[from] RepositoryError),
 
     #[error("Cannot info package information")]
-    InstalledPackagesError(#[from] InstalledPackagesError),
+    InstalledPackagesError(#[from] RegisterError),
 
     #[error("Cannot display installer error")]
     DisplayError(#[from] DisplayError),

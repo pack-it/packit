@@ -24,9 +24,9 @@ impl HandleCommand for UninstallArgs {
         let mut installer = Installer::new(config, &mut register, manager, InstallerOptions::default());
 
         // Uninstall all specified packages
-        for package_id in &self.packages {
-            if let Err(error) = installer.uninstall(&package_id) {
-                error!(error, "Cannot uninstall package {package_id}");
+        for optional_id in &self.packages {
+            if let Err(error) = installer.uninstall(&optional_id) {
+                error!(error, "Cannot uninstall package {optional_id}");
             }
         }
 
