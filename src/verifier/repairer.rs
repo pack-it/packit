@@ -5,10 +5,11 @@ use crate::{
     config::Config,
     installer::{
         types::{PackageId, Version},
-        Installer, InstallerOptions, Symlinker,
+        Installer, InstallerOptions,
     },
     repositories::manager::RepositoryManager,
     storage::package_register::PackageRegister,
+    utils::symlink::remove_symlinks,
     verifier::{error::VerifierError, Issue, Verifier},
 };
 
@@ -105,7 +106,7 @@ impl<'a> Repairer<'a> {
             // Remove the symlinks first
             // TODO: Use uninstall scripts here in the future
             if symlinked {
-                Symlinker::new(self.config).remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&package_directory))?;
+                remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&package_directory))?;
             }
 
             // Remove the packages

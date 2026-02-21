@@ -4,16 +4,20 @@ use crate::{
     cli::display::error::DisplayError,
     installer::{error::InstallerError, types::VersionError},
     packager::PackagerError,
+    utils::symlink::SymlinkError,
 };
 
 /// The errors that occur during verification.
 #[derive(Error, Debug)]
 pub enum VerifierError {
-    #[error("Could not verify")]
-    IOError(#[from] std::io::Error),
+    #[error("Cannot parse symlink name, because it doesn't end properly")]
+    InvalidSymlink,
 
     #[error("Cannot parse filename, because it contains invalid unicode")]
     InvalidUnicodeError,
+
+    #[error("Could not verify")]
+    IOError(#[from] std::io::Error),
 
     #[error("Could not display issues")]
     DisplayError(#[from] DisplayError),
@@ -27,6 +31,6 @@ pub enum VerifierError {
     #[error("Could not verify, because the version number couldn't be parsed")]
     VersionError(#[from] VersionError),
 
-    #[error("Cannot parse symlink name, because it doesn't end properly")]
-    InvalidSymlink,
+    #[error("Could not verify, because a symlink opperation failed")]
+    SymlinkError(#[from] SymlinkError),
 }

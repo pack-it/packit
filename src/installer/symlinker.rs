@@ -9,6 +9,7 @@ use crate::{
     },
     platforms::symlink,
     storage::package_register::PackageRegister,
+    utils::symlink::{create_folder_symlinks, remove_symlinks},
 };
 
 pub struct Symlinker<'a> {
@@ -28,76 +29,14 @@ impl<'a> Symlinker<'a> {
             let package_dir_path = package_directory.join(dir_name);
             let prefix_dir_path = prefix_dir.join(dir_name);
 
-            self.create_folder_symlinks(&package_dir_path, &prefix_dir_path, true)?;
+            create_folder_symlinks(&package_dir_path, &prefix_dir_path, true)?;
         }
 
         Ok(())
     }
 
-    fn create_folder_symlinks(&self, source_dir: &Path, destination_dir: &Path, keep_subdirectories: bool) -> Result<()> {
-        // Create destination if it does not exist
-        if !destination_dir.exists() {
-            fs::create_dir_all(&destination_dir)?;
-        }
-
-        // Skip symlinking if source does not exist
-        if !source_dir.exists() {
-            return Ok(());
-        }
-
-        // Symlink files
-        for file in fs::read_dir(source_dir)? {
-            let file = file?;
-
-            let destination = destination_dir.join(file.file_name());
-
-            // Handle directories
-            if file.file_type()?.is_dir() {
-                // If we want to keep subdirectories, create the symlinks for the subdirectory
-                // TODO: Handle subdirectories properly
-                if keep_subdirectories {
-                    self.create_folder_symlinks(&file.path(), &destination, true)?;
-                } else {
-                    dbg!("Skipping subdirectory", file);
-                }
-
-                continue;
-            }
-
-            // Check if file already exists
-            if fs::exists(&destination)? {
-                warning!("Symlink {:?} already exists in {:?}", file.file_name(), destination_dir);
-                continue;
-            }
-
-            // Symlink file in destination directory
-            symlink::create_symlink(&file.path(), &destination)?;
-        }
-
-        Ok(())
-    }
-
-    /// Searches for symlinks with a certain destination (destinations inside of the destination are also a match).
-    pub fn remove_symlinks(&self, search_dir: &Path, destination_dir: &Path) -> Result<()> {
-        for file in fs::read_dir(search_dir)? {
-            let file = file?;
-            let file_type = file.file_type()?;
-
-            if file_type.is_dir() {
-                self.remove_symlinks(&file.path(), destination_dir)?;
-
-                // Remove the directory if it is empty after removing symlinks
-                if fs::read_dir(file.path())?.next().is_none() {
-                    fs::remove_dir(file.path())?;
-                }
-            }
-
-            if file_type.is_symlink() && fs::read_link(file.path())?.starts_with(destination_dir) {
-                symlink::remove_symlink(&file.path())?
-            }
-        }
-
-        Ok(())
+    pub(super) fn remove_symlinks(&self, search_dir: &Path, destination_dir: &Path) -> Result<()> {
+        Ok(remove_symlinks(search_dir, destination_dir)?)
     }
 
     /// Sets a package to active and create the appropiate symlinks for it
@@ -118,7 +57,7 @@ impl<'a> Symlinker<'a> {
 
         // Remove old symlinks
         let package_directory = self.config.prefix_directory.join("packages").join(&package_id.name);
-        self.remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&package_directory))?;
+        remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&package_directory))?;
 
         // Create active symlink
         fs::create_dir_all(global_active_path)?;
@@ -173,7 +112,7 @@ impl<'a> Symlinker<'a> {
             let entry = entry?;
 
             if entry.file_type()?.is_dir() && entry.file_name() != "active" {
-                self.remove_symlinks(&entry.path(), &install_path)?;
+                remove_symlinks(&entry.path(), &install_path)?;
             }
         }
 
