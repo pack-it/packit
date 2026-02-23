@@ -31,7 +31,7 @@ impl FromStr for Checksum {
 }
 
 impl Checksum {
-    pub fn from_bytes(buffer: &mut Vec<u8>) -> Self {
+    pub fn from_bytes(buffer: &[u8]) -> Self {
         let checksum: [u8; 32] = Sha256::digest(buffer).into();
         Self { sha256: checksum }
     }

@@ -132,8 +132,8 @@ impl<'a> Verifier<'a> {
     /// Returns true if the package was altered, false if not.
     fn check_package_alterations(&self, package_id: &PackageId) -> Result<bool> {
         let install_directory = self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
-        let mut compressed = packager::compress(&install_directory)?;
-        let checksum = Checksum::from_bytes(&mut compressed);
+        let compressed = packager::compress(&install_directory)?;
+        let checksum = Checksum::from_bytes(&compressed);
 
         // TODO: Actually search for the correct checksum
         let correct_checksum = Checksum {

@@ -40,10 +40,10 @@ pub fn package(config: &Config, package_id: &PackageId, destination: &PathBuf, r
     }
 
     // Compress the package
-    let mut compressed = compress(&install_directory)?;
+    let compressed = compress(&install_directory)?;
 
     // Calculate checksum for the compressed
-    let checksum = Checksum::from_bytes(&mut compressed);
+    let checksum = Checksum::from_bytes(&compressed);
 
     // Create the file names
     let filename = format!("{package_id}-{revisions}-{TARGET_ARCHITECTURE}");

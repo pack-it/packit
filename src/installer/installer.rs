@@ -1,5 +1,3 @@
-use sha2::{Digest, Sha256};
-
 use crate::{
     cli::display::{
         ask_user,
@@ -21,7 +19,7 @@ use crate::{
         error::RepositoryError,
         manager::RepositoryManager,
         provider,
-        types::{PackageMeta, PackageTarget, PackageVersionMeta},
+        types::{Checksum, PackageMeta, PackageTarget, PackageVersionMeta},
     },
     storage::package_register::PackageRegister,
 };
@@ -395,11 +393,11 @@ impl<'a> Installer<'a> {
         let checksum = self.repository_manager.get_prebuild_checksum(repository_id, package, revision, TARGET_ARCHITECTURE)?;
 
         // Calculate the checksum
-        let calculated_checksum: [u8; 32] = Sha256::digest(&bytes).into();
+        let calculated_checksum = Checksum::from_bytes(&bytes);
 
         // Check equality of checksum
         match checksum {
-            Some(checksum) if checksum.sha256 == calculated_checksum => (),
+            Some(checksum) if checksum == calculated_checksum => (),
             _ => return Err(InstallerError::ChecksumError),
         }
 
