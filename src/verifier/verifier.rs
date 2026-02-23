@@ -7,7 +7,10 @@ use crate::{
     packager,
     repositories::types::Checksum,
     storage::package_register::PackageRegister,
-    verifier::{error::VerifierError, Issue},
+    verifier::{
+        error::{Result, VerifierError},
+        Issue,
+    },
 };
 
 /// An enum which represents a specific check.
@@ -45,7 +48,7 @@ impl<'a> Verifier<'a> {
 
     /// Gets the next issue in the correct order, defined in VERIFY_ORDER.
     /// None is returned if there are no more issues to return.
-    pub fn next_issue(&mut self, register: &PackageRegister) -> Result<Option<Issue>, VerifierError> {
+    pub fn next_issue(&mut self, register: &PackageRegister) -> Result<Option<Issue>> {
         loop {
             let check = match VERIFY_ORDER.get(self.current_issue) {
                 Some(check) => check,
@@ -75,14 +78,14 @@ impl<'a> Verifier<'a> {
     /// Gets the next issue for a specific package in the correct order, defined in VERIFY_ORDER.
     /// None is returned if there are no more issues to return.
     /// Note that this method assumes that the package exists.
-    pub fn next_package_issue(&mut self, package_id: &PackageId, register: &PackageRegister) -> Result<Option<Issue>, VerifierError> {
+    pub fn next_package_issue(&mut self, package_id: &PackageId, register: &PackageRegister) -> Result<Option<Issue>> {
         loop {
             let check = match VERIFY_ORDER.get(self.current_issue) {
                 Some(check) => check,
                 None => return Ok(None),
             };
 
-            // Increase curren issue
+            // Increase current issue
             self.current_issue += 1;
 
             let issue = match check {
@@ -109,7 +112,7 @@ impl<'a> Verifier<'a> {
 
     /// Checks for alterations in all packages using a checksum which is compared to the checksum from the pre-build.
     /// Returns an alteration issue or None if there are no packages which are altered.
-    fn check_alterations(&self, register: &PackageRegister) -> Result<Option<Issue>, VerifierError> {
+    fn check_alterations(&self, register: &PackageRegister) -> Result<Option<Issue>> {
         // Find issues with a package, maybe even package it and compare it with checksum
         let mut altered = Vec::new();
         for package in register.iterate_all() {
@@ -127,20 +130,24 @@ impl<'a> Verifier<'a> {
 
     /// Checks for alterations in a single package using a checksum which is compared to the checksum from the pre-build.
     /// Returns true if the package was altered, false if not.
-    fn check_package_alterations(&self, package_id: &PackageId) -> Result<bool, VerifierError> {
+    fn check_package_alterations(&self, package_id: &PackageId) -> Result<bool> {
         let install_directory = self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
         let mut compressed = packager::compress(&install_directory)?;
-        let checksum = Checksum::calculate_checksum(&mut compressed)?;
+        let checksum = Checksum::from_bytes(&mut compressed);
 
         // TODO: Actually search for the correct checksum
-        let correct_checksum = "904723e939e42c4cfa16b2cc8bf9f7d637a6f56b568975b0b97cb897ce5fff15";
+        let correct_checksum = Checksum {
+            sha256: [
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            ],
+        };
 
         Ok(checksum != correct_checksum)
     }
 
     /// Checks if all packages in the register also exist in the Packit package storage.
     /// Returns a storage consistency issue or None if there are no packages missing from storage.
-    fn check_storage_consistency(&self, register: &PackageRegister) -> Result<Option<Issue>, VerifierError> {
+    fn check_storage_consistency(&self, register: &PackageRegister) -> Result<Option<Issue>> {
         let mut missing = Vec::new();
         for package in register.iterate_all() {
             if !self.package_storage_is_consistent(&package.package_id)? {
@@ -157,7 +164,7 @@ impl<'a> Verifier<'a> {
 
     /// Checks if a specific package exists in storage. Note that it doesn't check if the package also exists in the register.
     /// Returns false if the package storage isn't consistent, true if it is.
-    fn package_storage_is_consistent(&self, package_id: &PackageId) -> Result<bool, VerifierError> {
+    fn package_storage_is_consistent(&self, package_id: &PackageId) -> Result<bool> {
         let installed_directory = self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
 
         // Check if the directory exists, if so return true
@@ -170,7 +177,7 @@ impl<'a> Verifier<'a> {
 
     /// Checks if all packages in storage also exist in the Packit register.
     /// Returns a register consistency issue or None if there are packages missing from the register.
-    fn check_register_consistency(&self, register: &PackageRegister) -> Result<Option<Issue>, VerifierError> {
+    fn check_register_consistency(&self, register: &PackageRegister) -> Result<Option<Issue>> {
         let package_directory = self.config.prefix_directory.join("packages");
         let mut missing = Vec::new();
         for file_package in fs::read_dir(package_directory)? {
@@ -209,7 +216,7 @@ impl<'a> Verifier<'a> {
 
     /// Checks if a specific package exists in the register. Note that it doesn't check if the package also exists in storage.
     /// Returns false if the package register isn't consistent, true if it is.
-    fn register_package_is_consistent(&self, package_id: &PackageId, register: &PackageRegister) -> Result<bool, VerifierError> {
+    fn register_package_is_consistent(&self, package_id: &PackageId, register: &PackageRegister) -> Result<bool> {
         // Return no issue if the package exists in the register
         if register.get_package_version(package_id).is_some() {
             return Ok(true);

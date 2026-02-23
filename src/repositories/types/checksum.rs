@@ -1,9 +1,7 @@
-use std::io;
-
 use serde::{de, Deserialize};
 use sha2::{Digest, Sha256};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Checksum {
     pub sha256: [u8; 32],
 }
@@ -22,8 +20,12 @@ impl<'de> Deserialize<'de> for Checksum {
 }
 
 impl Checksum {
-    pub fn calculate_checksum(buffer: &mut Vec<u8>) -> Result<String, io::Error> {
+    pub fn from_bytes(buffer: &mut Vec<u8>) -> Checksum {
         let checksum: [u8; 32] = Sha256::digest(buffer).into();
-        Ok(hex::encode(checksum))
+        Checksum { sha256: checksum }
+    }
+
+    pub fn to_string(&self) -> String {
+        hex::encode(self.sha256)
     }
 }

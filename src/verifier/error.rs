@@ -34,3 +34,5 @@ pub enum VerifierError {
     #[error("Could not verify, because a symlink opperation failed")]
     SymlinkError(#[from] SymlinkError),
 }
+
+pub(super) type Result<T> = std::result::Result<T, VerifierError>;

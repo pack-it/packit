@@ -1,4 +1,4 @@
-mod error;
+pub mod error;
 mod issue;
 mod repairer;
 mod verifier;

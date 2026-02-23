@@ -43,7 +43,7 @@ pub fn package(config: &Config, package_id: &PackageId, destination: &PathBuf, r
     let mut compressed = compress(&install_directory)?;
 
     // Calculate checksum for the compressed
-    let checksum = Checksum::calculate_checksum(&mut compressed)?;
+    let checksum = Checksum::from_bytes(&mut compressed);
 
     // Create the file names
     let filename = format!("{package_id}-{revisions}-{TARGET_ARCHITECTURE}");
@@ -55,7 +55,7 @@ pub fn package(config: &Config, package_id: &PackageId, destination: &PathBuf, r
     let mut compressed_file = File::create(prepackage_dir)?;
     let mut checksum_file = File::create(checksum_filename)?;
     compressed_file.write_all(&compressed)?;
-    checksum_file.write_all(checksum.as_bytes())?;
+    checksum_file.write_all(checksum.to_string().as_bytes())?;
 
     Ok(())
 }

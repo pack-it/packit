@@ -12,3 +12,5 @@ pub enum InstalledPackagesError {
     #[error("Cannot serialize installed packages")]
     SerializeError(#[from] toml::ser::Error),
 }
+
+// TODO: Use Result<T> here as well

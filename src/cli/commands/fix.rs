@@ -1,7 +1,10 @@
 use clap::Args;
 
 use crate::{
-    cli::commands::HandleCommand,
+    cli::{
+        commands::HandleCommand,
+        display::{ask_user, QuestionResponse},
+    },
     config::Config,
     repositories::manager::RepositoryManager,
     storage::package_register::PackageRegister,
@@ -18,9 +21,20 @@ impl HandleCommand for FixArgs {
         let mut register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
         let mut verifier = Verifier::new(config);
 
-        // Repair the found issues
         let mut repairer = Repairer::new(config, manager);
-        repairer.fix(&mut verifier, &mut register).unwrap_or_exit(1);
+
+        // Retrieve and fix the issues one by one
+        while let Some(issue) = verifier.next_issue(&register).unwrap_or_exit(1) {
+            print!("{issue}\n");
+
+            let question = "Would you like to automatically fix the above issue with `pit fix`?";
+            if ask_user(question, QuestionResponse::Yes).unwrap_or_exit(1).is_no() {
+                continue;
+            }
+
+            // Repair the found issues
+            repairer.fix(issue, &mut register).unwrap_or_exit(1);
+        }
 
         // Return correct message based on found issues
         if !verifier.issues_found() {

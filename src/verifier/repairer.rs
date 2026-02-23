@@ -1,7 +1,7 @@
 use std::{fs, path::Path, str::FromStr};
 
 use crate::{
-    cli::display::{ask_user, logging::warning, QuestionResponse},
+    cli::display::logging::warning,
     config::Config,
     installer::{
         types::{PackageId, Version},
@@ -10,7 +10,10 @@ use crate::{
     repositories::manager::RepositoryManager,
     storage::package_register::PackageRegister,
     utils::symlink::remove_symlinks,
-    verifier::{error::VerifierError, Issue, Verifier},
+    verifier::{
+        error::{Result, VerifierError},
+        Issue,
+    },
 };
 
 /// Repairer which gets issues with the verifier and fixes them.
@@ -25,29 +28,20 @@ impl<'a> Repairer<'a> {
         Self { config, manager }
     }
 
-    /// Gets the issues one by one with the verifier and fixes them.
-    pub fn fix(&mut self, verifier: &mut Verifier, register: &mut PackageRegister) -> Result<(), VerifierError> {
-        while let Some(issue) = verifier.next_issue(register)? {
-            print!("{issue}\n");
-
-            let question = "Would you like to automatically fix the above issue with `pit fix`?";
-            if ask_user(question, QuestionResponse::Yes)?.is_no() {
-                continue;
-            }
-
-            match issue {
-                Issue::BrokenTree(missing) => self.fix_broken_tree(missing, register)?,
-                Issue::InconsistentStorage(missing) => self.fix_inconsistent_storage(missing, register)?,
-                Issue::InconsistentRegister(missing) => self.fix_inconsistent_register(missing, register)?,
-                _ => warning!("Issue fix not yet implemented"),
-            }
+    /// Fixes the given issue by executing the fix for that issue.
+    pub fn fix(&mut self, issue: Issue, register: &mut PackageRegister) -> Result<()> {
+        match issue {
+            Issue::BrokenTree(missing) => self.fix_broken_tree(missing, register)?,
+            Issue::InconsistentStorage(missing) => self.fix_inconsistent_storage(missing, register)?,
+            Issue::InconsistentRegister(missing) => self.fix_inconsistent_register(missing, register)?,
+            _ => warning!("Fix not executed, because the issue fix is not yet implemented"),
         }
 
         Ok(())
     }
 
     /// Fixes broken dependency trees by installing the missing packages.
-    fn fix_broken_tree(&mut self, missing: Vec<(PackageId, PackageId)>, register: &mut PackageRegister) -> Result<(), VerifierError> {
+    fn fix_broken_tree(&mut self, missing: Vec<(PackageId, PackageId)>, register: &mut PackageRegister) -> Result<()> {
         for (_, missing_package) in missing {
             // There could be duplicates in the missing packages, so skip when already seen
             if register.get_package_version(&missing_package).is_some() {
@@ -64,13 +58,13 @@ impl<'a> Repairer<'a> {
     }
 
     /// Fixes inconsistent storage by temporarily removing the missing package from the register and then re-installing the packages.
-    fn fix_inconsistent_storage(&mut self, missing: Vec<PackageId>, register: &mut PackageRegister) -> Result<(), VerifierError> {
+    fn fix_inconsistent_storage(&mut self, missing: Vec<PackageId>, register: &mut PackageRegister) -> Result<()> {
         for missing_package in missing {
             // Gather the package settings before removing the package from the register
             let (symlinked, active) = match register.get_package(&missing_package.name) {
                 Some(package) => (package.symlinked, package.active_version == missing_package.version),
                 None => {
-                    warning!("Inconsistent package cannot be found in Installed.toml anymore, eventhough it could be found before.");
+                    warning!("Inconsistent package cannot be found in Installed.toml anymore, eventhough it was found before.");
                     (false, false)
                 },
             };
@@ -89,7 +83,7 @@ impl<'a> Repairer<'a> {
 
     /// Fixes an inconsistent register by temporarily removing the missing packages from storage and then re-installing the packages.
     /// Note that it's not possible to recreate the register entries, because some entries like the source repository cannot be defered from the package storage.
-    fn fix_inconsistent_register(&mut self, missing: Vec<PackageId>, register: &mut PackageRegister) -> Result<(), VerifierError> {
+    fn fix_inconsistent_register(&mut self, missing: Vec<PackageId>, register: &mut PackageRegister) -> Result<()> {
         let active_directory = self.config.prefix_directory.join("active");
         let bin_directory = self.config.prefix_directory.join("bin");
         let package_directory = self.config.prefix_directory.join("packages");
