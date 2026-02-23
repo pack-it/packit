@@ -10,7 +10,7 @@ use thiserror::Error;
 use crate::{
     cli::display::logging::warning,
     platforms::{DEFAULT_CONFIG_DIR, DEFAULT_PREFIX},
-    repositories::default::DEFAULT_PROVIDER_ID,
+    repositories::metadata::DEFAULT_METADATA_PROVIDER_ID,
     utils::constants::CONFIG_FILENAME,
 };
 
@@ -38,8 +38,14 @@ pub struct Repository {
     pub path: String,
 
     /// The repository provider, defaults to the packit repository format
-    #[serde(default = "default_repository_provider")]
+    #[serde(default = "Repository::default_repository_provider")]
     pub provider: String,
+
+    /// The url of the prebuild packages repository
+    pub prebuilds_url: Option<String>,
+
+    /// The provider of the prebuild packages repository
+    pub prebuilds_provider: Option<String>,
 }
 
 impl Repository {
@@ -47,7 +53,13 @@ impl Repository {
         Self {
             path: path.to_string(),
             provider: provider.to_string(),
+            prebuilds_url: None,
+            prebuilds_provider: None,
         }
+    }
+
+    pub fn default_repository_provider() -> String {
+        DEFAULT_METADATA_PROVIDER_ID.into()
     }
 }
 
@@ -57,10 +69,6 @@ fn default_prompt_repo_conflicts() -> bool {
 
 fn default_prefix_directory() -> PathBuf {
     DEFAULT_PREFIX.into()
-}
-
-pub fn default_repository_provider() -> String {
-    DEFAULT_PROVIDER_ID.into()
 }
 
 /// The errors that occur when reading the config file.

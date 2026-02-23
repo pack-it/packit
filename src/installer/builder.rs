@@ -1,4 +1,3 @@
-use sha2::{Digest, Sha256};
 use std::path::Path;
 use tempfile::TempDir;
 use thiserror::Error;
@@ -9,13 +8,13 @@ use crate::{
     installer::{
         build_env::BuildEnv,
         scripts::{self, ScriptData, ScriptError},
-        unpack::{unpack, UnpackError},
+        unpack::{unpack, ArchiveExtension, UnpackError},
     },
     platforms::TARGET_ARCHITECTURE,
     repositories::{
         error::RepositoryError,
         manager::RepositoryManager,
-        types::{PackageMeta, PackageVersionMeta},
+        types::{Checksum, PackageMeta, PackageVersionMeta},
     },
     storage::package_register::PackageRegister,
 };
@@ -137,10 +136,10 @@ impl<'a> Builder<'a> {
         let bytes = response.bytes()?;
 
         // Calculate the checksum
-        let checksum: [u8; 32] = Sha256::digest(&bytes).into();
+        let checksum = Checksum::from_bytes(&bytes);
 
         // Check equality of checksum
-        if source.checksum.sha256 != checksum {
+        if source.checksum != checksum {
             return Err(BuilderError::ChecksumError);
         }
 
@@ -149,7 +148,7 @@ impl<'a> Builder<'a> {
 
         // Unpack the package to the temp directory
         let unpack_directory = TempDir::new()?;
-        unpack(&source.url, bytes, &unpack_directory)?;
+        unpack(ArchiveExtension::from_path(&source.url), bytes, &unpack_directory)?;
 
         // Create build env
         let env = BuildEnv::new(

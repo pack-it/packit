@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use serde::{de, Deserialize};
 use sha2::{Digest, Sha256};
 
@@ -12,15 +14,24 @@ impl<'de> Deserialize<'de> for Checksum {
         D: serde::Deserializer<'de>,
     {
         let string: String = de::Deserialize::deserialize(deserializer)?;
+
+        Checksum::from_str(&string).map_err(de::Error::custom)
+    }
+}
+
+impl FromStr for Checksum {
+    type Err = hex::FromHexError;
+
+    fn from_str(string: &str) -> Result<Self, Self::Err> {
         let mut sha256 = [0; 32];
-        hex::decode_to_slice(string, &mut sha256).map_err(de::Error::custom)?;
+        hex::decode_to_slice(string, &mut sha256)?;
 
         Ok(Self { sha256 })
     }
 }
 
 impl Checksum {
-    pub fn from_bytes(buffer: &mut Vec<u8>) -> Self {
+    pub fn from_bytes(buffer: &[u8]) -> Self {
         let checksum: [u8; 32] = Sha256::digest(buffer).into();
         Self { sha256: checksum }
     }

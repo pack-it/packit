@@ -1,5 +1,7 @@
 use thiserror::Error;
 
+use crate::installer::types::PackageId;
+
 /// The errors that occur when requesting metadata from a repository.
 #[derive(Error, Debug)]
 pub enum RepositoryError {
@@ -12,6 +14,9 @@ pub enum RepositoryError {
     #[error("Cannot parse repository file")]
     ParseError(#[from] toml::de::Error),
 
+    #[error("Cannot parse checksum from hex")]
+    ChecksumParseError(#[from] hex::FromHexError),
+
     #[error("Cannot find repository '{repository_id}'")]
     RepositoryNotFoundError {
         repository_id: String,
@@ -23,11 +28,20 @@ pub enum RepositoryError {
         version: Option<String>,
     },
 
+    #[error("Cannot find prebuild of package '{package_id}' revision {revision}")]
+    PrebuildNotFound {
+        package_id: PackageId,
+        revision: u64,
+    },
+
     #[error("Package is not valid")]
     ValidationError(String),
 
     #[error("Cannot find target for package.")]
     TargetError,
+
+    #[error("The given package name is empty")]
+    EmptyPackageName,
 }
 
 pub(super) type Result<T> = std::result::Result<T, RepositoryError>;

@@ -2,7 +2,7 @@ use std::{collections::HashSet, path::PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{config, installer::types::PackageId};
+use crate::{config::Repository, installer::types::PackageId};
 
 /// Represents a package which is installed on the system.
 #[derive(Serialize, Deserialize, Debug)]
@@ -12,7 +12,7 @@ pub struct InstalledPackageVersion {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub license: Option<String>,
 
-    #[serde(default = "config::default_repository_provider")]
+    #[serde(default = "Repository::default_repository_provider")]
     #[serde(skip_serializing_if = "is_repository_provider_default")]
     pub source_repository_provider: String,
     pub source_repository_url: String,
@@ -32,5 +32,5 @@ pub struct InstalledPackageVersion {
 }
 
 fn is_repository_provider_default(value: &String) -> bool {
-    *value == config::default_repository_provider()
+    *value == Repository::default_repository_provider()
 }

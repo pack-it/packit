@@ -2,7 +2,7 @@ use thiserror::Error;
 
 use crate::{
     cli::display::error::DisplayError,
-    installer::{builder::BuilderError, scripts::ScriptError},
+    installer::{builder::BuilderError, scripts::ScriptError, unpack::UnpackError},
     platforms::symlink::SymlinkError,
     repositories::error::RepositoryError,
     storage::error::InstalledPackagesError,
@@ -13,6 +13,9 @@ use crate::{
 pub enum InstallerError {
     #[error("Cannot write prefix directory due to incorrect permissions.")]
     PermissionsError,
+
+    #[error("Prebuild checksum does not match")]
+    ChecksumError,
 
     #[error("Error while interacting with filesystem")]
     IOError(#[from] std::io::Error),
@@ -55,6 +58,9 @@ pub enum InstallerError {
 
     #[error("Cannot build package")]
     BuildError(#[from] BuilderError),
+
+    #[error("Cannot unpack prebuild package")]
+    UnpackError(#[from] UnpackError),
 }
 
 pub(super) type Result<T> = std::result::Result<T, InstallerError>;
