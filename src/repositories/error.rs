@@ -1,5 +1,7 @@
 use thiserror::Error;
 
+use crate::installer::types::PackageId;
+
 /// The errors that occur when requesting metadata from a repository.
 #[derive(Error, Debug)]
 pub enum RepositoryError {
@@ -26,10 +28,9 @@ pub enum RepositoryError {
         version: Option<String>,
     },
 
-    #[error("Cannot find prebuild of package '{package_name}@{version}' revision {revision}")]
+    #[error("Cannot find prebuild of package '{package_id}' revision {revision}")]
     PrebuildNotFound {
-        package_name: String,
-        version: String,
+        package_id: PackageId,
         revision: u64,
     },
 

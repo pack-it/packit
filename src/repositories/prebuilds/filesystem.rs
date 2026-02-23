@@ -39,8 +39,7 @@ impl PrebuildProvider for FileSystemPrebuildProvider {
 
     fn read_prebuild(&self, package_id: &PackageId, revision: u64, target: &str) -> Result<(ArchiveExtension, Bytes)> {
         let url = self.get_prebuild_url(package_id, revision, target)?.ok_or(RepositoryError::PrebuildNotFound {
-            package_name: package_id.name.clone(),
-            version: package_id.version.to_string(),
+            package_id: package_id.clone(),
             revision,
         })?;
 
