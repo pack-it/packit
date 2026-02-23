@@ -4,7 +4,7 @@ use crate::{
     cli::display::error::DisplayError,
     installer::{error::InstallerError, types::VersionError},
     packager::PackagerError,
-    utils::symlink::SymlinkError,
+    platforms::symlink::SymlinkError,
 };
 
 /// The errors that occur during verification.

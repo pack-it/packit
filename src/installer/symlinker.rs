@@ -9,7 +9,7 @@ use crate::{
     },
     platforms::symlink,
     storage::package_register::PackageRegister,
-    utils::symlink::{create_folder_symlinks, remove_symlinks},
+    utils::io::{create_folder_symlinks, remove_symlinks},
 };
 
 pub struct Symlinker<'a> {

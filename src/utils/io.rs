@@ -1,18 +1,9 @@
 use std::{fs, path::Path};
 
-use thiserror::Error;
-
-use crate::{cli::display::logging::warning, platforms::symlink};
-
-/// The errors that occur during symlink opperations.
-#[derive(Error, Debug)]
-pub enum SymlinkError {
-    #[error("Symlink IO failed")]
-    IOError(#[from] std::io::Error),
-
-    #[error("Path is not a symlink")]
-    NonSymlink,
-}
+use crate::{
+    cli::display::logging::warning,
+    platforms::symlink::{self, SymlinkError},
+};
 
 pub fn create_folder_symlinks(source_dir: &Path, destination_dir: &Path, keep_subdirectories: bool) -> Result<(), SymlinkError> {
     // Create destination if it does not exist

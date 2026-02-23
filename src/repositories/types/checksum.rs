@@ -20,9 +20,9 @@ impl<'de> Deserialize<'de> for Checksum {
 }
 
 impl Checksum {
-    pub fn from_bytes(buffer: &mut Vec<u8>) -> Checksum {
+    pub fn from_bytes(buffer: &mut Vec<u8>) -> Self {
         let checksum: [u8; 32] = Sha256::digest(buffer).into();
-        Checksum { sha256: checksum }
+        Self { sha256: checksum }
     }
 
     pub fn to_string(&self) -> String {

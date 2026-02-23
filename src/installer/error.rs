@@ -3,9 +3,9 @@ use thiserror::Error;
 use crate::{
     cli::display::error::DisplayError,
     installer::{builder::BuilderError, scripts::ScriptError},
+    platforms::symlink::SymlinkError,
     repositories::error::RepositoryError,
     storage::error::InstalledPackagesError,
-    utils::symlink::SymlinkError,
 };
 
 /// The errors that occur during installation.

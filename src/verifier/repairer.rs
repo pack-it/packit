@@ -9,7 +9,7 @@ use crate::{
     },
     repositories::manager::RepositoryManager,
     storage::package_register::PackageRegister,
-    utils::symlink::remove_symlinks,
+    utils::io::remove_symlinks,
     verifier::{
         error::{Result, VerifierError},
         Issue,
