@@ -35,7 +35,7 @@ impl ArchiveExtension {
             Some(index) => index,
             None => return Self::Unknown,
         };
-        let (_, extension) = path.split_at(extension_index + 1);
+        let (_, extension) = path.split_at(path.len() - extension_index);
 
         match extension.to_lowercase().as_str() {
             "gz" => Self::GZ,

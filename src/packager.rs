@@ -48,12 +48,13 @@ pub fn package(config: &Config, package_id: &PackageId, destination: &PathBuf, r
     // Create the file names
     let filename = format!("{package_id}-{revisions}-{TARGET_ARCHITECTURE}");
     let compressed_filename = format!("{filename}.tar.gz");
-    let prepackage_dir = destination.join(compressed_filename);
+    let prepackage_file = destination.join(compressed_filename);
     let checksum_filename = format!("{filename}.sha256");
+    let checksum_file = destination.join(checksum_filename);
 
     // Store the compressed package and checksum
-    let mut compressed_file = File::create(prepackage_dir)?;
-    let mut checksum_file = File::create(checksum_filename)?;
+    let mut compressed_file = File::create(prepackage_file)?;
+    let mut checksum_file = File::create(checksum_file)?;
     compressed_file.write_all(&compressed)?;
     checksum_file.write_all(checksum.to_string().as_bytes())?;
 
