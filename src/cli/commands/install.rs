@@ -1,12 +1,18 @@
 use clap::Args;
 
 use crate::{
-    cli::{commands::HandleCommand, display::logging::error},
+    cli::{
+        commands::{package, HandleCommand},
+        display::logging::error,
+    },
     config::Config,
-    installer::{types::OptionalPackageId, Installer, InstallerOptions},
+    installer::{
+        types::{OptionalPackageId, PackageId, Version},
+        Installer, InstallerOptions,
+    },
     repositories::manager::RepositoryManager,
     storage::package_register::PackageRegister,
-    utils::unwrap_or_exit::UnwrapOrExit,
+    utils::{tree::Node, unwrap_or_exit::UnwrapOrExit},
 };
 
 #[derive(Args, Debug)]
@@ -37,22 +43,28 @@ impl HandleCommand for InstallArgs {
         let register_dir = PackageRegister::get_default_path();
         let mut register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
-        let installer_options = InstallerOptions::default()
-            .build_source(self.build)
-            .skip_symlinking(self.skip_symlinking)
-            .skip_active(self.skip_active)
-            .keep_build(self.keep_build);
-        let mut installer = Installer::new(&config, &mut register, &manager, installer_options);
+        let package_id = PackageId::new("htop", &Version { numbers: vec![3, 4, 1] });
+        //let tree = Node::new_with_value(&package_id, &register, |package_id| register.get_package_version(&package_id));
+        let tree = Node::new(&package_id, &register);
 
-        // TODO: Check if this exists as an external package (possibly leading to conflicts) (if so, add to external packages)
-        // TODO: check for duplicate packages in Vec
+        dbg!(tree);
 
-        // Install all packages
-        for package_id in &self.packages {
-            if let Err(error) = installer.install(&package_id) {
-                error!(error, "Cannot install package {package_id}");
-            }
-        }
+        // let installer_options = InstallerOptions::default()
+        //     .build_source(self.build)
+        //     .skip_symlinking(self.skip_symlinking)
+        //     .skip_active(self.skip_active)
+        //     .keep_build(self.keep_build);
+        // let mut installer = Installer::new(&config, &mut register, &manager, installer_options);
+
+        // // TODO: Check if this exists as an external package (possibly leading to conflicts) (if so, add to external packages)
+        // // TODO: check for duplicate packages in Vec
+
+        // // Install all packages
+        // for package_id in &self.packages {
+        //     if let Err(error) = installer.install(&package_id) {
+        //         error!(error, "Cannot install package {package_id}");
+        //     }
+        // }
 
         // Save changes
         register.save_to(&register_dir).unwrap_or_exit(1);

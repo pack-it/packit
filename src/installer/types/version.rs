@@ -26,7 +26,7 @@ pub enum VersionError {
 
 #[derive(Debug, Eq, Clone, Hash)]
 pub struct Version {
-    numbers: Vec<u32>,
+    pub numbers: Vec<u32>,
 }
 
 impl<'de> Deserialize<'de> for Version {
