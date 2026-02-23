@@ -48,12 +48,16 @@ impl<'a> Repairer<'a> {
 
     /// Fixes broken dependency trees by installing the missing packages.
     fn fix_broken_tree(&mut self, missing: Vec<(PackageId, PackageId)>, register: &mut PackageRegister) -> Result<(), VerifierError> {
-        let installer_options = InstallerOptions::default().skip_symlinking(true);
-        let mut installer = Installer::new(&self.config, register, &self.manager, installer_options);
-
         for (_, missing_package) in missing {
-            // TODO: Do we want to check for already existing packages? (there could be duplicates in the missing dependencies)
-            installer.install(&missing_package.into())?;
+            // There could be duplicates in the missing packages, so skip when already seen
+            if register.get_package_version(&missing_package).is_some() {
+                continue;
+            }
+
+            // Install and save
+            let installer_options = InstallerOptions::default().skip_symlinking(true);
+            let mut installer = Installer::new(&self.config, register, &self.manager, installer_options);
+            installer.install(&missing_package.clone().into())?;
         }
 
         Ok(())
