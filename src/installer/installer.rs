@@ -389,7 +389,7 @@ impl<'a> Installer<'a> {
     }
 
     fn download_prebuild(&self, repository_id: &str, package: &PackageId, revision: u64, destination_dir: impl AsRef<Path>) -> Result<()> {
-        let (url, bytes) = self.repository_manager.read_prebuild(repository_id, package, revision, TARGET_ARCHITECTURE)?;
+        let (extension, bytes) = self.repository_manager.read_prebuild(repository_id, package, revision, TARGET_ARCHITECTURE)?;
         let checksum = self.repository_manager.get_prebuild_checksum(repository_id, package, revision, TARGET_ARCHITECTURE)?;
 
         // Calculate the checksum
@@ -402,7 +402,7 @@ impl<'a> Installer<'a> {
         }
 
         // Unpack the prebuild to the destination
-        unpack(&url, bytes, &destination_dir)?;
+        unpack(extension, bytes, &destination_dir)?;
 
         Ok(())
     }

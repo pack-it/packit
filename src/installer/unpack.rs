@@ -18,28 +18,45 @@ pub enum UnpackError {
 
     #[error("The file extension is not supported")]
     ExtensionNotSupported,
-
-    #[error("Cannot get the extension from the file")]
-    NoExtension,
 }
 
 type Result<T> = core::result::Result<T, UnpackError>;
 
+pub enum ArchiveExtension {
+    GZ,
+    ZIP,
+    XZ,
+    Unknown,
+}
+
+impl ArchiveExtension {
+    pub fn from_path(path: &str) -> Self {
+        let extension_index = match path.chars().rev().position(|x| x == '.') {
+            Some(index) => index,
+            None => return Self::Unknown,
+        };
+        let (_, extension) = path.split_at(extension_index + 1);
+
+        match extension.to_lowercase().as_str() {
+            "gz" => Self::GZ,
+            "zip" => Self::ZIP,
+            "xz" => Self::XZ,
+            _ => Self::Unknown,
+        }
+    }
+}
+
 // Unpacks files and saves them to the provided destination directory
-pub fn unpack<P: AsRef<Path>>(source_path: &str, bytes: Bytes, destination_directory: P) -> Result<()> {
+pub fn unpack<P: AsRef<Path>>(extension: ArchiveExtension, bytes: Bytes, destination_directory: P) -> Result<()> {
     let size = bytes.len();
     let cursor = Cursor::new(bytes);
 
     // Initialize progress bar
     let reader = ReaderWithProgress::new(cursor, size as u64);
 
-    // Get extension from url
-    let extension_index = source_path.chars().rev().position(|x| x == '.').ok_or(UnpackError::NoExtension)?;
-    let (_, extension) = source_path.split_at(extension_index + 1);
-
     match extension {
-        "gz" => unpack_gz(reader, destination_directory),
-        "zip" | "xz" => unpack_zip_xz(reader, destination_directory),
+        ArchiveExtension::GZ => unpack_gz(reader, destination_directory),
+        ArchiveExtension::ZIP | ArchiveExtension::XZ => unpack_zip_xz(reader, destination_directory),
         _ => Err(UnpackError::ExtensionNotSupported),
     }
 }

@@ -6,7 +6,7 @@ mod options;
 pub mod scripts;
 mod symlinker;
 pub mod types;
-mod unpack;
+pub mod unpack;
 
 pub use self::installer::Installer;
 

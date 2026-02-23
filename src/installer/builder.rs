@@ -8,7 +8,7 @@ use crate::{
     installer::{
         build_env::BuildEnv,
         scripts::{self, ScriptData, ScriptError},
-        unpack::{unpack, UnpackError},
+        unpack::{unpack, ArchiveExtension, UnpackError},
     },
     platforms::TARGET_ARCHITECTURE,
     repositories::{
@@ -148,7 +148,7 @@ impl<'a> Builder<'a> {
 
         // Unpack the package to the temp directory
         let unpack_directory = TempDir::new()?;
-        unpack(&source.url, bytes, &unpack_directory)?;
+        unpack(ArchiveExtension::from_path(&source.url), bytes, &unpack_directory)?;
 
         // Create build env
         let env = BuildEnv::new(

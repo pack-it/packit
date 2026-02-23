@@ -3,7 +3,7 @@ use std::{fs, path::PathBuf, str::FromStr};
 use bytes::Bytes;
 
 use crate::{
-    installer::types::PackageId,
+    installer::{types::PackageId, unpack::ArchiveExtension},
     repositories::{
         error::{RepositoryError, Result},
         provider::PrebuildProvider,
@@ -37,7 +37,7 @@ impl PrebuildProvider for FileSystemPrebuildProvider {
         Ok(Some(Checksum::from_str(&checksum_string)?))
     }
 
-    fn read_prebuild(&self, package_id: &PackageId, revision: u64, target: &str) -> Result<(String, Bytes)> {
+    fn read_prebuild(&self, package_id: &PackageId, revision: u64, target: &str) -> Result<(ArchiveExtension, Bytes)> {
         let url = self.get_prebuild_url(package_id, revision, target)?.ok_or(RepositoryError::PrebuildNotFound {
             package_name: package_id.name.clone(),
             version: package_id.version.to_string(),
@@ -47,7 +47,7 @@ impl PrebuildProvider for FileSystemPrebuildProvider {
         // TODO: improve efficiency of file reading
         let bytes = fs::read(&url)?;
 
-        Ok((url, Bytes::from(bytes)))
+        Ok((ArchiveExtension::from_path(&url), Bytes::from(bytes)))
     }
 }
 

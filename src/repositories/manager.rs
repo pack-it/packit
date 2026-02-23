@@ -5,7 +5,7 @@ use bytes::Bytes;
 use crate::{
     cli::display::logging::{debug, error, warning},
     config::Config,
-    installer::types::PackageId,
+    installer::{types::PackageId, unpack::ArchiveExtension},
     platforms::TARGET_ARCHITECTURE,
     repositories::{
         error::{RepositoryError, Result},
@@ -231,8 +231,14 @@ impl<'a> RepositoryManager<'a> {
         provider.get_prebuild_checksum(&package, revision, target)
     }
 
-    /// Reads the prebuild of the given package version as bytes, returns a tuple containing the origin url and the bytes.
-    pub fn read_prebuild(&self, repository_id: &str, package: &PackageId, revision: u64, target: &str) -> Result<(String, Bytes)> {
+    /// Reads the prebuild of the given package version as bytes, returns a tuple containing the archive extension and the bytes.
+    pub fn read_prebuild(
+        &self,
+        repository_id: &str,
+        package: &PackageId,
+        revision: u64,
+        target: &str,
+    ) -> Result<(ArchiveExtension, Bytes)> {
         let provider = match self.prebuild_providers.get(repository_id) {
             Some(provider) => provider,
             None => {

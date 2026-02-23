@@ -2,7 +2,10 @@ use bytes::Bytes;
 
 use crate::{
     config::Repository,
-    installer::types::{PackageId, Version},
+    installer::{
+        types::{PackageId, Version},
+        unpack::ArchiveExtension,
+    },
     repositories::{
         error::Result,
         metadata::{FileSystemMetadataProvider, WebMetadataProvider, FILESYSTEM_METADATA_PROVIDER_ID, WEB_METADATA_PROVIDER_ID},
@@ -35,7 +38,7 @@ pub trait PrebuildProvider {
     fn get_prebuild_checksum(&self, package_id: &PackageId, revision: u64, target: &str) -> Result<Option<Checksum>>;
 
     /// Reads the prebuild package as bytes, returns a tuple containing the origin url and the bytes.
-    fn read_prebuild(&self, package_id: &PackageId, revision: u64, target: &str) -> Result<(String, Bytes)>;
+    fn read_prebuild(&self, package_id: &PackageId, revision: u64, target: &str) -> Result<(ArchiveExtension, Bytes)>;
 }
 
 /// Creates a metadata repository provider for the given repository.
