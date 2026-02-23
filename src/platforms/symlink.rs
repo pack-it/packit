@@ -2,7 +2,7 @@ use std::path::Path;
 
 use thiserror::Error;
 
-/// The errors that occur during display.
+/// The errors that occur during symlink opperations.
 #[derive(Error, Debug)]
 pub enum SymlinkError {
     #[error("Symlink IO failed")]
