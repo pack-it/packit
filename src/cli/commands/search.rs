@@ -7,6 +7,7 @@ use crate::{
     installer::types::{OptionalPackageId, PackageId},
     platforms::TARGET_ARCHITECTURE,
     repositories::{error::RepositoryError, manager::RepositoryManager},
+    utils::unwrap_or_exit::UnwrapOrExit,
 };
 
 #[derive(Args, Debug)]
@@ -46,7 +47,7 @@ impl HandleCommand for SearchArgs {
         };
 
         // Create a package id
-        let package_id = PackageId::new(&self.optional_id.name, version);
+        let package_id = PackageId::new(&self.optional_id.name, version).unwrap_or_exit(1);
 
         // Get package version info for its target
         let package_version = match manager.read_repo_package_version(&repository_id, &package_id) {

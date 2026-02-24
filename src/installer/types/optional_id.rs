@@ -53,6 +53,15 @@ impl Display for OptionalPackageId {
     }
 }
 
+impl OptionalPackageId {
+    pub fn versioned(&self) -> Option<PackageId> {
+        match &self.version {
+            Some(version) => Some(PackageId::new(&self.name, &version).expect("Expected valid name from optional package id")),
+            None => None,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::installer::types::{package_id::PackageIdError, PackageId, Version};
@@ -62,7 +71,7 @@ mod tests {
     #[test]
     fn from_str_optional() {
         let version = Version::from_str("3.4.1").expect("Expected Version.");
-        let correct_version = PackageId::new("test", &version).into();
+        let correct_version = PackageId::new("test", &version).expect("Expected valid package id").into();
         match OptionalPackageId::from_str("test@3.4.1") {
             Ok(id) => assert_eq!(id, correct_version),
             Err(e) => panic!("Expected Ok(OptionalPackageId(name: 'test', version: Some(Version(..)))), got Err({e:?})"),
@@ -85,7 +94,7 @@ mod tests {
 
     #[test]
     fn from_str_invalid_chars() {
-        let invalid_chars = "!#$%^&*()ABCDEFGHIJKLMNOPQRSTUVWXYZ~:;{}[]<>,.?/|\\\"\'`+=";
+        let invalid_chars = "!#$%^&*()~:;{}[]<>,.?/|\\\"\'`+=";
         for char in invalid_chars.chars() {
             assert_eq!(
                 OptionalPackageId::from_str(format!("{char}@3.4.1").as_str()),

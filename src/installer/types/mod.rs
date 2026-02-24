@@ -10,6 +10,7 @@ pub use dependency::DependencyParserError;
 pub use optional_id::OptionalPackageId;
 
 pub use package_id::PackageId;
+pub use package_id::PackageIdError;
 
 pub use version::Version;
 pub use version::VersionError;

@@ -1,5 +1,7 @@
 use thiserror::Error;
 
+use crate::installer::types::PackageIdError;
+
 /// The errors that occur when reading or saving the register file.
 #[derive(Error, Debug)]
 pub enum RegisterError {
@@ -11,6 +13,9 @@ pub enum RegisterError {
 
     #[error("Cannot serialize installed packages")]
     SerializeError(#[from] toml::ser::Error),
+
+    #[error("Cannot add package with invalid package id")]
+    PackageIdError(#[from] PackageIdError),
 }
 
 // TODO: Use Result<T> here as well

@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     cli::display::logging::warning,
     config::Repository,
-    installer::types::{Dependency, PackageId, Version},
+    installer::types::{Dependency, OptionalPackageId, PackageId},
     platforms::DEFAULT_CONFIG_DIR,
     repositories::types::{PackageMeta, PackageVersionMeta},
     storage::{error::RegisterError, installed_package::InstalledPackage, installed_package_version::InstalledPackageVersion},
@@ -91,9 +91,9 @@ impl PackageRegister {
         install_path: &PathBuf,
         symlinked: bool,
         active: bool,
-    ) {
+    ) -> Result<(), RegisterError> {
         let installed_package_version = InstalledPackageVersion {
-            package_id: PackageId::new(&package.name, &package_version.version),
+            package_id: PackageId::new(&package.name, &package_version.version)?,
             license: package_version.license.clone(),
             source_repository_url: source_repository.path.clone(),
             source_repository_provider: source_repository.provider.clone(),
@@ -119,7 +119,9 @@ impl PackageRegister {
                     InstalledPackage::new(installed_package_version, symlinked, package),
                 );
             },
-        }
+        };
+
+        Ok(())
     }
 
     /// Removes a package version from the register storage.
@@ -210,10 +212,10 @@ impl PackageRegister {
     /// Checks if a certain package is a dependency by checking its dependents.
     /// If only a package name is given we check all installed versions of that
     /// package, if any of those are a dependency we return true.
-    pub fn is_dependency(&self, package_name: &str, version: Option<&Version>) -> bool {
+    pub fn is_dependency(&self, optional_id: &OptionalPackageId) -> bool {
         // Only check a specific package version if a version is provided
-        if let Some(version) = version {
-            return match self.get_package_version(&PackageId::new(package_name, version)) {
+        if let Some(package_id) = optional_id.versioned() {
+            return match self.get_package_version(&package_id) {
                 Some(package) => !package.dependents.is_empty(),
                 None => {
                     warning!("Package version not found in dependency check.");
@@ -223,7 +225,7 @@ impl PackageRegister {
         }
 
         // Check all package versions for being a dependency
-        for package in self.get_all_package_versions(package_name) {
+        for package in self.get_all_package_versions(&optional_id.name) {
             if !package.dependents.is_empty() {
                 return true;
             }
@@ -260,7 +262,6 @@ pub mod tests {
     use std::str::FromStr;
 
     use crate::installer::types::dependency_tests::create_dependency;
-    use crate::installer::types::Version;
     use crate::platforms::TARGET_ARCHITECTURE;
     use crate::repositories::types::{Checksum, Source, Sources};
 
@@ -300,13 +301,13 @@ pub mod tests {
     }
 
     fn create_register() -> PackageRegister {
-        let package_a = PackageId::new("A", &Version::from_str("3.4.1").expect("Expected Version."));
-        let package_b = PackageId::new("B", &Version::from_str("2.72").expect("Expected Version."));
-        let package_c = PackageId::new("C", &Version::from_str("1.18.1").expect("Expected Version."));
-        let package_d = PackageId::new("D", &Version::from_str("2.5.4").expect("Expected Version."));
-        let package_e = PackageId::new("E", &Version::from_str("10.4").expect("Expected Version."));
-        let package_f5 = PackageId::new("F", &Version::from_str("5").expect("Expected Version."));
-        let package_f6 = PackageId::new("F", &Version::from_str("6").expect("Expected Version."));
+        let package_a = PackageId::from_str("A@3.4.1").expect("Expected valid package id");
+        let package_b = PackageId::from_str("B@2.72").expect("Expected valid package id");
+        let package_c = PackageId::from_str("C@1.18.1").expect("Expected valid package id");
+        let package_d = PackageId::from_str("D@2.5.4").expect("Expected valid package id");
+        let package_e = PackageId::from_str("E@10.4").expect("Expected valid package id");
+        let package_f5 = PackageId::from_str("F@5").expect("Expected valid package id");
+        let package_f6 = PackageId::from_str("F@6").expect("Expected valid package id");
 
         let mut packages = HashMap::new();
         let package_versions = vec![create_package_version(
@@ -389,28 +390,30 @@ pub mod tests {
     #[test]
     fn add_package() {
         let mut register = create_register();
-        let package_id = PackageId::new("New package", &Version::from_str("2.90").expect("Expected Version."));
+        let package_id = PackageId::from_str("new_package@2.90").expect("Expected valid package id");
         let package_meta = create_package_meta(&package_id);
         let package_version_meta = create_package_version_meta(&package_id);
         let mut dependency_ids = HashSet::new();
-        dependency_ids.insert(PackageId::new("B", &Version::from_str("2.72").expect("Expected Version.")));
+        dependency_ids.insert(PackageId::from_str("B@2.72").expect("Expected valid package id"));
 
-        register.add_package(
-            &package_meta,
-            &package_version_meta,
-            &dependency_ids,
-            &Repository::new("-", "-"),
-            &PathBuf::from("-"),
-            false,
-            false,
-        );
+        register
+            .add_package(
+                &package_meta,
+                &package_version_meta,
+                &dependency_ids,
+                &Repository::new("-", "-"),
+                &PathBuf::from("-"),
+                false,
+                false,
+            )
+            .expect("Expected successful package addition in test");
 
         let package = match register.get_package_version(&package_id) {
             Some(package) => package,
             None => panic!("Expected Some(InstalledPackageVersion (..)), got None"),
         };
 
-        let package_b_id = PackageId::new("B", &Version::from_str("2.72").expect("Expected Version."));
+        let package_b_id = PackageId::from_str("B@2.72").expect("Expected valid package id");
         let package_b = match register.get_package_version(&package_b_id) {
             Some(package) => package,
             None => panic!("Expected Some(InstalledPackageVersion (..)), got None"),
@@ -426,27 +429,27 @@ pub mod tests {
     fn remove_package_version() {
         let mut register = create_register();
 
-        let package_b = PackageId::new("B", &Version::from_str("2.72").expect("Expected Version."));
+        let package_b = PackageId::from_str("B@2.72").expect("Expected valid package id");
         register.remove_package_version(&package_b);
 
         assert!(register.get_package_version(&package_b).is_none());
 
         // Check if package A still has B as a dependency (B shouldn't be removed)
-        let package_a = PackageId::new("A", &Version::from_str("3.4.1").expect("Expected Version."));
+        let package_a = PackageId::from_str("A@3.4.1").expect("Expected valid package id");
         assert!(register.get_package_version(&package_a).expect("Expected package A").dependencies.get(&package_b).is_some());
 
         // Check that B is deleted as a dependent
-        let package_a = PackageId::new("E", &Version::from_str("10.4").expect("Expected Version."));
-        assert!(register.get_package_version(&package_a).expect("Expected package C").dependents.get(&package_b).is_none());
+        let package_e = PackageId::from_str("E@10.4").expect("Expected valid package id");
+        assert!(register.get_package_version(&package_e).expect("Expected package C").dependents.get(&package_b).is_none());
     }
 
     #[test]
     fn remove_package_version_one_of_two() {
         let mut register = create_register();
-
-        let package_f5 = PackageId::new("F", &Version::from_str("5").expect("Expected Version."));
-        let package_f6 = PackageId::new("F", &Version::from_str("6").expect("Expected Version."));
+        let package_f5 = PackageId::from_str("F@5").expect("Expected valid package id");
+        let package_f6 = PackageId::from_str("F@6").expect("Expected valid package id");
         register.remove_package_version(&package_f5);
+
         assert!(register.get_package_version(&package_f5).is_none());
         assert!(register.get_package_version(&package_f6).is_some());
     }
@@ -455,12 +458,12 @@ pub mod tests {
     fn remove_package() {
         let mut register = create_register();
 
-        let package_f = PackageId::new("F", &Version::from_str("5").expect("Expected Version."));
+        let package_f = PackageId::from_str("F@5").expect("Expected valid package id");
         register.remove_package(&package_f.name);
         assert!(register.get_package(&package_f.name).is_none());
 
         // Check if package D still has B as a dependency (B shouldn't be removed)
-        let package_d = PackageId::new("D", &Version::from_str("2.5.4").expect("Expected Version."));
+        let package_d = PackageId::from_str("D@2.5.4").expect("Expected valid package id");
         assert!(register.get_package_version(&package_d).expect("Expected package D").dependencies.get(&package_f).is_some());
     }
 
@@ -468,26 +471,27 @@ pub mod tests {
     fn is_dependency() {
         let register = create_register();
 
-        let package_f5 = PackageId::new("F", &Version::from_str("5").expect("Expected Version."));
-        assert!(register.is_dependency(&package_f5.name, Some(&package_f5.version)));
-        assert!(register.is_dependency(&package_f5.name, None));
+        let package_f5 = PackageId::from_str("F@5").expect("Expected valid package id");
+
+        assert!(register.is_dependency(&package_f5.into()));
+        assert!(register.is_dependency(&OptionalPackageId::from_str("F").expect("Expected valid package name")));
     }
 
     #[test]
     fn is_not_dependency() {
         let register = create_register();
 
-        let package_f6 = PackageId::new("F", &Version::from_str("6").expect("Expected Version."));
-        assert!(!register.is_dependency(&package_f6.name, Some(&package_f6.version)));
+        let package_f6 = PackageId::from_str("F@6").expect("Expected valid package id");
+        assert!(!register.is_dependency(&package_f6.into()));
 
-        let package_a = PackageId::new("A", &Version::from_str("3.4.1").expect("Expected Version."));
-        assert!(!register.is_dependency(&package_a.name, Some(&package_a.version)));
+        let package_a = PackageId::from_str("A@3.4.1").expect("Expected valid package id");
+        assert!(!register.is_dependency(&package_a.into()));
     }
 
     #[test]
     fn get_satisfying_package() {
         let register = create_register();
-        let package_a_id = PackageId::new("A", &Version::from_str("3.4.1").expect("Expected Version."));
+        let package_a_id = PackageId::from_str("A@3.4.1").expect("Expected valid package id");
         let dependency = create_dependency("A", "3.4.1");
         let package_a = register.get_package_version(&package_a_id).expect("Expected package A.");
 

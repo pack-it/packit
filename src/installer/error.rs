@@ -2,7 +2,7 @@ use thiserror::Error;
 
 use crate::{
     cli::display::error::DisplayError,
-    installer::{builder::BuilderError, scripts::ScriptError, unpack::UnpackError},
+    installer::{builder::BuilderError, scripts::ScriptError, types::PackageIdError, unpack::UnpackError},
     platforms::symlink::SymlinkError,
     repositories::error::RepositoryError,
     storage::error::RegisterError,
@@ -45,7 +45,7 @@ pub enum InstallerError {
     RepositoryError(#[from] RepositoryError),
 
     #[error("Cannot info package information")]
-    InstalledPackagesError(#[from] RegisterError),
+    RegisterError(#[from] RegisterError),
 
     #[error("Cannot display installer error")]
     DisplayError(#[from] DisplayError),
@@ -61,6 +61,9 @@ pub enum InstallerError {
 
     #[error("Cannot unpack prebuild package")]
     UnpackError(#[from] UnpackError),
+
+    #[error("Cannot (un)install because of invalid package id")]
+    PackageIdError(#[from] PackageIdError),
 }
 
 pub(super) type Result<T> = std::result::Result<T, InstallerError>;
