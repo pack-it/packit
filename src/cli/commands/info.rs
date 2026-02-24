@@ -8,7 +8,7 @@ use crate::{
     installer::types::{OptionalPackageId, PackageId},
     repositories::manager::RepositoryManager,
     storage::{installed_package::InstalledPackage, package_register::PackageRegister},
-    utils::unwrap_or_exit::UnwrapOrExit,
+    utils::{tree::Node, unwrap_or_exit::UnwrapOrExit},
 };
 
 #[derive(Args, Debug)]
@@ -38,6 +38,18 @@ impl HandleCommand for InfoArgs {
                 exit(1)
             },
         };
+
+        // Display tree if tree flag is given
+        if self.tree {
+            if let Some(package_id) = self.package.versioned() {
+                let tree = Node::new(&package_id, &register).unwrap_or_exit(1);
+                println!("{tree}");
+                return;
+            } else {
+                error!(msg: "Displaying a tree requires package version to be specified.");
+                exit(1)
+            }
+        }
 
         // Show package version specific information
         if let Some(package_id) = self.package.versioned() {
