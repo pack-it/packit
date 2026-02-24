@@ -15,6 +15,11 @@ pub enum TreeError {
     NotFound(PackageId),
 }
 
+const BRANCH: &str = "\u{251C}\u{2500}\u{2500}\u{2500} ";
+const LAST_BRANCH: &str = "\u{2514}\u{2500}\u{2500}\u{2500} ";
+const VERTICAL_LINE: &str = "\u{2502}    ";
+const EMPTY_SPACE: &str = "     ";
+
 impl<T> Node<T> {
     /// Creates a tree with package id as root. It also takes a closure which will get the necessary value for each node.
     fn new_impl<F>(package_id: &PackageId, register: &PackageRegister, value_closure: &F) -> Result<Self, TreeError>
@@ -38,10 +43,33 @@ impl<T> Node<T> {
     {
         Self::new_impl(package_id, register, &value_closure)
     }
+
+    fn display_impl(&self, node: &Node<T>, prefix: &str) {
+        println!("{prefix}{}", node.id);
+
+        // Note that when the input prefix is "" then this prefix will also be ""
+        let prefix = match prefix.ends_with(BRANCH) {
+            true => prefix.replace(BRANCH, VERTICAL_LINE),
+            false => prefix.replace(LAST_BRANCH, EMPTY_SPACE),
+        };
+
+        for (index, child) in node.children.iter().enumerate() {
+            let branch_section = match index == node.children.len() - 1 {
+                true => LAST_BRANCH,
+                false => BRANCH,
+            };
+
+            self.display_impl(child, format!("{prefix}{branch_section}").as_str());
+        }
+    }
+
+    pub fn display(&self) {
+        self.display_impl(self, "");
+    }
 }
 
 impl Node<()> {
     pub fn new(package_id: &PackageId, register: &PackageRegister) -> Result<Self, TreeError> {
-        Node::new_impl(package_id, register, &|package_id| {})
+        Node::new_impl(package_id, register, &|_| {})
     }
 }
