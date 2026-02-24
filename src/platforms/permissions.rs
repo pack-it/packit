@@ -6,11 +6,11 @@ pub enum PermissionError {
     #[error("Error while fetching permissions")]
     IOError(#[from] std::io::Error),
 
-    #[error("User does not exist")]
-    UserDoesNotExist,
-
     #[error("Group does not exist")]
     GroupDoesNotExist,
+
+    #[error("String contains a nul byte")]
+    NulError(#[from] std::ffi::NulError),
 }
 
 type Result<T> = core::result::Result<T, PermissionError>;
@@ -78,7 +78,7 @@ pub mod platform {
             Err(e) => {
                 if matches!(e, PermissionError::GroupDoesNotExist) {
                     warning!("The 'packit' group does not exist. Please run 'pit fix' to fix your Packit installation");
-                    // TODO: pit fix does not exist yet
+                    // TODO: Add group check to verifier
                 }
                 return Err(e);
             },
@@ -102,21 +102,8 @@ pub mod platform {
         Ok(())
     }
 
-    pub fn get_user_id(name: &str) -> Result<u32> {
-        let c_name = CString::new(name).unwrap();
-        let passwd = unsafe { libc::getpwnam(c_name.as_ptr()) };
-
-        if passwd.is_null() {
-            return Err(PermissionError::UserDoesNotExist);
-        }
-
-        unsafe {
-            return Ok((*passwd).pw_uid);
-        }
-    }
-
     pub fn get_group_id(name: &str) -> Result<u32> {
-        let c_name = CString::new(name).unwrap();
+        let c_name = CString::new(name)?;
         let group = unsafe { libc::getgrnam(c_name.as_ptr()) };
 
         if group.is_null() {
