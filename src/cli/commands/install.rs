@@ -34,7 +34,7 @@ pub struct InstallArgs {
 
 impl HandleCommand for InstallArgs {
     fn handle(&self, config: &Config, manager: &RepositoryManager) {
-        let register_dir = PackageRegister::get_default_path();
+        let register_dir = PackageRegister::get_default_path(config);
         let mut register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
         let installer_options = InstallerOptions::default()

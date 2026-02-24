@@ -22,7 +22,7 @@ pub struct LinkArgs {
 
 impl HandleCommand for LinkArgs {
     fn handle(&self, config: &Config, _: &RepositoryManager) {
-        let register_path = PackageRegister::get_default_path();
+        let register_path = PackageRegister::get_default_path(config);
         let mut register = PackageRegister::from(&register_path).unwrap_or_exit(1);
 
         // Get installed package

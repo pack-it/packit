@@ -208,7 +208,7 @@ impl<'a> Installer<'a> {
             false,
             false,
         )?;
-        self.register.save_to(&PackageRegister::get_default_path())?;
+        self.register.save_to(&PackageRegister::get_default_path(self.config))?;
 
         // Download and run post install script if it exists
         let script_path = version_meta.get_postinstall_script_path(TARGET_ARCHITECTURE)?;
