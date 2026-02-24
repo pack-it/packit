@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use thiserror::Error;
 
 use crate::{installer::types::PackageId, storage::package_register::PackageRegister};
@@ -44,8 +46,8 @@ impl<T> Node<T> {
         Self::new_impl(package_id, register, &value_closure)
     }
 
-    fn display_impl(&self, node: &Node<T>, prefix: &str) {
-        println!("{prefix}{}", node.id);
+    fn display_impl(&self, f: &mut std::fmt::Formatter<'_>, node: &Node<T>, prefix: &str) -> std::fmt::Result {
+        write!(f, "{prefix}{}\n", node.id)?;
 
         // Note that when the input prefix is "" then this prefix will also be ""
         let prefix = match prefix.ends_with(BRANCH) {
@@ -59,17 +61,22 @@ impl<T> Node<T> {
                 false => BRANCH,
             };
 
-            self.display_impl(child, format!("{prefix}{branch_section}").as_str());
+            self.display_impl(f, child, format!("{prefix}{branch_section}").as_str())?;
         }
-    }
 
-    pub fn display(&self) {
-        self.display_impl(self, "");
+        Ok(())
     }
 }
 
 impl Node<()> {
     pub fn new(package_id: &PackageId, register: &PackageRegister) -> Result<Self, TreeError> {
         Node::new_impl(package_id, register, &|_| {})
+    }
+}
+
+impl<T> Display for Node<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.display_impl(f, self, "")?;
+        Ok(())
     }
 }
