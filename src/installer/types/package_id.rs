@@ -12,7 +12,7 @@ pub enum PackageIdError {
     #[error("Couldn't parse package id, because of an invalid version.")]
     VersionError(#[from] VersionError),
 
-    #[error("Invalid package name, a package name cannot be empty and can only contain characters: 'a-z', '0-9', '-' and '_'")]
+    #[error("Invalid package name, a package name cannot be empty and can only contain characters: 'a-z', 'A-Z', '0-9', '-' and '_'")]
     InvalidPackageName,
 }
 
