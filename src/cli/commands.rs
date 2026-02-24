@@ -1,5 +1,6 @@
 mod check;
 mod fix;
+mod info;
 mod install;
 mod link;
 mod list;
@@ -17,7 +18,7 @@ use clap::{builder::Styles, Parser, Subcommand};
 use crate::{
     cli::{
         commands::{
-            check::CheckArgs, fix::FixArgs, install::InstallArgs, link::LinkArgs, list::ListArgs, package::PackageArgs,
+            check::CheckArgs, fix::FixArgs, info::InfoArgs, install::InstallArgs, link::LinkArgs, list::ListArgs, package::PackageArgs,
             repositories::RepositoryArgs, search::SearchArgs, switch::SwitchArgs, uninstall::UninstallArgs, unlink::UnlinkArgs,
         },
         display::logging::error,
@@ -68,6 +69,9 @@ enum Commands {
 
     /// Package a package version
     Package(PackageArgs),
+
+    /// Get info from a specific package
+    Info(InfoArgs),
 }
 
 impl Cli {
@@ -104,6 +108,7 @@ impl Cli {
             Commands::Check(args) => args,
             Commands::Fix(args) => args,
             Commands::Package(args) => args,
+            Commands::Info(args) => args,
         };
 
         args.handle(config, manager);
