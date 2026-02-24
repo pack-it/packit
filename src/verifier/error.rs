@@ -2,7 +2,10 @@ use thiserror::Error;
 
 use crate::{
     cli::display::error::DisplayError,
-    installer::{error::InstallerError, types::VersionError},
+    installer::{
+        error::InstallerError,
+        types::{PackageIdError, VersionError},
+    },
     packager::PackagerError,
     platforms::symlink::SymlinkError,
 };
@@ -33,6 +36,9 @@ pub enum VerifierError {
 
     #[error("Could not verify, because a symlink opperation failed")]
     SymlinkError(#[from] SymlinkError),
+
+    #[error("Could not verify because of an invalid package id")]
+    PackageIdError(#[from] PackageIdError),
 }
 
 pub(super) type Result<T> = std::result::Result<T, VerifierError>;

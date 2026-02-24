@@ -63,22 +63,22 @@ impl<'a> Installer<'a> {
     }
 
     /// Installs the given package and its dependencies.
-    pub fn install(&mut self, package_id: &OptionalPackageId) -> Result<()> {
+    pub fn install(&mut self, optional_id: &OptionalPackageId) -> Result<()> {
         // Check if we can write to the prefix directory
         if !self.can_write_prefix_dir()? {
             return Err(InstallerError::PermissionsError);
         }
 
-        let (repository_id, package_metadata) = self.repository_manager.read_package(&package_id.name)?;
+        let (repository_id, package_metadata) = self.repository_manager.read_package(&optional_id.name)?;
 
         // Use the latest version if the version isn't specified
-        let version = match &package_id.version {
+        let version = match &optional_id.version {
             Some(version) => version,
             None => package_metadata.get_latest_version(TARGET_ARCHITECTURE)?,
         };
 
         // Create a package id of the current package
-        let package_id = PackageId::new(&package_id.name, &version);
+        let package_id = PackageId::new(&optional_id.name, &version)?;
 
         // Check if this package version is already installed
         if self.register.get_package_version(&package_id).is_some() {
@@ -108,7 +108,7 @@ impl<'a> Installer<'a> {
         let mut all_dependencies = Vec::new();
         let mut dependency_ids = Vec::new();
         for node in nodes {
-            let package_id = PackageId::new(&node.package_metadata.name, &node.version_metadata.version);
+            let package_id = PackageId::new(&node.package_metadata.name, &node.version_metadata.version)?;
             if !self.options.build_source {
                 let revision = node.version_metadata.revisions.len() as u64;
 
@@ -153,7 +153,7 @@ impl<'a> Installer<'a> {
 
     fn install_package(&mut self, node: &DependencyNode, use_prebuild: bool) -> Result<()> {
         // Create the package id and install directory
-        let package_id = PackageId::new(&node.package_metadata.name, &node.version_metadata.version);
+        let package_id = PackageId::new(&node.package_metadata.name, &node.version_metadata.version)?;
         let install_directory = self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
 
         // Return early if the package has been installed by another node in the sequence (duplicates can exist)
@@ -207,7 +207,7 @@ impl<'a> Installer<'a> {
             &install_directory,
             false,
             false,
-        );
+        )?;
         self.register.save_to(&PackageRegister::get_default_path())?;
 
         // Download and run post install script if it exists
@@ -245,7 +245,7 @@ impl<'a> Installer<'a> {
 
             // Get all the data to create a dependency node
             let version = self.get_latest_dependency_version(&dependency)?;
-            let dependency_id = PackageId::new(dependency.get_name(), &version);
+            let dependency_id = PackageId::new(dependency.get_name(), &version)?;
             let (repository_id, package_metadata) = self.repository_manager.read_package(dependency.get_name())?;
             let version_metadata = self.repository_manager.read_repo_package_version(&repository_id, &dependency_id)?;
             let mut node = DependencyNode {
@@ -298,7 +298,7 @@ impl<'a> Installer<'a> {
 
             // Get all the data to create a dependency node
             let version = self.get_latest_dependency_version(&dependency)?;
-            let dependency_id = PackageId::new(dependency.get_name(), &version);
+            let dependency_id = PackageId::new(dependency.get_name(), &version)?;
             let (repository_id, package_metadata) = self.repository_manager.read_package(dependency.get_name())?;
             let dependency_package = self.repository_manager.read_repo_package_version(&repository_id, &dependency_id)?;
             let mut node = DependencyNode {
@@ -370,19 +370,21 @@ impl<'a> Installer<'a> {
             // Get name and version from the current build dependency
             let name = &build_dependency.package_metadata.name;
             let version = &build_dependency.version_metadata.version;
-            let package_id = PackageId::new(name, version);
+            let package_id = PackageId::new(name, version)?;
 
             // Continue if the build dependency is also a dependency in the dependency sequence
             if dependencies.iter().any(|d| *d == package_id) {
                 continue;
             }
 
+            let optional_id = &package_id.into();
+
             // Continue if it's still a dependency somewhere else in the build dependency sequence (because of the DFS)
-            if self.register.is_dependency(name, Some(version)) {
+            if self.register.is_dependency(optional_id) {
                 continue;
             }
 
-            self.uninstall(&package_id.into())?;
+            self.uninstall(optional_id)?;
         }
 
         Ok(())
@@ -408,25 +410,25 @@ impl<'a> Installer<'a> {
     }
 
     /// Uninstalls a package version if specified, otherwise it will uninstall the entire package directory.
-    pub fn uninstall(&mut self, package_id: &OptionalPackageId) -> Result<()> {
+    pub fn uninstall(&mut self, optional_id: &OptionalPackageId) -> Result<()> {
         // Check if we can write to the prefix directory
         if !self.can_write_prefix_dir()? {
             return Err(InstallerError::PermissionsError);
         }
 
         // Check if the current package to delete is a dependency, if so, give dependency error
-        if self.register.is_dependency(&package_id.name, package_id.version.as_ref()) {
+        if self.register.is_dependency(optional_id) {
             return Err(InstallerError::DependencyError {
-                package_name: package_id.name.clone(),
+                package_name: optional_id.name.clone(),
             });
         }
 
         // This determines the directory to remove. If there are multiple versions and the version is
         // specified only the specified version directory will be deleted. The entire package directory
         // is deleted if the version isn't specified or if the package directory only contains one version.
-        match &package_id.version {
-            Some(version) => self.uninstall_single(&PackageId::new(&package_id.name, &version))?,
-            None => self.uninstall_all(&package_id.name)?,
+        match &optional_id.version {
+            Some(version) => self.uninstall_single(&PackageId::new(&optional_id.name, &version)?)?,
+            None => self.uninstall_all(&optional_id.name)?,
         };
 
         Ok(())
