@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use crate::installer::types::{DependencyParserError, Version};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum VersionBounds {
     Range(Version, Version),
     Lower(Version),

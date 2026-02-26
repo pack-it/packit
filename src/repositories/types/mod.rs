@@ -4,6 +4,7 @@ mod package;
 mod package_target;
 mod package_version;
 mod repository;
+mod target_bounds;
 
 pub use self::repository::RepositoryMeta;
 
