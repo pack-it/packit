@@ -116,14 +116,14 @@ impl InfoArgs {
         }
         println!();
 
-        print!("Dependent: ");
-        if package_version.dependents.is_empty() {
-            print!("None");
-        }
-
         // Early return if verbose is disabled
         if !self.verbose {
             return;
+        }
+
+        print!("Dependent: ");
+        if package_version.dependents.is_empty() {
+            print!("None");
         }
 
         for dependent in &package_version.dependents {

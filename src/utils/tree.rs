@@ -4,7 +4,10 @@ use clap::error::Result;
 use thiserror::Error;
 
 use crate::{
-    installer::{types::PackageId, DependencyTypes, InstallMeta},
+    installer::{
+        types::{Dependency, PackageId},
+        DependencyTypes, InstallMeta,
+    },
     platforms::TARGET_ARCHITECTURE,
     repositories::{error::RepositoryError, manager::RepositoryManager},
     storage::package_register::PackageRegister,
@@ -127,33 +130,19 @@ impl Node<InstallMeta, DependencyTypes> {
         let dependencies = install_meta.version_metadata.dependencies.iter().chain(target.dependencies.iter());
 
         // Also add build dependencies if include build is true
-        let children = if include_build {
-            let build_dependencies = install_meta.version_metadata.build_dependencies.iter().chain(target.build_dependencies.iter());
-            build_dependencies
+        let children = match include_build {
+            true => install_meta
+                .version_metadata
+                .build_dependencies
+                .iter()
+                .chain(target.build_dependencies.iter())
+                .map(|d| Node::new_from_dependency(manager, d, DependencyTypes::Build, include_build))
+                .chain(dependencies.map(|d| Node::new_from_dependency(manager, d, label.clone(), include_build)))
+                .collect::<Result<_, _>>()?,
+            false => dependencies
                 .into_iter()
-                .map(|d| {
-                    let install_meta = InstallMeta::new(manager, d)?;
-                    let latest_version = install_meta.package_metadata.get_latest_version(TARGET_ARCHITECTURE)?;
-                    let dependency_id = PackageId::new(d.get_name(), latest_version).expect("Expected valid dependency");
-                    Self::new_from_meta_impl(&dependency_id, install_meta, manager, DependencyTypes::Build, include_build)
-                })
-                .chain(dependencies.map(|d| {
-                    let install_meta = InstallMeta::new(manager, d)?;
-                    let latest_version = install_meta.package_metadata.get_latest_version(TARGET_ARCHITECTURE)?;
-                    let dependency_id = PackageId::new(d.get_name(), latest_version).expect("Expected valid dependency");
-                    Self::new_from_meta_impl(&dependency_id, install_meta, manager, label.clone(), include_build)
-                }))
-                .collect::<Result<_, _>>()?
-        } else {
-            dependencies
-                .into_iter()
-                .map(|d| {
-                    let install_meta = InstallMeta::new(manager, d)?;
-                    let latest_version = install_meta.package_metadata.get_latest_version(TARGET_ARCHITECTURE)?;
-                    let dependency_id = PackageId::new(d.get_name(), latest_version).expect("Expected valid dependency");
-                    Self::new_from_meta_impl(&dependency_id, install_meta, manager, DependencyTypes::Normal, include_build)
-                })
-                .collect::<Result<_, _>>()?
+                .map(|d| Node::new_from_dependency(manager, d, DependencyTypes::Normal, include_build))
+                .collect::<Result<_, _>>()?,
         };
 
         Ok(Self {
@@ -184,6 +173,18 @@ impl Node<InstallMeta, DependencyTypes> {
         }
 
         Ok(())
+    }
+
+    fn new_from_dependency(
+        manager: &RepositoryManager,
+        dependency: &Dependency,
+        label: DependencyTypes,
+        include_build: bool,
+    ) -> Result<Node<InstallMeta, DependencyTypes>, TreeError> {
+        let install_meta = InstallMeta::new(manager, dependency)?;
+        let latest_version = install_meta.package_metadata.get_latest_version(TARGET_ARCHITECTURE)?;
+        let dependency_id = PackageId::new(dependency.get_name(), latest_version).expect("Expected valid dependency");
+        Self::new_from_meta_impl(&dependency_id, install_meta, manager, label, include_build)
     }
 }
 
