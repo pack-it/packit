@@ -34,7 +34,7 @@ pub enum VerifierError {
     #[error("Could not verify, because the version number couldn't be parsed")]
     VersionError(#[from] VersionError),
 
-    #[error("Could not verify, because a symlink opperation failed")]
+    #[error("Could not verify, because a symlink operation failed")]
     SymlinkError(#[from] SymlinkError),
 
     #[error("Could not verify because of an invalid package id")]

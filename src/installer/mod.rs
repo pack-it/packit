@@ -8,6 +8,8 @@ mod symlinker;
 pub mod types;
 pub mod unpack;
 
+pub use self::installer::DependencyTypes;
+pub use self::installer::InstallMeta;
 pub use self::installer::Installer;
 
 pub use self::options::InstallerOptions;

@@ -6,6 +6,7 @@ use crate::{
     platforms::symlink::SymlinkError,
     repositories::error::RepositoryError,
     storage::error::RegisterError,
+    utils::tree::TreeError,
 };
 
 /// The errors that occur during installation.
@@ -37,9 +38,6 @@ pub enum InstallerError {
         package_name: String,
     },
 
-    #[error("Cannot install package because the '{0}' dependency cannot be satisfied by the current package repository.")]
-    SupportError(String),
-
     // Wrapped custom errors
     #[error("Cannot find a repository for installation")]
     RepositoryError(#[from] RepositoryError),
@@ -64,6 +62,9 @@ pub enum InstallerError {
 
     #[error("Cannot (un)install because of invalid package id")]
     PackageIdError(#[from] PackageIdError),
+
+    #[error("Cannot do tree operation")]
+    TreeError(#[from] TreeError),
 }
 
 pub(super) type Result<T> = std::result::Result<T, InstallerError>;
