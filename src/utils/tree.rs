@@ -4,18 +4,18 @@ use clap::error::Result;
 use thiserror::Error;
 
 use crate::{
-    installer::{types::PackageId, InstallMeta},
+    installer::{types::PackageId, DependencyTypes, InstallMeta},
     platforms::TARGET_ARCHITECTURE,
     repositories::{error::RepositoryError, manager::RepositoryManager},
     storage::package_register::PackageRegister,
 };
 
 #[derive(Debug)]
-pub struct Node<V, T: Eq> {
+pub struct Node<V, L: Eq> {
     id: PackageId,
     value: V,
-    children: Vec<Node<V, T>>,
-    label: T,
+    children: Vec<Node<V, L>>,
+    label: L,
 }
 
 #[derive(Error, Debug)]
@@ -32,14 +32,14 @@ const LAST_BRANCH: &str = "\u{2514}\u{2500}\u{2500}\u{2500} ";
 const VERTICAL_LINE: &str = "\u{2502}    ";
 const EMPTY_SPACE: &str = "     ";
 
-impl<V, T: Eq> Node<V, T> {
+impl<V, L: Eq> Node<V, L> {
     /// Creates a tree with package id as root. It also takes a closure which will get the necessary value for each node.
     fn new_impl<F>(package_id: &PackageId, register: &PackageRegister, value_closure: &F) -> Result<Self, TreeError>
     where
-        F: Fn(&PackageId) -> (V, T),
+        F: Fn(&PackageId) -> (V, L),
     {
         let package = register.get_package_version(package_id).ok_or(TreeError::NotFound(package_id.clone()))?;
-        let children: Vec<Node<V, T>> =
+        let children: Vec<Node<V, L>> =
             package.dependencies.iter().map(|d| Node::new_impl(&d, register, value_closure)).collect::<Result<Vec<_>, _>>()?;
 
         let (value, label) = value_closure(package_id);
@@ -54,12 +54,12 @@ impl<V, T: Eq> Node<V, T> {
 
     pub fn new_with_value<F>(package_id: &PackageId, register: &PackageRegister, value_closure: F) -> Result<Self, TreeError>
     where
-        F: Fn(&PackageId) -> (V, T),
+        F: Fn(&PackageId) -> (V, L),
     {
         Self::new_impl(package_id, register, &value_closure)
     }
 
-    fn display_impl(&self, f: &mut std::fmt::Formatter<'_>, node: &Node<V, T>, prefix: &str) -> std::fmt::Result {
+    fn display_impl(&self, f: &mut std::fmt::Formatter<'_>, node: &Node<V, L>, prefix: &str) -> std::fmt::Result {
         write!(f, "{prefix}{}\n", node.id)?;
 
         // Note that when the input prefix is "" then this prefix will also be ""
@@ -88,23 +88,23 @@ impl<V, T: Eq> Node<V, T> {
         &self.value
     }
 
-    pub fn get_children_as_id(&self, group: Option<T>) -> HashSet<PackageId> {
-        if let Some(label) = group {
+    pub fn get_children_ids(&self, label: Option<L>) -> HashSet<PackageId> {
+        if let Some(label) = label {
             return self.children.iter().filter(|c| c.label == label).map(|c| c.id.clone()).collect();
         }
 
         self.children.iter().map(|c| c.id.clone()).collect()
     }
 
-    pub fn get_children(&self) -> &Vec<Node<V, T>> {
+    pub fn get_children(&self) -> &Vec<Node<V, L>> {
         &self.children
     }
 
-    pub fn get_children_mut(&mut self) -> Vec<&mut Node<V, T>> {
+    pub fn get_children_mut(&mut self) -> Vec<&mut Node<V, L>> {
         self.children.iter_mut().collect()
     }
 
-    pub fn get_label(&self) -> &T {
+    pub fn get_label(&self) -> &L {
         &self.label
     }
 }
@@ -113,12 +113,6 @@ impl Node<(), ()> {
     pub fn new(package_id: &PackageId, register: &PackageRegister) -> Result<Self, TreeError> {
         Node::new_impl(package_id, register, &|_| ((), ()))
     }
-}
-
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum DependencyTypes {
-    Normal,
-    Build,
 }
 
 impl Node<InstallMeta, DependencyTypes> {
@@ -193,7 +187,7 @@ impl Node<InstallMeta, DependencyTypes> {
     }
 }
 
-impl<V, T: Eq> Display for Node<V, T> {
+impl<V, L: Eq> Display for Node<V, L> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.display_impl(f, self, "")?;
         Ok(())

@@ -22,7 +22,7 @@ use crate::{
         types::{Checksum, PackageMeta, PackageTarget, PackageVersionMeta},
     },
     storage::package_register::PackageRegister,
-    utils::tree::{DependencyTypes, Node},
+    utils::tree::Node,
 };
 
 use std::{
@@ -36,6 +36,13 @@ pub struct Installer<'a> {
     register: &'a mut PackageRegister,
     repository_manager: &'a RepositoryManager<'a>,
     options: InstallerOptions,
+}
+
+/// A label enum for the install/dependency tree
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum DependencyTypes {
+    Normal,
+    Build,
 }
 
 /// A helper struct for the installer to move around nodes from the dependency trees
@@ -237,7 +244,7 @@ impl<'a> Installer<'a> {
         self.register.add_package(
             &node_value.package_metadata,
             &node_value.version_metadata,
-            &node.get_children_as_id(Some(DependencyTypes::Normal)),
+            &node.get_children_ids(Some(DependencyTypes::Normal)),
             source_repository,
             &install_directory,
             false,

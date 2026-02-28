@@ -34,7 +34,7 @@ impl HandleCommand for InfoArgs {
         let package = match register.get_package(&self.package.name) {
             Some(package) => package,
             None => {
-                error!(msg: "Package '{}' doesn't exist", self.package);
+                error!(msg: "Package '{}' is not installed", self.package);
                 exit(1)
             },
         };
@@ -121,15 +121,15 @@ impl InfoArgs {
             print!("None");
         }
 
-        for dependent in &package_version.dependents {
-            print!("\n  - {dependent}");
-        }
-        println!();
-
         // Early return if verbose is disabled
         if !self.verbose {
             return;
         }
+
+        for dependent in &package_version.dependents {
+            print!("\n  - {dependent}");
+        }
+        println!();
 
         println!("Source repository provider: {}", package_version.source_repository_provider);
         println!("Source repository url: {}", package_version.source_repository_url);
