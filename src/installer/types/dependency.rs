@@ -11,6 +11,7 @@ pub enum DependencyParserError {
     VersionNumberError(#[from] VersionError),
 }
 
+// TODO: Dependency names should be validated like in the PackageId also implement a method which takes a version and then returns a PackageId
 #[derive(Debug, Clone)]
 pub struct Dependency {
     name: String,

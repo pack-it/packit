@@ -42,6 +42,9 @@ pub enum RepositoryError {
 
     #[error("The given package name is empty")]
     EmptyPackageName,
+
+    #[error("Dependency '{0}' cannot be satisfied by the current package repository.")]
+    SupportError(String),
 }
 
 pub(super) type Result<T> = std::result::Result<T, RepositoryError>;
