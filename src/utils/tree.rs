@@ -13,6 +13,7 @@ use crate::{
     storage::package_register::PackageRegister,
 };
 
+/// A node to create a dependency tree with generic values and labels.
 #[derive(Debug)]
 pub struct Node<V, L: Eq> {
     id: PackageId,
@@ -21,6 +22,7 @@ pub struct Node<V, L: Eq> {
     label: L,
 }
 
+/// Errors which could occur while doing tree operations
 #[derive(Error, Debug)]
 pub enum TreeError {
     #[error("Package id '{0}' cannot be found")]
@@ -30,13 +32,16 @@ pub enum TreeError {
     RepositoryError(#[from] RepositoryError),
 }
 
+// Static string prefixes for the tree display
 const BRANCH: &str = "\u{251C}\u{2500}\u{2500}\u{2500} ";
 const LAST_BRANCH: &str = "\u{2514}\u{2500}\u{2500}\u{2500} ";
 const VERTICAL_LINE: &str = "\u{2502}    ";
 const EMPTY_SPACE: &str = "     ";
 
+/// Generic node implementation.
 impl<V, L: Eq> Node<V, L> {
-    /// Creates a tree with package id as root. It also takes a closure which will get the necessary value for each node.
+    /// Creates a tree based on the installed packages, the given package id will be the root.
+    /// It also takes a closure which will get the necessary value and label for each node.
     fn new_impl<F>(package_id: &PackageId, register: &PackageRegister, value_closure: &F) -> Result<Self, TreeError>
     where
         F: Fn(&PackageId) -> (V, L),
@@ -55,6 +60,7 @@ impl<V, L: Eq> Node<V, L> {
         })
     }
 
+    /// A wrapper method to create a tree with nodes that hold values.
     pub fn new_with_value<F>(package_id: &PackageId, register: &PackageRegister, value_closure: F) -> Result<Self, TreeError>
     where
         F: Fn(&PackageId) -> (V, L),
@@ -62,6 +68,7 @@ impl<V, L: Eq> Node<V, L> {
         Self::new_impl(package_id, register, &value_closure)
     }
 
+    /// The implementation of the tree display.
     fn display_impl(&self, f: &mut std::fmt::Formatter<'_>, node: &Node<V, L>, prefix: &str) -> std::fmt::Result {
         write!(f, "{prefix}{}\n", node.id)?;
 
@@ -83,14 +90,17 @@ impl<V, L: Eq> Node<V, L> {
         Ok(())
     }
 
+    /// Gets the package id.
     pub fn get_id(&self) -> &PackageId {
         &self.id
     }
 
+    /// Gets the value of the node.
     pub fn get_value(&self) -> &V {
         &self.value
     }
 
+    /// Gets the children ids of a node in a hashset. If a label has been given it will only return the children with that label.
     pub fn get_children_ids(&self, label: Option<L>) -> HashSet<PackageId> {
         if let Some(label) = label {
             return self.children.iter().filter(|c| c.label == label).map(|c| c.id.clone()).collect();
@@ -99,26 +109,33 @@ impl<V, L: Eq> Node<V, L> {
         self.children.iter().map(|c| c.id.clone()).collect()
     }
 
+    /// Gets references to the child nodes.
     pub fn get_children(&self) -> &Vec<Node<V, L>> {
         &self.children
     }
 
+    /// Gets mutable references to the child nodes.
     pub fn get_children_mut(&mut self) -> Vec<&mut Node<V, L>> {
         self.children.iter_mut().collect()
     }
 
+    /// Gets the label.
     pub fn get_label(&self) -> &L {
         &self.label
     }
 }
 
+/// An empty node implementation (node without values or labels).
 impl Node<(), ()> {
     pub fn new(package_id: &PackageId, register: &PackageRegister) -> Result<Self, TreeError> {
         Node::new_impl(package_id, register, &|_| ((), ()))
     }
 }
 
+/// A node implementation based on metadata instead of installed packages. Meant specifically for that installer.
 impl Node<InstallMeta, DependencyTypes> {
+    /// Creates a tree based on metadata with the given package id as root.
+    /// If include_build is true the build dependencies are included in the tree (with the appropriate labels).
     fn new_from_meta_impl(
         package_id: &PackageId,
         install_meta: InstallMeta,
@@ -136,12 +153,12 @@ impl Node<InstallMeta, DependencyTypes> {
                 .build_dependencies
                 .iter()
                 .chain(target.build_dependencies.iter())
-                .map(|d| Node::new_from_dependency(manager, d, DependencyTypes::Build, include_build))
-                .chain(dependencies.map(|d| Node::new_from_dependency(manager, d, label.clone(), include_build)))
+                .map(|d| Self::new_from_dependency(manager, d, DependencyTypes::Build, include_build))
+                .chain(dependencies.map(|d| Self::new_from_dependency(manager, d, label.clone(), include_build)))
                 .collect::<Result<_, _>>()?,
             false => dependencies
                 .into_iter()
-                .map(|d| Node::new_from_dependency(manager, d, DependencyTypes::Normal, include_build))
+                .map(|d| Self::new_from_dependency(manager, d, DependencyTypes::Normal, include_build))
                 .collect::<Result<_, _>>()?,
         };
 
@@ -153,28 +170,27 @@ impl Node<InstallMeta, DependencyTypes> {
         })
     }
 
+    /// A wrapper method which creates the metadata dependency tree without build dependencies.
     pub fn new_from_meta(package_id: &PackageId, install_meta: InstallMeta, manager: &RepositoryManager) -> Result<Self, TreeError> {
         Self::new_from_meta_impl(package_id, install_meta, manager, DependencyTypes::Normal, false)
     }
 
+    /// A wrapper method which creates the metadata dependency tree with build dependencies.
     pub fn new_from_meta_build(package_id: &PackageId, install_meta: InstallMeta, manager: &RepositoryManager) -> Result<Self, TreeError> {
         Self::new_from_meta_impl(package_id, install_meta, manager, DependencyTypes::Normal, true)
     }
 
+    /// Expands a node with its build dependencies after initial creation of the tree.
     pub fn expand_node_with_build(&mut self, manager: &RepositoryManager) -> Result<(), TreeError> {
         let target = self.value.version_metadata.get_target(TARGET_ARCHITECTURE)?;
-
         for dependency in self.value.version_metadata.build_dependencies.iter().chain(target.build_dependencies.iter()) {
-            let install_meta = InstallMeta::new(manager, dependency)?;
-            let latest_version = install_meta.package_metadata.get_latest_version(TARGET_ARCHITECTURE)?;
-            let dependency_id = PackageId::new(dependency.get_name(), latest_version).expect("Expected valid dependency");
-            let new_child = Self::new_from_meta_impl(&dependency_id, install_meta, manager, DependencyTypes::Normal, true)?;
-            self.children.push(new_child);
+            self.children.push(Self::new_from_dependency(manager, dependency, DependencyTypes::Build, false)?);
         }
 
         Ok(())
     }
 
+    /// A helper method which does an often used recursion step. It creates the install meta from the dependency and then calls the new_from_meta_impl.
     fn new_from_dependency(
         manager: &RepositoryManager,
         dependency: &Dependency,
@@ -188,6 +204,7 @@ impl Node<InstallMeta, DependencyTypes> {
     }
 }
 
+/// Display trait for nice display of a tree.
 impl<V, L: Eq> Display for Node<V, L> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.display_impl(f, self, "")?;
