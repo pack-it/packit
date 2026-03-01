@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use serde::{de, Deserialize};
+use serde::{Deserialize, de};
 use sha2::{Digest, Sha256};
 
 #[derive(Debug, PartialEq, Eq)]

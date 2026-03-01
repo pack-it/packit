@@ -1,6 +1,6 @@
 use std::{fmt::Display, str::FromStr};
 
-use crate::installer::types::{package_id::PackageIdError, PackageId, Version};
+use crate::installer::types::{PackageId, Version, package_id::PackageIdError};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OptionalPackageId {
@@ -64,7 +64,7 @@ impl OptionalPackageId {
 
 #[cfg(test)]
 mod tests {
-    use crate::installer::types::{package_id::PackageIdError, PackageId, Version};
+    use crate::installer::types::{PackageId, Version, package_id::PackageIdError};
 
     use super::*;
 

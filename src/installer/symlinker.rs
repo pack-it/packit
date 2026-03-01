@@ -78,7 +78,7 @@ impl<'a> Symlinker<'a> {
                 return Err(InstallerError::PackageNotFound {
                     package_name: package_id.name.clone(),
                     version: None,
-                })
+                });
             },
         }
 

@@ -8,8 +8,8 @@ use crate::{
     repositories::types::Checksum,
     storage::package_register::PackageRegister,
     verifier::{
-        error::{Result, VerifierError},
         Issue,
+        error::{Result, VerifierError},
     },
 };
 

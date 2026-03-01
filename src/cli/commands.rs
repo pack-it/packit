@@ -13,7 +13,7 @@ mod unlink;
 
 use std::process::exit;
 
-use clap::{builder::Styles, Parser, Subcommand};
+use clap::{Parser, Subcommand, builder::Styles};
 
 use crate::{
     cli::{

@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use serde::{de, Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de};
 use thiserror::Error;
 
 use crate::installer::types::{Version, VersionBounds, VersionError};
@@ -32,7 +32,7 @@ impl<'de> Deserialize<'de> for Dependency {
                 return Ok(Self {
                     name: string.to_string(),
                     version_ranges: vec![],
-                })
+                });
             },
         };
 

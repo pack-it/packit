@@ -5,7 +5,7 @@ use std::{
     path::PathBuf,
 };
 
-use flate2::{write::GzEncoder, Compression, GzBuilder};
+use flate2::{Compression, GzBuilder, write::GzEncoder};
 use tar::{Builder, EntryType, Header};
 use thiserror::Error;
 

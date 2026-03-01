@@ -1,11 +1,11 @@
 use std::{
-    cmp::{max, Ordering},
+    cmp::{Ordering, max},
     fmt::Display,
     num::ParseIntError,
     str::FromStr,
 };
 
-use serde::{de, Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de};
 use thiserror::Error;
 
 /// Errors that occur when requesting metadata from a repository.

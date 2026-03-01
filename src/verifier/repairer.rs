@@ -4,15 +4,15 @@ use crate::{
     cli::display::logging::warning,
     config::Config,
     installer::{
-        types::{PackageId, Version},
         Installer, InstallerOptions,
+        types::{PackageId, Version},
     },
     repositories::manager::RepositoryManager,
     storage::package_register::PackageRegister,
     utils::io::remove_symlinks,
     verifier::{
-        error::{Result, VerifierError},
         Issue,
+        error::{Result, VerifierError},
     },
 };
 

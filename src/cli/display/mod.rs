@@ -7,8 +7,8 @@ mod spinner;
 
 pub use progressbar::ProgressBar;
 
-pub use prompts::ask_user;
 pub use prompts::QuestionResponse;
+pub use prompts::ask_user;
 
 pub use reader::ReaderWithProgress;
 

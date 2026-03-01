@@ -8,8 +8,8 @@ use crate::{
     },
     repositories::{
         error::Result,
-        metadata::{FileSystemMetadataProvider, WebMetadataProvider, FILESYSTEM_METADATA_PROVIDER_ID, WEB_METADATA_PROVIDER_ID},
-        prebuilds::{FileSystemPrebuildProvider, DEFAULT_PREBUILD_PROVIDER_ID, FILESYSTEM_PREBUILD_PROVIDER_ID},
+        metadata::{FILESYSTEM_METADATA_PROVIDER_ID, FileSystemMetadataProvider, WEB_METADATA_PROVIDER_ID, WebMetadataProvider},
+        prebuilds::{DEFAULT_PREBUILD_PROVIDER_ID, FILESYSTEM_PREBUILD_PROVIDER_ID, FileSystemPrebuildProvider},
         types::{Checksum, PackageMeta, PackageVersionMeta, RepositoryMeta},
     },
 };

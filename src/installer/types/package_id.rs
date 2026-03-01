@@ -1,7 +1,7 @@
 use std::{fmt::Display, str::FromStr};
 
 use regex::Regex;
-use serde::{de, Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de};
 use thiserror::Error;
 
 use crate::installer::types::{Version, VersionError};

@@ -3,7 +3,7 @@ use clap::Args;
 use crate::{
     cli::{commands::HandleCommand, display::logging::error},
     config::Config,
-    installer::{types::OptionalPackageId, Installer, InstallerOptions},
+    installer::{Installer, InstallerOptions, types::OptionalPackageId},
     repositories::manager::RepositoryManager,
     storage::package_register::PackageRegister,
     utils::unwrap_or_exit::UnwrapOrExit,
