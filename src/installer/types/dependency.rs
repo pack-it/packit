@@ -3,12 +3,15 @@ use std::fmt::Display;
 use serde::{Deserialize, Serialize, de};
 use thiserror::Error;
 
-use crate::installer::types::{Version, VersionBounds, VersionError};
+use crate::installer::types::{PackageId, Version, VersionBounds, VersionError};
 
 #[derive(Error, Debug, PartialEq)]
 pub enum DependencyParserError {
     #[error("Cannot parse version number")]
     VersionNumberError(#[from] VersionError),
+
+    #[error("Invalid dependency name, a package name cannot be empty and can only contain characters: 'a-z', 'A-Z', '0-9', '-' and '_'")]
+    InvalidDependencyName,
 }
 
 // TODO: Dependency names should be validated like in the PackageId also implement a method which takes a version and then returns a PackageId
@@ -28,13 +31,13 @@ impl<'de> Deserialize<'de> for Dependency {
 
         let (name, version) = match index {
             Some(index) => string.split_at(index),
-            None => {
-                return Ok(Self {
-                    name: string.to_string(),
-                    version_ranges: vec![],
-                });
-            },
+            None => (string.as_str(), ""),
         };
+
+        // Check for name validity
+        if !PackageId::is_valid_name(name) {
+            return Err(de::Error::custom(DependencyParserError::InvalidDependencyName));
+        }
 
         // Remove @ character from version number
         let version = version.strip_prefix("@").unwrap_or("");
@@ -119,6 +122,10 @@ impl Dependency {
         }
 
         false
+    }
+
+    pub fn to_package_id(&self, version: Version) -> PackageId {
+        PackageId::new(&self.name, &version).expect("Expected valid name from dependency.")
     }
 }
 

@@ -57,7 +57,7 @@ impl InstallMeta {
         // Get all the data to create a dependency node
         let (repository_id, package_metadata) = manager.read_package(dependency.get_name())?;
         let version = package_metadata.get_latest_dependency_version(&dependency)?;
-        let dependency_id = PackageId::new(dependency.get_name(), &version).expect("Expected valid dependency name");
+        let dependency_id = dependency.to_package_id(version);
         let version_metadata = manager.read_repo_package_version(&repository_id, &dependency_id)?;
 
         Ok(Self {
