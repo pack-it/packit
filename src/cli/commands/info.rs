@@ -26,8 +26,8 @@ pub struct InfoArgs {
 }
 
 impl HandleCommand for InfoArgs {
-    fn handle(&self, _: &Config, _: &RepositoryManager) {
-        let register_dir = PackageRegister::get_default_path();
+    fn handle(&self, config: &Config, _: &RepositoryManager) {
+        let register_dir = PackageRegister::get_default_path(config);
         let register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
         // Get package information
