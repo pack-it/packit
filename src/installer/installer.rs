@@ -95,14 +95,8 @@ impl<'a> Installer<'a> {
 
         let (repository_id, package_metadata) = self.repository_manager.read_package(&optional_id.name)?;
 
-        // Use the latest version if the version isn't specified
-        let version = match &optional_id.version {
-            Some(version) => version,
-            None => package_metadata.get_latest_version(TARGET_ARCHITECTURE)?,
-        };
-
         // Create a package id of the current package
-        let package_id = optional_id.to_package_id(version.clone());
+        let package_id = optional_id.versioned_or_else_try(|| package_metadata.get_latest_version(TARGET_ARCHITECTURE).cloned())?;
 
         // Check if this package version is already installed
         if self.register.get_package_version(&package_id).is_some() {
@@ -376,10 +370,10 @@ impl<'a> Installer<'a> {
         // This determines the directory to remove. If there are multiple versions and the version is
         // specified only the specified version directory will be deleted. The entire package directory
         // is deleted if the version isn't specified or if the package directory only contains one version.
-        match &optional_id.version {
-            Some(version) => self.uninstall_single(&optional_id.to_package_id(version.clone()))?,
+        match optional_id.versioned() {
+            Some(package_id) => self.uninstall_single(&package_id)?,
             None => self.uninstall_all(&optional_id.name)?,
-        };
+        }
 
         Ok(())
     }
