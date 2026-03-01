@@ -38,8 +38,11 @@ pub use platform::set_packit_permissions;
 pub mod platform {
     use std::{
         ffi::CString,
-        fs::Metadata,
-        os::unix::fs::{self, MetadataExt},
+        fs::{self, Metadata, Permissions},
+        os::unix::{
+            self,
+            fs::{MetadataExt, PermissionsExt},
+        },
         path::PathBuf,
     };
 
@@ -74,7 +77,12 @@ pub mod platform {
         Ok(false)
     }
 
-    pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool) -> Result<()> {
+    pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool, recurse: bool) -> Result<()> {
+        let metadata = fs::metadata(&path)?;
+        set_file_permissions(path, metadata.permissions(), is_multiuser, recurse)
+    }
+
+    fn set_file_permissions(path: &PathBuf, mut old_permissions: Permissions, is_multiuser: bool, recurse: bool) -> Result<()> {
         if is_multiuser {
             let packit_group = match get_group_id(PACKIT_GROUP_NAME) {
                 Ok(uid) => uid,
@@ -87,9 +95,22 @@ pub mod platform {
             };
 
             set_ownership(path, None, Some(packit_group))?;
+
+            old_permissions.set_mode(0o775);
+        } else {
+            old_permissions.set_mode(0o755);
         }
 
-        // TODO: set mode of files
+        fs::set_permissions(&path, old_permissions)?;
+
+        if recurse && path.is_dir() {
+            let dir = fs::read_dir(&path)?;
+            for entry in dir {
+                let entry = entry?;
+
+                set_file_permissions(&entry.path(), entry.metadata()?.permissions(), is_multiuser, recurse)?;
+            }
+        }
 
         Ok(())
     }
@@ -97,12 +118,12 @@ pub mod platform {
     pub fn set_ownership(path: &PathBuf, uid: Option<u32>, gid: Option<u32>) -> Result<()> {
         // If the path is a symlink, set symlink ownership
         if path.is_symlink() {
-            fs::lchown(path, uid, gid)?;
+            unix::fs::lchown(path, uid, gid)?;
             return Ok(());
         }
 
         // Set file ownership
-        fs::chown(path, uid, gid)?;
+        unix::fs::chown(path, uid, gid)?;
 
         Ok(())
     }
@@ -132,7 +153,7 @@ mod platform {
         Ok(false)
     }
 
-    pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool) -> Result<()> {
+    pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool, recurse: bool) -> Result<()> {
         todo!()
     }
 }
@@ -147,7 +168,7 @@ mod platform {
         panic!("Cannot check write permissions for target, target is not supported.");
     }
 
-    pub fn set_packit_permissions(_path: &PathBuf, _is_multiuser: bool) -> Result<()> {
+    pub fn set_packit_permissions(_path: &PathBuf, _is_multiuser: bool, _recurse: bool) -> Result<()> {
         panic!("Cannot set ownership for target, target is not supported.");
     }
 }

@@ -278,7 +278,7 @@ impl<'a> Installer<'a> {
         }
 
         // Set correct permissions for the installed package
-        permissions::set_packit_permissions(&install_directory, self.config.multiuser)?;
+        permissions::set_packit_permissions(&install_directory, self.config.multiuser, true)?;
 
         // Add and save package to installed storage toml
         self.register.add_package(
