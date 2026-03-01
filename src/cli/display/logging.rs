@@ -41,7 +41,7 @@ pub fn error_impl<T: Error>(error: T) {
 }
 
 pub fn error_with_msg_impl<T: Error>(error: T, message: std::fmt::Arguments) {
-    error_msg_impl(format_args!("{message}\n{}", trace_error(error)));
+    error_msg_impl(format_args!("{message}\nCaused by: {}", trace_error(error)));
 }
 
 macro_rules! error {
