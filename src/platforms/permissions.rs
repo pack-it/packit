@@ -32,7 +32,7 @@ pub fn is_writable(path: &PathBuf) -> Result<bool> {
     platform::is_writable(path, metadata)
 }
 
-pub use platform::set_packit_ownership;
+pub use platform::set_packit_permissions;
 
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 pub mod platform {
@@ -72,19 +72,22 @@ pub mod platform {
         Ok(false)
     }
 
-    pub fn set_packit_ownership(path: &PathBuf) -> Result<()> {
-        let packit_group = match get_group_id("packit") {
-            Ok(uid) => uid,
-            Err(e) => {
-                if matches!(e, PermissionError::GroupDoesNotExist) {
-                    warning!("The 'packit' group does not exist. Please run 'pit fix' to fix your Packit installation");
-                    // TODO: Add group check to verifier
-                }
-                return Err(e);
-            },
-        };
+    pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool) -> Result<()> {
+        if is_multiuser {
+            let packit_group = match get_group_id("packit") {
+                Ok(uid) => uid,
+                Err(e) => {
+                    if matches!(e, PermissionError::GroupDoesNotExist) {
+                        warning!("The 'packit' group does not exist. Please run 'pit fix' to fix your Packit installation");
+                    }
+                    return Err(e);
+                },
+            };
 
-        set_ownership(path, None, Some(packit_group))?;
+            set_ownership(path, None, Some(packit_group))?;
+        }
+
+        // TODO: set mode of files
 
         Ok(())
     }
@@ -127,7 +130,7 @@ mod platform {
         Ok(false)
     }
 
-    pub fn set_packit_ownership(path: &PathBuf) -> Result<()> {
+    pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool) -> Result<()> {
         todo!()
     }
 }
@@ -142,7 +145,7 @@ mod platform {
         panic!("Cannot check write permissions for target, target is not supported.");
     }
 
-    pub fn set_packit_ownership(path: &PathBuf) -> Result<()> {
+    pub fn set_packit_permissions(_path: &PathBuf, _is_multiuser: bool) -> Result<()> {
         panic!("Cannot set ownership for target, target is not supported.");
     }
 }

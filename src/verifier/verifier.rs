@@ -20,10 +20,12 @@ enum Check {
     RegisterConsistency,
     DependencyTree,
     Alterations,
+    PackitGroup,
 }
 
 /// Defines the correct order to do verifier checks.
 const VERIFY_ORDER: &[Check] = &[
+    Check::PackitGroup,
     Check::StorageConsistency,
     Check::RegisterConsistency,
     Check::Alterations,
@@ -67,6 +69,7 @@ impl<'a> Verifier<'a> {
                     warning!("This is an experimental check, issues from this check could be inaccurate.");
                     self.check_alterations(register)?
                 },
+                Check::PackitGroup => self.check_packit_group(),
             };
 
             if let Some(issue) = issue {
@@ -104,6 +107,7 @@ impl<'a> Verifier<'a> {
                 },
                 Check::Alterations if !self.check_package_alterations(package_id, register)? => continue,
                 Check::Alterations => Issue::AlteredPackage(vec![package_id.clone()]),
+                _ => continue, // Continue if the check if not package specific
             };
 
             self.issues_found = true;
@@ -321,6 +325,15 @@ impl<'a> Verifier<'a> {
         }
 
         missing
+    }
+
+    fn check_packit_group(&self) -> Option<Issue> {
+        #[cfg(any(target_os = "macos", target_os = "linux"))]
+        {
+            // TODO: check if group exists
+        }
+
+        None
     }
 
     /// Get the issues found states.

@@ -24,11 +24,14 @@ pub struct Config {
     pub repositories_rank: Vec<String>,
 
     /// False to use the repositories rank to resolve package conflicts, true to ask for confirmation
-    #[serde(default = "default_prompt_repo_conflicts")]
+    #[serde(default = "Config::default_prompt_repo_conflicts")]
     pub prompt_repo_conflicts: bool, //TODO: maybe remove this option? or should it be optional for extra safety?
 
-    #[serde(default = "default_prefix_directory")]
+    #[serde(default = "Config::default_prefix_directory")]
     pub prefix_directory: PathBuf,
+
+    #[serde(default = "Config::default_multiuser")]
+    pub multiuser: bool,
 }
 
 /// Represents a repository, containing connection information.
@@ -61,14 +64,6 @@ impl Repository {
     pub fn default_repository_provider() -> String {
         DEFAULT_METADATA_PROVIDER_ID.into()
     }
-}
-
-fn default_prompt_repo_conflicts() -> bool {
-    false
-}
-
-fn default_prefix_directory() -> PathBuf {
-    DEFAULT_PREFIX.into()
 }
 
 /// The errors that occur when reading the config file.
@@ -110,5 +105,17 @@ impl Config {
     /// Gets the default path of the Packit config file.
     pub fn get_default_path() -> PathBuf {
         Path::new(DEFAULT_CONFIG_DIR).join(CONFIG_FILENAME)
+    }
+
+    fn default_prompt_repo_conflicts() -> bool {
+        false
+    }
+
+    fn default_prefix_directory() -> PathBuf {
+        DEFAULT_PREFIX.into()
+    }
+
+    fn default_multiuser() -> bool {
+        false
     }
 }
