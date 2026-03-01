@@ -8,7 +8,7 @@ use crate::{
     installer::{
         build_env::BuildEnv,
         scripts::{self, ScriptData, ScriptError},
-        unpack::{unpack, ArchiveExtension, UnpackError},
+        unpack::{ArchiveExtension, UnpackError, unpack},
     },
     platforms::TARGET_ARCHITECTURE,
     repositories::{

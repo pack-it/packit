@@ -1,8 +1,7 @@
 use crate::{
     cli::display::{
-        ask_user,
+        QuestionResponse, ask_user,
         logging::{error, warning},
-        QuestionResponse,
     },
     config::{Config, Repository},
     installer::{
@@ -14,7 +13,7 @@ use crate::{
         types::{Dependency, OptionalPackageId, PackageId},
         unpack::unpack,
     },
-    platforms::{symlink, TARGET_ARCHITECTURE},
+    platforms::{TARGET_ARCHITECTURE, symlink},
     repositories::{
         error::RepositoryError,
         manager::RepositoryManager,
@@ -291,21 +290,26 @@ impl<'a> Installer<'a> {
                 // Prompt user if the installed version is newer than the version currently installing
                 if installed_package.active_version > install_meta.version_metadata.version {
                     let question = format!(
-                            "A newer version ({}) of this package is currently active, do you want to change the active version to the older version ({})?", 
-                            installed_package.active_version, install_meta.version_metadata.version
-                        );
+                        "A newer version ({}) of this package is currently active, do you want to change the active version to the older version ({})?",
+                        installed_package.active_version, install_meta.version_metadata.version
+                    );
                     should_set_active = ask_user(&question, QuestionResponse::No)?.is_yes();
                 }
 
                 // Prompt user if the installed version is not symlinked and we're not skipping symlinking
                 if should_set_active && !installed_package.symlinked && should_symlink {
-                    let question = format!("The current active version of '{}' ({}) is not symlinked, do you want to proceed with symlinking the newly installed version", package_id.name, installed_package.active_version);
+                    let question = format!(
+                        "The current active version of '{}' ({}) is not symlinked, do you want to proceed with symlinking the newly installed version",
+                        package_id.name, installed_package.active_version
+                    );
                     should_symlink = ask_user(&question, QuestionResponse::No)?.is_yes();
                 }
 
                 // Show warning if the not symlinking but package was previously symlinked
                 if should_set_active && installed_package.symlinked && !should_symlink {
-                    warning!("The new active package version will not be symlinked, while the previously active version was symlinked. The package will not be automatically findable by your system anymore.");
+                    warning!(
+                        "The new active package version will not be symlinked, while the previously active version was symlinked. The package will not be automatically findable by your system anymore."
+                    );
                 }
             }
         }

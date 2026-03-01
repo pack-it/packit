@@ -3,7 +3,7 @@ use clap::Args;
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{ask_user, QuestionResponse},
+        display::{QuestionResponse, ask_user},
     },
     config::Config,
     repositories::manager::RepositoryManager,

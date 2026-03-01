@@ -5,8 +5,8 @@ use thiserror::Error;
 
 use crate::{
     installer::{
-        types::{Dependency, PackageId},
         DependencyTypes, InstallMeta,
+        types::{Dependency, PackageId},
     },
     platforms::TARGET_ARCHITECTURE,
     repositories::{error::RepositoryError, manager::RepositoryManager},

@@ -3,7 +3,7 @@ use clap::Args;
 use crate::{
     cli::{commands::HandleCommand, display::logging::warning},
     config::Config,
-    installer::{types::Version, Symlinker},
+    installer::{Symlinker, types::Version},
     repositories::manager::RepositoryManager,
     storage::package_register::PackageRegister,
     utils::unwrap_or_exit::UnwrapOrExit,
@@ -46,7 +46,9 @@ impl HandleCommand for SwitchArgs {
 
         // Show warning if skip symlinking is specified, but package was symlinked before
         if self.skip_symlinking && package.symlinked {
-            warning!("Skipping symlinking while package was symlinked before. The package will not be automatically findable by your system anymore.");
+            warning!(
+                "Skipping symlinking while package was symlinked before. The package will not be automatically findable by your system anymore."
+            );
         }
 
         let package_id = package_version.package_id.clone();

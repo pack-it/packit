@@ -70,7 +70,7 @@ impl<'a> RepositoryManager<'a> {
             None => {
                 return Err(RepositoryError::RepositoryNotFoundError {
                     repository_id: repository_id.into(),
-                })
+                });
             },
         };
 
@@ -119,7 +119,7 @@ impl<'a> RepositoryManager<'a> {
             None => {
                 return Err(RepositoryError::RepositoryNotFoundError {
                     repository_id: repository_id.into(),
-                })
+                });
             },
         };
 
@@ -173,7 +173,7 @@ impl<'a> RepositoryManager<'a> {
             None => {
                 return Err(RepositoryError::RepositoryNotFoundError {
                     repository_id: repository_id.into(),
-                })
+                });
             },
         };
 
@@ -209,7 +209,7 @@ impl<'a> RepositoryManager<'a> {
             None => {
                 return Err(RepositoryError::RepositoryNotFoundError {
                     repository_id: repository_id.into(),
-                })
+                });
             },
         };
 
@@ -224,7 +224,7 @@ impl<'a> RepositoryManager<'a> {
             None => {
                 return Err(RepositoryError::RepositoryNotFoundError {
                     repository_id: repository_id.into(),
-                })
+                });
             },
         };
 
@@ -244,7 +244,7 @@ impl<'a> RepositoryManager<'a> {
             None => {
                 return Err(RepositoryError::RepositoryNotFoundError {
                     repository_id: repository_id.into(),
-                })
+                });
             },
         };
 

@@ -11,8 +11,8 @@ use crate::{
     repositories::{
         error::{RepositoryError, Result},
         types::{
-            common::{Source, Sources},
             PackageTarget, Script,
+            common::{Source, Sources},
         },
     },
 };
