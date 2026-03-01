@@ -57,7 +57,7 @@ impl InstallMeta {
         // Get all the data to create a dependency node
         let (repository_id, package_metadata) = manager.read_package(dependency.get_name())?;
         let version = package_metadata.get_latest_dependency_version(&dependency)?;
-        let dependency_id = PackageId::new(dependency.get_name(), &version).expect("Expected valid dependency name");
+        let dependency_id = dependency.to_package_id(version);
         let version_metadata = manager.read_repo_package_version(&repository_id, &dependency_id)?;
 
         Ok(Self {
@@ -91,18 +91,28 @@ impl<'a> Installer<'a> {
             return Err(InstallerError::PermissionsError);
         }
 
-        // TODO: If version isn't specified check here if a package with the package name is already installed (otherwise a user can get two different version installed without knowing)
-
         let (repository_id, package_metadata) = self.repository_manager.read_package(&optional_id.name)?;
+        let latest_version = package_metadata.get_latest_version(TARGET_ARCHITECTURE)?;
 
-        // Use the latest version if the version isn't specified
-        let version = match &optional_id.version {
-            Some(version) => version,
-            None => package_metadata.get_latest_version(TARGET_ARCHITECTURE)?,
-        };
+        // If the version isn't specified check if a package with this package name is already installed (otherwise a user can get two different version installed without knowing)
+        if optional_id.version.is_none() {
+            if let Some(package) = self.register.get_package(&optional_id.name) {
+                if package.get_package_version(latest_version).is_some() {
+                    println!("The latest version '{latest_version}' of '{optional_id}' is already installed.");
+                    return Ok(());
+                }
+
+                let question = format!(
+                    "The package '{optional_id}' is already installed, but a newer version '{latest_version}' is available. Do you wish to install the latest version as well?"
+                );
+                if ask_user(&question, QuestionResponse::No)?.is_no_or_invalid() {
+                    return Ok(());
+                }
+            }
+        }
 
         // Create a package id of the current package
-        let package_id = PackageId::new(&optional_id.name, &version)?;
+        let package_id = optional_id.versioned_or(latest_version.clone());
 
         // Check if this package version is already installed
         if self.register.get_package_version(&package_id).is_some() {
@@ -194,7 +204,7 @@ impl<'a> Installer<'a> {
         let node_value = node.get_value();
 
         // Create the package id and install directory
-        let package_id = PackageId::new(&node_value.package_metadata.name, &node_value.version_metadata.version)?;
+        let package_id = PackageId::new(&node_value.package_metadata.name, node_value.version_metadata.version.clone())?;
         let install_directory = self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
 
         // Return early if the package has been installed by another node in the sequence (duplicates can exist)
@@ -376,10 +386,10 @@ impl<'a> Installer<'a> {
         // This determines the directory to remove. If there are multiple versions and the version is
         // specified only the specified version directory will be deleted. The entire package directory
         // is deleted if the version isn't specified or if the package directory only contains one version.
-        match &optional_id.version {
-            Some(version) => self.uninstall_single(&PackageId::new(&optional_id.name, &version)?)?,
+        match optional_id.versioned() {
+            Some(package_id) => self.uninstall_single(&package_id)?,
             None => self.uninstall_all(&optional_id.name)?,
-        };
+        }
 
         Ok(())
     }

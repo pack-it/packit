@@ -4,10 +4,9 @@ use colored::Colorize;
 use crate::{
     cli::{commands::HandleCommand, display::logging::error},
     config::Config,
-    installer::types::{OptionalPackageId, PackageId},
+    installer::types::OptionalPackageId,
     platforms::TARGET_ARCHITECTURE,
     repositories::{error::RepositoryError, manager::RepositoryManager},
-    utils::unwrap_or_exit::UnwrapOrExit,
 };
 
 #[derive(Args, Debug)]
@@ -40,20 +39,14 @@ impl HandleCommand for SearchArgs {
             },
         };
 
-        // Use the latest version if the version isn't specified
-        let version = match &self.optional_id.version {
-            Some(version) => version,
-            None => &latest_version,
-        };
-
         // Create a package id
-        let package_id = PackageId::new(&self.optional_id.name, version).unwrap_or_exit(1);
+        let package_id = self.optional_id.versioned_or(latest_version.clone());
 
         // Get package version info for its target
         let package_version = match manager.read_repo_package_version(&repository_id, &package_id) {
             Ok(package_version) => package_version,
             Err(e) => {
-                error!(e, "Cannot read {} version {version} from repository {repository_id}", package.name);
+                error!(e, "Cannot read '{package_id}' from repository {repository_id}");
                 return;
             },
         };
@@ -62,14 +55,11 @@ impl HandleCommand for SearchArgs {
         let target = match package_version.get_target(TARGET_ARCHITECTURE) {
             Ok(target) => target,
             Err(RepositoryError::TargetError) => {
-                println!(
-                    "Package {} version {version} from repository {repository_id} does not exist for current target",
-                    package.name
-                );
+                println!("Package {package_id} from repository {repository_id} does not exist for current target");
                 return;
             },
             Err(e) => {
-                error!(e, "Cannot read {} version {version} from repository {repository_id}", package.name);
+                error!(e, "Cannot read {package_id} from repository {repository_id}");
                 return;
             },
         };

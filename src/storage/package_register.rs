@@ -92,7 +92,7 @@ impl PackageRegister {
         active: bool,
     ) -> Result<(), RegisterError> {
         let installed_package_version = InstalledPackageVersion {
-            package_id: PackageId::new(&package.name, &package_version.version)?,
+            package_id: PackageId::new(&package.name, package_version.version.clone())?,
             license: package_version.license.clone(),
             source_repository_url: source_repository.path.clone(),
             source_repository_provider: source_repository.provider.clone(),

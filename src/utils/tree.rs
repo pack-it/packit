@@ -199,7 +199,7 @@ impl Node<InstallMeta, DependencyTypes> {
     ) -> Result<Node<InstallMeta, DependencyTypes>, TreeError> {
         let install_meta = InstallMeta::new(manager, dependency)?;
         let latest_version = install_meta.package_metadata.get_latest_version(TARGET_ARCHITECTURE)?;
-        let dependency_id = PackageId::new(dependency.get_name(), latest_version).expect("Expected valid dependency");
+        let dependency_id = dependency.to_package_id(latest_version.clone());
         Self::new_from_meta_impl(&dependency_id, install_meta, manager, label, include_build)
     }
 }
