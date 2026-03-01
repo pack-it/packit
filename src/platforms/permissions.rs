@@ -47,6 +47,8 @@ pub mod platform {
 
     use super::{PermissionError, Result};
 
+    pub const PACKIT_GROUP_NAME: &str = "packit";
+
     pub(super) fn is_writable(_path: &PathBuf, metadata: Metadata) -> Result<bool> {
         let mode = metadata.mode();
 
@@ -74,7 +76,7 @@ pub mod platform {
 
     pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool) -> Result<()> {
         if is_multiuser {
-            let packit_group = match get_group_id("packit") {
+            let packit_group = match get_group_id(PACKIT_GROUP_NAME) {
                 Ok(uid) => uid,
                 Err(e) => {
                     if matches!(e, PermissionError::GroupDoesNotExist) {

@@ -328,9 +328,17 @@ impl<'a> Verifier<'a> {
     }
 
     fn check_packit_group(&self) -> Option<Issue> {
+        if !self.config.multiuser {
+            return None; // We don't need the packit group if multiuser mode is enabled
+        }
+
         #[cfg(any(target_os = "macos", target_os = "linux"))]
         {
-            // TODO: check if group exists
+            use crate::platforms::permissions;
+
+            if permissions::platform::get_group_id(permissions::platform::PACKIT_GROUP_NAME).is_err() {
+                return Some(Issue::MissingPackitGroup);
+            }
         }
 
         None
