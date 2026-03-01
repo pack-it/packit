@@ -102,7 +102,7 @@ impl<'a> Installer<'a> {
         };
 
         // Create a package id of the current package
-        let package_id = PackageId::new(&optional_id.name, &version)?;
+        let package_id = optional_id.to_package_id(version.clone());
 
         // Check if this package version is already installed
         if self.register.get_package_version(&package_id).is_some() {
@@ -194,7 +194,7 @@ impl<'a> Installer<'a> {
         let node_value = node.get_value();
 
         // Create the package id and install directory
-        let package_id = PackageId::new(&node_value.package_metadata.name, &node_value.version_metadata.version)?;
+        let package_id = PackageId::new(&node_value.package_metadata.name, node_value.version_metadata.version.clone())?;
         let install_directory = self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
 
         // Return early if the package has been installed by another node in the sequence (duplicates can exist)
@@ -377,7 +377,7 @@ impl<'a> Installer<'a> {
         // specified only the specified version directory will be deleted. The entire package directory
         // is deleted if the version isn't specified or if the package directory only contains one version.
         match &optional_id.version {
-            Some(version) => self.uninstall_single(&PackageId::new(&optional_id.name, &version)?)?,
+            Some(version) => self.uninstall_single(&optional_id.to_package_id(version.clone()))?,
             None => self.uninstall_all(&optional_id.name)?,
         };
 

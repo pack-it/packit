@@ -4,10 +4,9 @@ use colored::Colorize;
 use crate::{
     cli::{commands::HandleCommand, display::logging::error},
     config::Config,
-    installer::types::{OptionalPackageId, PackageId},
+    installer::types::OptionalPackageId,
     platforms::TARGET_ARCHITECTURE,
     repositories::{error::RepositoryError, manager::RepositoryManager},
-    utils::unwrap_or_exit::UnwrapOrExit,
 };
 
 #[derive(Args, Debug)]
@@ -47,7 +46,7 @@ impl HandleCommand for SearchArgs {
         };
 
         // Create a package id
-        let package_id = PackageId::new(&self.optional_id.name, version).unwrap_or_exit(1);
+        let package_id = self.optional_id.to_package_id(version.clone());
 
         // Get package version info for its target
         let package_version = match manager.read_repo_package_version(&repository_id, &package_id) {

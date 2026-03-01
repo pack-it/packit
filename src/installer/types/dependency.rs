@@ -125,7 +125,7 @@ impl Dependency {
     }
 
     pub fn to_package_id(&self, version: Version) -> PackageId {
-        PackageId::new(&self.name, &version).expect("Expected valid name from dependency.")
+        PackageId::new(&self.name, version).expect("Expected valid name from dependency.")
     }
 }
 

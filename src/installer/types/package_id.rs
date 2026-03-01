@@ -25,14 +25,14 @@ pub struct PackageId {
 const VALID_PACKAGE_NAME: &str = r"^[a-zA-Z0-9\-_]+$";
 
 impl PackageId {
-    pub fn new(name: &str, version: &Version) -> Result<Self, PackageIdError> {
+    pub fn new(name: &str, version: Version) -> Result<Self, PackageIdError> {
         if !PackageId::is_valid_name(name) {
             return Err(PackageIdError::InvalidPackageName);
         }
 
         Ok(Self {
             name: name.to_string(),
-            version: version.clone(),
+            version,
         })
     }
 
@@ -105,7 +105,7 @@ mod tests {
     #[test]
     fn from_str() {
         let version = Version::from_str("3.4.1").expect("Expected Version.");
-        let correct_version = PackageId::new("test", &version).expect("Expected valid package name");
+        let correct_version = PackageId::new("test", version).expect("Expected valid package name");
 
         match PackageId::from_str("test@3.4.1") {
             Ok(id) => assert_eq!(id, correct_version),
@@ -140,7 +140,7 @@ mod tests {
     #[test]
     fn valid_format() {
         let version = Version::from_str("3.4.1").expect("Expected Version.");
-        let correct_version = PackageId::new("test", &version).expect("Expected valid package name");
+        let correct_version = PackageId::new("test", version).expect("Expected valid package name");
 
         assert_eq!(correct_version.to_string(), "test@3.4.1");
     }

@@ -198,7 +198,7 @@ impl<'a> Verifier<'a> {
 
                 // Get the version, and create the package id
                 let version = Version::from_str(file_version.file_name().to_str().ok_or(VerifierError::InvalidUnicodeError)?)?;
-                let package_id = PackageId::new(package_name, &version)?;
+                let package_id = PackageId::new(package_name, version)?;
 
                 // Check if the package version also exists in the register, if not add it to missing
                 if register.get_package_version(&package_id).is_none() {
