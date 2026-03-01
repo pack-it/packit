@@ -69,18 +69,6 @@ impl OptionalPackageId {
 
         PackageId::new(&self.name, version).expect("Expected valid name from optional package id")
     }
-
-    pub fn versioned_or_else_try<F, E>(&self, version_closure: F) -> Result<PackageId, E>
-    where
-        F: FnOnce() -> Result<Version, E>,
-    {
-        let version = match &self.version {
-            Some(version) => version.clone(),
-            None => version_closure()?,
-        };
-
-        Ok(PackageId::new(&self.name, version).expect("Expected valid name from optional package id"))
-    }
 }
 
 #[cfg(test)]

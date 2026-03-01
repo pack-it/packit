@@ -91,12 +91,28 @@ impl<'a> Installer<'a> {
             return Err(InstallerError::PermissionsError);
         }
 
-        // TODO: If version isn't specified check here if a package with the package name is already installed (otherwise a user can get two different version installed without knowing)
-
         let (repository_id, package_metadata) = self.repository_manager.read_package(&optional_id.name)?;
+        let latest_version = package_metadata.get_latest_version(TARGET_ARCHITECTURE)?;
+
+        // If the version isn't specified check if a package with this package name is already installed (otherwise a user can get two different version installed without knowing)
+        if optional_id.version.is_none() {
+            if let Some(package) = self.register.get_package(&optional_id.name) {
+                if package.get_package_version(latest_version).is_some() {
+                    println!("The latest version '{latest_version}' of '{optional_id}' is already installed.");
+                    return Ok(());
+                }
+
+                let question = format!(
+                    "The package '{optional_id}' is already installed, but a newer version '{latest_version}' is available. Do you wish to install the latest version as well?"
+                );
+                if ask_user(&question, QuestionResponse::No)?.is_no_or_invalid() {
+                    return Ok(());
+                }
+            }
+        }
 
         // Create a package id of the current package
-        let package_id = optional_id.versioned_or_else_try(|| package_metadata.get_latest_version(TARGET_ARCHITECTURE).cloned())?;
+        let package_id = optional_id.versioned_or(latest_version.clone());
 
         // Check if this package version is already installed
         if self.register.get_package_version(&package_id).is_some() {
