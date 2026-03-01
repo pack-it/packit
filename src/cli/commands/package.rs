@@ -23,7 +23,7 @@ pub struct PackageArgs {
 
 impl HandleCommand for PackageArgs {
     fn handle(&self, config: &Config, _: &RepositoryManager) {
-        let register_dir = PackageRegister::get_default_path();
+        let register_dir = PackageRegister::get_default_path(config);
         let register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
         let package_version = match register.get_package_version(&self.package_id) {

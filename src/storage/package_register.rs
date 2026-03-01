@@ -8,9 +8,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     cli::display::logging::warning,
-    config::Repository,
+    config::{Config, Repository},
     installer::types::{Dependency, OptionalPackageId, PackageId},
-    platforms::DEFAULT_CONFIG_DIR,
     repositories::types::{PackageMeta, PackageVersionMeta},
     storage::{error::RegisterError, installed_package::InstalledPackage, installed_package_version::InstalledPackageVersion},
     utils::constants::REGISTER_FILENAME,
@@ -76,8 +75,8 @@ impl PackageRegister {
     }
 
     /// Gets the default path of the Packit installed packages file.
-    pub fn get_default_path() -> PathBuf {
-        Path::new(DEFAULT_CONFIG_DIR).join(REGISTER_FILENAME)
+    pub fn get_default_path(config: &Config) -> PathBuf {
+        Path::new(&config.prefix_directory).join(REGISTER_FILENAME)
     }
 
     /// Adds a package to the register storage.
