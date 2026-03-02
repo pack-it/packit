@@ -78,23 +78,25 @@ pub mod platform {
     }
 
     pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool, recurse: bool) -> Result<()> {
+        let group_id = match is_multiuser {
+            true => match get_group_id(PACKIT_GROUP_NAME) {
+                Ok(uid) => Some(uid),
+                Err(PermissionError::GroupDoesNotExist) => {
+                    warning!("The 'packit' group does not exist. Please run 'pit fix' to fix your Packit installation");
+                    return Err(PermissionError::GroupDoesNotExist);
+                },
+                Err(e) => return Err(e),
+            },
+            false => None,
+        };
+
         let metadata = fs::metadata(&path)?;
-        set_file_permissions(path, metadata.permissions(), is_multiuser, recurse)
+        set_file_permissions(path, metadata.permissions(), group_id, recurse)
     }
 
-    fn set_file_permissions(path: &PathBuf, mut old_permissions: Permissions, is_multiuser: bool, recurse: bool) -> Result<()> {
-        if is_multiuser {
-            let packit_group = match get_group_id(PACKIT_GROUP_NAME) {
-                Ok(uid) => uid,
-                Err(e) => {
-                    if matches!(e, PermissionError::GroupDoesNotExist) {
-                        warning!("The 'packit' group does not exist. Please run 'pit fix' to fix your Packit installation");
-                    }
-                    return Err(e);
-                },
-            };
-
-            set_ownership(path, None, Some(packit_group))?;
+    fn set_file_permissions(path: &PathBuf, mut old_permissions: Permissions, group_id: Option<u32>, recurse: bool) -> Result<()> {
+        if let Some(group_id) = group_id {
+            set_ownership(path, None, Some(group_id))?;
 
             old_permissions.set_mode(0o775);
         } else {
@@ -108,7 +110,7 @@ pub mod platform {
             for entry in dir {
                 let entry = entry?;
 
-                set_file_permissions(&entry.path(), entry.metadata()?.permissions(), is_multiuser, recurse)?;
+                set_file_permissions(&entry.path(), entry.metadata()?.permissions(), group_id, recurse)?;
             }
         }
 
