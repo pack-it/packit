@@ -580,8 +580,9 @@ impl<'a> Installer<'a> {
         let old_package = self.get_specific_package_update(optional_id)?;
 
         if old_package.package_id.version == *new_version {
-            error!(msg: "Cannot update '{}', because the latest version of it is already installed.", old_package.package_id);
-            exit(1);
+            return Err(InstallerError::ExistError {
+                package_id: old_package.package_id.clone(),
+            });
         }
 
         // Check if the new version still satisfies all dependents
@@ -590,16 +591,24 @@ impl<'a> Installer<'a> {
             let package_version_meta = self.repository_manager.read_repo_package_version(&repository_id, dependent)?;
             let dependency = match package_version_meta.dependencies.iter().find(|d| *d.get_name() == old_package.package_id.name) {
                 Some(dependency) => dependency,
-                None => todo!("What to do here?"), // TODO
+                None => {
+                    warning!(
+                        "Dependent is not a dependent of '{}' eventhough it should be.",
+                        old_package.package_id
+                    );
+                    continue;
+                },
             };
 
             if !dependency.satisfied(&old_package.package_id.name, Some(new_version)) {
-                error!(msg: "The new version '{new_version}' of this package cannot satisfy all dependents from the old package version.");
-                exit(1)
+                return Err(InstallerError::SatisfyError {
+                    new_version: new_version.clone(),
+                });
             }
         }
 
         // Use the old package reference before another borrow from self.install
+        // Clone to avoid borrowing issues
         let dependents = old_package.dependents.clone();
         let old_package_id = old_package.package_id.clone();
 
@@ -611,6 +620,7 @@ impl<'a> Installer<'a> {
         let package_version = match self.register.get_package_version_mut(&new_package_id) {
             Some(package_version) => package_version,
             None => {
+                // Theoretically unreachable
                 error!(msg: "New package version '{new_version}' was not installed correctly.");
                 exit(1);
             },
@@ -644,15 +654,12 @@ impl<'a> Installer<'a> {
     fn get_specific_package_update(&self, optional_id: &OptionalPackageId) -> Result<&InstalledPackageVersion> {
         // If a version is specified multiple installed versions are okay
         if let Some(package_id) = optional_id.versioned() {
-            let package_version = match self.register.get_package_version(&package_id) {
-                Some(package_version) => package_version,
-                None => {
-                    error!(msg: "Cannot update '{optional_id}', because that package (version) is not installed." );
-                    exit(1);
-                },
-            };
-
-            return Ok(package_version);
+            return Ok(
+                self.register.get_package_version(&package_id).ok_or(InstallerError::PackageNotFound {
+                    package_name: package_id.name,
+                    version: Some(package_id.version.to_string()),
+                })?,
+            );
         }
 
         // Get installed versions
@@ -660,19 +667,13 @@ impl<'a> Installer<'a> {
 
         // Check if version is specified when multiple versions are installed
         if installed_versions.len() > 1 && optional_id.version.is_none() {
-            error!(msg: "Multiple versions of '{optional_id}' are installed, to update specificy a specific version.");
-            exit(1);
+            return Err(InstallerError::SpecificityError);
         }
 
         // Get the installed package version and simultaniously check if any version of the package exists
-        let installed_version = match installed_versions.get(0) {
-            Some(package) => package,
-            None => {
-                error!(msg: "Cannot update '{optional_id}', because no version of this package is installed.");
-                exit(1);
-            },
-        };
-
-        Ok(installed_version)
+        Ok(installed_versions.get(0).ok_or(InstallerError::PackageNotFound {
+            package_name: optional_id.name.to_string(),
+            version: Some("any".to_string()),
+        })?)
     }
 }
