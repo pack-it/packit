@@ -57,10 +57,10 @@ impl InstallMeta {
     pub fn new(manager: &RepositoryManager, dependency: &Dependency) -> std::result::Result<Self, RepositoryError> {
         // Get all the data to create a dependency node
         let (repository_id, package_metadata) = manager.read_package(dependency.get_name())?;
-        let target_bounds = package_metadata.get_best_target(&Target::current())?;
         let version = package_metadata.get_latest_dependency_version(&dependency)?;
         let dependency_id = dependency.to_package_id(version);
         let version_metadata = manager.read_repo_package_version(&repository_id, &dependency_id)?;
+        let target_bounds = version_metadata.get_best_target(&Target::current())?;
 
         Ok(Self {
             package_metadata,
@@ -95,8 +95,7 @@ impl<'a> Installer<'a> {
         }
 
         let (repository_id, package_metadata) = self.repository_manager.read_package(&optional_id.name)?;
-        let target_bounds = package_metadata.get_best_target(&Target::current())?;
-        let latest_version = package_metadata.get_latest_version(&target_bounds)?;
+        let latest_version = package_metadata.get_latest_version(&Target::current())?;
 
         // If the version isn't specified check if a package with this package name is already installed (otherwise a user can get two different version installed without knowing)
         if optional_id.version.is_none() {
@@ -126,6 +125,7 @@ impl<'a> Installer<'a> {
 
         // Get package version info
         let version_metadata = self.repository_manager.read_repo_package_version(&repository_id, &package_id)?;
+        let target_bounds = version_metadata.get_best_target(&Target::current())?;
 
         // Create flattend dependency sequence
         let root_meta = InstallMeta {

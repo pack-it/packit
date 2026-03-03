@@ -1,4 +1,4 @@
-use std::{fmt::Display, str::FromStr};
+use std::fmt::Display;
 
 use crate::platforms::Os;
 
@@ -29,23 +29,6 @@ impl Display for TargetArchitecture {
         };
 
         write!(f, "{string}")
-    }
-}
-
-impl FromStr for TargetArchitecture {
-    type Err = ();
-
-    fn from_str(string: &str) -> Result<Self, Self::Err> {
-        match string {
-            "x86_64-apple-darwin" => Ok(Self::MacOsX86_64),
-            "aarch64-apple-darwin" => Ok(Self::MacOsAarch64),
-            "aarch64-unknown-linux-gnu" => Ok(Self::LinuxAarch64Gnu),
-            "x86_64-unknown-linux-gnu" => Ok(Self::LinuxX86_64Gnu),
-            "x86_64-unknown-linux-musl" => Ok(Self::LinuxX86_64Musl),
-            "x86_64-pc-windows-msvc" => Ok(Self::WindowsX86_64Msvc),
-            "aarch64-pc-windows-msvc" => Ok(Self::WindowsAarch64Msvc),
-            _ => Err(()), // Do we want to error or return unknown here?
-        }
     }
 }
 
@@ -90,6 +73,26 @@ impl TargetArchitecture {
             Self::LinuxAarch64Gnu | Self::LinuxX86_64Gnu | Self::LinuxX86_64Musl => Os::Linux,
             Self::WindowsX86_64Msvc | Self::WindowsAarch64Msvc => Os::Windows,
             Self::Unknown(_) => Os::Unknown,
+        }
+    }
+
+    pub fn is_unknown(&self) -> bool {
+        match self {
+            Self::Unknown(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn from_str(string: &str) -> Self {
+        match string {
+            "x86_64-apple-darwin" => Self::MacOsX86_64,
+            "aarch64-apple-darwin" => Self::MacOsAarch64,
+            "aarch64-unknown-linux-gnu" => Self::LinuxAarch64Gnu,
+            "x86_64-unknown-linux-gnu" => Self::LinuxX86_64Gnu,
+            "x86_64-unknown-linux-musl" => Self::LinuxX86_64Musl,
+            "x86_64-pc-windows-msvc" => Self::WindowsX86_64Msvc,
+            "aarch64-pc-windows-msvc" => Self::WindowsAarch64Msvc,
+            _ => Self::Unknown(Some(string.into())),
         }
     }
 }

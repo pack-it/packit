@@ -31,14 +31,15 @@ impl HandleCommand for SearchArgs {
             },
         };
 
-        let target_bounds =
-            package.get_best_target(&Target::current()).unwrap_or_exit_msg("The package is not available for the current target", 1);
-
         // Get latest version of package
-        let latest_version = match package.latest_versions.get(&target_bounds) {
-            Some(version) => version,
-            None => {
+        let latest_version = match package.get_latest_version(&Target::current()) {
+            Ok(version) => version,
+            Err(RepositoryError::TargetError) => {
                 println!("Package does not exist for current target");
+                return;
+            },
+            Err(e) => {
+                error!(e, "Unable to retrieve latest version of package");
                 return;
             },
         };
@@ -54,6 +55,10 @@ impl HandleCommand for SearchArgs {
                 return;
             },
         };
+
+        let target_bounds = package_version
+            .get_best_target(&Target::current())
+            .unwrap_or_exit_msg("The package is not available for the current target", 1);
 
         // Get current target
         let target = match package_version.get_target(&target_bounds) {

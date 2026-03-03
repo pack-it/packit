@@ -35,13 +35,14 @@ impl FromStr for TargetName {
         }
 
         match string {
-            "macos" => return Ok(Self::Os(Os::MacOs)),
+            "mac" => return Ok(Self::Os(Os::MacOs)),
             "linux" => return Ok(Self::Os(Os::Linux)),
             "windows" => return Ok(Self::Os(Os::Windows)),
             _ => (),
         }
 
-        if let Ok(architecture) = TargetArchitecture::from_str(string) {
+        let architecture = TargetArchitecture::from_str(string);
+        if !architecture.is_unknown() {
             return Ok(Self::Architecture(architecture));
         }
 
@@ -118,7 +119,7 @@ impl FromStr for TargetBounds {
 }
 
 impl TargetBounds {
-    pub fn satisfies(&self, target: &Target) -> bool {
+    pub fn satisfied_by(&self, target: &Target) -> bool {
         // Check if target name matches
         match &self.name {
             TargetName::Architecture(architecture) if *architecture != target.architecture => return false,
@@ -127,6 +128,7 @@ impl TargetBounds {
             _ => (),
         }
 
+        // Extract relevant version from os version info (and check if distro matches if applicable)
         let version = match &target.os {
             OsVersion::MacOs { version } | OsVersion::Windows { version } => version,
             OsVersion::Linux {
@@ -141,10 +143,12 @@ impl TargetBounds {
             OsVersion::Unknown => return false,
         };
 
+        // If version bounds are empty, target satisfies the bounds
         if self.version_bounds.is_empty() {
             return true;
         }
 
+        // Check if one of the version bounds covers the os version
         for range in &self.version_bounds {
             if range.covers(&version) {
                 return true;
@@ -185,7 +189,7 @@ impl TargetBounds {
         let mut current_best_priority = 0;
 
         for target in targets {
-            if !target.satisfies(specific_target) {
+            if !target.satisfied_by(specific_target) {
                 continue;
             }
 

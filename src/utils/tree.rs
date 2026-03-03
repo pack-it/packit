@@ -8,6 +8,7 @@ use crate::{
         DependencyTypes, InstallMeta,
         types::{Dependency, PackageId},
     },
+    platforms::Target,
     repositories::{error::RepositoryError, manager::RepositoryManager},
     storage::package_register::PackageRegister,
 };
@@ -197,7 +198,7 @@ impl Node<InstallMeta, DependencyTypes> {
         include_build: bool,
     ) -> Result<Node<InstallMeta, DependencyTypes>, TreeError> {
         let install_meta = InstallMeta::new(manager, dependency)?;
-        let latest_version = install_meta.package_metadata.get_latest_version(&install_meta.target_bounds)?;
+        let latest_version = install_meta.package_metadata.get_latest_version(&Target::current())?;
         let dependency_id = dependency.to_package_id(latest_version.clone());
         Self::new_from_meta_impl(&dependency_id, install_meta, manager, label, include_build)
     }

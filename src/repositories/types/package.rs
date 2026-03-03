@@ -22,15 +22,12 @@ pub struct PackageMeta {
 }
 
 impl PackageMeta {
-    // TODO: ensure PackageMeta.get_best_target and PackageVersionMeta.get_best_target are not mixed
-    pub fn get_best_target(&self, target: &Target) -> Result<TargetBounds> {
-        match TargetBounds::get_best_target(&target, self.latest_versions.keys().collect()) {
-            Some(target) => Ok(target.clone()),
-            None => Err(RepositoryError::TargetError),
-        }
-    }
+    pub fn get_latest_version(&self, target: &Target) -> Result<&Version> {
+        let target = match TargetBounds::get_best_target(&target, self.latest_versions.keys().collect()) {
+            Some(target) => target,
+            None => return Err(RepositoryError::TargetError),
+        };
 
-    pub fn get_latest_version(&self, target: &TargetBounds) -> Result<&Version> {
         Ok(self.latest_versions.get(target).ok_or(RepositoryError::TargetError)?)
     }
 

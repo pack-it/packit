@@ -98,7 +98,7 @@ impl<'a> RepositoryManager<'a> {
             };
 
             // Check if package contains the target
-            if !package.get_best_target(&Target::current()).is_ok() {
+            if !package.get_latest_version(&Target::current()).is_ok() {
                 continue;
             }
 
