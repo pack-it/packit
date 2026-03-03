@@ -634,6 +634,7 @@ impl<'a> Installer<'a> {
             },
         };
 
+        // Set the dependents of the old package for the new package
         package_version.dependents = dependents.clone();
 
         // Change the register dependency entries to the new package version
@@ -644,7 +645,11 @@ impl<'a> Installer<'a> {
             }
         }
 
-        // TODO: Set the active and symlinked state for the new package (to the old package state)
+        // Set the active and symlinked state for the new package (to the old package state)
+        let package = self.register.get_package(&old_package_id.name).expect("Expected old package to still exist.");
+        if package.active_version == *new_version {
+            Symlinker::new(self.config).set_active(self.register, &new_package_id, package.symlinked)?;
+        }
 
         println!("The new package version '{new_version}' has been succesfully installed, uninstalling the old version now.");
 
