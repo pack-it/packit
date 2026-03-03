@@ -23,6 +23,7 @@ impl Os {
 }
 
 #[derive(Clone, Debug)]
+#[allow(dead_code)]
 pub enum OsVersion {
     MacOs {
         version: Version,
@@ -76,14 +77,107 @@ impl OsVersion {
             },
         };
 
-        debug!("Retrieved macOS current version {version}");
+        debug!("Retrieved current macOS version {version}");
 
         Some(Self::MacOs { version })
     }
 
     #[cfg(target_os = "linux")]
     fn get_version() -> Option<Self> {
-        //TODO
+        use std::{fs, process::Command};
+
+        let kernel_output = match Command::new("/usr/bin/uname").arg("-r").output() {
+            Ok(output) => output,
+            Err(e) => {
+                error!(e, "Cannot fetch kernel version");
+                return None;
+            },
+        };
+
+        let kernel_version_str = match String::from_utf8(kernel_output.stdout) {
+            Ok(string) => string,
+            Err(e) => {
+                error!(e, "Cannot parse kernel version to string");
+                return None;
+            },
+        };
+
+        let kernel_version_str = match kernel_version_str.split_once("-") {
+            Some((version, _)) => version,
+            None => &kernel_version_str,
+        };
+
+        let kernel_version = match Version::from_str(kernel_version_str.trim()) {
+            Ok(version) => version,
+            Err(e) => {
+                error!(e, "Cannot parse kernel version from string");
+                return None;
+            },
+        };
+
+        debug!("Retrieved current kernel version {kernel_version}");
+
+        let distro_info = match fs::read_to_string("/etc/os-release") {
+            Ok(info) => info,
+            Err(e) => {
+                error!(e, "Cannot read distro information");
+                return None;
+            },
+        };
+
+        let mut distro = None;
+        let mut distro_version = None;
+        for line in distro_info.split("\n") {
+            let (key, value) = match line.split_once("=") {
+                Some(val) => val,
+                None => {
+                    error!(msg: "Invalid result from /etc/os-release: line does not contain '='");
+                    continue;
+                },
+            };
+
+            // Remove quotes from value
+            let value = match value.starts_with("\"") && value.ends_with("\"") {
+                true => &value[1..value.len() - 1],
+                false => value,
+            };
+
+            match key.to_lowercase().as_str() {
+                "id" => distro = Some(value),
+                "version_id" => distro_version = Some(value),
+                _ => continue,
+            }
+        }
+
+        let distro = match distro {
+            Some(distro) => distro,
+            None => {
+                error!(msg: "Cannot read distro name");
+                return None;
+            },
+        };
+
+        let distro_version = match distro_version {
+            Some(version) => match Version::from_str(version.trim()) {
+                Ok(version) => version,
+                Err(e) => {
+                    error!(e, "Cannot parse distro version from string");
+                    return None;
+                },
+            },
+            None => {
+                error!(msg: "Cannot read distro version");
+                return None;
+            },
+        };
+
+        debug!("Retrieved current distro {distro} with version {distro_version}");
+
+        Some(Self::Linux {
+            distro: distro.into(),
+            distro_version,
+            kernel_version,
+        })
     }
 
     #[cfg(target_os = "windows")]
