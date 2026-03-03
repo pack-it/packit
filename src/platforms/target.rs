@@ -1,5 +1,6 @@
 use crate::platforms::{OsVersion, TargetArchitecture};
 
+#[derive(Debug)]
 pub struct Target {
     pub architecture: TargetArchitecture,
     pub os: OsVersion,

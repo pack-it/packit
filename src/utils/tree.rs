@@ -8,7 +8,6 @@ use crate::{
         DependencyTypes, InstallMeta,
         types::{Dependency, PackageId},
     },
-    platforms::TARGET_ARCHITECTURE,
     repositories::{error::RepositoryError, manager::RepositoryManager},
     storage::package_register::PackageRegister,
 };
@@ -143,7 +142,7 @@ impl Node<InstallMeta, DependencyTypes> {
         label: DependencyTypes,
         include_build: bool,
     ) -> Result<Self, TreeError> {
-        let target = install_meta.version_metadata.get_target(TARGET_ARCHITECTURE)?;
+        let target = install_meta.version_metadata.get_target(&install_meta.target_bounds)?;
         let dependencies = install_meta.version_metadata.dependencies.iter().chain(target.dependencies.iter());
 
         // Also add build dependencies if include build is true
@@ -182,7 +181,7 @@ impl Node<InstallMeta, DependencyTypes> {
 
     /// Expands a node with its build dependencies after initial creation of the tree.
     pub fn expand_node_with_build(&mut self, manager: &RepositoryManager) -> Result<(), TreeError> {
-        let target = self.value.version_metadata.get_target(TARGET_ARCHITECTURE)?;
+        let target = self.value.version_metadata.get_target(&self.value.target_bounds)?;
         for dependency in self.value.version_metadata.build_dependencies.iter().chain(target.build_dependencies.iter()) {
             self.children.push(Self::new_from_dependency(manager, dependency, DependencyTypes::Build, false)?);
         }
@@ -198,7 +197,7 @@ impl Node<InstallMeta, DependencyTypes> {
         include_build: bool,
     ) -> Result<Node<InstallMeta, DependencyTypes>, TreeError> {
         let install_meta = InstallMeta::new(manager, dependency)?;
-        let latest_version = install_meta.package_metadata.get_latest_version(TARGET_ARCHITECTURE)?;
+        let latest_version = install_meta.package_metadata.get_latest_version(&install_meta.target_bounds)?;
         let dependency_id = dependency.to_package_id(latest_version.clone());
         Self::new_from_meta_impl(&dependency_id, install_meta, manager, label, include_build)
     }

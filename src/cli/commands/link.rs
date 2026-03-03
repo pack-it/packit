@@ -4,8 +4,8 @@ use crate::{
     cli::{commands::HandleCommand, display::logging::warning},
     config::{Config, Repository},
     installer::Symlinker,
-    platforms::TARGET_ARCHITECTURE,
-    repositories::{manager::RepositoryManager, provider},
+    platforms::Target,
+    repositories::{manager::RepositoryManager, provider, types::PackageVersionMeta},
     storage::package_register::PackageRegister,
     utils::unwrap_or_exit::UnwrapOrExit,
 };
@@ -55,10 +55,11 @@ impl HandleCommand for LinkArgs {
                 1,
             );
 
-            let package_version_meta = provider.read_package_version(&self.package_name, &package.active_version).unwrap_or_exit_msg(
-                "Unable to read package metadata for package, try --force if you're sure you want to link.",
-                1,
-            );
+            let package_version_meta: PackageVersionMeta =
+                provider.read_package_version(&self.package_name, &package.active_version).unwrap_or_exit_msg(
+                    "Unable to read package metadata for package, try --force if you're sure you want to link.",
+                    1,
+                );
 
             // Skip if the package version metadata defines skip_symlinking
             if package_version_meta.skip_symlinking {
@@ -66,8 +67,13 @@ impl HandleCommand for LinkArgs {
                 return;
             }
 
-            let target = package_version_meta.get_target(TARGET_ARCHITECTURE).unwrap_or_exit_msg(
+            let target_bounds = package_version_meta.get_best_target(&Target::current()).unwrap_or_exit_msg(
                 "The metadata does not contain the current target, try --force if you're sure you want to link.",
+                1,
+            );
+
+            let target = package_version_meta.get_target(&target_bounds).unwrap_or_exit_msg(
+                "Cannot get current target from package metadata, try --force if you're sure you want to link.",
                 1,
             );
 

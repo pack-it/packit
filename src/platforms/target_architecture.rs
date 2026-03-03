@@ -2,8 +2,6 @@ use std::{fmt::Display, str::FromStr};
 
 use crate::platforms::Os;
 
-pub const TARGET_ARCHITECTURE: &str = "unknown"; //TODO: delete
-
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TargetArchitecture {
     MacOsX86_64,

@@ -5,8 +5,9 @@ use crate::{
     cli::{commands::HandleCommand, display::logging::error},
     config::Config,
     installer::types::OptionalPackageId,
-    platforms::TARGET_ARCHITECTURE,
+    platforms::Target,
     repositories::{error::RepositoryError, manager::RepositoryManager},
+    utils::unwrap_or_exit::UnwrapOrExit,
 };
 
 #[derive(Args, Debug)]
@@ -30,8 +31,11 @@ impl HandleCommand for SearchArgs {
             },
         };
 
+        let target_bounds =
+            package.get_best_target(&Target::current()).unwrap_or_exit_msg("The package is not available for the current target", 1);
+
         // Get latest version of package
-        let latest_version = match package.latest_versions.get(TARGET_ARCHITECTURE) {
+        let latest_version = match package.latest_versions.get(&target_bounds) {
             Some(version) => version,
             None => {
                 println!("Package does not exist for current target");
@@ -52,7 +56,7 @@ impl HandleCommand for SearchArgs {
         };
 
         // Get current target
-        let target = match package_version.get_target(TARGET_ARCHITECTURE) {
+        let target = match package_version.get_target(&target_bounds) {
             Ok(target) => target,
             Err(RepositoryError::TargetError) => {
                 println!("Package {package_id} from repository {repository_id} does not exist for current target");

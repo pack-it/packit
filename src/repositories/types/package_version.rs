@@ -59,11 +59,18 @@ pub struct PackageVersionMeta {
 }
 
 impl PackageVersionMeta {
-    pub fn get_source(&self, target_name: &str) -> Result<&Source> {
+    pub fn get_best_target(&self, target: &Target) -> Result<TargetBounds> {
+        match TargetBounds::get_best_target(&target, self.targets.keys().collect()) {
+            Some(target) => Ok(target.clone()),
+            None => Err(RepositoryError::TargetError),
+        }
+    }
+
+    pub fn get_source(&self, target: &TargetBounds) -> Result<&Source> {
         match &self.sources {
             Sources::Single(source) => Ok(source),
             Sources::Named(sources) => {
-                let target = self.get_target(target_name)?;
+                let target = self.get_target(target)?;
                 let source =
                     target.source.as_ref().ok_or(RepositoryError::ValidationError("Package target does not specify source".into()))?;
 
@@ -82,57 +89,52 @@ impl PackageVersionMeta {
         }
     }
 
-    pub fn has_target(&self, target_name: &str) -> Result<bool> {
-        match self.get_target(target_name) {
+    pub fn has_target(&self, target: &TargetBounds) -> Result<bool> {
+        match self.get_target(target) {
             Ok(_) => Ok(true),
             Err(RepositoryError::TargetError) => Ok(false),
             Err(e) => Err(e),
         }
     }
 
-    pub fn get_target(&self, target_name: &str) -> Result<&PackageTarget> {
-        let target = Target::current(); //TODO
-
-        match TargetBounds::get_best_target(&target, self.targets.keys().collect()) {
-            Some(target) => Ok(self.targets.get(target).ok_or(RepositoryError::TargetError)?),
-            None => Err(RepositoryError::TargetError),
-        }
+    pub fn get_target(&self, target: &TargetBounds) -> Result<&PackageTarget> {
+        self.targets.get(target).ok_or(RepositoryError::TargetError)
     }
 
-    pub fn get_build_script_path(&self, target_name: &str) -> Result<String> {
-        let target = self.get_target(target_name)?;
+    pub fn get_build_script_path(&self, target: &TargetBounds) -> Result<String> {
+        let target = self.get_target(target)?;
 
         Ok(self.get_script_path(self.use_version_specific_build, &target.build_script, "build"))
     }
 
-    pub fn get_preinstall_script_path(&self, target_name: &str) -> Result<String> {
-        let target = self.get_target(target_name)?;
+    pub fn get_preinstall_script_path(&self, target: &TargetBounds) -> Result<String> {
+        let target = self.get_target(target)?;
 
         Ok(self.get_script_path(self.use_version_specific_preinstall, &target.preinstall_script, "preinstall"))
     }
 
-    pub fn get_postinstall_script_path(&self, target_name: &str) -> Result<String> {
-        let target = self.get_target(target_name)?;
+    pub fn get_postinstall_script_path(&self, target: &TargetBounds) -> Result<String> {
+        let target = self.get_target(target)?;
 
         Ok(self.get_script_path(self.use_version_specific_postinstall, &target.postinstall_script, "postinstall"))
     }
 
-    pub fn get_test_script_path(&self, target_name: &str) -> Result<String> {
-        let target = self.get_target(target_name)?;
+    pub fn get_test_script_path(&self, target: &TargetBounds) -> Result<String> {
+        let target = self.get_target(target)?;
 
         Ok(self.get_script_path(self.use_version_specific_test, &target.test_script, "test"))
     }
 
-    pub fn get_uninstall_script_path(&self, target_name: &str) -> Result<String> {
-        let target = self.get_target(target_name)?;
+    pub fn get_uninstall_script_path(&self, target: &TargetBounds) -> Result<String> {
+        let target = self.get_target(target)?;
 
         Ok(self.get_script_path(self.use_version_specific_uninstall, &target.uninstall_script, "uninstall"))
     }
 
     /// Gets the script arguments for the given target.
     /// Returns None when the target cannot be found.
-    pub fn get_script_args(&self, target_name: &str) -> Result<HashMap<&str, &str>> {
-        let target = self.get_target(target_name)?;
+    pub fn get_script_args(&self, target: &TargetBounds) -> Result<HashMap<&str, &str>> {
+        let target = self.get_target(target)?;
 
         Ok(self.script_args.iter().chain(target.script_args.iter()).map(|(key, value)| (key.as_str(), value.as_str())).collect())
     }

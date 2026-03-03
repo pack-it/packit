@@ -110,15 +110,9 @@ impl Dependency {
         }
 
         for range in &self.version_ranges {
-            return match range {
-                VersionBounds::Range(lower, upper) if lower <= version && upper >= version => true,
-                VersionBounds::Lower(lower) if version < lower => true,
-                VersionBounds::LowerEqual(lower) if version <= lower => true,
-                VersionBounds::Higher(higher) if version > higher => true,
-                VersionBounds::HigherEqual(higher) if version >= higher => true,
-                VersionBounds::Equal(equal) if version == equal => true,
-                _ => continue,
-            };
+            if range.covers(version) {
+                return true;
+            }
         }
 
         false

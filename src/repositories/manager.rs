@@ -6,11 +6,11 @@ use crate::{
     cli::display::logging::{debug, error, warning},
     config::Config,
     installer::{types::PackageId, unpack::ArchiveExtension},
-    platforms::TARGET_ARCHITECTURE,
+    platforms::Target,
     repositories::{
         error::{RepositoryError, Result},
         provider::{self, MetadataProvider, PrebuildProvider},
-        types::{Checksum, PackageMeta, PackageVersionMeta, RepositoryMeta},
+        types::{Checksum, PackageMeta, PackageVersionMeta, RepositoryMeta, TargetBounds},
     },
 };
 
@@ -98,7 +98,7 @@ impl<'a> RepositoryManager<'a> {
             };
 
             // Check if package contains the target
-            if !package.latest_versions.contains_key(TARGET_ARCHITECTURE) {
+            if !package.get_best_target(&Target::current()).is_ok() {
                 continue;
             }
 
@@ -128,7 +128,7 @@ impl<'a> RepositoryManager<'a> {
 
     /// Reads package version metadata of the given package, containing dependencies and targets.
     /// Returns the id of the repository and the package version metadata.
-    pub fn read_package_version(&self, package_id: &PackageId) -> Result<(String, PackageVersionMeta)> {
+    pub fn read_package_version(&self, package_id: &PackageId, target_bounds: &TargetBounds) -> Result<(String, PackageVersionMeta)> {
         for repository_id in &self.config.repositories_rank {
             let provider = match self.metadata_providers.get(repository_id) {
                 Some(provider) => provider,
@@ -147,7 +147,7 @@ impl<'a> RepositoryManager<'a> {
             };
 
             // Check if package contains the target
-            if !package.has_target(TARGET_ARCHITECTURE)? {
+            if !package.has_target(target_bounds)? {
                 continue;
             }
 
@@ -203,7 +203,7 @@ impl<'a> RepositoryManager<'a> {
 
     /// Retrieves the prebuild url for the given package version.
     /// Returns the url, or None if a prebuild is not available for the package.
-    pub fn get_prebuild_url(&self, repository_id: &str, package: &PackageId, revision: u64, target: &str) -> Result<Option<String>> {
+    pub fn get_prebuild_url(&self, repository_id: &str, package: &PackageId, revision: u64, target: &Target) -> Result<Option<String>> {
         let provider = match self.prebuild_providers.get(repository_id) {
             Some(provider) => provider,
             None => {
@@ -218,7 +218,13 @@ impl<'a> RepositoryManager<'a> {
 
     /// Retrieves the prebuild checksum for the given package version.
     /// Returns the checksum, or None if a prebuild is not available for the package.
-    pub fn get_prebuild_checksum(&self, repository_id: &str, package: &PackageId, revision: u64, target: &str) -> Result<Option<Checksum>> {
+    pub fn get_prebuild_checksum(
+        &self,
+        repository_id: &str,
+        package: &PackageId,
+        revision: u64,
+        target: &Target,
+    ) -> Result<Option<Checksum>> {
         let provider = match self.prebuild_providers.get(repository_id) {
             Some(provider) => provider,
             None => {
@@ -237,7 +243,7 @@ impl<'a> RepositoryManager<'a> {
         repository_id: &str,
         package: &PackageId,
         revision: u64,
-        target: &str,
+        target: &Target,
     ) -> Result<(ArchiveExtension, Bytes)> {
         let provider = match self.prebuild_providers.get(repository_id) {
             Some(provider) => provider,

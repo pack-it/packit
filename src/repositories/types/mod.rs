@@ -18,3 +18,5 @@ pub use self::common::Script;
 
 pub use self::common::Source;
 pub use self::common::Sources;
+
+pub use self::target_bounds::TargetBounds;

@@ -86,7 +86,7 @@ impl OsVersion {
         //TODO
     }
 
-    fn get_os(&self) -> Os {
+    pub fn get_os(&self) -> Os {
         match self {
             Self::MacOs { .. } => Os::MacOs,
             Self::Linux { .. } => Os::Linux,

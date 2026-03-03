@@ -10,11 +10,10 @@ use crate::{
         scripts::{self, ScriptData, ScriptError},
         unpack::{ArchiveExtension, UnpackError, unpack},
     },
-    platforms::TARGET_ARCHITECTURE,
     repositories::{
         error::RepositoryError,
         manager::RepositoryManager,
-        types::{Checksum, PackageMeta, PackageVersionMeta},
+        types::{Checksum, PackageMeta, PackageVersionMeta, TargetBounds},
     },
     storage::package_register::PackageRegister,
 };
@@ -71,12 +70,13 @@ impl<'a> Builder<'a> {
 
     pub fn build(
         &self,
+        target_bounds: &TargetBounds,
         package: &PackageMeta,
         package_version: &PackageVersionMeta,
         repository_id: &str,
         destination_dir: impl AsRef<Path>,
     ) -> Result<()> {
-        let target = package_version.get_target(TARGET_ARCHITECTURE)?;
+        let target = package_version.get_target(target_bounds)?;
 
         let mut installed_dependencies = Vec::new();
         let mut installed_build_dependencies = Vec::new();
@@ -114,7 +114,7 @@ impl<'a> Builder<'a> {
         }
 
         // Get source from the package version
-        let source = package_version.get_source(TARGET_ARCHITECTURE)?;
+        let source = package_version.get_source(target_bounds)?;
 
         // Show download spinner
         let spinner = Spinner::new();
@@ -159,10 +159,10 @@ impl<'a> Builder<'a> {
         );
 
         // Construct args for the build script
-        let script_args = package_version.get_script_args(TARGET_ARCHITECTURE)?;
+        let script_args = package_version.get_script_args(target_bounds)?;
 
         // Download and run build script
-        let script_path = package_version.get_build_script_path(TARGET_ARCHITECTURE)?;
+        let script_path = package_version.get_build_script_path(target_bounds)?;
         let script_path = scripts::download_script(self.repository_manager, &script_path, &package.name, &repository_id)?
             .ok_or(ScriptError::ScriptNotFound("build".into()))?;
         let script_data = ScriptData::new(&script_path, &destination_dir, &package_version.version, self.config, &script_args);

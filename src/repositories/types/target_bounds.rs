@@ -6,7 +6,7 @@ use thiserror::Error;
 use crate::{
     cli::display::logging::warning,
     installer::types::VersionBounds,
-    platforms::{Os, Target, TargetArchitecture},
+    platforms::{Os, OsVersion, Target, TargetArchitecture},
 };
 
 /// Errors that occur when creating or using the target bounds.
@@ -19,7 +19,7 @@ pub enum TargetBoundsError {
     InvalidTargetName,
 }
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TargetName {
     Architecture(TargetArchitecture),
     Os(Os),
@@ -67,9 +67,9 @@ impl TargetName {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TargetBounds {
-    pub name: TargetName, //TODO: we should probably split name into an architecture enum
+    pub name: TargetName,
     pub addition: Option<String>,
     pub version_bounds: Vec<VersionBounds>,
 }
@@ -119,7 +119,38 @@ impl FromStr for TargetBounds {
 
 impl TargetBounds {
     pub fn satisfies(&self, target: &Target) -> bool {
-        //TODO
+        // Check if target name matches
+        match &self.name {
+            TargetName::Architecture(architecture) if *architecture != target.architecture => return false,
+            TargetName::Os(os) if *os != target.os.get_os() => return false,
+            TargetName::Unix if !target.os.get_os().is_unix() => return false,
+            _ => (),
+        }
+
+        let version = match &target.os {
+            OsVersion::MacOs { version } | OsVersion::Windows { version } => version,
+            OsVersion::Linux {
+                distro,
+                distro_version,
+                kernel_version,
+            } => match &self.addition {
+                Some(addition) if addition != distro => return false,
+                Some(_) => distro_version,
+                None => kernel_version,
+            },
+            OsVersion::Unknown => return false,
+        };
+
+        if self.version_bounds.is_empty() {
+            return true;
+        }
+
+        for range in &self.version_bounds {
+            if range.covers(&version) {
+                return true;
+            }
+        }
+
         false
     }
 
