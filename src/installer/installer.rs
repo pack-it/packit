@@ -579,6 +579,14 @@ impl<'a> Installer<'a> {
     pub fn update(&mut self, optional_id: &OptionalPackageId, new_version: &Version) -> Result<()> {
         let old_package = self.get_specific_package_update(optional_id)?;
 
+        // Check if the new version is lower then the current
+        if old_package.package_id.version > *new_version {
+            return Err(InstallerError::UpdateVersionError {
+                new_version: old_package.package_id.version.clone(),
+            });
+        }
+
+        // Check if the new version is already installed
         if old_package.package_id.version == *new_version {
             return Err(InstallerError::ExistError {
                 package_id: old_package.package_id.clone(),

@@ -51,6 +51,11 @@ pub enum InstallerError {
         new_version: Version,
     },
 
+    #[error("Could not update, the given version '{new_version}' is lower then the current version.")]
+    UpdateVersionError {
+        new_version: Version,
+    },
+
     #[error("Cannot delete package, '{package_name}' is a dependency.")]
     DependencyError {
         package_name: String,
