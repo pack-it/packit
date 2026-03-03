@@ -1,14 +1,14 @@
-use crate::platforms::{OsVersion, TARGET_ARCHITECTURE};
+use crate::platforms::{OsVersion, TargetArchitecture};
 
 pub struct Target {
-    pub architecture: String,
+    pub architecture: TargetArchitecture,
     pub os: OsVersion,
 }
 
 impl Target {
     pub fn current() -> Self {
         Self {
-            architecture: TARGET_ARCHITECTURE.into(),
+            architecture: TargetArchitecture::current(),
             os: OsVersion::current(),
         }
     }

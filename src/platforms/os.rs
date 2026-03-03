@@ -2,9 +2,26 @@ use std::sync::LazyLock;
 
 use crate::{cli::display::logging::error, installer::types::Version};
 
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum Os {
+    MacOs,
+    Linux,
+    Windows,
+    Unknown,
+}
+
+impl Os {
+    pub fn is_unix(&self) -> bool {
+        match self {
+            Self::MacOs | Self::Linux => true,
+            _ => false,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub enum OsVersion {
-    Macos {
+    MacOs {
         version: Version,
     },
     Linux {
@@ -56,7 +73,7 @@ impl OsVersion {
             },
         };
 
-        Some(Self::Macos { version })
+        Some(Self::MacOs { version })
     }
 
     #[cfg(target_os = "linux")]
@@ -67,5 +84,14 @@ impl OsVersion {
     #[cfg(target_os = "windows")]
     fn get_version() -> Option<Self> {
         //TODO
+    }
+
+    fn get_os(&self) -> Os {
+        match self {
+            Self::MacOs { .. } => Os::MacOs,
+            Self::Linux { .. } => Os::Linux,
+            Self::Windows { .. } => Os::Windows,
+            Self::Unknown => Os::Unknown,
+        }
     }
 }

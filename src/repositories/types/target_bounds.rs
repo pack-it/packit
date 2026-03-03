@@ -6,7 +6,7 @@ use thiserror::Error;
 use crate::{
     cli::display::logging::warning,
     installer::types::VersionBounds,
-    platforms::{self, Target},
+    platforms::{Os, Target, TargetArchitecture},
 };
 
 /// Errors that occur when creating or using the target bounds.
@@ -14,11 +14,62 @@ use crate::{
 pub enum TargetBoundsError {
     #[error("Target additions are not allowed for the target OS")]
     AdditionNotAllowed,
+
+    #[error("Target name is invalid")]
+    InvalidTargetName,
+}
+
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub enum TargetName {
+    Architecture(TargetArchitecture),
+    Os(Os),
+    Unix,
+}
+
+impl FromStr for TargetName {
+    type Err = TargetBoundsError;
+
+    fn from_str(string: &str) -> Result<Self, Self::Err> {
+        if string == "unix" {
+            return Ok(Self::Unix);
+        }
+
+        match string {
+            "macos" => return Ok(Self::Os(Os::MacOs)),
+            "linux" => return Ok(Self::Os(Os::Linux)),
+            "windows" => return Ok(Self::Os(Os::Windows)),
+            _ => (),
+        }
+
+        if let Ok(architecture) = TargetArchitecture::from_str(string) {
+            return Ok(Self::Architecture(architecture));
+        }
+
+        Err(TargetBoundsError::InvalidTargetName)
+    }
+}
+
+impl TargetName {
+    pub fn is_unix(&self) -> bool {
+        match self {
+            TargetName::Architecture(architecture) => architecture.get_os().is_unix(),
+            TargetName::Os(os) => os.is_unix(),
+            TargetName::Unix => true,
+        }
+    }
+
+    pub fn get_os(&self) -> Option<Os> {
+        match self {
+            TargetName::Architecture(architecture) => Some(architecture.get_os()),
+            TargetName::Os(os) => Some(os.clone()),
+            TargetName::Unix => None,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct TargetBounds {
-    pub name: String, //TODO: we should probably split name into an architecture enum
+    pub name: TargetName, //TODO: we should probably split name into an architecture enum
     pub addition: Option<String>,
     pub version_bounds: Vec<VersionBounds>,
 }
@@ -49,9 +100,11 @@ impl FromStr for TargetBounds {
         // TODO: split addition from name
         let addition = None;
 
+        let name = TargetName::from_str(name)?;
+
         // Check if additions are allowed
         if addition.is_some() {
-            if platforms::get_os_name(name) != "linux" {
+            if !matches!(name.get_os(), Some(Os::Linux)) {
                 return Err(TargetBoundsError::AdditionNotAllowed);
             }
         }
@@ -72,23 +125,23 @@ impl TargetBounds {
 
     fn calculate_priority(&self) -> u32 {
         if self.addition.is_none() && self.version_bounds.is_empty() {
-            match self.name.as_str() {
-                "unix" => return 1,
-                "macos" | "linux" | "windows" => return 2,
+            match self.name {
+                TargetName::Unix => return 1,
+                TargetName::Os(_) => return 2,
                 _ => return 3,
             }
         }
 
         if self.addition.is_none() && !self.version_bounds.is_empty() {
-            match self.name.as_str() {
-                "macos" | "linux" | "windows" => return 4,
+            match self.name {
+                TargetName::Os(_) => return 4,
                 _ => return 5,
             }
         }
 
         if self.addition.is_some() && !self.version_bounds.is_empty() {
-            match self.name.as_str() {
-                "macos" | "linux" | "windows" => return 6,
+            match self.name {
+                TargetName::Os(_) => return 6,
                 _ => return 7,
             }
         }
