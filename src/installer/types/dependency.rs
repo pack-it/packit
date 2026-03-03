@@ -95,6 +95,7 @@ impl Dependency {
         &self.name
     }
 
+    // TODO: Should only except package_id, version shouldn't be optional
     pub fn satisfied(&self, name: &str, version: Option<&Version>) -> bool {
         if self.name != name {
             return false;

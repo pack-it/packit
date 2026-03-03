@@ -10,6 +10,7 @@ mod search;
 mod switch;
 mod uninstall;
 mod unlink;
+mod update;
 
 use std::process::exit;
 
@@ -20,6 +21,7 @@ use crate::{
         commands::{
             check::CheckArgs, fix::FixArgs, info::InfoArgs, install::InstallArgs, link::LinkArgs, list::ListArgs, package::PackageArgs,
             repositories::RepositoryArgs, search::SearchArgs, switch::SwitchArgs, uninstall::UninstallArgs, unlink::UnlinkArgs,
+            update::UpdateArgs,
         },
         display::logging::error,
     },
@@ -72,6 +74,9 @@ enum Commands {
 
     /// Get info from a specific package
     Info(InfoArgs),
+
+    /// Update an installed package
+    Update(UpdateArgs),
 }
 
 impl Cli {
@@ -109,6 +114,7 @@ impl Cli {
             Commands::Fix(args) => args,
             Commands::Package(args) => args,
             Commands::Info(args) => args,
+            Commands::Update(args) => args,
         };
 
         args.handle(config, manager);
