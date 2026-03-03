@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use crate::installer::types::{DependencyParserError, Version};
+use crate::installer::types::{Version, VersionError};
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum VersionBounds {
@@ -13,7 +13,7 @@ pub enum VersionBounds {
 }
 
 impl FromStr for VersionBounds {
-    type Err = DependencyParserError;
+    type Err = VersionError;
 
     fn from_str(version: &str) -> Result<Self, Self::Err> {
         // Check if the statement is a two sided range
@@ -47,7 +47,7 @@ impl FromStr for VersionBounds {
 }
 
 impl VersionBounds {
-    pub fn from_str_ranges(ranges: &str) -> Result<Vec<VersionBounds>, DependencyParserError> {
+    pub fn from_str_ranges(ranges: &str) -> Result<Vec<VersionBounds>, VersionError> {
         // Check for empty input
         if ranges.is_empty() {
             return Ok(Vec::new());

@@ -1,6 +1,9 @@
-use std::sync::LazyLock;
+use std::{str::FromStr, sync::LazyLock};
 
-use crate::{cli::display::logging::error, installer::types::Version};
+use crate::{
+    cli::display::logging::{debug, error},
+    installer::types::Version,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Os {
@@ -47,7 +50,7 @@ impl OsVersion {
 
     #[cfg(target_os = "macos")]
     fn get_version() -> Option<Self> {
-        use std::{process::Command, str::FromStr};
+        use std::process::Command;
 
         let output = match Command::new("/usr/bin/sw_vers").arg("-productVersion").output() {
             Ok(output) => output,
@@ -73,6 +76,8 @@ impl OsVersion {
             },
         };
 
+        debug!("Retrieved macOS current version {version}");
+
         Some(Self::MacOs { version })
     }
 
@@ -84,6 +89,11 @@ impl OsVersion {
     #[cfg(target_os = "windows")]
     fn get_version() -> Option<Self> {
         //TODO
+    }
+
+    #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+    fn get_version() -> Option<Self> {
+        None
     }
 
     pub fn get_os(&self) -> Os {

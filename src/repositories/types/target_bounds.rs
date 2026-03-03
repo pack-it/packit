@@ -5,7 +5,7 @@ use thiserror::Error;
 
 use crate::{
     cli::display::logging::warning,
-    installer::types::VersionBounds,
+    installer::types::{VersionBounds, VersionError},
     platforms::{Os, OsVersion, Target, TargetArchitecture},
 };
 
@@ -17,6 +17,9 @@ pub enum TargetBoundsError {
 
     #[error("Target name is invalid")]
     InvalidTargetName,
+
+    #[error("Cannot parse version number")]
+    VersionError(#[from] VersionError),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -89,17 +92,19 @@ impl FromStr for TargetBounds {
     type Err = TargetBoundsError;
 
     fn from_str(string: &str) -> Result<Self, Self::Err> {
-        let index = string.chars().position(|c| c == '@');
-
-        let (name, version_bounds) = match index {
-            Some(index) => string.split_at(index),
+        // Split name and version_bounds
+        let (name, version_bounds) = match string.split_once('@') {
+            Some(val) => val,
             None => (string, ""),
         };
 
-        let version_bounds = VersionBounds::from_str_ranges(version_bounds).unwrap();
+        let version_bounds = VersionBounds::from_str_ranges(version_bounds)?;
 
-        // TODO: split addition from name
-        let addition = None;
+        // Split addition from name
+        let (name, addition) = match name.split_once(':') {
+            Some((name, addition)) => (name, Some(addition)),
+            None => (name, None),
+        };
 
         let name = TargetName::from_str(name)?;
 
@@ -112,7 +117,7 @@ impl FromStr for TargetBounds {
 
         Ok(Self {
             name: name.into(),
-            addition,
+            addition: addition.map(|x| x.into()),
             version_bounds,
         })
     }
