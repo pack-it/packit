@@ -15,13 +15,12 @@ use crate::{
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
-// TODO: Add a version parameter to specify which version to update or downgrade to
 #[derive(Args, Debug)]
 pub struct UpdateArgs {
-    /// The name of the packages to update, with an optional version specified with NAME@VERSION
+    /// The name of the package to update, with an optional version specified with NAME@VERSION.
     optional_id: OptionalPackageId,
 
-    /// A new version to update to. Can only be a high version then the current version
+    /// The version to update to. This can only be a higher version than the current version.
     new_version: Option<Version>,
 }
 

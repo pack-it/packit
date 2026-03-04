@@ -39,7 +39,7 @@ pub enum InstallerError {
     },
 
     #[error("Package '{package_id}' is already installed.")]
-    ExistError {
+    AlreadyInstalledError {
         package_id: PackageId,
     },
 
@@ -52,7 +52,7 @@ pub enum InstallerError {
     },
 
     #[error("Could not update, the given version '{new_version}' is lower then the current version.")]
-    UpdateVersionError {
+    VersionTooLowError {
         new_version: Version,
     },
 

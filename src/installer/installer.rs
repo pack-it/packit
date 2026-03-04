@@ -581,14 +581,14 @@ impl<'a> Installer<'a> {
 
         // Check if the new version is lower then the current
         if old_package.package_id.version > *new_version {
-            return Err(InstallerError::UpdateVersionError {
+            return Err(InstallerError::VersionTooLowError {
                 new_version: old_package.package_id.version.clone(),
             });
         }
 
         // Check if the new version is already installed
         if old_package.package_id.version == *new_version {
-            return Err(InstallerError::ExistError {
+            return Err(InstallerError::AlreadyInstalledError {
                 package_id: old_package.package_id.clone(),
             });
         }
