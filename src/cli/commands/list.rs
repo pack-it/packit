@@ -5,6 +5,7 @@ use crate::{
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
+// TODO: Expand command to list updateable packages
 #[derive(Args, Debug)]
 pub struct ListArgs {}
 

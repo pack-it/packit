@@ -2,7 +2,12 @@ use thiserror::Error;
 
 use crate::{
     cli::display::error::DisplayError,
-    installer::{builder::BuilderError, scripts::ScriptError, types::PackageIdError, unpack::UnpackError},
+    installer::{
+        builder::BuilderError,
+        scripts::ScriptError,
+        types::{PackageId, PackageIdError, Version},
+        unpack::UnpackError,
+    },
     platforms::symlink::SymlinkError,
     repositories::error::RepositoryError,
     storage::error::RegisterError,
@@ -27,10 +32,28 @@ pub enum InstallerError {
         e: std::io::Error,
     },
 
-    #[error("Package '{package_name}' with version '{}' does not exist.", version.clone().unwrap_or("any".to_string()))]
+    #[error("Package '{package_name}' with version '{}' is not installed.", version.clone().unwrap_or("any".to_string()))]
     PackageNotFound {
         package_name: String,
         version: Option<String>,
+    },
+
+    #[error("Package '{package_id}' is already installed.")]
+    AlreadyInstalledError {
+        package_id: PackageId,
+    },
+
+    #[error("Multiple versions are installed, so only package name input is not specific enough. Please provide a version as well.")]
+    SpecificityError,
+
+    #[error("The new version '{new_version}' of this package cannot satisfy all dependents from the old package version.")]
+    SatisfyError {
+        new_version: Version,
+    },
+
+    #[error("Could not update, the given version '{new_version}' is lower then the current version.")]
+    VersionTooLowError {
+        new_version: Version,
     },
 
     #[error("Cannot delete package, '{package_name}' is a dependency.")]

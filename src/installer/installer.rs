@@ -10,7 +10,7 @@ use crate::{
         options::InstallerOptions,
         scripts::{self, ScriptData},
         symlinker::Symlinker,
-        types::{Dependency, OptionalPackageId, PackageId},
+        types::{Dependency, OptionalPackageId, PackageId, Version},
         unpack::unpack,
     },
     platforms::{Target, symlink},
@@ -20,13 +20,14 @@ use crate::{
         provider,
         types::{Checksum, PackageMeta, PackageTarget, PackageVersionMeta, TargetBounds},
     },
-    storage::package_register::PackageRegister,
+    storage::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
     utils::tree::Node,
 };
 
 use std::{
     fs,
     path::{Path, PathBuf},
+    process::exit,
 };
 
 /// The installer of Packit, managing the installation of packages on the system.
@@ -573,5 +574,119 @@ impl<'a> Installer<'a> {
 
         // TODO: Use something else then readonly, because it can be different for super user and group
         Ok(!permissions.readonly())
+    }
+
+    pub fn update(&mut self, optional_id: &OptionalPackageId, new_version: &Version) -> Result<()> {
+        let old_package = self.get_specific_package_update(optional_id)?;
+
+        // Check if the new version is lower then the current
+        if old_package.package_id.version > *new_version {
+            return Err(InstallerError::VersionTooLowError {
+                new_version: old_package.package_id.version.clone(),
+            });
+        }
+
+        // Check if the new version is already installed
+        if old_package.package_id.version == *new_version {
+            return Err(InstallerError::AlreadyInstalledError {
+                package_id: old_package.package_id.clone(),
+            });
+        }
+
+        // Check if the new version still satisfies all dependents
+        for dependent in &old_package.dependents {
+            let (repository_id, _) = self.repository_manager.read_package(&dependent.name)?;
+            let package_version_meta = self.repository_manager.read_repo_package_version(&repository_id, dependent)?;
+            let dependency = match package_version_meta.dependencies.iter().find(|d| *d.get_name() == old_package.package_id.name) {
+                Some(dependency) => dependency,
+                None => {
+                    warning!(
+                        "Dependent is not a dependent of '{}' eventhough it should be.",
+                        old_package.package_id
+                    );
+                    continue;
+                },
+            };
+
+            if !dependency.satisfied(&old_package.package_id.name, Some(new_version)) {
+                return Err(InstallerError::SatisfyError {
+                    new_version: new_version.clone(),
+                });
+            }
+        }
+
+        // Use the old package reference before another borrow from self.install
+        // Clone to avoid borrowing issues
+        let dependents = old_package.dependents.clone();
+        let old_package_id = old_package.package_id.clone();
+
+        // Install the newer packager first
+        let new_package_id = PackageId::new(&old_package.package_id.name, new_version.clone())?;
+        self.install(&new_package_id.clone().into())?;
+
+        // Add dependents to new_package
+        let package_version = match self.register.get_package_version_mut(&new_package_id) {
+            Some(package_version) => package_version,
+            None => {
+                // Theoretically unreachable
+                error!(msg: "New package version '{new_version}' was not installed correctly.");
+                exit(1);
+            },
+        };
+
+        // Set the dependents of the old package for the new package
+        package_version.dependents = dependents.clone();
+
+        // Change the register dependency entries to the new package version
+        for package_id in &dependents {
+            if let Some(dependent) = self.register.get_package_version_mut(package_id) {
+                dependent.dependencies.remove(&old_package_id);
+                dependent.dependencies.insert(new_package_id.clone());
+            }
+        }
+
+        // Set the active and symlinked state for the new package (to the old package state)
+        let package = self.register.get_package(&old_package_id.name).expect("Expected old package to still exist.");
+        if package.active_version == *new_version {
+            Symlinker::new(self.config).set_active(self.register, &new_package_id, package.symlinked)?;
+        }
+
+        println!("The new package version '{new_version}' has been succesfully installed, uninstalling the old version now.");
+
+        // Remove the old package dependents, because the old package is no longer a dependency
+        // Note that this is necessary before doing an uninstall.
+        let old_package = self.register.get_package_version_mut(&old_package_id).expect("Expected old package to still exist.");
+        old_package.dependents.clear();
+
+        // Uninstall the package
+        self.uninstall(&old_package_id.into())?;
+
+        Ok(())
+    }
+
+    fn get_specific_package_update(&self, optional_id: &OptionalPackageId) -> Result<&InstalledPackageVersion> {
+        // If a version is specified multiple installed versions are okay
+        if let Some(package_id) = optional_id.versioned() {
+            return Ok(
+                self.register.get_package_version(&package_id).ok_or(InstallerError::PackageNotFound {
+                    package_name: package_id.name,
+                    version: Some(package_id.version.to_string()),
+                })?,
+            );
+        }
+
+        // Get installed versions
+        let installed_versions = self.register.get_all_package_versions(&optional_id.name);
+
+        // Check if version is specified when multiple versions are installed
+        if installed_versions.len() > 1 && optional_id.version.is_none() {
+            return Err(InstallerError::SpecificityError);
+        }
+
+        // Get the installed package version and simultaniously check if any version of the package exists
+        Ok(installed_versions.get(0).ok_or(InstallerError::PackageNotFound {
+            package_name: optional_id.name.to_string(),
+            version: Some("any".to_string()),
+        })?)
     }
 }
