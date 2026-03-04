@@ -128,6 +128,12 @@ impl FromStr for Version {
     }
 }
 
+impl From<&[u32]> for Version {
+    fn from(value: &[u32]) -> Self {
+        Self { numbers: Vec::from(value) }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

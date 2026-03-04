@@ -21,3 +21,7 @@ sha2 = "0.10.9"
 hex = "0.4.3"
 zip = "8.1.0"
 regex = "1.12.3"
+
+# Windows dependencies
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-version = "0.1.7"

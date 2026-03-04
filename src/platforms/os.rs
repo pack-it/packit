@@ -182,7 +182,16 @@ impl OsVersion {
 
     #[cfg(target_os = "windows")]
     fn get_version() -> Option<Self> {
-        //TODO
+        let windows_version = windows_version::OsVersion::current();
+
+        let version = Version::from(&[windows_version.major, windows_version.minor, windows_version.pack]);
+
+        debug!(
+            "Retrieved current windows version version {version} with build version {}",
+            windows_version.build
+        );
+
+        Some(Self::Windows { version })
     }
 
     #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
