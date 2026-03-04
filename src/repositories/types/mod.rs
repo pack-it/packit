@@ -4,6 +4,7 @@ mod package;
 mod package_target;
 mod package_version;
 mod repository;
+mod target_bounds;
 
 pub use self::repository::RepositoryMeta;
 
@@ -17,3 +18,5 @@ pub use self::common::Script;
 
 pub use self::common::Source;
 pub use self::common::Sources;
+
+pub use self::target_bounds::TargetBounds;

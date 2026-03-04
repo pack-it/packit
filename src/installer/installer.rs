@@ -13,12 +13,12 @@ use crate::{
         types::{Dependency, OptionalPackageId, PackageId},
         unpack::unpack,
     },
-    platforms::{TARGET_ARCHITECTURE, symlink},
+    platforms::{Target, symlink},
     repositories::{
         error::RepositoryError,
         manager::RepositoryManager,
         provider,
-        types::{Checksum, PackageMeta, PackageTarget, PackageVersionMeta},
+        types::{Checksum, PackageMeta, PackageTarget, PackageVersionMeta, TargetBounds},
     },
     storage::package_register::PackageRegister,
     utils::tree::Node,
@@ -50,6 +50,7 @@ pub struct InstallMeta {
     pub package_metadata: PackageMeta,
     pub version_metadata: PackageVersionMeta,
     pub repository_id: String,
+    pub target_bounds: TargetBounds,
 }
 
 impl InstallMeta {
@@ -59,11 +60,13 @@ impl InstallMeta {
         let version = package_metadata.get_latest_dependency_version(&dependency)?;
         let dependency_id = dependency.to_package_id(version);
         let version_metadata = manager.read_repo_package_version(&repository_id, &dependency_id)?;
+        let target_bounds = version_metadata.get_best_target(&Target::current())?;
 
         Ok(Self {
             package_metadata,
             version_metadata,
             repository_id,
+            target_bounds,
         })
     }
 }
@@ -92,7 +95,7 @@ impl<'a> Installer<'a> {
         }
 
         let (repository_id, package_metadata) = self.repository_manager.read_package(&optional_id.name)?;
-        let latest_version = package_metadata.get_latest_version(TARGET_ARCHITECTURE)?;
+        let latest_version = package_metadata.get_latest_version(&Target::current())?;
 
         // If the version isn't specified check if a package with this package name is already installed (otherwise a user can get two different version installed without knowing)
         if optional_id.version.is_none() {
@@ -122,12 +125,14 @@ impl<'a> Installer<'a> {
 
         // Get package version info
         let version_metadata = self.repository_manager.read_repo_package_version(&repository_id, &package_id)?;
+        let target_bounds = version_metadata.get_best_target(&Target::current())?;
 
         // Create flattend dependency sequence
         let root_meta = InstallMeta {
             package_metadata,
             version_metadata,
             repository_id,
+            target_bounds,
         };
 
         let mut tree = match self.options.build_source {
@@ -162,7 +167,7 @@ impl<'a> Installer<'a> {
         let revision = node_value.version_metadata.revisions.len() as u64;
 
         // Install the package with a prebuild if possible
-        match self.repository_manager.get_prebuild_url(&node_value.repository_id, node.get_id(), revision, TARGET_ARCHITECTURE) {
+        match self.repository_manager.get_prebuild_url(&node_value.repository_id, node.get_id(), revision, &Target::current()) {
             Ok(Some(_)) => {
                 self.install_package(node, true)?;
                 return Ok(());
@@ -218,10 +223,10 @@ impl<'a> Installer<'a> {
         }
 
         let version_meta = &node_value.version_metadata;
-        let script_args = version_meta.get_script_args(TARGET_ARCHITECTURE)?;
+        let script_args = version_meta.get_script_args(&node_value.target_bounds)?;
 
         // Download and run pre install script if it exists
-        let script_path = version_meta.get_preinstall_script_path(TARGET_ARCHITECTURE)?;
+        let script_path = version_meta.get_preinstall_script_path(&node_value.target_bounds)?;
         let downloaded_script =
             scripts::download_script(self.repository_manager, &script_path, &package_id.name, &node_value.repository_id)?;
         if let Some(script_file) = downloaded_script {
@@ -233,7 +238,7 @@ impl<'a> Installer<'a> {
         let source_repository = self.config.repositories.get(&node_value.repository_id).expect("Expected repository in config");
 
         // Get the target information from the package version info
-        let target = version_meta.get_target(TARGET_ARCHITECTURE)?;
+        let target = version_meta.get_target(&node_value.target_bounds)?;
 
         // Get build version of package
         match use_prebuild {
@@ -242,6 +247,7 @@ impl<'a> Installer<'a> {
                 self.download_prebuild(&node_value.repository_id, &package_id, revision, &install_directory)?
             },
             false => Builder::new(self.config, self.register, self.repository_manager).build(
+                &node_value.target_bounds,
                 &node_value.package_metadata,
                 &version_meta,
                 &node_value.repository_id,
@@ -262,7 +268,7 @@ impl<'a> Installer<'a> {
         self.register.save_to(&PackageRegister::get_default_path(self.config))?;
 
         // Download and run post install script if it exists
-        let script_path = version_meta.get_postinstall_script_path(TARGET_ARCHITECTURE)?;
+        let script_path = version_meta.get_postinstall_script_path(&node_value.target_bounds)?;
         let downloaded_script =
             scripts::download_script(self.repository_manager, &script_path, &package_id.name, &node_value.repository_id)?;
         if let Some(script_file) = downloaded_script {
@@ -273,7 +279,7 @@ impl<'a> Installer<'a> {
         self.determine_active(node_value, &package_id, target)?;
 
         // Download and run test script if it exists
-        let script_path = version_meta.get_test_script_path(TARGET_ARCHITECTURE)?;
+        let script_path = version_meta.get_test_script_path(&node_value.target_bounds)?;
         let downloaded_script =
             scripts::download_script(self.repository_manager, &script_path, &package_id.name, &node_value.repository_id)?;
         if let Some(script_file) = downloaded_script {
@@ -351,8 +357,8 @@ impl<'a> Installer<'a> {
     }
 
     fn download_prebuild(&self, repository_id: &str, package: &PackageId, revision: u64, destination_dir: impl AsRef<Path>) -> Result<()> {
-        let (extension, bytes) = self.repository_manager.read_prebuild(repository_id, package, revision, TARGET_ARCHITECTURE)?;
-        let checksum = self.repository_manager.get_prebuild_checksum(repository_id, package, revision, TARGET_ARCHITECTURE)?;
+        let (extension, bytes) = self.repository_manager.read_prebuild(repository_id, package, revision, &Target::current())?;
+        let checksum = self.repository_manager.get_prebuild_checksum(repository_id, package, revision, &Target::current())?;
 
         // Calculate the checksum
         let calculated_checksum = Checksum::from_bytes(&bytes);
@@ -529,15 +535,17 @@ impl<'a> Installer<'a> {
             },
         };
 
+        let target_bounds = package_version.get_best_target(&Target::current())?;
+
         // Get script data from package version metadata
-        let script_path = package_version.get_uninstall_script_path(TARGET_ARCHITECTURE)?;
+        let script_path = package_version.get_uninstall_script_path(&target_bounds)?;
 
         // Download and run script
         if let Some(script_text) = provider.read_script(&package_id.name, &script_path)? {
             let script_path = scripts::write_script_to_tempfile(&script_text)?;
 
             // Run script
-            let script_args = package_version.get_script_args(TARGET_ARCHITECTURE)?;
+            let script_args = package_version.get_script_args(&target_bounds)?;
             let script_data = ScriptData::new(&script_path, &install_directory, &package_id.version, self.config, &script_args);
             scripts::run_uninstall_script(&script_data)?
         }

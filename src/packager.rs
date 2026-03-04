@@ -13,7 +13,7 @@ use crate::{
     cli::display::logging::warning,
     config::Config,
     installer::types::PackageId,
-    platforms::TARGET_ARCHITECTURE,
+    platforms::TargetArchitecture,
     repositories::{error::RepositoryError, types::Checksum},
 };
 
@@ -46,7 +46,8 @@ pub fn package(config: &Config, package_id: &PackageId, destination: &PathBuf, r
     let checksum = Checksum::from_bytes(&compressed);
 
     // Create the file names
-    let filename = format!("{package_id}-{revisions}-{TARGET_ARCHITECTURE}");
+    let target_architecture = TargetArchitecture::current().to_string();
+    let filename = format!("{package_id}-{revisions}-{target_architecture}");
     let compressed_filename = format!("{filename}.tar.gz");
     let prepackage_file = destination.join(compressed_filename);
     let checksum_filename = format!("{filename}.sha256");

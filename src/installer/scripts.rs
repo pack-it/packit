@@ -12,7 +12,7 @@ use crate::{
     cli::display::logging::warning,
     config::Config,
     installer::{build_env::BuildEnv, types::Version},
-    platforms::TARGET_ARCHITECTURE,
+    platforms::TargetArchitecture,
     repositories::{error::RepositoryError, manager::RepositoryManager},
     utils::env::Environment,
 };
@@ -114,7 +114,7 @@ fn run_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, env: Environm
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .env("PACKIT_PREFIX_PATH", &script_data.config.prefix_directory)
-        .env("PACKIT_TARGET", TARGET_ARCHITECTURE)
+        .env("PACKIT_TARGET", TargetArchitecture::current().to_string())
         .env("PACKIT_PACKAGE_PATH", package_install_path)
         .env("PACKIT_PACKAGE_VERSION", script_data.package_version.to_string());
 

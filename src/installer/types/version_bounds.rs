@@ -1,8 +1,8 @@
 use std::str::FromStr;
 
-use crate::installer::types::{DependencyParserError, Version};
+use crate::installer::types::{Version, VersionError};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum VersionBounds {
     Range(Version, Version),
     Lower(Version),
@@ -13,7 +13,7 @@ pub enum VersionBounds {
 }
 
 impl FromStr for VersionBounds {
-    type Err = DependencyParserError;
+    type Err = VersionError;
 
     fn from_str(version: &str) -> Result<Self, Self::Err> {
         // Check if the statement is a two sided range
@@ -47,7 +47,7 @@ impl FromStr for VersionBounds {
 }
 
 impl VersionBounds {
-    pub fn from_str_ranges(ranges: &str) -> Result<Vec<VersionBounds>, DependencyParserError> {
+    pub fn from_str_ranges(ranges: &str) -> Result<Vec<VersionBounds>, VersionError> {
         // Check for empty input
         if ranges.is_empty() {
             return Ok(Vec::new());
@@ -61,6 +61,18 @@ impl VersionBounds {
         }
 
         Ok(bounds)
+    }
+
+    pub fn covers(&self, version: &Version) -> bool {
+        match self {
+            VersionBounds::Range(lower, upper) if lower <= version && upper >= version => true,
+            VersionBounds::Lower(lower) if version < lower => true,
+            VersionBounds::LowerEqual(lower) if version <= lower => true,
+            VersionBounds::Higher(higher) if version > higher => true,
+            VersionBounds::HigherEqual(higher) if version >= higher => true,
+            VersionBounds::Equal(equal) if version == equal => true,
+            _ => false,
+        }
     }
 }
 

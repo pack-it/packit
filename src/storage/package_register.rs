@@ -263,8 +263,8 @@ pub mod tests {
     use std::str::FromStr;
 
     use crate::installer::types::dependency_tests::create_dependency;
-    use crate::platforms::TARGET_ARCHITECTURE;
-    use crate::repositories::types::{Checksum, Source, Sources};
+    use crate::platforms::TargetArchitecture;
+    use crate::repositories::types::{Checksum, Source, Sources, TargetBounds};
 
     use super::*;
 
@@ -356,12 +356,15 @@ pub mod tests {
     }
 
     fn create_package_meta(package_id: &PackageId) -> PackageMeta {
+        let current_target_bounds =
+            TargetBounds::from_str(&TargetArchitecture::current().to_string()).expect("Expected valid target bounds");
+
         PackageMeta {
             name: package_id.name.to_string(),
             description: "-".to_string(),
             homepage: None,
             versions: vec![package_id.version.clone()],
-            latest_versions: HashMap::from([(TARGET_ARCHITECTURE.to_string(), package_id.version.clone())]),
+            latest_versions: HashMap::from([(current_target_bounds, package_id.version.clone())]),
         }
     }
 
