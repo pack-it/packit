@@ -12,8 +12,11 @@ use crate::{
 /// Errors that occur when creating or using the target bounds.
 #[derive(Error, Debug, PartialEq)]
 pub enum TargetBoundsError {
-    #[error("Target additions are not allowed for the target OS")]
+    #[error("Target additions are not allowed for this target name")]
     AdditionNotAllowed,
+
+    #[error("Version bounds are not allowed for this target name")]
+    VersionBoundsNotAllowed,
 
     #[error("Target name is invalid")]
     InvalidTargetName,
@@ -113,6 +116,11 @@ impl FromStr for TargetBounds {
             if !matches!(name.get_os(), Some(Os::Linux)) {
                 return Err(TargetBoundsError::AdditionNotAllowed);
             }
+        }
+
+        // Check if version bounds are given for the unix target
+        if matches!(name, TargetName::Unix) && !version_bounds.is_empty() {
+            return Err(TargetBoundsError::VersionBoundsNotAllowed);
         }
 
         Ok(Self {
