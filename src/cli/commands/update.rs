@@ -9,7 +9,7 @@ use crate::{
         Installer, InstallerOptions,
         types::{OptionalPackageId, Version},
     },
-    platforms::TARGET_ARCHITECTURE,
+    platforms::Target,
     repositories::manager::RepositoryManager,
     storage::package_register::PackageRegister,
     utils::unwrap_or_exit::UnwrapOrExit,
@@ -33,7 +33,7 @@ impl HandleCommand for UpdateArgs {
 
         let new_version = match &self.new_version {
             Some(version) => version,
-            None => package_meta.get_latest_version(TARGET_ARCHITECTURE).unwrap_or_exit(1),
+            None => package_meta.get_latest_version(&Target::current()).unwrap_or_exit(1),
         };
 
         // Check if new version exists
