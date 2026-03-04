@@ -112,10 +112,8 @@ impl FromStr for TargetBounds {
         let name = TargetName::from_str(name)?;
 
         // Check if additions are allowed
-        if addition.is_some() {
-            if !matches!(name.get_os(), Some(Os::Linux)) {
-                return Err(TargetBoundsError::AdditionNotAllowed);
-            }
+        if addition.is_some() && !matches!(name.get_os(), Some(Os::Linux)) {
+            return Err(TargetBoundsError::AdditionNotAllowed);
         }
 
         // Check if version bounds are given for the unix target

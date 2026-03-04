@@ -84,20 +84,12 @@ impl OsVersion {
 
     #[cfg(target_os = "linux")]
     fn get_version() -> Option<Self> {
-        use std::{fs, process::Command};
+        use std::fs;
 
-        let kernel_output = match Command::new("/usr/bin/uname").arg("-r").output() {
-            Ok(output) => output,
+        let kernel_version_str = match fs::read_to_string("/proc/sys/kernel/osrelease") {
+            Ok(info) => info,
             Err(e) => {
-                error!(e, "Cannot fetch kernel version");
-                return None;
-            },
-        };
-
-        let kernel_version_str = match String::from_utf8(kernel_output.stdout) {
-            Ok(string) => string,
-            Err(e) => {
-                error!(e, "Cannot parse kernel version to string");
+                error!(e, "Cannot read kernel version");
                 return None;
             },
         };
