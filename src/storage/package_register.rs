@@ -262,6 +262,7 @@ impl PackageRegister {
 pub mod tests {
     use std::str::FromStr;
 
+    use crate::installer::types::VersionIntervals;
     use crate::installer::types::dependency_tests::create_dependency;
     use crate::platforms::TargetArchitecture;
     use crate::repositories::types::{Checksum, Source, Sources, TargetBounds};
@@ -359,12 +360,15 @@ pub mod tests {
         let current_target_bounds =
             TargetBounds::from_str(&TargetArchitecture::current().to_string()).expect("Expected valid target bounds");
 
+        let version_intervals =
+            VersionIntervals::from_str_intervals(&format!("{}", package_id.version)).expect("Expected valid version intervals.");
+
         PackageMeta {
             name: package_id.name.to_string(),
             description: "-".to_string(),
             homepage: None,
             versions: vec![package_id.version.clone()],
-            latest_versions: HashMap::from([(current_target_bounds, package_id.version.clone())]),
+            supported_versions: HashMap::from([(current_target_bounds, version_intervals)]),
         }
     }
 

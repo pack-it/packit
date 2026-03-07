@@ -45,6 +45,11 @@ pub enum RepositoryError {
 
     #[error("Dependency '{0}' cannot be satisfied by the current package repository.")]
     SupportError(String),
+
+    #[error(
+        "Invalid version intervals for the current targets supported versions. Intervals must not be empty and not contain a higher (equals) bound."
+    )]
+    InvalidSupportIntervals,
 }
 
 pub(super) type Result<T> = std::result::Result<T, RepositoryError>;

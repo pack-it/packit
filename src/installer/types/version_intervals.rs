@@ -1,8 +1,10 @@
 use std::str::FromStr;
 
+use serde::Deserialize;
+
 use crate::installer::types::{Version, VersionBounds, VersionError};
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
 pub struct VersionIntervals {
     version_bounds: Vec<VersionBounds>,
 }
