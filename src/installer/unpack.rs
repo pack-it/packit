@@ -64,7 +64,7 @@ pub fn unpack<P: AsRef<Path>>(extension: ArchiveExtension, bytes: Bytes, destina
 fn unpack_gz<P: AsRef<Path>>(reader: ReaderWithProgress<Cursor<Bytes>>, destination_directory: P) -> Result<()> {
     let tar = GzDecoder::new(reader);
     let mut archive = Archive::new(tar);
-
+    archive.set_preserve_mtime(false);
     archive.unpack(destination_directory)?;
 
     Ok(())
