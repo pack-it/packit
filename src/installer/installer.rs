@@ -10,7 +10,7 @@ use crate::{
         options::InstallerOptions,
         scripts::{self, ScriptData},
         symlinker::Symlinker,
-        types::{Dependency, OptionalPackageId, PackageId, Version},
+        types::{OptionalPackageId, PackageId, Version},
         unpack::unpack,
     },
     platforms::{Target, symlink},
@@ -25,6 +25,7 @@ use crate::{
 };
 
 use std::{
+    collections::HashSet,
     fs,
     path::{Path, PathBuf},
     process::exit,
@@ -55,12 +56,11 @@ pub struct InstallMeta {
 }
 
 impl InstallMeta {
-    pub fn new(manager: &RepositoryManager, dependency: &Dependency) -> std::result::Result<Self, RepositoryError> {
-        // Get all the data to create a dependency node
-        let (repository_id, package_metadata) = manager.read_package(dependency.get_name())?;
-        let version = package_metadata.get_latest_dependency_version(&dependency)?;
-        let dependency_id = dependency.to_package_id(version);
-        let version_metadata = manager.read_repo_package_version(&repository_id, &dependency_id)?;
+    pub fn new(
+        package_metadata: PackageMeta,
+        version_metadata: PackageVersionMeta,
+        repository_id: String,
+    ) -> std::result::Result<Self, RepositoryError> {
         let target_bounds = version_metadata.get_best_target(&Target::current())?;
 
         Ok(Self {
@@ -138,13 +138,12 @@ impl<'a> Installer<'a> {
 
         let mut tree = match self.options.build_source {
             true => {
-                let dependency_tree: Node<InstallMeta, DependencyTypes> =
-                    Node::new_from_meta_build(&package_id, root_meta, self.repository_manager)?;
+                let dependency_tree = Node::new_from_meta_build(&package_id, root_meta, self.repository_manager, self.register)?;
                 self.install_nodes_build(&dependency_tree)?;
                 dependency_tree
             },
             false => {
-                let mut dependency_tree = Node::new_from_meta(&package_id, root_meta, self.repository_manager)?;
+                let mut dependency_tree = Node::new_from_meta(&package_id, root_meta, self.repository_manager, self.register)?;
                 self.install_nodes(&mut dependency_tree)?;
                 dependency_tree
             },
@@ -157,20 +156,24 @@ impl<'a> Installer<'a> {
         Ok(())
     }
 
-    fn install_nodes(&mut self, node: &mut Node<InstallMeta, DependencyTypes>) -> Result<()> {
+    fn install_nodes(&mut self, node: &mut Node<Option<InstallMeta>, DependencyTypes>) -> Result<()> {
         // Install childs first
         // TODO: Implement parallelization here
         for child in node.get_children_mut() {
             self.install_nodes(child)?;
         }
 
-        let node_value = node.get_value();
-        let revision = node_value.version_metadata.revisions.len() as u64;
+        // Get the value or return early if there is no value (package is already satisfied)
+        let node_value = match node.get_value() {
+            Some(value) => value,
+            None => return Ok(()),
+        };
 
         // Install the package with a prebuild if possible
+        let revision = node_value.version_metadata.revisions.len() as u64;
         match self.repository_manager.get_prebuild_url(&node_value.repository_id, node.get_id(), revision, &Target::current()) {
             Ok(Some(_)) => {
-                self.install_package(node, true)?;
+                self.install_package(node_value, node.get_children_ids(Some(DependencyTypes::Normal)), true)?;
                 return Ok(());
             },
             Ok(None) | Err(RepositoryError::RepositoryNotFoundError { .. }) => (),
@@ -187,30 +190,34 @@ impl<'a> Installer<'a> {
             return Ok(());
         }
 
-        node.expand_node_with_build(self.repository_manager)?;
+        node.expand_node_with_build(self.repository_manager, self.register)?;
         self.install_nodes_build(node)?;
 
         Ok(())
     }
 
-    fn install_nodes_build(&mut self, node: &Node<InstallMeta, DependencyTypes>) -> Result<()> {
+    fn install_nodes_build(&mut self, node: &Node<Option<InstallMeta>, DependencyTypes>) -> Result<()> {
         // Install childs first
         // TODO: Implement parallelization here
         for child in node.get_children() {
             self.install_nodes_build(child)?;
         }
 
+        // Get the value or return early if there is no value (package is already satisfied)
+        let node_value = match node.get_value() {
+            Some(value) => value,
+            None => return Ok(()),
+        };
+
         // Install the current node
-        self.install_package(node, false)?;
+        self.install_package(node_value, node.get_children_ids(Some(DependencyTypes::Normal)), false)?;
 
         Ok(())
     }
 
-    fn install_package(&mut self, node: &Node<InstallMeta, DependencyTypes>, use_prebuild: bool) -> Result<()> {
-        let node_value = node.get_value();
-
+    fn install_package(&mut self, install_meta: &InstallMeta, children: HashSet<PackageId>, use_prebuild: bool) -> Result<()> {
         // Create the package id and install directory
-        let package_id = PackageId::new(&node_value.package_metadata.name, node_value.version_metadata.version.clone())?;
+        let package_id = PackageId::new(&install_meta.package_metadata.name, install_meta.version_metadata.version.clone())?;
         let install_directory = self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
 
         // Return early if the package has been installed by another node in the sequence (duplicates can exist)
@@ -223,44 +230,44 @@ impl<'a> Installer<'a> {
             fs::create_dir_all(&install_directory)?;
         }
 
-        let version_meta = &node_value.version_metadata;
-        let script_args = version_meta.get_script_args(&node_value.target_bounds)?;
+        let version_meta = &install_meta.version_metadata;
+        let script_args = version_meta.get_script_args(&install_meta.target_bounds)?;
 
         // Download and run pre install script if it exists
-        let script_path = version_meta.get_preinstall_script_path(&node_value.target_bounds)?;
+        let script_path = version_meta.get_preinstall_script_path(&install_meta.target_bounds)?;
         let downloaded_script =
-            scripts::download_script(self.repository_manager, &script_path, &package_id.name, &node_value.repository_id)?;
+            scripts::download_script(self.repository_manager, &script_path, &package_id.name, &install_meta.repository_id)?;
         if let Some(script_file) = downloaded_script {
             let script_data = ScriptData::new(&script_file, &install_directory, &version_meta.version, self.config, &script_args);
             scripts::run_pre_script(&script_data, &install_directory)?;
         }
 
         // Get source repository for installed storage before actually installing package
-        let source_repository = self.config.repositories.get(&node_value.repository_id).expect("Expected repository in config");
+        let source_repository = self.config.repositories.get(&install_meta.repository_id).expect("Expected repository in config");
 
         // Get the target information from the package version info
-        let target = version_meta.get_target(&node_value.target_bounds)?;
+        let target = version_meta.get_target(&install_meta.target_bounds)?;
 
         // Get build version of package
         match use_prebuild {
             true => {
-                let revision = node_value.version_metadata.revisions.len() as u64;
-                self.download_prebuild(&node_value.repository_id, &package_id, revision, &install_directory)?
+                let revision = install_meta.version_metadata.revisions.len() as u64;
+                self.download_prebuild(&install_meta.repository_id, &package_id, revision, &install_directory)?
             },
             false => Builder::new(self.config, self.register, self.repository_manager).build(
-                &node_value.target_bounds,
-                &node_value.package_metadata,
+                &install_meta.target_bounds,
+                &install_meta.package_metadata,
                 &version_meta,
-                &node_value.repository_id,
+                &install_meta.repository_id,
                 &install_directory,
             )?,
         }
 
         // Add and save package to installed storage toml
         self.register.add_package(
-            &node_value.package_metadata,
-            &node_value.version_metadata,
-            &node.get_children_ids(Some(DependencyTypes::Normal)),
+            &install_meta.package_metadata,
+            &install_meta.version_metadata,
+            children,
             source_repository,
             &install_directory,
             false,
@@ -269,20 +276,20 @@ impl<'a> Installer<'a> {
         self.register.save_to(&PackageRegister::get_default_path(self.config))?;
 
         // Download and run post install script if it exists
-        let script_path = version_meta.get_postinstall_script_path(&node_value.target_bounds)?;
+        let script_path = version_meta.get_postinstall_script_path(&install_meta.target_bounds)?;
         let downloaded_script =
-            scripts::download_script(self.repository_manager, &script_path, &package_id.name, &node_value.repository_id)?;
+            scripts::download_script(self.repository_manager, &script_path, &package_id.name, &install_meta.repository_id)?;
         if let Some(script_file) = downloaded_script {
             let script_data = ScriptData::new(&script_file, &install_directory, &version_meta.version, self.config, &script_args);
             scripts::run_post_script(&script_data)?;
         }
 
-        self.determine_active(node_value, &package_id, target)?;
+        self.determine_active(install_meta, &package_id, target)?;
 
         // Download and run test script if it exists
-        let script_path = version_meta.get_test_script_path(&node_value.target_bounds)?;
+        let script_path = version_meta.get_test_script_path(&install_meta.target_bounds)?;
         let downloaded_script =
-            scripts::download_script(self.repository_manager, &script_path, &package_id.name, &node_value.repository_id)?;
+            scripts::download_script(self.repository_manager, &script_path, &package_id.name, &install_meta.repository_id)?;
         if let Some(script_file) = downloaded_script {
             let script_data = ScriptData::new(&script_file, &install_directory, &version_meta.version, self.config, &script_args);
             scripts::run_test_script(&script_data)?;
@@ -339,7 +346,7 @@ impl<'a> Installer<'a> {
         Ok(())
     }
 
-    fn remove_build_dependencies(&mut self, node: &mut Node<InstallMeta, DependencyTypes>) -> Result<()> {
+    fn remove_build_dependencies(&mut self, node: &mut Node<Option<InstallMeta>, DependencyTypes>) -> Result<()> {
         // Remove current before childs (parents before children)
         let optional_id = &OptionalPackageId::from(node.get_id().clone());
         if self.register.get_package_version(node.get_id()).is_some()
