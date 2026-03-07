@@ -8,7 +8,6 @@ pub struct VersionIntervals {
 }
 
 impl VersionIntervals {
-    // TODO: Check for impossible requirements, like: >3.1|<3.1
     pub fn from_str_intervals(intervals: &str) -> Result<Self, VersionError> {
         // Check for empty input
         if intervals.is_empty() {
@@ -24,7 +23,50 @@ impl VersionIntervals {
             version_bounds.push(VersionBounds::from_str(interval)?);
         }
 
+        // Check for impossible requirements, like: >3.1|<3.1
+        if !Self::validate_intervals(&version_bounds) {
+            return Err(VersionError::InvalidInterval);
+        }
+
         Ok(Self { version_bounds })
+    }
+
+    /// Checks if the intervals are valid, the intervals are valid if they don't overlap and are in order.
+    /// True is returned if the intervals are valid, otherwise false.
+    fn validate_intervals(version_bounds: &Vec<VersionBounds>) -> bool {
+        let mut previous: Option<&VersionBounds> = None;
+        for bound in version_bounds {
+            let valued_previous = match previous {
+                Some(previous) => previous,
+                None => {
+                    previous = Some(&bound);
+                    continue;
+                },
+            };
+
+            let low_version = match bound {
+                VersionBounds::Range(low, _) => low,
+                VersionBounds::Lower(_) => return false,
+                VersionBounds::LowerEqual(_) => return false,
+                VersionBounds::Higher(version) => version,
+                VersionBounds::HigherEqual(version) => version,
+                VersionBounds::Equal(version) => version,
+            };
+
+            match valued_previous {
+                VersionBounds::Range(_, high) if *low_version <= *high => return false,
+                VersionBounds::Lower(version) if low_version < version => return false,
+                VersionBounds::LowerEqual(version) if low_version <= version => return false,
+                VersionBounds::Higher(_) => return false,
+                VersionBounds::HigherEqual(_) => return false,
+                VersionBounds::Equal(version) if *low_version <= *version => return false,
+                _ => {},
+            }
+
+            previous = Some(bound)
+        }
+
+        true
     }
 
     pub fn covers(&self, version: &Version) -> bool {

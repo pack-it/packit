@@ -20,6 +20,9 @@ pub enum VersionError {
     #[error("Multiple leading, trailing or consecutive dots are not allowed in version number.")]
     DotsError,
 
+    #[error("Invalid version interval, an interval must be ordered and not overlapping.")]
+    InvalidInterval,
+
     #[error("Couldn't parse version number")]
     ParseError(#[from] ParseIntError),
 }
