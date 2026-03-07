@@ -3,7 +3,7 @@ use std::fmt::Display;
 use serde::{Deserialize, Serialize, de};
 use thiserror::Error;
 
-use crate::installer::types::{PackageId, Version, VersionBounds, VersionError};
+use crate::installer::types::{PackageId, Version, VersionBounds, VersionError, version_intervals::VersionIntervals};
 
 #[derive(Error, Debug, PartialEq)]
 pub enum DependencyParserError {
@@ -17,7 +17,7 @@ pub enum DependencyParserError {
 #[derive(Debug, Clone)]
 pub struct Dependency {
     name: String,
-    version_ranges: Vec<VersionBounds>,
+    version_intervals: VersionIntervals,
 }
 
 impl<'de> Deserialize<'de> for Dependency {
@@ -41,12 +41,11 @@ impl<'de> Deserialize<'de> for Dependency {
         // Remove @ character from version number
         let version = version.strip_prefix("@").unwrap_or("");
 
-        // TODO: Check for impossible requirements, like: >3.1|<3.1
-        let version_ranges = VersionBounds::from_str_ranges(version).map_err(de::Error::custom)?;
+        let version_intervals = VersionIntervals::from_str_intervals(version).map_err(de::Error::custom)?;
 
         Ok(Self {
             name: name.to_string(),
-            version_ranges,
+            version_intervals,
         })
     }
 }
@@ -63,13 +62,13 @@ impl Serialize for Dependency {
 impl Display for Dependency {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // Return only the name if the version isn't specified
-        if self.version_ranges.is_empty() {
+        if self.version_intervals.get_version_bounds().is_empty() {
             write!(f, "{}", self.name)?;
             return Ok(());
         }
 
         let mut string_version = String::new();
-        for range in &self.version_ranges {
+        for range in self.version_intervals.get_version_bounds() {
             if !string_version.is_empty() {
                 string_version.push('|');
             }
@@ -99,12 +98,12 @@ impl Dependency {
             return false;
         }
 
-        if self.version_ranges.is_empty() {
+        if self.version_intervals.get_version_bounds().is_empty() {
             return true;
         }
 
-        for range in &self.version_ranges {
-            if range.covers(&version) {
+        for bound in self.version_intervals.get_version_bounds() {
+            if bound.covers(&version) {
                 return true;
             }
         }
@@ -123,10 +122,10 @@ pub mod tests {
 
     use super::*;
 
-    pub fn create_dependency(name: &str, version_ranges: &str) -> Dependency {
+    pub fn create_dependency(name: &str, version_intervals: &str) -> Dependency {
         Dependency {
             name: name.into(),
-            version_ranges: VersionBounds::from_str_ranges(version_ranges).expect("Expected VersionBounds"),
+            version_intervals: VersionIntervals::from_str_intervals(version_intervals).expect("Expected correct version intervals."),
         }
     }
 

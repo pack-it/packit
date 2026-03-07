@@ -5,7 +5,7 @@ use thiserror::Error;
 
 use crate::{
     cli::display::logging::warning,
-    installer::types::{VersionBounds, VersionError},
+    installer::types::{VersionError, VersionIntervals},
     platforms::{Os, OsVersion, Target, TargetArchitecture},
 };
 
@@ -78,7 +78,7 @@ impl TargetName {
 pub struct TargetBounds {
     pub name: TargetName,
     pub addition: Option<String>,
-    pub version_bounds: Vec<VersionBounds>,
+    pub version_intervals: VersionIntervals,
 }
 
 impl<'de> Deserialize<'de> for TargetBounds {
@@ -101,7 +101,7 @@ impl FromStr for TargetBounds {
             None => (string, ""),
         };
 
-        let version_bounds = VersionBounds::from_str_ranges(version_bounds)?;
+        let version_intervals = VersionIntervals::from_str_intervals(version_bounds)?;
 
         // Split addition from name
         let (name, addition) = match name.split_once(':') {
@@ -124,7 +124,7 @@ impl FromStr for TargetBounds {
         Ok(Self {
             name: name.into(),
             addition: addition.map(|x| x.into()),
-            version_bounds,
+            version_intervals,
         })
     }
 }
@@ -155,13 +155,14 @@ impl TargetBounds {
         };
 
         // If version bounds are empty, target satisfies the bounds
-        if self.version_bounds.is_empty() {
+        if self.version_intervals.get_version_bounds().is_empty() {
             return true;
         }
 
         // Check if one of the version bounds covers the os version
-        for range in &self.version_bounds {
-            if range.covers(&version) {
+        // TODO: Move to version interval struct (also the above if and also for dependency struct)
+        for interval in self.version_intervals.get_version_bounds() {
+            if interval.covers(&version) {
                 return true;
             }
         }
@@ -170,7 +171,7 @@ impl TargetBounds {
     }
 
     fn calculate_priority(&self) -> u32 {
-        if self.addition.is_none() && self.version_bounds.is_empty() {
+        if self.addition.is_none() && self.version_intervals.get_version_bounds().is_empty() {
             match self.name {
                 TargetName::Unix => return 1,
                 TargetName::Os(_) => return 2,
@@ -178,14 +179,14 @@ impl TargetBounds {
             }
         }
 
-        if self.addition.is_none() && !self.version_bounds.is_empty() {
+        if self.addition.is_none() && !self.version_intervals.get_version_bounds().is_empty() {
             match self.name {
                 TargetName::Os(_) => return 4,
                 _ => return 5,
             }
         }
 
-        if self.addition.is_some() && !self.version_bounds.is_empty() {
+        if self.addition.is_some() && !self.version_intervals.get_version_bounds().is_empty() {
             match self.name {
                 TargetName::Os(_) => return 6,
                 _ => return 7,
