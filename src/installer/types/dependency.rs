@@ -98,17 +98,7 @@ impl Dependency {
             return false;
         }
 
-        if self.version_intervals.get_version_bounds().is_empty() {
-            return true;
-        }
-
-        for bound in self.version_intervals.get_version_bounds() {
-            if bound.covers(&version) {
-                return true;
-            }
-        }
-
-        false
+        self.version_intervals.covers(version)
     }
 
     pub fn to_package_id(&self, version: Version) -> PackageId {

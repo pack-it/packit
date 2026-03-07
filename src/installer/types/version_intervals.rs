@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use crate::installer::types::{VersionBounds, VersionError};
+use crate::installer::types::{Version, VersionBounds, VersionError};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct VersionIntervals {
@@ -25,6 +25,22 @@ impl VersionIntervals {
         }
 
         Ok(Self { version_bounds })
+    }
+
+    pub fn covers(&self, version: &Version) -> bool {
+        // If version bounds are empty, version satisfies the bounds
+        if self.version_bounds.is_empty() {
+            return true;
+        }
+
+        // Check if any of the version bounds covers the version
+        for bound in &self.version_bounds {
+            if bound.covers(&version) {
+                return true;
+            }
+        }
+
+        false
     }
 
     pub fn get_version_bounds(&self) -> &Vec<VersionBounds> {

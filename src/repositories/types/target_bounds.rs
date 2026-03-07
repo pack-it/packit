@@ -154,20 +154,7 @@ impl TargetBounds {
             OsVersion::Unknown => return false,
         };
 
-        // If version bounds are empty, target satisfies the bounds
-        if self.version_intervals.get_version_bounds().is_empty() {
-            return true;
-        }
-
-        // Check if one of the version bounds covers the os version
-        // TODO: Move to version interval struct (also the above if and also for dependency struct)
-        for interval in self.version_intervals.get_version_bounds() {
-            if interval.covers(&version) {
-                return true;
-            }
-        }
-
-        false
+        self.version_intervals.covers(version)
     }
 
     fn calculate_priority(&self) -> u32 {
