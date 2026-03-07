@@ -1,10 +1,9 @@
-use std::{collections::HashSet, fmt::Display, process::exit};
+use std::{collections::HashSet, fmt::Display};
 
 use clap::error::Result;
 use thiserror::Error;
 
 use crate::{
-    cli::display::logging::error,
     installer::{
         DependencyTypes, InstallMeta,
         types::{Dependency, PackageId},
@@ -30,6 +29,9 @@ pub enum TreeError {
 
     #[error("Cannot create tree, because of an error reading the repository")]
     RepositoryError(#[from] RepositoryError),
+
+    #[error("Cannot expand a node which does not have a value to expand with.")]
+    ExpansionError,
 }
 
 // Static string prefixes for the tree display
@@ -197,11 +199,7 @@ impl Node<Option<InstallMeta>, DependencyTypes> {
     pub fn expand_node_with_build(&mut self, manager: &RepositoryManager, register: &PackageRegister) -> Result<(), TreeError> {
         let value = match &self.value {
             Some(value) => value,
-            None => {
-                // Should be unreachable
-                error!(msg: "Cannot expand a node without a value.");
-                exit(1);
-            },
+            None => return Err(TreeError::ExpansionError),
         };
 
         let target = value.version_metadata.get_target(&value.target_bounds)?;
@@ -238,7 +236,6 @@ impl Node<Option<InstallMeta>, DependencyTypes> {
 
         // Use the latest version if the dependency is not yet satisfied
         let (repository_id, package_metadata) = manager.read_package(dependency.get_name())?;
-        dbg!(&repository_id);
         let version = package_metadata.get_latest_dependency_version(&dependency)?;
         let dependency_id = dependency.to_package_id(version);
         let version_metadata = manager.read_repo_package_version(&repository_id, &dependency_id)?;
