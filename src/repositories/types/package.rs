@@ -12,6 +12,7 @@ use crate::{
 };
 
 /// Represents the package metadata, containing package information.
+/// TODO: Validate name with PackageId rules
 #[derive(Deserialize, Debug)]
 pub struct PackageMeta {
     pub name: String,
@@ -36,7 +37,7 @@ impl PackageMeta {
         // The supported vec isn't necessary in order, so we need to keep track of the current highest version
         let mut current_highest: Option<Version> = None;
         for version in &self.versions {
-            if !dependency.satisfied(&self.name, Some(&version)) {
+            if !dependency.satisfied(&self.name, &version) {
                 continue;
             }
 

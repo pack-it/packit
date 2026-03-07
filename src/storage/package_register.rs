@@ -244,7 +244,7 @@ impl PackageRegister {
     pub fn get_satisfying_package(&self, dependency: &Dependency) -> Option<&InstalledPackageVersion> {
         // Loop over all packages with the dependency name and check if they satisfy the dependency
         for package in self.packages.get(dependency.get_name())?.get_versions() {
-            if dependency.satisfied(&package.package_id.name, Some(&package.package_id.version)) {
+            if dependency.satisfied(&package.package_id.name, &package.package_id.version) {
                 return Some(package);
             }
         }

@@ -585,6 +585,7 @@ impl<'a> Installer<'a> {
 
     pub fn update(&mut self, optional_id: &OptionalPackageId, new_version: &Version) -> Result<()> {
         let old_package = self.get_specific_package_update(optional_id)?;
+        let new_package_id = PackageId::new(&old_package.package_id.name, new_version.clone())?;
 
         // Check if the new version is lower then the current
         if old_package.package_id.version > *new_version {
@@ -615,7 +616,7 @@ impl<'a> Installer<'a> {
                 },
             };
 
-            if !dependency.satisfied(&old_package.package_id.name, Some(new_version)) {
+            if !dependency.satisfied(&new_package_id.name, new_version) {
                 return Err(InstallerError::SatisfyError {
                     new_version: new_version.clone(),
                 });
@@ -628,7 +629,6 @@ impl<'a> Installer<'a> {
         let old_package_id = old_package.package_id.clone();
 
         // Install the newer packager first
-        let new_package_id = PackageId::new(&old_package.package_id.name, new_version.clone())?;
         self.install(&new_package_id.clone().into())?;
 
         // Add dependents to new_package
