@@ -497,18 +497,18 @@ impl<'a> Installer<'a> {
         // Path to the determined directory
         let directory = self.config.prefix_directory.join("packages").join(&package_name);
 
-        // Check if package was symlinked
-        if let Some(package) = self.register.get_package(package_name) {
-            if package.symlinked {
-                Symlinker::new(self.config).remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&directory))?;
-            }
-        }
-
         // Remove active path symlink
         let active_path = Path::new(&self.config.prefix_directory).join("active").join(&package_name);
         match active_path.exists() {
             true => symlink::remove_symlink(&active_path)?,
             false => warning!("Active symlink did not exist, was the package even installed succesfully?"),
+        }
+
+        // Check if package was symlinked
+        if let Some(package) = self.register.get_package(package_name) {
+            if package.symlinked {
+                Symlinker::new(self.config).remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&directory))?;
+            }
         }
 
         // Run uninstall scripts for all versions
