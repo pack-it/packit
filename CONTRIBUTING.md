@@ -53,3 +53,23 @@ To create a pull request you need to go to the official repository (https://gith
 Ensure the titles describes clearly what changes you made, ideally this matches with the commit naming conventions. Add a good description, including all details of your changes.
 <br><br>
 After you done all steps above, click on the `Create pull request` button. Your pull request is now created and one of the Packit maintainers will review it as soon as possible.
+
+## Types of contributions
+
+### Feature request or implementation
+
+You're always welcome to submit feature requests, this can be in the form of a GitHub issue, or as a pull request. Please note that we cannot always accept all feature requests, so we advice you to first create an issue before implementing your idea.
+
+We're open to all new ideas and improvements and will review your request as soon as possible.
+
+### Bugs
+
+If you found a bug, make sure to create a GitHub issue for it. We would also really appreciate it if you implement a fix and create a pull request for it. We will make sure to review it as soon as possible.
+
+### Documentation improvements
+
+You're always welcome to improve our documentation! You can just create a pull request with your changes, we will take a look at it as soon as possible.
+
+### Available packages changes
+
+If you want to add support for a new package, a new package version or some other change to the list of available packages, please take a look at our [core repository](https://github.com/pack-it/core).
