@@ -5,18 +5,6 @@ use crate::installer::types::PackageId;
 /// The errors that occur when requesting metadata from a repository.
 #[derive(Error, Debug)]
 pub enum RepositoryError {
-    #[error("Cannot read repository file from disk")]
-    ReadError(#[from] std::io::Error),
-
-    #[error("Cannot request repository file from external repository")]
-    RequestError(#[from] reqwest::Error),
-
-    #[error("Cannot parse repository file")]
-    ParseError(#[from] toml::de::Error),
-
-    #[error("Cannot parse checksum from hex")]
-    ChecksumParseError(#[from] hex::FromHexError),
-
     #[error("Cannot find repository '{repository_id}'")]
     RepositoryNotFoundError {
         repository_id: String,
@@ -48,6 +36,18 @@ pub enum RepositoryError {
 
     #[error("No supported version for the current target could be found for package '{0}'.")]
     SupportError(String),
+
+    #[error("Cannot read repository file from disk")]
+    ReadError(#[from] std::io::Error),
+
+    #[error("Cannot request repository file from external repository")]
+    RequestError(#[from] reqwest::Error),
+
+    #[error("Cannot parse repository file")]
+    ParseError(#[from] toml::de::Error),
+
+    #[error("Cannot parse checksum from hex")]
+    ChecksumParseError(#[from] hex::FromHexError),
 }
 
 pub(super) type Result<T> = std::result::Result<T, RepositoryError>;

@@ -11,7 +11,7 @@ use crate::{
     config::{Config, Repository},
     installer::types::{Dependency, OptionalPackageId, PackageId, PackageName},
     repositories::types::{PackageMeta, PackageVersionMeta},
-    storage::{error::RegisterError, installed_package::InstalledPackage, installed_package_version::InstalledPackageVersion},
+    storage::{error::Result, installed_package::InstalledPackage, installed_package_version::InstalledPackageVersion},
     utils::constants::REGISTER_FILENAME,
 };
 
@@ -31,7 +31,7 @@ impl PackageRegister {
     /// # Errors
     ///
     /// This function will return an error if the file cannot be opened or if the content is invalid.
-    pub fn from(path: &Path) -> Result<Self, RegisterError> {
+    pub fn from(path: &Path) -> Result<Self> {
         // If the file does not exist, we return an empty storage
         if !fs::exists(path)? {
             return Ok(PackageRegister { packages: HashMap::new() });
@@ -54,7 +54,7 @@ impl PackageRegister {
     /// # Errors
     ///
     /// This function will return an error if the data cannot be serialized or if the file cannot be written.
-    pub fn save_to(&self, path: &Path) -> Result<(), RegisterError> {
+    pub fn save_to(&self, path: &Path) -> Result<()> {
         let data = toml::to_string(self)?;
 
         // Add header text to data
@@ -90,7 +90,7 @@ impl PackageRegister {
         install_path: &PathBuf,
         symlinked: bool,
         active: bool,
-    ) -> Result<(), RegisterError> {
+    ) -> Result<()> {
         let installed_package_version = InstalledPackageVersion {
             package_id: PackageId::new(package.name.clone(), package_version.version.clone()),
             license: package_version.license.clone(),

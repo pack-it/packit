@@ -24,17 +24,14 @@ pub enum BuilderError {
     #[error("Build files download unsuccessful")]
     RequestUnsuccessful(reqwest::StatusCode),
 
-    #[error("Cannot request files for building")]
-    RequestError(#[from] reqwest::Error),
-
-    #[error("Error while interacting with filesystem")]
-    IOError(#[from] std::io::Error),
-
     #[error("Dependency '{package_name}' of type '{dependency_type}' is not installed.")]
     MissingDependencyError {
         dependency_type: String,
         package_name: String,
     },
+
+    #[error("Checksum does not match")]
+    ChecksumError,
 
     #[error("Cannot unpack response")]
     UnpackError(#[from] UnpackError),
@@ -45,8 +42,11 @@ pub enum BuilderError {
     #[error("Cannot find a repository for building")]
     RepositoryError(#[from] RepositoryError),
 
-    #[error("Checksum does not match")]
-    ChecksumError,
+    #[error("Cannot request files for building")]
+    RequestError(#[from] reqwest::Error),
+
+    #[error("Error while interacting with filesystem")]
+    IOError(#[from] std::io::Error),
 }
 
 pub type Result<T> = core::result::Result<T, BuilderError>;

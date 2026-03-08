@@ -1,6 +1,5 @@
 use std::{collections::HashSet, fmt::Display};
 
-use clap::error::Result;
 use thiserror::Error;
 
 use crate::{
@@ -28,12 +27,14 @@ pub enum TreeError {
     #[error("Package id '{0}' cannot be found")]
     NotFound(PackageId),
 
-    #[error("Cannot create tree, because of an error reading the repository")]
-    RepositoryError(#[from] RepositoryError),
-
     #[error("Cannot expand a node which does not have a value to expand with.")]
     ExpansionError,
+
+    #[error("Cannot create tree, because of an error reading the repository")]
+    RepositoryError(#[from] RepositoryError),
 }
+
+type Result<T> = std::result::Result<T, TreeError>;
 
 // Static string prefixes for the tree display
 const BRANCH: &str = "\u{251C}\u{2500}\u{2500}\u{2500} ";
@@ -45,13 +46,13 @@ const EMPTY_SPACE: &str = "     ";
 impl<V, L: Eq> Node<V, L> {
     /// Creates a tree based on the installed packages, the given package id will be the root.
     /// It also takes a closure which will get the necessary value and label for each node.
-    fn new_impl<F>(package_id: &PackageId, register: &PackageRegister, value_closure: &F) -> Result<Self, TreeError>
+    fn new_impl<F>(package_id: &PackageId, register: &PackageRegister, value_closure: &F) -> Result<Self>
     where
         F: Fn(&PackageId) -> (V, L),
     {
         let package = register.get_package_version(package_id).ok_or(TreeError::NotFound(package_id.clone()))?;
         let children: Vec<Node<V, L>> =
-            package.dependencies.iter().map(|d| Node::new_impl(&d, register, value_closure)).collect::<Result<Vec<_>, _>>()?;
+            package.dependencies.iter().map(|d| Node::new_impl(&d, register, value_closure)).collect::<Result<Vec<_>>>()?;
 
         let (value, label) = value_closure(package_id);
 
@@ -64,7 +65,7 @@ impl<V, L: Eq> Node<V, L> {
     }
 
     /// A wrapper method to create a tree with nodes that hold values.
-    pub fn new_with_value<F>(package_id: &PackageId, register: &PackageRegister, value_closure: F) -> Result<Self, TreeError>
+    pub fn new_with_value<F>(package_id: &PackageId, register: &PackageRegister, value_closure: F) -> Result<Self>
     where
         F: Fn(&PackageId) -> (V, L),
     {
@@ -130,7 +131,7 @@ impl<V, L: Eq> Node<V, L> {
 
 /// An empty node implementation (node without values or labels).
 impl Node<(), ()> {
-    pub fn new(package_id: &PackageId, register: &PackageRegister) -> Result<Self, TreeError> {
+    pub fn new(package_id: &PackageId, register: &PackageRegister) -> Result<Self> {
         Node::new_impl(package_id, register, &|_| ((), ()))
     }
 }
@@ -146,7 +147,7 @@ impl Node<Option<InstallMeta>, DependencyTypes> {
         register: &PackageRegister,
         label: DependencyTypes,
         include_build: bool,
-    ) -> Result<Self, TreeError> {
+    ) -> Result<Self> {
         let target = install_meta.version_metadata.get_target(&install_meta.target_bounds)?;
         let dependencies = install_meta.version_metadata.dependencies.iter().chain(target.dependencies.iter());
 
@@ -159,11 +160,11 @@ impl Node<Option<InstallMeta>, DependencyTypes> {
                 .chain(target.build_dependencies.iter())
                 .map(|d| Self::new_from_dependency(manager, register, d, DependencyTypes::Build, include_build))
                 .chain(dependencies.map(|d| Self::new_from_dependency(manager, register, d, label.clone(), include_build)))
-                .collect::<Result<_, _>>()?,
+                .collect::<Result<_>>()?,
             false => dependencies
                 .into_iter()
                 .map(|d| Self::new_from_dependency(manager, register, d, DependencyTypes::Normal, include_build))
-                .collect::<Result<_, _>>()?,
+                .collect::<Result<_>>()?,
         };
 
         Ok(Self {
@@ -180,7 +181,7 @@ impl Node<Option<InstallMeta>, DependencyTypes> {
         install_meta: InstallMeta,
         manager: &RepositoryManager,
         register: &PackageRegister,
-    ) -> Result<Self, TreeError> {
+    ) -> Result<Self> {
         Self::new_from_meta_impl(package_id, install_meta, manager, register, DependencyTypes::Normal, false)
     }
 
@@ -190,14 +191,14 @@ impl Node<Option<InstallMeta>, DependencyTypes> {
         install_meta: InstallMeta,
         manager: &RepositoryManager,
         register: &PackageRegister,
-    ) -> Result<Self, TreeError> {
+    ) -> Result<Self> {
         Self::new_from_meta_impl(package_id, install_meta, manager, register, DependencyTypes::Normal, true)
     }
 
     /// Expands a node with its build dependencies after initial creation of the tree.
     /// Note that this only applies for the build dependencies of the current node, the
     /// dependencies of the current node will be satisfied with pre-builds.
-    pub fn expand_node_with_build(&mut self, manager: &RepositoryManager, register: &PackageRegister) -> Result<(), TreeError> {
+    pub fn expand_node_with_build(&mut self, manager: &RepositoryManager, register: &PackageRegister) -> Result<()> {
         let value = match &self.value {
             Some(value) => value,
             None => return Err(TreeError::ExpansionError),
@@ -224,7 +225,7 @@ impl Node<Option<InstallMeta>, DependencyTypes> {
         dependency: &Dependency,
         label: DependencyTypes,
         include_build: bool,
-    ) -> Result<Node<Option<InstallMeta>, DependencyTypes>, TreeError> {
+    ) -> Result<Node<Option<InstallMeta>, DependencyTypes>> {
         // If the package is already satisfied don't expand the dependency tree further
         if let Some(package) = register.get_satisfying_package(dependency) {
             return Ok(Node {

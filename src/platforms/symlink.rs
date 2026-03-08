@@ -5,11 +5,11 @@ use thiserror::Error;
 /// The errors that occur during symlink operations.
 #[derive(Error, Debug)]
 pub enum SymlinkError {
-    #[error("Symlink IO failed")]
-    IOError(#[from] std::io::Error),
-
     #[error("Path is not a symlink")]
     NonSymlink,
+
+    #[error("Symlink IO failed")]
+    IOError(#[from] std::io::Error),
 }
 
 #[cfg(any(target_os = "macos", target_os = "linux"))]

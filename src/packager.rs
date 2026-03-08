@@ -20,14 +20,14 @@ use crate::{
 /// The errors that occur during installation.
 #[derive(Error, Debug)]
 pub enum PackagerError {
+    #[error("Cannot parse filename, because it contains invalid unicode")]
+    InvalidUnicodeError,
+
     #[error("Cannot get revisions from repository manager")]
     RepositoryError(#[from] RepositoryError),
 
     #[error("Error while packaging")]
     IOError(#[from] std::io::Error),
-
-    #[error("Cannot parse filename, because it contains invalid unicode")]
-    InvalidUnicodeError,
 }
 
 pub fn package(config: &Config, package_id: &PackageId, destination: &PathBuf, revisions: usize) -> Result<(), PackagerError> {

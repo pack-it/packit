@@ -10,14 +10,14 @@ use crate::cli::display::ReaderWithProgress;
 /// The errors that occur during unpacking.
 #[derive(Error, Debug)]
 pub enum UnpackError {
+    #[error("The file extension is not supported")]
+    ExtensionNotSupported,
+
     #[error("Error while interacting with filesystem")]
     IOError(#[from] std::io::Error),
 
     #[error("Error while unpacking")]
     ZipError(#[from] zip::result::ZipError),
-
-    #[error("The file extension is not supported")]
-    ExtensionNotSupported,
 }
 
 type Result<T> = core::result::Result<T, UnpackError>;

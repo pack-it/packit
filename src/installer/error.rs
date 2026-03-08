@@ -23,9 +23,6 @@ pub enum InstallerError {
     #[error("Prebuild checksum does not match")]
     ChecksumError,
 
-    #[error("Error while interacting with filesystem")]
-    IOError(#[from] std::io::Error),
-
     #[error("Could not uninstall package '{package_name}'. {e}")]
     UninstallError {
         package_name: String,
@@ -93,6 +90,9 @@ pub enum InstallerError {
 
     #[error("Cannot do tree operation")]
     TreeError(#[from] TreeError),
+
+    #[error("Error while interacting with filesystem")]
+    IOError(#[from] std::io::Error),
 }
 
 pub(super) type Result<T> = std::result::Result<T, InstallerError>;
