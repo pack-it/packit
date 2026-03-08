@@ -181,13 +181,14 @@ impl<'a> Installer<'a> {
         }
 
         // Return early if the user doesn't want to build from source as alternative install method
-        // TODO: Look at this, now it's possible that one of the package dependencies just isn't installed
         let question = format!(
             "Prebuild package for {} cannot be found, would you like to build from source instead?",
             node.get_id()
         );
-        if ask_user(&question, QuestionResponse::Yes)?.is_no() {
-            return Ok(());
+        if ask_user(&question, QuestionResponse::Yes)?.is_no_or_invalid() {
+            return Err(InstallerError::InstallationCanceled {
+                reason: format!("package '{}' cannot be installed without building from source", node.get_id()),
+            });
         }
 
         node.expand_node_with_build(self.repository_manager, self.register)?;

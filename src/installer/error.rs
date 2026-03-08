@@ -61,6 +61,11 @@ pub enum InstallerError {
         package_name: String,
     },
 
+    #[error("Canceled package installation: {reason}.")]
+    InstallationCanceled {
+        reason: String,
+    },
+
     // Wrapped custom errors
     #[error("Cannot find a repository for installation")]
     RepositoryError(#[from] RepositoryError),
