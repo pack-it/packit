@@ -1,18 +1,8 @@
 use std::{fmt::Display, str::FromStr};
 
 use serde::{Deserialize, Serialize, de};
-use thiserror::Error;
 
-use crate::installer::types::{PackageId, PackageName, Version, VersionBounds, VersionError, version_intervals::VersionIntervals};
-
-#[derive(Error, Debug, PartialEq)]
-pub enum DependencyParserError {
-    #[error("Cannot parse version number")]
-    VersionNumberError(#[from] VersionError),
-
-    #[error("Invalid dependency name, a package name cannot be empty and can only contain characters: 'a-z', 'A-Z', '0-9', '-' and '_'")]
-    InvalidDependencyName,
-}
+use crate::installer::types::{PackageName, Version, VersionBounds, version_intervals::VersionIntervals};
 
 #[derive(Debug, Clone)]
 pub struct Dependency {
@@ -32,11 +22,6 @@ impl<'de> Deserialize<'de> for Dependency {
             Some(index) => string.split_at(index),
             None => (string.as_str(), ""),
         };
-
-        // Check for name validity
-        if !PackageId::is_valid_name(name) {
-            return Err(de::Error::custom(DependencyParserError::InvalidDependencyName));
-        }
 
         // Remove @ character from version number
         let version = version.strip_prefix("@").unwrap_or("");

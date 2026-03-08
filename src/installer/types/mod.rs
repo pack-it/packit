@@ -14,6 +14,7 @@ pub use package_id::PackageId;
 pub use package_id::PackageIdError;
 
 pub use package_name::PackageName;
+pub use package_name::PackageNameError;
 
 pub use version::Version;
 pub use version::VersionError;

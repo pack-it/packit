@@ -2,10 +2,16 @@ use std::{fmt::Display, ops::Deref, path::Path, str::FromStr};
 
 use regex::Regex;
 use serde::{Deserialize, Serialize, de};
-
-use crate::installer::types::PackageIdError;
+use thiserror::Error;
 
 const VALID_PACKAGE_NAME: &str = r"^[a-zA-Z0-9\-_]+$";
+
+/// Errors that occur when creating or using the package id.
+#[derive(Error, Debug, PartialEq)]
+pub enum PackageNameError {
+    #[error("Package name cannot be empty and can only contain characters: 'a-z', 'A-Z', '0-9', '-' and '_'")]
+    InvalidPackageName,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PackageName(String);
@@ -39,12 +45,12 @@ impl Display for PackageName {
 }
 
 impl FromStr for PackageName {
-    type Err = PackageIdError;
+    type Err = PackageNameError;
 
     fn from_str(string: &str) -> Result<Self, Self::Err> {
         let re = Regex::new(VALID_PACKAGE_NAME).expect("Expected valid regex");
         if !re.is_match(string) {
-            return Err(PackageIdError::InvalidPackageName);
+            return Err(PackageNameError::InvalidPackageName);
         }
 
         return Ok(Self(string.to_string()));

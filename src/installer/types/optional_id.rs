@@ -69,7 +69,7 @@ impl OptionalPackageId {
 
 #[cfg(test)]
 mod tests {
-    use crate::installer::types::{PackageId, Version, package_id::PackageIdError};
+    use crate::installer::types::{PackageId, Version, package_id::PackageIdError, package_name::PackageNameError};
 
     use super::*;
 
@@ -95,7 +95,10 @@ mod tests {
 
     #[test]
     fn from_str_empty_optional() {
-        assert_eq!(OptionalPackageId::from_str(""), Err(PackageIdError::InvalidPackageName));
+        assert_eq!(
+            OptionalPackageId::from_str(""),
+            Err(PackageIdError::PackageNameError(PackageNameError::InvalidPackageName))
+        );
     }
 
     #[test]
@@ -104,7 +107,7 @@ mod tests {
         for char in invalid_chars.chars() {
             assert_eq!(
                 OptionalPackageId::from_str(format!("{char}@3.4.1").as_str()),
-                Err(PackageIdError::InvalidPackageName)
+                Err(PackageIdError::PackageNameError(PackageNameError::InvalidPackageName))
             );
         }
     }
