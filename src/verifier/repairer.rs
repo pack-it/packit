@@ -29,6 +29,7 @@ impl<'a> Repairer<'a> {
     }
 
     /// Fixes the given issue by executing the fix for that issue.
+    /// Note: The register is not saved after the fix is applied.
     pub fn fix(&mut self, issue: Issue, register: &mut PackageRegister) -> Result<()> {
         match issue {
             Issue::BrokenTree(missing) => self.fix_broken_tree(missing, register)?,

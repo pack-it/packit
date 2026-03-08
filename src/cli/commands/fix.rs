@@ -34,6 +34,9 @@ impl HandleCommand for FixArgs {
 
             // Repair the found issues
             repairer.fix(issue, &mut register).unwrap_or_exit(1);
+
+            // Save register after the fix
+            register.save_to(&register_dir).unwrap_or_exit(1);
         }
 
         // Return correct message based on found issues
