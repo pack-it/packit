@@ -89,7 +89,7 @@ impl<'a> Repairer<'a> {
         let package_directory = self.config.prefix_directory.join("packages");
         for package_id in missing {
             // Figure out the active version
-            let active_target = fs::read_link(active_directory.join(&package_id.name.to_string()))?;
+            let active_target = fs::read_link(active_directory.join(&package_id.name))?;
             let target_name = active_target.file_name().ok_or(VerifierError::InvalidSymlink)?;
             let version = Version::from_str(target_name.to_str().ok_or(VerifierError::InvalidUnicodeError)?)?;
 
@@ -97,7 +97,7 @@ impl<'a> Repairer<'a> {
             let active = package_id.version == version;
 
             // Figure out if symlinked
-            let symlinked = !fs::symlink_metadata(bin_directory.join(&package_id.name.to_string())).is_err();
+            let symlinked = !fs::symlink_metadata(bin_directory.join(&package_id.name)).is_err();
 
             // Temporarily remove the package from the storage
             // We have to uninstall and install, because we can't know the repository source otherwise
@@ -108,7 +108,7 @@ impl<'a> Repairer<'a> {
             }
 
             // Remove the packages
-            fs::remove_dir_all(&package_directory.join(&package_id.name.to_string()).join(package_id.version.to_string()))?;
+            fs::remove_dir_all(&package_directory.join(&package_id.name).join(package_id.version.to_string()))?;
 
             // Re-install the package
             let installer_options = InstallerOptions::default().skip_symlinking(!symlinked).skip_active(!active);

@@ -131,8 +131,7 @@ impl<'a> Verifier<'a> {
     /// Checks for alterations in a single package using a checksum which is compared to the checksum from the pre-build.
     /// Returns true if the package was altered, false if not.
     fn check_package_alterations(&self, package_id: &PackageId) -> Result<bool> {
-        let install_directory =
-            self.config.prefix_directory.join("packages").join(package_id.name.to_string()).join(package_id.version.to_string());
+        let install_directory = self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
         let compressed = packager::compress(&install_directory)?;
         let checksum = Checksum::from_bytes(&compressed);
 
@@ -166,8 +165,7 @@ impl<'a> Verifier<'a> {
     /// Checks if a specific package exists in storage. Note that it doesn't check if the package also exists in the register.
     /// Returns false if the package storage isn't consistent, true if it is.
     fn package_storage_is_consistent(&self, package_id: &PackageId) -> Result<bool> {
-        let installed_directory =
-            self.config.prefix_directory.join("packages").join(&package_id.name.to_string()).join(package_id.version.to_string());
+        let installed_directory = self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
 
         // Check if the directory exists, if so return true
         if fs::exists(installed_directory)? {

@@ -48,7 +48,7 @@ impl<'a> Into<Environment> for BuildEnv<'a> {
         }
 
         // Add M4 variable if m4 is a dependency
-        if self.build_dependencies.iter().any(|x| x.package_id.name.to_string() == "m4") {
+        if self.build_dependencies.iter().any(|x| *x.package_id.name == "m4") {
             let m4_path = self.prefix_directory.join("bin").join("m4");
             match m4_path.to_str() {
                 Some(path) => drop(env.insert_var("M4", path)),

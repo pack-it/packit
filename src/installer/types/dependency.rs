@@ -100,10 +100,6 @@ impl Dependency {
 
         self.version_intervals.covers(version)
     }
-
-    pub fn to_package_id(&self, version: Version) -> PackageId {
-        PackageId::new(self.name.clone(), version)
-    }
 }
 
 #[cfg(test)]

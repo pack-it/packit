@@ -28,8 +28,7 @@ impl HandleCommand for CheckArgs {
         // Check if the package exists before checking it with the verifier
         if let Some(package_id) = &self.package {
             // Check if the package exists in the register or in storage before doing any checks
-            let installed_directory =
-                config.prefix_directory.join("packages").join(package_id.name.to_string()).join(package_id.version.to_string());
+            let installed_directory = config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
             if register.get_package_version(package_id).is_none() && !fs::exists(installed_directory).unwrap_or_exit(1) {
                 error!(msg: "Cannot perform checks, package {package_id} doesn't exist in register or storage.");
                 exit(1);

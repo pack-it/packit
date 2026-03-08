@@ -51,12 +51,12 @@ impl<'a> Symlinker<'a> {
         };
 
         let global_active_path = Path::new(&self.config.prefix_directory).join("active");
-        let active_path = global_active_path.join(&package_version.package_id.name.to_string());
+        let active_path = global_active_path.join(&package_version.package_id.name);
 
         let package_install_path = package_version.install_path.clone();
 
         // Remove old symlinks
-        let package_directory = self.config.prefix_directory.join("packages").join(&package_id.name.to_string());
+        let package_directory = self.config.prefix_directory.join("packages").join(&package_id.name);
         remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&package_directory))?;
 
         // Create active symlink

@@ -1,4 +1,4 @@
-use std::{fmt::Display, ops::Deref, str::FromStr};
+use std::{fmt::Display, ops::Deref, path::Path, str::FromStr};
 
 use regex::Regex;
 use serde::{Deserialize, Serialize, de};
@@ -8,9 +8,7 @@ use crate::installer::types::PackageIdError;
 const VALID_PACKAGE_NAME: &str = r"^[a-zA-Z0-9\-_]+$";
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct PackageName {
-    name: String,
-}
+pub struct PackageName(String);
 
 impl<'de> Deserialize<'de> for PackageName {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -29,13 +27,13 @@ impl Serialize for PackageName {
     where
         S: serde::Serializer,
     {
-        serializer.collect_str(&self.name)
+        serializer.collect_str(&self.0)
     }
 }
 
 impl Display for PackageName {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", &self.name)?;
+        write!(f, "{}", &self.0)?;
         Ok(())
     }
 }
@@ -49,14 +47,20 @@ impl FromStr for PackageName {
             return Err(PackageIdError::InvalidPackageName);
         }
 
-        return Ok(Self { name: string.to_string() });
+        return Ok(Self(string.to_string()));
     }
 }
 
 impl Deref for PackageName {
-    type Target = str;
+    type Target = String;
 
     fn deref(&self) -> &Self::Target {
-        &self.name
+        &self.0
+    }
+}
+
+impl AsRef<Path> for PackageName {
+    fn as_ref(&self) -> &Path {
+        Path::new(&self.0)
     }
 }

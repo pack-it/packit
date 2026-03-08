@@ -62,14 +62,7 @@ impl FileSystemPrebuildProvider {
         let prefix = package_id.name.chars().next().ok_or(RepositoryError::EmptyPackageName)?.to_string();
         let target = target.architecture.to_string();
         let prebuild_name = format!("{package_id}-{revision}-{target}.{extension}");
-
-        let path = self
-            .path
-            .join("packages")
-            .join(prefix)
-            .join(&package_id.name.to_string())
-            .join(package_id.version.to_string())
-            .join(prebuild_name);
+        let path = self.path.join("packages").join(prefix).join(&package_id.name).join(package_id.version.to_string()).join(prebuild_name);
 
         if !fs::exists(&path)? {
             return Ok(None);

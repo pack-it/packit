@@ -221,8 +221,7 @@ impl<'a> Installer<'a> {
             install_meta.package_metadata.name.clone(),
             install_meta.version_metadata.version.clone(),
         );
-        let install_directory =
-            self.config.prefix_directory.join("packages").join(package_id.name.to_string()).join(package_id.version.to_string());
+        let install_directory = self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
 
         // Return early if the package has been installed by another node in the sequence (duplicates can exist)
         if self.register.get_package_version(&package_id).is_some() {
@@ -426,8 +425,8 @@ impl<'a> Installer<'a> {
         // Remove entire package directory if there is only one version, otherwise only remove the package version directory
         let installed_versions = self.register.get_all_package_versions(&package_id.name);
         let directory = match installed_versions.len() {
-            1 => self.config.prefix_directory.join("packages").join(package_id.name.to_string()),
-            _ => self.config.prefix_directory.join("packages").join(package_id.name.to_string()).join(package_id.version.to_string()),
+            1 => self.config.prefix_directory.join("packages").join(&package_id.name),
+            _ => self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string()),
         };
 
         let installed_package = match self.register.get_package(&package_id.name) {
@@ -495,7 +494,7 @@ impl<'a> Installer<'a> {
         }
 
         // Path to the determined directory
-        let directory = self.config.prefix_directory.join("packages").join(package_name.to_string());
+        let directory = self.config.prefix_directory.join("packages").join(&package_name);
 
         // Check if package was symlinked
         if let Some(package) = self.register.get_package(package_name) {
@@ -505,7 +504,7 @@ impl<'a> Installer<'a> {
         }
 
         // Remove active path symlink
-        let active_path = Path::new(&self.config.prefix_directory).join("active").join(&package_name.to_string());
+        let active_path = Path::new(&self.config.prefix_directory).join("active").join(&package_name);
         match active_path.exists() {
             true => symlink::remove_symlink(&active_path)?,
             false => warning!("Active symlink did not exist, was the package even installed succesfully?"),
