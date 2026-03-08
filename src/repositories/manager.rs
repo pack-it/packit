@@ -13,7 +13,7 @@ use crate::{
     repositories::{
         error::{RepositoryError, Result},
         provider::{self, MetadataProvider, PrebuildProvider},
-        types::{Checksum, PackageMeta, PackageVersionMeta, RepositoryMeta, TargetBounds},
+        types::{Checksum, PackageMeta, PackageVersionMeta, RepositoryMeta},
     },
 };
 
@@ -131,7 +131,7 @@ impl<'a> RepositoryManager<'a> {
 
     /// Reads package version metadata of the given package, containing dependencies and targets.
     /// Returns the id of the repository and the package version metadata.
-    pub fn read_package_version(&self, package_id: &PackageId, target_bounds: &TargetBounds) -> Result<(String, PackageVersionMeta)> {
+    pub fn read_package_version(&self, package_id: &PackageId, target: &Target) -> Result<(String, PackageVersionMeta)> {
         for repository_id in &self.config.repositories_rank {
             let provider = match self.metadata_providers.get(repository_id) {
                 Some(provider) => provider,
@@ -150,7 +150,7 @@ impl<'a> RepositoryManager<'a> {
             };
 
             // Check if package contains the target
-            if !package.has_target(target_bounds)? {
+            if matches!(package.get_best_target(target), Err(RepositoryError::TargetError)) {
                 continue;
             }
 
