@@ -11,7 +11,10 @@ use thiserror::Error;
 use crate::{
     cli::display::logging::warning,
     config::Config,
-    installer::{build_env::BuildEnv, types::Version},
+    installer::{
+        build_env::BuildEnv,
+        types::{PackageName, Version},
+    },
     platforms::TargetArchitecture,
     repositories::{error::RepositoryError, manager::RepositoryManager},
     utils::env::Environment,
@@ -158,7 +161,7 @@ fn run_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, env: Environm
 pub fn download_script(
     repository_manager: &RepositoryManager,
     script_path: &str,
-    package_name: &str,
+    package_name: &PackageName,
     repository_id: &str,
 ) -> Result<Option<NamedTempFile>> {
     let script_text = match repository_manager.read_script(&repository_id, &package_name, &script_path)? {

@@ -5,7 +5,7 @@ use crate::{
     config::Config,
     installer::{
         error::{InstallerError, Result},
-        types::PackageId,
+        types::{PackageId, PackageName},
     },
     platforms::symlink,
     storage::package_register::PackageRegister,
@@ -76,7 +76,7 @@ impl<'a> Symlinker<'a> {
             },
             None => {
                 return Err(InstallerError::PackageNotFound {
-                    package_name: package_id.name.clone(),
+                    package_name: package_id.name.to_string(),
                     version: None,
                 });
             },
@@ -88,9 +88,9 @@ impl<'a> Symlinker<'a> {
         Ok(())
     }
 
-    pub fn unlink_package(&self, register: &mut PackageRegister, package_name: &str) -> Result<()> {
+    pub fn unlink_package(&self, register: &mut PackageRegister, package_name: &PackageName) -> Result<()> {
         let package = register.get_package(&package_name).ok_or(InstallerError::PackageNotFound {
-            package_name: package_name.into(),
+            package_name: package_name.to_string(),
             version: None,
         })?;
 
@@ -101,7 +101,7 @@ impl<'a> Symlinker<'a> {
 
         // Get active package version
         let package_version = package.get_package_version(&package.active_version).ok_or(InstallerError::PackageNotFound {
-            package_name: package_name.into(),
+            package_name: package_name.to_string(),
             version: Some(package.active_version.to_string()),
         })?;
 
@@ -122,7 +122,7 @@ impl<'a> Symlinker<'a> {
             None => {
                 warning!("Cannot get installed package after changing symlinks, please try running pit fix to fix your installation");
                 return Err(InstallerError::PackageNotFound {
-                    package_name: package_name.into(),
+                    package_name: package_name.to_string(),
                     version: None,
                 });
             },

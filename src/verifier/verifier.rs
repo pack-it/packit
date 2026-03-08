@@ -3,7 +3,7 @@ use std::{fs, str::FromStr};
 use crate::{
     cli::display::logging::warning,
     config::Config,
-    installer::types::{PackageId, Version},
+    installer::types::{PackageId, PackageName, Version},
     packager,
     repositories::types::Checksum,
     storage::package_register::PackageRegister,
@@ -189,6 +189,7 @@ impl<'a> Verifier<'a> {
             // Get the package name
             let package_name = file_package.file_name();
             let package_name = package_name.to_str().ok_or(VerifierError::InvalidUnicodeError)?;
+            let package_name = PackageName::from_str(package_name)?;
 
             for file_version in fs::read_dir(file_package.path())? {
                 let file_version = file_version?;
@@ -198,7 +199,7 @@ impl<'a> Verifier<'a> {
 
                 // Get the version, and create the package id
                 let version = Version::from_str(file_version.file_name().to_str().ok_or(VerifierError::InvalidUnicodeError)?)?;
-                let package_id = PackageId::new(package_name, version)?;
+                let package_id = PackageId::new(package_name.clone(), version);
 
                 // Check if the package version also exists in the register, if not add it to missing
                 if register.get_package_version(&package_id).is_none() {

@@ -1,10 +1,10 @@
 use std::{fmt::Display, str::FromStr};
 
-use crate::installer::types::{PackageId, Version, package_id::PackageIdError};
+use crate::installer::types::{PackageId, PackageName, Version, package_id::PackageIdError};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OptionalPackageId {
-    pub name: String,
+    pub name: PackageName,
     pub version: Option<Version>,
 }
 
@@ -30,12 +30,8 @@ impl FromStr for OptionalPackageId {
             });
         }
 
-        if !PackageId::is_valid_name(string) {
-            return Err(PackageIdError::InvalidPackageName);
-        }
-
         Ok(Self {
-            name: string.into(),
+            name: PackageName::from_str(string)?,
             version: None,
         })
     }
@@ -56,7 +52,7 @@ impl Display for OptionalPackageId {
 impl OptionalPackageId {
     pub fn versioned(&self) -> Option<PackageId> {
         match &self.version {
-            Some(version) => Some(PackageId::new(&self.name, version.clone()).expect("Expected valid name from optional package id")),
+            Some(version) => Some(PackageId::new(self.name.clone(), version.clone())),
             None => None,
         }
     }
@@ -67,27 +63,28 @@ impl OptionalPackageId {
             None => version,
         };
 
-        PackageId::new(&self.name, version).expect("Expected valid name from optional package id")
+        PackageId::new(self.name.clone(), version)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::installer::types::{PackageId, Version, package_id::PackageIdError};
+    use crate::installer::types::{PackageId, Version, package_id::PackageIdError, package_name::PackageNameError};
 
     use super::*;
 
     #[test]
     fn from_str_optional() {
+        let package_name = PackageName::from_str("test").expect("Expected valid package name.");
         let version = Version::from_str("3.4.1").expect("Expected Version.");
-        let correct_version = PackageId::new("test", version).expect("Expected valid package id").into();
+        let correct_version = PackageId::new(package_name.clone(), version).into();
         match OptionalPackageId::from_str("test@3.4.1") {
             Ok(id) => assert_eq!(id, correct_version),
             Err(e) => panic!("Expected Ok(OptionalPackageId(name: 'test', version: Some(Version(..)))), got Err({e:?})"),
         }
 
         let correct_version = OptionalPackageId {
-            name: "test".into(),
+            name: package_name,
             version: None,
         };
         match OptionalPackageId::from_str("test") {
@@ -98,7 +95,10 @@ mod tests {
 
     #[test]
     fn from_str_empty_optional() {
-        assert_eq!(OptionalPackageId::from_str(""), Err(PackageIdError::InvalidPackageName));
+        assert_eq!(
+            OptionalPackageId::from_str(""),
+            Err(PackageIdError::PackageNameError(PackageNameError::InvalidPackageName))
+        );
     }
 
     #[test]
@@ -107,7 +107,7 @@ mod tests {
         for char in invalid_chars.chars() {
             assert_eq!(
                 OptionalPackageId::from_str(format!("{char}@3.4.1").as_str()),
-                Err(PackageIdError::InvalidPackageName)
+                Err(PackageIdError::PackageNameError(PackageNameError::InvalidPackageName))
             );
         }
     }

@@ -10,7 +10,7 @@ use crate::{
         options::InstallerOptions,
         scripts::{self, ScriptData},
         symlinker::Symlinker,
-        types::{OptionalPackageId, PackageId, Version},
+        types::{OptionalPackageId, PackageId, PackageName, Version},
         unpack::unpack,
     },
     platforms::{Target, symlink},
@@ -217,7 +217,10 @@ impl<'a> Installer<'a> {
 
     fn install_package(&mut self, install_meta: &InstallMeta, children: HashSet<PackageId>, use_prebuild: bool) -> Result<()> {
         // Create the package id and install directory
-        let package_id = PackageId::new(&install_meta.package_metadata.name, install_meta.version_metadata.version.clone())?;
+        let package_id = PackageId::new(
+            install_meta.package_metadata.name.clone(),
+            install_meta.version_metadata.version.clone(),
+        );
         let install_directory = self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
 
         // Return early if the package has been installed by another node in the sequence (duplicates can exist)
@@ -393,7 +396,7 @@ impl<'a> Installer<'a> {
         // Check if the current package to delete is a dependency, if so, give dependency error
         if self.register.is_dependency(optional_id) {
             return Err(InstallerError::DependencyError {
-                package_name: optional_id.name.clone(),
+                package_name: optional_id.name.to_string(),
             });
         }
 
@@ -472,7 +475,7 @@ impl<'a> Installer<'a> {
     }
 
     // Checks if there exists at least one version of the specified package. If so, it returns the package directory.
-    fn uninstall_all(&mut self, package_name: &str) -> Result<()> {
+    fn uninstall_all(&mut self, package_name: &PackageName) -> Result<()> {
         let installed_versions = self.register.get_all_package_versions(package_name);
 
         // Ask the user if he/she wants to continue when version isn't specified and there are multiple versions installed
@@ -485,13 +488,13 @@ impl<'a> Installer<'a> {
         // Make sure at least one version exists
         if installed_versions.is_empty() {
             return Err(InstallerError::PackageNotFound {
-                package_name: package_name.into(),
+                package_name: package_name.to_string(),
                 version: None,
             });
         }
 
         // Path to the determined directory
-        let directory = self.config.prefix_directory.join("packages").join(package_name);
+        let directory = self.config.prefix_directory.join("packages").join(&package_name);
 
         // Check if package was symlinked
         if let Some(package) = self.register.get_package(package_name) {
@@ -585,7 +588,7 @@ impl<'a> Installer<'a> {
 
     pub fn update(&mut self, optional_id: &OptionalPackageId, new_version: &Version) -> Result<()> {
         let old_package = self.get_specific_package_update(optional_id)?;
-        let new_package_id = PackageId::new(&old_package.package_id.name, new_version.clone())?;
+        let new_package_id = PackageId::new(old_package.package_id.name.clone(), new_version.clone());
 
         // Check if the new version is lower then the current
         if old_package.package_id.version > *new_version {
@@ -676,7 +679,7 @@ impl<'a> Installer<'a> {
         if let Some(package_id) = optional_id.versioned() {
             return Ok(
                 self.register.get_package_version(&package_id).ok_or(InstallerError::PackageNotFound {
-                    package_name: package_id.name,
+                    package_name: package_id.name.to_string(),
                     version: Some(package_id.version.to_string()),
                 })?,
             );

@@ -1,48 +1,29 @@
 use std::{fmt::Display, str::FromStr};
 
-use regex::Regex;
 use serde::{Deserialize, Serialize, de};
 use thiserror::Error;
 
-use crate::installer::types::{Version, VersionError};
+use crate::installer::types::{PackageName, Version, VersionError, package_name::PackageNameError};
 
 /// Errors that occur when creating or using the package id.
 #[derive(Error, Debug, PartialEq)]
 pub enum PackageIdError {
-    #[error("Couldn't parse package id, because of an invalid version.")]
+    #[error("Invalid package id version")]
     VersionError(#[from] VersionError),
 
-    #[error("Invalid package name, a package name cannot be empty and can only contain characters: 'a-z', 'A-Z', '0-9', '-' and '_'")]
-    InvalidPackageName,
+    #[error("Invalid package id name")]
+    PackageNameError(#[from] PackageNameError),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PackageId {
-    pub name: String,
+    pub name: PackageName,
     pub version: Version,
 }
 
-const VALID_PACKAGE_NAME: &str = r"^[a-zA-Z0-9\-_]+$";
-
 impl PackageId {
-    pub fn new(name: &str, version: Version) -> Result<Self, PackageIdError> {
-        if !PackageId::is_valid_name(name) {
-            return Err(PackageIdError::InvalidPackageName);
-        }
-
-        Ok(Self {
-            name: name.to_string(),
-            version,
-        })
-    }
-
-    pub fn is_valid_name(name: &str) -> bool {
-        let re = Regex::new(VALID_PACKAGE_NAME).expect("Expected valid regex");
-        if !re.is_match(name) {
-            return false;
-        }
-
-        true
+    pub fn new(name: PackageName, version: Version) -> Self {
+        Self { name, version }
     }
 }
 
@@ -86,13 +67,8 @@ impl FromStr for PackageId {
         // Remove @ character from version number before converting to Version
         let version = Version::from_str(&version[1..])?;
 
-        // Check name validity
-        if !PackageId::is_valid_name(name) {
-            return Err(PackageIdError::InvalidPackageName);
-        }
-
         Ok(Self {
-            name: name.to_string(),
+            name: PackageName::from_str(name)?,
             version,
         })
     }
@@ -104,8 +80,9 @@ mod tests {
 
     #[test]
     fn from_str() {
+        let package_name = PackageName::from_str("test").expect("Expected valid package name.");
         let version = Version::from_str("3.4.1").expect("Expected Version.");
-        let correct_version = PackageId::new("test", version).expect("Expected valid package name");
+        let correct_version = PackageId::new(package_name, version);
 
         match PackageId::from_str("test@3.4.1") {
             Ok(id) => assert_eq!(id, correct_version),
@@ -123,7 +100,10 @@ mod tests {
 
     #[test]
     fn from_str_no_name() {
-        assert_eq!(PackageId::from_str("@3.4.1"), Err(PackageIdError::InvalidPackageName));
+        assert_eq!(
+            PackageId::from_str("@3.4.1"),
+            Err(PackageIdError::PackageNameError(PackageNameError::InvalidPackageName))
+        );
     }
 
     #[test]
@@ -132,15 +112,16 @@ mod tests {
         for char in invalid_chars.chars() {
             assert_eq!(
                 PackageId::from_str(format!("{char}@3.4.1").as_str()),
-                Err(PackageIdError::InvalidPackageName)
+                Err(PackageIdError::PackageNameError(PackageNameError::InvalidPackageName))
             );
         }
     }
 
     #[test]
     fn valid_format() {
+        let package_name = PackageName::from_str("test").expect("Expected valid package name.");
         let version = Version::from_str("3.4.1").expect("Expected Version.");
-        let correct_version = PackageId::new("test", version).expect("Expected valid package name");
+        let correct_version = PackageId::new(package_name, version);
 
         assert_eq!(correct_version.to_string(), "test@3.4.1");
     }

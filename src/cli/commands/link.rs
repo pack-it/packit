@@ -3,7 +3,7 @@ use clap::Args;
 use crate::{
     cli::{commands::HandleCommand, display::logging::warning},
     config::{Config, Repository},
-    installer::Symlinker,
+    installer::{Symlinker, types::PackageName},
     platforms::Target,
     repositories::{manager::RepositoryManager, provider, types::PackageVersionMeta},
     storage::package_register::PackageRegister,
@@ -13,7 +13,7 @@ use crate::{
 #[derive(Args, Debug)]
 pub struct LinkArgs {
     /// The name of the package to link
-    pub package_name: String,
+    pub package_name: PackageName,
 
     /// True to force linking, even when we should not link
     #[arg(short, long, default_value = "false")]
