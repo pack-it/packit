@@ -19,7 +19,7 @@ pub struct PackageMeta {
     pub description: String,
     pub homepage: Option<String>,
     pub versions: Vec<Version>,
-    pub supported_versions: HashMap<TargetBounds, VersionIntervals>, // TODO: Maybe make sure these intervals don't use higher than bounds
+    pub supported_versions: HashMap<TargetBounds, VersionIntervals>,
 }
 
 impl PackageMeta {
@@ -29,40 +29,43 @@ impl PackageMeta {
             None => return Err(RepositoryError::TargetError),
         };
 
-        let current_versions = self.supported_versions.get(target).ok_or(RepositoryError::TargetError)?;
-        if let Some(last_bound) = current_versions.get_version_bounds().last() {
-            return Ok(last_bound.get_upperbound().ok_or(RepositoryError::InvalidSupportIntervals)?);
-        }
-
-        Err(RepositoryError::InvalidSupportIntervals)
+        let supported = self.supported_versions.get(target).ok_or(RepositoryError::TargetError)?;
+        Ok(self.latest_version_impl(|v| !supported.covers(v))?.ok_or(RepositoryError::EmptyIntervals)?)
     }
 
-    pub fn get_latest_dependency_version(&self, dependency: &Dependency, target: &Target) -> Result<Version> {
+    pub fn get_latest_dependency_version(&self, dependency: &Dependency, target: &Target) -> Result<&Version> {
         let target = match TargetBounds::get_best_target(&target, self.supported_versions.keys().collect()) {
             Some(target) => target,
             None => return Err(RepositoryError::TargetError),
         };
 
-        // The supported vec isn't necessary in order, so we need to keep track of the current highest version
-        let mut current_highest: Option<Version> = None;
-        for version in &self.versions {
-            // Continue if the dependency is not satisfied
-            if !dependency.satisfied(&self.name, version) {
-                continue;
-            }
+        let supported = self.supported_versions.get(target).ok_or(RepositoryError::TargetError)?;
+        Ok(self
+            .latest_version_impl(|v| !dependency.satisfied(&self.name, v) || !supported.covers(v))?
+            .ok_or(RepositoryError::SupportError(dependency.to_string()))?)
+    }
 
-            // Continue if the version is not supported for the current target
-            if !self.supported_versions.get(target).ok_or(RepositoryError::TargetError)?.covers(version) {
+    /// A generic method to get the latest version of the current package.
+    /// If any of the checks are true for the current version we continue for that version.
+    fn latest_version_impl<F>(&self, checks: F) -> Result<Option<&Version>>
+    where
+        F: Fn(&Version) -> bool,
+    {
+        // The versions vec isn't necessary in order, so we need to keep track of the current highest version
+        let mut current_highest: Option<&Version> = None;
+        for version in &self.versions {
+            // Continue if any of the checks are true
+            if checks(version) {
                 continue;
             }
 
             current_highest = match current_highest {
-                Some(highest) if highest < *version => Some(version.clone()),
-                None => Some(version.clone()),
+                Some(highest) if highest < version => Some(version),
+                None => Some(version),
                 _ => continue,
             };
         }
 
-        Ok(current_highest.ok_or(RepositoryError::SupportError(dependency.to_string()))?)
+        Ok(current_highest)
     }
 }

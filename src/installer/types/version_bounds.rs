@@ -60,19 +60,6 @@ impl VersionBounds {
             _ => false,
         }
     }
-
-    /// Gets the upperbound of the current VersionBounds.
-    /// Returns Some(Version) if an upperbound exists, None if it doesn't.
-    pub fn get_upperbound(&self) -> Option<&Version> {
-        match self {
-            VersionBounds::Range(_, high) => Some(high),
-            VersionBounds::Lower(version) => Some(version),
-            VersionBounds::LowerEqual(version) => Some(version),
-            VersionBounds::Higher(_) => None,
-            VersionBounds::HigherEqual(_) => None,
-            VersionBounds::Equal(version) => Some(version),
-        }
-    }
 }
 
 #[cfg(test)]
