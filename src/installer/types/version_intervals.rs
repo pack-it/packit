@@ -1,12 +1,23 @@
 use std::str::FromStr;
 
-use serde::Deserialize;
+use serde::{Deserialize, de};
 
 use crate::installer::types::{Version, VersionBounds, VersionError};
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct VersionIntervals {
     version_bounds: Vec<VersionBounds>,
+}
+
+impl<'de> Deserialize<'de> for VersionIntervals {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let string: String = de::Deserialize::deserialize(deserializer)?;
+
+        Ok(Self::from_str_intervals(&string).map_err(de::Error::custom)?)
+    }
 }
 
 impl VersionIntervals {
