@@ -6,7 +6,7 @@ use crate::{
 
 // TODO: Expand command to list updateable packages
 #[derive(Args, Debug)]
-pub struct ListArgs {}
+pub struct ListArgs;
 
 impl HandleCommand for ListArgs {
     fn handle(&self) {

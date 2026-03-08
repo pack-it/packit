@@ -63,6 +63,11 @@ pub enum InstallerError {
         reason: String,
     },
 
+    #[error("An unreachable state has been reached: {msg}.")]
+    UnreachableError {
+        msg: String,
+    },
+
     // Wrapped custom errors
     #[error("Cannot find a repository for installation")]
     RepositoryError(#[from] RepositoryError),

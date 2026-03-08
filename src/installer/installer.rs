@@ -28,7 +28,6 @@ use std::{
     collections::HashSet,
     fs,
     path::{Path, PathBuf},
-    process::exit,
 };
 
 /// The installer of Packit, managing the installation of packages on the system.
@@ -433,8 +432,9 @@ impl<'a> Installer<'a> {
         let installed_package = match self.register.get_package(&package_id.name) {
             Some(package) => package,
             None => {
-                warning!("Package cannot be found eventhough it was found before, should be unreachable.");
-                return Ok(());
+                return Err(InstallerError::UnreachableError {
+                    msg: "Package cannot be found eventhough it was found before".to_string(),
+                });
             },
         };
 
@@ -442,8 +442,9 @@ impl<'a> Installer<'a> {
         let repository = match installed_package.get_package_version(&package_id.version) {
             Some(package_version) => Repository::new(&package_version.source_repository_url, &package_version.source_repository_provider),
             None => {
-                warning!("Package version cannot be found eventhough it was found before, should be unreachable.");
-                return Ok(());
+                return Err(InstallerError::UnreachableError {
+                    msg: "Package version cannot be found eventhough it was found before".to_string(),
+                });
             },
         };
 
@@ -640,8 +641,9 @@ impl<'a> Installer<'a> {
             Some(package_version) => package_version,
             None => {
                 // Theoretically unreachable
-                error!(msg: "New package version '{new_version}' was not installed correctly.");
-                exit(1);
+                return Err(InstallerError::UnreachableError {
+                    msg: format!("New package version '{new_version}' cannot be retrieved from the register"),
+                });
             },
         };
 

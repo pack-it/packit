@@ -8,7 +8,7 @@ use clap::Args;
 use colored::Colorize;
 
 #[derive(Args, Debug)]
-pub struct RepositoryArgs {}
+pub struct RepositoryArgs;
 
 impl HandleCommand for RepositoryArgs {
     /// Handles the repositories command, listing all configured repositories.
