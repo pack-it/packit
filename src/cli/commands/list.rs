@@ -1,8 +1,7 @@
 use clap::Args;
 
 use crate::{
-    cli::commands::HandleCommand, config::Config, repositories::manager::RepositoryManager, storage::package_register::PackageRegister,
-    utils::unwrap_or_exit::UnwrapOrExit,
+    cli::commands::HandleCommand, config::Config, storage::package_register::PackageRegister, utils::unwrap_or_exit::UnwrapOrExit,
 };
 
 // TODO: Expand command to list updateable packages
@@ -10,8 +9,9 @@ use crate::{
 pub struct ListArgs {}
 
 impl HandleCommand for ListArgs {
-    fn handle(&self, config: &Config, _: &RepositoryManager) {
-        let register_dir = PackageRegister::get_default_path(config);
+    fn handle(&self) {
+        let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
+        let register_dir = PackageRegister::get_default_path(&config);
         let register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
         for package in register.iterate_all() {

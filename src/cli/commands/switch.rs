@@ -7,7 +7,6 @@ use crate::{
         Symlinker,
         types::{PackageName, Version},
     },
-    repositories::manager::RepositoryManager,
     storage::package_register::PackageRegister,
     utils::unwrap_or_exit::UnwrapOrExit,
 };
@@ -26,8 +25,9 @@ pub struct SwitchArgs {
 }
 
 impl HandleCommand for SwitchArgs {
-    fn handle(&self, config: &Config, _: &RepositoryManager) {
-        let register_path = PackageRegister::get_default_path(config);
+    fn handle(&self) {
+        let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
+        let register_path = PackageRegister::get_default_path(&config);
         let mut register = PackageRegister::from(&register_path).unwrap_or_exit(1);
 
         // Get installed package
@@ -58,7 +58,7 @@ impl HandleCommand for SwitchArgs {
         let should_symlink = !self.skip_symlinking && package.symlinked;
 
         // Set package version to active
-        Symlinker::new(config)
+        Symlinker::new(&config)
             .set_active(&mut register, &package_id, should_symlink)
             .unwrap_or_exit_msg("Cannot switch active package", 1);
 

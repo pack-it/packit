@@ -5,7 +5,7 @@ use crate::{
     config::{Config, Repository},
     installer::{Symlinker, types::PackageName},
     platforms::Target,
-    repositories::{manager::RepositoryManager, provider, types::PackageVersionMeta},
+    repositories::{provider, types::PackageVersionMeta},
     storage::package_register::PackageRegister,
     utils::unwrap_or_exit::UnwrapOrExit,
 };
@@ -21,8 +21,9 @@ pub struct LinkArgs {
 }
 
 impl HandleCommand for LinkArgs {
-    fn handle(&self, config: &Config, _: &RepositoryManager) {
-        let register_path = PackageRegister::get_default_path(config);
+    fn handle(&self) {
+        let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
+        let register_path = PackageRegister::get_default_path(&config);
         let mut register = PackageRegister::from(&register_path).unwrap_or_exit(1);
 
         // Get installed package
@@ -87,7 +88,7 @@ impl HandleCommand for LinkArgs {
         let install_path = package_version.install_path.clone();
 
         // Create symlinks
-        Symlinker::new(config).create_symlinks(&install_path).unwrap_or_exit_msg("Unable to link package", 1);
+        Symlinker::new(&config).create_symlinks(&install_path).unwrap_or_exit_msg("Unable to link package", 1);
 
         let package = register
             .get_package_mut(&self.package_name)

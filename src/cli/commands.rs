@@ -16,17 +16,13 @@ use std::process::exit;
 
 use clap::{Parser, Subcommand, builder::Styles};
 
-use crate::{
-    cli::{
-        commands::{
-            check::CheckArgs, fix::FixArgs, info::InfoArgs, install::InstallArgs, link::LinkArgs, list::ListArgs, package::PackageArgs,
-            repositories::RepositoryArgs, search::SearchArgs, switch::SwitchArgs, uninstall::UninstallArgs, unlink::UnlinkArgs,
-            update::UpdateArgs,
-        },
-        display::logging::error,
+use crate::cli::{
+    commands::{
+        check::CheckArgs, fix::FixArgs, info::InfoArgs, install::InstallArgs, link::LinkArgs, list::ListArgs, package::PackageArgs,
+        repositories::RepositoryArgs, search::SearchArgs, switch::SwitchArgs, uninstall::UninstallArgs, unlink::UnlinkArgs,
+        update::UpdateArgs,
     },
-    config::Config,
-    repositories::manager::RepositoryManager,
+    display::logging::error,
 };
 
 #[derive(Parser, Debug)]
@@ -99,7 +95,7 @@ impl Cli {
     }
 
     /// Reads and handles the command.
-    pub fn handle_command(&self, manager: &RepositoryManager, config: &Config) {
+    pub fn handle_command(&self) {
         // Handle commands with user specified arguments
         let args: &dyn HandleCommand = match &self.command {
             Commands::Install(args) => args,
@@ -117,10 +113,10 @@ impl Cli {
             Commands::Update(args) => args,
         };
 
-        args.handle(config, manager);
+        args.handle();
     }
 }
 
 trait HandleCommand {
-    fn handle(&self, config: &Config, manager: &RepositoryManager);
+    fn handle(&self);
 }
