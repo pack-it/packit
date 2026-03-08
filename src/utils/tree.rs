@@ -8,6 +8,7 @@ use crate::{
         DependencyTypes, InstallMeta,
         types::{Dependency, PackageId},
     },
+    platforms::Target,
     repositories::{error::RepositoryError, manager::RepositoryManager},
     storage::package_register::PackageRegister,
 };
@@ -236,8 +237,8 @@ impl Node<Option<InstallMeta>, DependencyTypes> {
 
         // Use the latest version if the dependency is not yet satisfied
         let (repository_id, package_metadata) = manager.read_package(dependency.get_name())?;
-        let version = package_metadata.get_latest_dependency_version(&dependency)?;
-        let dependency_id = dependency.to_package_id(version);
+        let version = package_metadata.get_latest_dependency_version(&dependency, &Target::current())?;
+        let dependency_id = dependency.to_package_id(version.clone());
         let version_metadata = manager.read_repo_package_version(&repository_id, &dependency_id)?;
         let install_meta = InstallMeta::new(package_metadata, version_metadata, repository_id)?;
         Self::new_from_meta_impl(&dependency_id, install_meta, manager, register, label, include_build)

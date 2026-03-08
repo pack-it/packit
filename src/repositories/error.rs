@@ -43,7 +43,10 @@ pub enum RepositoryError {
     #[error("The given package name is empty")]
     EmptyPackageName,
 
-    #[error("Dependency '{0}' cannot be satisfied by the current package repository.")]
+    #[error("Dependency '{0}' cannot be satisfied by the current package repository for the current target.")]
+    DependencySupportError(String),
+
+    #[error("No supported version for the current target could be found for package '{0}'.")]
     SupportError(String),
 }
 

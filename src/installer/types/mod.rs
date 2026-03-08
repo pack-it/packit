@@ -3,6 +3,7 @@ mod optional_id;
 mod package_id;
 mod version;
 mod version_bounds;
+mod version_intervals;
 
 pub use dependency::Dependency;
 
@@ -15,6 +16,8 @@ pub use version::Version;
 pub use version::VersionError;
 
 pub use version_bounds::VersionBounds;
+
+pub use version_intervals::VersionIntervals;
 
 #[cfg(test)]
 pub use dependency::tests as dependency_tests;

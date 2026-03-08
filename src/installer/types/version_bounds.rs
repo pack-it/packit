@@ -1,8 +1,10 @@
 use std::str::FromStr;
 
+use serde::Deserialize;
+
 use crate::installer::types::{Version, VersionError};
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Deserialize)]
 pub enum VersionBounds {
     Range(Version, Version),
     Lower(Version),
@@ -47,22 +49,6 @@ impl FromStr for VersionBounds {
 }
 
 impl VersionBounds {
-    pub fn from_str_ranges(ranges: &str) -> Result<Vec<VersionBounds>, VersionError> {
-        // Check for empty input
-        if ranges.is_empty() {
-            return Ok(Vec::new());
-        }
-
-        let ranges = ranges.split('|');
-        let mut bounds = Vec::new();
-
-        for range in ranges {
-            bounds.push(VersionBounds::from_str(range)?);
-        }
-
-        Ok(bounds)
-    }
-
     pub fn covers(&self, version: &Version) -> bool {
         match self {
             VersionBounds::Range(lower, upper) if lower <= version && upper >= version => true,
@@ -137,30 +123,6 @@ mod tests {
         match version_bound {
             Ok(bound) => assert!(matches!(bound, VersionBounds::Equal(..)), "bound was {:?}", bound),
             Err(e) => panic!("Expected Ok(VersionBound (..)), got Err({e:?})"),
-        }
-    }
-
-    #[test]
-    fn from_str_ranges() {
-        let version_bounds = VersionBounds::from_str_ranges(">3.4|<6.5");
-
-        match version_bounds {
-            Ok(bounds) => {
-                assert!(bounds.len() == 2);
-                assert!(matches!(bounds.get(0), Some(VersionBounds::Higher(..))), "bound was {:?}", bounds);
-                assert!(matches!(bounds.get(1), Some(VersionBounds::Lower(..))), "bound was {:?}", bounds);
-            },
-            Err(e) => panic!("Expected Ok(Vec(VersionBound (..))), got Err({e:?})"),
-        }
-    }
-
-    #[test]
-    fn from_str_ranges_empty() {
-        let version_bounds = VersionBounds::from_str_ranges("");
-
-        match version_bounds {
-            Ok(bounds) => assert!(bounds.len() == 0),
-            Err(e) => panic!("Expected Ok([]), got Err({e:?})"),
         }
     }
 }

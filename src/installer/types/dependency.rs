@@ -1,9 +1,9 @@
-use std::fmt::Display;
+use std::{fmt::Display, str::FromStr};
 
 use serde::{Deserialize, Serialize, de};
 use thiserror::Error;
 
-use crate::installer::types::{PackageId, Version, VersionBounds, VersionError};
+use crate::installer::types::{PackageId, Version, VersionBounds, VersionError, version_intervals::VersionIntervals};
 
 #[derive(Error, Debug, PartialEq)]
 pub enum DependencyParserError {
@@ -14,11 +14,10 @@ pub enum DependencyParserError {
     InvalidDependencyName,
 }
 
-// TODO: Dependency names should be validated like in the PackageId also implement a method which takes a version and then returns a PackageId
 #[derive(Debug, Clone)]
 pub struct Dependency {
     name: String,
-    version_ranges: Vec<VersionBounds>,
+    version_intervals: VersionIntervals,
 }
 
 impl<'de> Deserialize<'de> for Dependency {
@@ -42,12 +41,11 @@ impl<'de> Deserialize<'de> for Dependency {
         // Remove @ character from version number
         let version = version.strip_prefix("@").unwrap_or("");
 
-        // TODO: Check for impossible requirements, like: >3.1|<3.1
-        let version_ranges = VersionBounds::from_str_ranges(version).map_err(de::Error::custom)?;
+        let version_intervals = VersionIntervals::from_str(version).map_err(de::Error::custom)?;
 
         Ok(Self {
             name: name.to_string(),
-            version_ranges,
+            version_intervals,
         })
     }
 }
@@ -64,13 +62,13 @@ impl Serialize for Dependency {
 impl Display for Dependency {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // Return only the name if the version isn't specified
-        if self.version_ranges.is_empty() {
+        if self.version_intervals.is_empty() {
             write!(f, "{}", self.name)?;
             return Ok(());
         }
 
         let mut string_version = String::new();
-        for range in &self.version_ranges {
+        for range in self.version_intervals.get_version_bounds() {
             if !string_version.is_empty() {
                 string_version.push('|');
             }
@@ -95,28 +93,12 @@ impl Dependency {
         &self.name
     }
 
-    // TODO: Should only except package_id, version shouldn't be optional
-    pub fn satisfied(&self, name: &str, version: Option<&Version>) -> bool {
+    pub fn satisfied(&self, name: &str, version: &Version) -> bool {
         if self.name != name {
             return false;
         }
 
-        let version = match version {
-            Some(version) => version,
-            None => return true,
-        };
-
-        if self.version_ranges.is_empty() {
-            return true;
-        }
-
-        for range in &self.version_ranges {
-            if range.covers(version) {
-                return true;
-            }
-        }
-
-        false
+        self.version_intervals.covers(version)
     }
 
     pub fn to_package_id(&self, version: Version) -> PackageId {
@@ -130,67 +112,59 @@ pub mod tests {
 
     use super::*;
 
-    pub fn create_dependency(name: &str, version_ranges: &str) -> Dependency {
+    pub fn create_dependency(name: &str, version_intervals: &str) -> Dependency {
         Dependency {
             name: name.into(),
-            version_ranges: VersionBounds::from_str_ranges(version_ranges).expect("Expected VersionBounds"),
+            version_intervals: VersionIntervals::from_str(version_intervals).expect("Expected correct version intervals."),
         }
-    }
-
-    #[test]
-    fn satisfied_name_only() {
-        let dependency = create_dependency("Test", "3.4.1");
-
-        assert!(dependency.satisfied("Test", None));
-        assert!(!dependency.satisfied("Test Wrong", None));
     }
 
     #[test]
     fn satisfied_range() {
         let dependency = create_dependency("Test", "3.4.1-3.4.8");
 
-        assert!(dependency.satisfied("Test", Some(&Version::from_str("3.4.8").expect("Expected Version."))));
-        assert!(!dependency.satisfied("Test", Some(&Version::from_str("3.4.0").expect("Expected version"))));
-        assert!(!dependency.satisfied("Test", Some(&Version::from_str("3.4.9").expect("Expected version"))));
+        assert!(dependency.satisfied("Test", &Version::from_str("3.4.8").expect("Expected Version.")));
+        assert!(!dependency.satisfied("Test", &Version::from_str("3.4.0").expect("Expected version")));
+        assert!(!dependency.satisfied("Test", &Version::from_str("3.4.9").expect("Expected version")));
     }
 
     #[test]
     fn satisfied_lower() {
         let dependency = create_dependency("Test", "<3.4.1");
 
-        assert!(dependency.satisfied("Test", Some(&Version::from_str("3.4.0").expect("Expected Version."))));
-        assert!(!dependency.satisfied("Test", Some(&Version::from_str("3.4.1").expect("Expected Version."))));
+        assert!(dependency.satisfied("Test", &Version::from_str("3.4.0").expect("Expected Version.")));
+        assert!(!dependency.satisfied("Test", &Version::from_str("3.4.1").expect("Expected Version.")));
     }
 
     #[test]
     fn satisfied_lower_equals() {
         let dependency = create_dependency("Test", "<=3.4.1");
 
-        assert!(dependency.satisfied("Test", Some(&Version::from_str("3.4.1").expect("Expected Version."))));
-        assert!(!dependency.satisfied("Test", Some(&Version::from_str("3.4.2").expect("Expected Version."))));
+        assert!(dependency.satisfied("Test", &Version::from_str("3.4.1").expect("Expected Version.")));
+        assert!(!dependency.satisfied("Test", &Version::from_str("3.4.2").expect("Expected Version.")));
     }
 
     #[test]
     fn satisfied_higher() {
         let dependency = create_dependency("Test", ">3.4.1");
 
-        assert!(dependency.satisfied("Test", Some(&Version::from_str("3.4.2").expect("Expected Version."))));
-        assert!(!dependency.satisfied("Test", Some(&Version::from_str("3.4.1").expect("Expected Version."))));
+        assert!(dependency.satisfied("Test", &Version::from_str("3.4.2").expect("Expected Version.")));
+        assert!(!dependency.satisfied("Test", &Version::from_str("3.4.1").expect("Expected Version.")));
     }
 
     #[test]
     fn satisfied_higher_equals() {
         let dependency = create_dependency("Test", ">=3.4.1");
 
-        assert!(dependency.satisfied("Test", Some(&Version::from_str("3.4.1").expect("Expected Version."))));
-        assert!(!dependency.satisfied("Test", Some(&Version::from_str("3.4.0").expect("Expected Version."))));
+        assert!(dependency.satisfied("Test", &Version::from_str("3.4.1").expect("Expected Version.")));
+        assert!(!dependency.satisfied("Test", &Version::from_str("3.4.0").expect("Expected Version.")));
     }
 
     #[test]
     fn satisfied_equals() {
         let dependency = create_dependency("Test", "3.4.1");
 
-        assert!(dependency.satisfied("Test", Some(&Version::from_str("3.4.1").expect("Expected Version."))));
-        assert!(!dependency.satisfied("Test", Some(&Version::from_str("5").expect("Expected Version."))));
+        assert!(dependency.satisfied("Test", &Version::from_str("3.4.1").expect("Expected Version.")));
+        assert!(!dependency.satisfied("Test", &Version::from_str("5").expect("Expected Version.")));
     }
 }
