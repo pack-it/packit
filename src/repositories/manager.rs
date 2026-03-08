@@ -5,7 +5,10 @@ use bytes::Bytes;
 use crate::{
     cli::display::logging::{debug, error, warning},
     config::Config,
-    installer::{types::PackageId, unpack::ArchiveExtension},
+    installer::{
+        types::{PackageId, PackageName},
+        unpack::ArchiveExtension,
+    },
     platforms::Target,
     repositories::{
         error::{RepositoryError, Result},
@@ -79,7 +82,7 @@ impl<'a> RepositoryManager<'a> {
 
     /// Reads package metadata of the given package, containing information about the package.
     /// Returns the id of the repository and the package metadata.
-    pub fn read_package(&self, package: &str) -> Result<(String, PackageMeta)> {
+    pub fn read_package(&self, package: &PackageName) -> Result<(String, PackageMeta)> {
         for repository_id in &self.config.repositories_rank {
             let provider = match self.metadata_providers.get(repository_id) {
                 Some(provider) => provider,
@@ -106,14 +109,14 @@ impl<'a> RepositoryManager<'a> {
         }
 
         Err(RepositoryError::PackageNotFoundError {
-            package_name: package.into(),
+            package_name: package.to_string(),
             version: None,
         })
     }
 
     /// Reads package metadata of the given package from the given repository, containing information about the package.
     /// Does not check if the data contains the current target.
-    pub fn read_repo_package(&self, repository_id: &str, package: &str) -> Result<PackageMeta> {
+    pub fn read_repo_package(&self, repository_id: &str, package: &PackageName) -> Result<PackageMeta> {
         let provider = match self.metadata_providers.get(repository_id) {
             Some(provider) => provider,
             None => {
@@ -188,7 +191,7 @@ impl<'a> RepositoryManager<'a> {
 
     /// Reads a script of the given package from the given repository.
     /// Returns the script as a string.
-    pub fn read_script(&self, repository_id: &str, package: &str, script_path: &str) -> Result<Option<String>> {
+    pub fn read_script(&self, repository_id: &str, package: &PackageName, script_path: &str) -> Result<Option<String>> {
         let provider = match self.metadata_providers.get(repository_id) {
             Some(provider) => provider,
             None => {

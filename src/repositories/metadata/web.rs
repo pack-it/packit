@@ -2,7 +2,7 @@ use reqwest::StatusCode;
 
 use crate::{
     config::Repository,
-    installer::types::Version,
+    installer::types::{PackageName, Version},
     repositories::{
         error::Result,
         provider::MetadataProvider,
@@ -24,19 +24,19 @@ impl MetadataProvider for WebMetadataProvider {
         Ok(toml::de::from_str(&data)?)
     }
 
-    fn read_package(&self, package: &str) -> Result<PackageMeta> {
+    fn read_package(&self, package: &PackageName) -> Result<PackageMeta> {
         let data = reqwest::blocking::get(format!("{}/packages/{package}/package.toml", self.url))?.text()?;
 
         Ok(toml::de::from_str(&data)?)
     }
 
-    fn read_package_version(&self, package: &str, version: &Version) -> Result<PackageVersionMeta> {
+    fn read_package_version(&self, package: &PackageName, version: &Version) -> Result<PackageVersionMeta> {
         let data = reqwest::blocking::get(format!("{}/packages/{package}/{version}/targets.toml", self.url))?.text()?;
 
         Ok(toml::de::from_str(&data)?)
     }
 
-    fn read_script(&self, package: &str, script_path: &str) -> Result<Option<String>> {
+    fn read_script(&self, package: &PackageName, script_path: &str) -> Result<Option<String>> {
         let response = reqwest::blocking::get(format!("{}/packages/{package}/{script_path}", self.url))?;
 
         if response.status() == StatusCode::NOT_FOUND {

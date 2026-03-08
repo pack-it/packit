@@ -3,7 +3,7 @@ use std::{fs, str::FromStr};
 use crate::{
     cli::display::logging::warning,
     config::Config,
-    installer::types::{PackageId, Version},
+    installer::types::{PackageId, PackageName, Version},
     packager,
     repositories::types::Checksum,
     storage::package_register::PackageRegister,
@@ -131,7 +131,8 @@ impl<'a> Verifier<'a> {
     /// Checks for alterations in a single package using a checksum which is compared to the checksum from the pre-build.
     /// Returns true if the package was altered, false if not.
     fn check_package_alterations(&self, package_id: &PackageId) -> Result<bool> {
-        let install_directory = self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
+        let install_directory =
+            self.config.prefix_directory.join("packages").join(package_id.name.to_string()).join(package_id.version.to_string());
         let compressed = packager::compress(&install_directory)?;
         let checksum = Checksum::from_bytes(&compressed);
 
@@ -165,7 +166,8 @@ impl<'a> Verifier<'a> {
     /// Checks if a specific package exists in storage. Note that it doesn't check if the package also exists in the register.
     /// Returns false if the package storage isn't consistent, true if it is.
     fn package_storage_is_consistent(&self, package_id: &PackageId) -> Result<bool> {
-        let installed_directory = self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
+        let installed_directory =
+            self.config.prefix_directory.join("packages").join(&package_id.name.to_string()).join(package_id.version.to_string());
 
         // Check if the directory exists, if so return true
         if fs::exists(installed_directory)? {
@@ -189,6 +191,7 @@ impl<'a> Verifier<'a> {
             // Get the package name
             let package_name = file_package.file_name();
             let package_name = package_name.to_str().ok_or(VerifierError::InvalidUnicodeError)?;
+            let package_name = PackageName::from_str(package_name)?;
 
             for file_version in fs::read_dir(file_package.path())? {
                 let file_version = file_version?;
@@ -198,7 +201,7 @@ impl<'a> Verifier<'a> {
 
                 // Get the version, and create the package id
                 let version = Version::from_str(file_version.file_name().to_str().ok_or(VerifierError::InvalidUnicodeError)?)?;
-                let package_id = PackageId::new(package_name, version)?;
+                let package_id = PackageId::new(package_name.clone(), version);
 
                 // Check if the package version also exists in the register, if not add it to missing
                 if register.get_package_version(&package_id).is_none() {

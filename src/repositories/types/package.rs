@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use serde::Deserialize;
 
 use crate::{
-    installer::types::{Dependency, Version, VersionIntervals},
+    installer::types::{Dependency, PackageName, Version, VersionIntervals},
     platforms::Target,
     repositories::{
         error::{RepositoryError, Result},
@@ -12,10 +12,9 @@ use crate::{
 };
 
 /// Represents the package metadata, containing package information.
-/// TODO: Validate name with PackageId rules
 #[derive(Deserialize, Debug)]
 pub struct PackageMeta {
-    pub name: String,
+    pub name: PackageName,
     pub description: String,
     pub homepage: Option<String>,
     pub versions: Vec<Version>,

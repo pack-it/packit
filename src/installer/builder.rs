@@ -93,7 +93,7 @@ impl<'a> Builder<'a> {
             // Return error to indicate the dependency is not installed yet
             return Err(BuilderError::MissingDependencyError {
                 dependency_type: "normal".into(),
-                package_name: dependency.get_name().into(),
+                package_name: dependency.get_name().to_string(),
             });
         }
 
@@ -109,7 +109,7 @@ impl<'a> Builder<'a> {
             // Return error to indicate the dependency is not installed yet
             return Err(BuilderError::MissingDependencyError {
                 dependency_type: "build".into(),
-                package_name: build_dependency.get_name().into(),
+                package_name: build_dependency.get_name().to_string(),
             });
         }
 

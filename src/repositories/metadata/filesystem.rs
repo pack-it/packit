@@ -2,7 +2,7 @@ use std::{fs, path::PathBuf};
 
 use crate::{
     config::Repository,
-    installer::types::Version,
+    installer::types::{PackageName, Version},
     repositories::{
         error::Result,
         provider::MetadataProvider,
@@ -24,21 +24,21 @@ impl MetadataProvider for FileSystemMetadataProvider {
         Ok(toml::de::from_str(&data)?)
     }
 
-    fn read_package(&self, package: &str) -> Result<PackageMeta> {
-        let data = fs::read_to_string(self.path.join("packages").join(package).join("package.toml"))?;
+    fn read_package(&self, package: &PackageName) -> Result<PackageMeta> {
+        let data = fs::read_to_string(self.path.join("packages").join(package.to_string()).join("package.toml"))?;
 
         Ok(toml::de::from_str(&data)?)
     }
 
-    fn read_package_version(&self, package: &str, version: &Version) -> Result<PackageVersionMeta> {
-        let path = self.path.join("packages").join(package).join(version.to_string()).join("targets.toml");
+    fn read_package_version(&self, package: &PackageName, version: &Version) -> Result<PackageVersionMeta> {
+        let path = self.path.join("packages").join(package.to_string()).join(version.to_string()).join("targets.toml");
         let data = fs::read_to_string(path)?;
 
         Ok(toml::de::from_str(&data)?)
     }
 
-    fn read_script(&self, package: &str, script_path: &str) -> Result<Option<String>> {
-        let path = self.path.join("packages").join(package).join(script_path);
+    fn read_script(&self, package: &PackageName, script_path: &str) -> Result<Option<String>> {
+        let path = self.path.join("packages").join(package.to_string()).join(script_path);
 
         if !fs::exists(&path)? {
             return Ok(None);

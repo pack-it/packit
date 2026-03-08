@@ -3,7 +3,7 @@ use bytes::Bytes;
 use crate::{
     config::Repository,
     installer::{
-        types::{PackageId, Version},
+        types::{PackageId, PackageName, Version},
         unpack::ArchiveExtension,
     },
     platforms::Target,
@@ -21,13 +21,13 @@ pub trait MetadataProvider {
     fn read_repository_metadata(&self) -> Result<RepositoryMeta>;
 
     /// Reads package metadata from the repository, containing information about the package.
-    fn read_package(&self, package: &str) -> Result<PackageMeta>;
+    fn read_package(&self, package: &PackageName) -> Result<PackageMeta>;
 
     /// Reads the metadata of a certain version of a package, containing dependencies and targets.
-    fn read_package_version(&self, package: &str, version: &Version) -> Result<PackageVersionMeta>;
+    fn read_package_version(&self, package: &PackageName, version: &Version) -> Result<PackageVersionMeta>;
 
     /// Reads the requested script from the repository.
-    fn read_script(&self, package: &str, script_path: &str) -> Result<Option<String>>;
+    fn read_script(&self, package: &PackageName, script_path: &str) -> Result<Option<String>>;
 }
 
 /// Generic prebuild repository provider trait, reading prebuild packages from a repository.

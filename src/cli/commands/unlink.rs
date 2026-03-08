@@ -1,14 +1,18 @@
 use clap::Args;
 
 use crate::{
-    cli::commands::HandleCommand, config::Config, installer::Symlinker, repositories::manager::RepositoryManager,
-    storage::package_register::PackageRegister, utils::unwrap_or_exit::UnwrapOrExit,
+    cli::commands::HandleCommand,
+    config::Config,
+    installer::{Symlinker, types::PackageName},
+    repositories::manager::RepositoryManager,
+    storage::package_register::PackageRegister,
+    utils::unwrap_or_exit::UnwrapOrExit,
 };
 
 #[derive(Args, Debug)]
 pub struct UnlinkArgs {
     /// The name of the package to unlink
-    pub package_name: String,
+    pub package_name: PackageName,
 }
 
 impl HandleCommand for UnlinkArgs {

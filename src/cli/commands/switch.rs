@@ -3,7 +3,10 @@ use clap::Args;
 use crate::{
     cli::{commands::HandleCommand, display::logging::warning},
     config::Config,
-    installer::{Symlinker, types::Version},
+    installer::{
+        Symlinker,
+        types::{PackageName, Version},
+    },
     repositories::manager::RepositoryManager,
     storage::package_register::PackageRegister,
     utils::unwrap_or_exit::UnwrapOrExit,
@@ -12,7 +15,7 @@ use crate::{
 #[derive(Args, Debug)]
 pub struct SwitchArgs {
     /// The name of the package to switch
-    pub package_name: String,
+    pub package_name: PackageName,
 
     /// The new active version of the package
     pub package_version: Version,

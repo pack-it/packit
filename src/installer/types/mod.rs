@@ -1,6 +1,7 @@
 mod dependency;
 mod optional_id;
 mod package_id;
+mod package_name;
 mod version;
 mod version_bounds;
 mod version_intervals;
@@ -11,6 +12,8 @@ pub use optional_id::OptionalPackageId;
 
 pub use package_id::PackageId;
 pub use package_id::PackageIdError;
+
+pub use package_name::PackageName;
 
 pub use version::Version;
 pub use version::VersionError;

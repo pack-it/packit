@@ -32,7 +32,7 @@ pub enum PackagerError {
 
 pub fn package(config: &Config, package_id: &PackageId, destination: &PathBuf, revisions: usize) -> Result<(), PackagerError> {
     warning!("This is an experimental feature, checksums calculated with the packager for pre-builds might not be accurate.");
-    let install_directory = config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
+    let install_directory = config.prefix_directory.join("packages").join(package_id.name.to_string()).join(package_id.version.to_string());
 
     // Return an error if the destination is not a directory
     if !destination.is_dir() {
