@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, str::FromStr};
 
 use serde::{Deserialize, Serialize, de};
 use thiserror::Error;
@@ -41,7 +41,7 @@ impl<'de> Deserialize<'de> for Dependency {
         // Remove @ character from version number
         let version = version.strip_prefix("@").unwrap_or("");
 
-        let version_intervals = VersionIntervals::from_str_intervals(version).map_err(de::Error::custom)?;
+        let version_intervals = VersionIntervals::from_str(version).map_err(de::Error::custom)?;
 
         Ok(Self {
             name: name.to_string(),
@@ -115,7 +115,7 @@ pub mod tests {
     pub fn create_dependency(name: &str, version_intervals: &str) -> Dependency {
         Dependency {
             name: name.into(),
-            version_intervals: VersionIntervals::from_str_intervals(version_intervals).expect("Expected correct version intervals."),
+            version_intervals: VersionIntervals::from_str(version_intervals).expect("Expected correct version intervals."),
         }
     }
 

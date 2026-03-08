@@ -16,12 +16,14 @@ impl<'de> Deserialize<'de> for VersionIntervals {
     {
         let string: String = de::Deserialize::deserialize(deserializer)?;
 
-        Ok(Self::from_str_intervals(&string).map_err(de::Error::custom)?)
+        Ok(Self::from_str(&string).map_err(de::Error::custom)?)
     }
 }
 
-impl VersionIntervals {
-    pub fn from_str_intervals(intervals: &str) -> Result<Self, VersionError> {
+impl FromStr for VersionIntervals {
+    type Err = VersionError;
+
+    fn from_str(intervals: &str) -> Result<Self, Self::Err> {
         // Check for empty input
         if intervals.is_empty() {
             return Ok(Self {
@@ -43,7 +45,9 @@ impl VersionIntervals {
 
         Ok(Self { version_bounds })
     }
+}
 
+impl VersionIntervals {
     /// Checks if the intervals are valid, the intervals are valid if they don't overlap and are in order.
     /// True is returned if the intervals are valid, otherwise false.
     fn validate_intervals(version_bounds: &Vec<VersionBounds>) -> bool {
@@ -109,7 +113,7 @@ mod tests {
 
     #[test]
     fn from_str_ranges() {
-        let version_intervals = VersionIntervals::from_str_intervals("<6.6|6.7|6.8-7.10|>8");
+        let version_intervals = VersionIntervals::from_str("<6.6|6.7|6.8-7.10|>8");
 
         match version_intervals {
             Ok(intervals) => {
@@ -138,7 +142,7 @@ mod tests {
 
     #[test]
     fn from_str_ranges_empty() {
-        let version_intervals = VersionIntervals::from_str_intervals("");
+        let version_intervals = VersionIntervals::from_str("");
 
         match version_intervals {
             Ok(intervals) => assert!(intervals.get_version_bounds().len() == 0),
@@ -150,7 +154,7 @@ mod tests {
     fn from_str_valid_interval() {
         let intervals = ["3", "<6.6|6.7|6.8-7.10|>8", "<=4|4.5|5-6|>=10.1", "4-10", "32|>34", "<6.5|>6.5"];
         for interval in intervals {
-            match VersionIntervals::from_str_intervals(interval) {
+            match VersionIntervals::from_str(interval) {
                 Ok(_) => {},
                 Err(e) => panic!("Expected Ok(..), got Err({e:?})"),
             }
@@ -161,7 +165,7 @@ mod tests {
     fn from_str_invalid_interval() {
         let intervals = ["3|3", "5-10|7-11", "<6.5|>=6.4", "<6.6|6.9|6.8-7.10|>8", ">4|5", "4|3"];
         for interval in intervals {
-            match VersionIntervals::from_str_intervals(interval) {
+            match VersionIntervals::from_str(interval) {
                 Ok(interval) => panic!("Expected Err(..), got Ok({interval:?})"),
                 Err(_) => {},
             }

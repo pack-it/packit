@@ -101,7 +101,7 @@ impl FromStr for TargetBounds {
             None => (string, ""),
         };
 
-        let version_intervals = VersionIntervals::from_str_intervals(version_bounds)?;
+        let version_intervals = VersionIntervals::from_str(version_bounds)?;
 
         // Split addition from name
         let (name, addition) = match name.split_once(':') {
