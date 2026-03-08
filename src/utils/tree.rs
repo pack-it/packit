@@ -227,7 +227,7 @@ impl Node<Option<InstallMeta>, DependencyTypes> {
         include_build: bool,
     ) -> Result<Node<Option<InstallMeta>, DependencyTypes>> {
         // If the package is already satisfied don't expand the dependency tree further
-        if let Some(package) = register.get_satisfying_package(dependency) {
+        if let Some(package) = register.get_latest_satisfying_package(dependency) {
             return Ok(Node {
                 id: package.package_id.clone(),
                 value: None,

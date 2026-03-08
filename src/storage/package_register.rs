@@ -235,21 +235,24 @@ impl PackageRegister {
         false
     }
 
-    /// Checks if the dependency is satisfied.
-    pub fn dependency_satisfied(&self, dependency: &Dependency) -> bool {
-        self.get_satisfying_package(dependency).is_some()
-    }
+    /// Gets the latest installed package which statisfies the given dependency.
+    pub fn get_latest_satisfying_package(&self, dependency: &Dependency) -> Option<&InstalledPackageVersion> {
+        let mut latest: Option<&InstalledPackageVersion> = None;
 
-    /// Gets an installed package which statisfies the dependency.
-    pub fn get_satisfying_package(&self, dependency: &Dependency) -> Option<&InstalledPackageVersion> {
         // Loop over all packages with the dependency name and check if they satisfy the dependency
         for package in self.packages.get(dependency.get_name())?.get_versions() {
-            if dependency.satisfied(&package.package_id.name, &package.package_id.version) {
-                return Some(package);
+            if !dependency.satisfied(&package.package_id.name, &package.package_id.version) {
+                continue;
             }
+
+            latest = match latest {
+                Some(latest) if latest.package_id.version < package.package_id.version => Some(package),
+                None => Some(package),
+                _ => continue,
+            };
         }
 
-        None
+        latest
     }
 
     /// Returns an iterator, which iterates over all nested installed package version values.
@@ -496,23 +499,23 @@ pub mod tests {
     }
 
     #[test]
-    fn get_satisfying_package() {
+    fn get_latest_satisfying_package() {
         let register = create_register();
-        let package_a_id = PackageId::from_str("A@3.4.1").expect("Expected valid package id");
-        let dependency = create_dependency("A", "3.4.1");
-        let package_a = register.get_package_version(&package_a_id).expect("Expected package A.");
+        let package_a_id = PackageId::from_str("F@6").expect("Expected valid package id");
+        let dependency = create_dependency("F", ">5");
+        let package_a = register.get_package_version(&package_a_id).expect("Expected package F.");
 
-        match register.get_satisfying_package(&dependency) {
+        match register.get_latest_satisfying_package(&dependency) {
             Some(package) => assert_eq!(package.package_id, package_a.package_id),
             None => panic!("Expected Some(InstalledPackageVersion (..)), got None"),
         }
     }
 
     #[test]
-    fn satisfying_package_not_found() {
+    fn latest_satisfying_package_not_found() {
         let register = create_register();
         let dependency = create_dependency("A", ">3.4.1");
 
-        assert!(register.get_satisfying_package(&dependency).is_none());
+        assert!(register.get_latest_satisfying_package(&dependency).is_none());
     }
 }

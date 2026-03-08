@@ -84,7 +84,7 @@ impl<'a> Builder<'a> {
         // Check if the normal dependencies are installed and get installed package for each dependency.
         let dependencies = package_version.dependencies.iter().chain(target.dependencies.iter());
         for dependency in dependencies {
-            if let Some(package) = self.register.get_satisfying_package(dependency) {
+            if let Some(package) = self.register.get_latest_satisfying_package(dependency) {
                 installed_dependencies.push(package);
 
                 continue;
@@ -100,7 +100,7 @@ impl<'a> Builder<'a> {
         // Check if the build dependencies are installed and get installed package for each dependency.
         let build_dependencies = package_version.build_dependencies.iter().chain(target.build_dependencies.iter());
         for build_dependency in build_dependencies {
-            if let Some(package) = self.register.get_satisfying_package(build_dependency) {
+            if let Some(package) = self.register.get_latest_satisfying_package(build_dependency) {
                 installed_build_dependencies.push(package);
 
                 continue;
