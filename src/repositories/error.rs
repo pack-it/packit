@@ -43,11 +43,11 @@ pub enum RepositoryError {
     #[error("The given package name is empty")]
     EmptyPackageName,
 
-    #[error("Dependency '{0}' cannot be satisfied by the current package repository.")]
-    SupportError(String),
+    #[error("Dependency '{0}' cannot be satisfied by the current package repository for the current target.")]
+    DependencySupportError(String),
 
-    #[error("Invalid version intervals, intervals must not be empty for the current targets supported versions.")]
-    EmptyIntervals,
+    #[error("No supported version for the current target could be found for package '{0}'.")]
+    SupportError(String),
 }
 
 pub(super) type Result<T> = std::result::Result<T, RepositoryError>;

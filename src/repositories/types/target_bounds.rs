@@ -158,7 +158,7 @@ impl TargetBounds {
     }
 
     fn calculate_priority(&self) -> u32 {
-        if self.addition.is_none() && self.version_intervals.get_version_bounds().is_empty() {
+        if self.addition.is_none() && self.version_intervals.is_empty() {
             match self.name {
                 TargetName::Unix => return 1,
                 TargetName::Os(_) => return 2,
@@ -166,14 +166,14 @@ impl TargetBounds {
             }
         }
 
-        if self.addition.is_none() && !self.version_intervals.get_version_bounds().is_empty() {
+        if self.addition.is_none() && !self.version_intervals.is_empty() {
             match self.name {
                 TargetName::Os(_) => return 4,
                 _ => return 5,
             }
         }
 
-        if self.addition.is_some() && !self.version_intervals.get_version_bounds().is_empty() {
+        if self.addition.is_some() && !self.version_intervals.is_empty() {
             match self.name {
                 TargetName::Os(_) => return 6,
                 _ => return 7,

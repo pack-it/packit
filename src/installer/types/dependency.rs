@@ -62,7 +62,7 @@ impl Serialize for Dependency {
 impl Display for Dependency {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // Return only the name if the version isn't specified
-        if self.version_intervals.get_version_bounds().is_empty() {
+        if self.version_intervals.is_empty() {
             write!(f, "{}", self.name)?;
             return Ok(());
         }

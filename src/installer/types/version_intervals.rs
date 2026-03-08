@@ -39,7 +39,7 @@ impl FromStr for VersionIntervals {
         }
 
         // Check for invalid intervals
-        if !Self::validate_intervals(&version_bounds) {
+        if !Self::bounds_valid(&version_bounds) {
             return Err(VersionError::InvalidInterval);
         }
 
@@ -50,7 +50,7 @@ impl FromStr for VersionIntervals {
 impl VersionIntervals {
     /// Checks if the intervals are valid, the intervals are valid if they don't overlap and are in order.
     /// True is returned if the intervals are valid, otherwise false.
-    fn validate_intervals(version_bounds: &Vec<VersionBounds>) -> bool {
+    fn bounds_valid(version_bounds: &Vec<VersionBounds>) -> bool {
         let mut previous: Option<&VersionBounds> = None;
         for bound in version_bounds {
             let valued_previous = match previous {
@@ -61,6 +61,9 @@ impl VersionIntervals {
                 },
             };
 
+            // In this match we return false early if the bound is a lower (or lower equal) bound.
+            // We can do this, because the first iteration never gets here. Meaning that if we have
+            // a lower bound the intervals are either not in order or are overlapping.
             let low_version = match bound {
                 VersionBounds::Range(low, _) => low,
                 VersionBounds::Lower(_) => return false,
@@ -70,6 +73,8 @@ impl VersionIntervals {
                 VersionBounds::Equal(version) => version,
             };
 
+            // Here we don't have to compare each bound type with each other bound type, again because the intervals
+            // need to be in order.
             match valued_previous {
                 VersionBounds::Range(_, high) if *low_version <= *high => return false,
                 VersionBounds::Lower(version) if low_version < version => return false,
@@ -88,7 +93,7 @@ impl VersionIntervals {
 
     pub fn covers(&self, version: &Version) -> bool {
         // If version bounds are empty, version satisfies the bounds
-        if self.version_bounds.is_empty() {
+        if self.is_empty() {
             return true;
         }
 
@@ -100,6 +105,10 @@ impl VersionIntervals {
         }
 
         false
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.version_bounds.is_empty()
     }
 
     pub fn get_version_bounds(&self) -> &Vec<VersionBounds> {
