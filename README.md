@@ -55,6 +55,34 @@ Unlinks the specified package, causing the package to be unavailable from the `P
 Packages the specified package into a prebuild and store it in the destination directory, together with a checksum of the prebuild.
 
 
+## Config
+
+| Field               | Explanation                                                |
+| ------------------- | ---------------------------------------------------------- |
+| `prefix_directory`  | Defines the directory used for installing packages, see [File structure](#file-structure) for the defaults on each platform. |
+| `repositories_rank` | Defines the order of repositories to search for a package. |
+
+### Repositories
+
+| Field                | Explanation                                                              |
+| -------------------- | ------------------------------------------------------------------------ |
+| `path`               | Defines the path to the repository.                                      |
+| `provider`           | Defines the provider of the repository, defaults to `web`.               |
+| `prebuilds_url`      | Defines the url of the prebuilds repository for this package repository. |
+| `prebuilds_provider` | Defines the provider of the prebuilds repository, defaults to `fs`.      |
+
+### Example config
+
+```
+repositories_rank = ["core"]
+
+[repositories]
+
+[repositories.core]
+path = "https://raw.githubusercontent.com/pack-it/core/main/"
+```
+
+
 ## File structure
 You might be interested in how (and why) Packit manages dependencies, configs and most importantly the installs. We explain that here, ofcourse this differs a bit for each platform as they have different file structures. Luckly Packit manages this for you!
 
