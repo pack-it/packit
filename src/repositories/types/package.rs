@@ -31,6 +31,7 @@ impl PackageMeta {
         Ok(self.latest_versions.get(target).ok_or(RepositoryError::TargetError)?)
     }
 
+    // TODO: Bug, this needs to adjust for the platform (so it should compare with get_latest_version)
     pub fn get_latest_dependency_version(&self, dependency: &Dependency) -> Result<Version> {
         // The supported vec isn't necessary in order, so we need to keep track of the current highest version
         let mut current_highest: Option<Version> = None;
