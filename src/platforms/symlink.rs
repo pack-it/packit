@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use thiserror::Error;
 
@@ -7,6 +7,11 @@ use thiserror::Error;
 pub enum SymlinkError {
     #[error("Path is not a symlink")]
     NonSymlink,
+
+    #[error("The given symlink original '{original}' cannot be found.")]
+    OriginalNotFound {
+        original: PathBuf,
+    },
 
     #[error("Symlink IO failed")]
     IOError(#[from] std::io::Error),
@@ -23,7 +28,7 @@ pub fn create_symlink(original: &Path, link: &Path) -> Result<(), SymlinkError> 
 /// Creates a symlink on Windows from link to original.
 #[cfg(target_os = "windows")]
 pub fn create_symlink(original: &Path, link: &Path) -> Result<(), SymlinkError> {
-    match source.is_dir() {
+    match original.is_dir() {
         true => std::os::windows::fs::symlink_dir(original, link)?,
         false => std::os::windows::fs::symlink_file(original, link)?,
     }
@@ -33,7 +38,7 @@ pub fn create_symlink(original: &Path, link: &Path) -> Result<(), SymlinkError> 
 
 /// Panics for any unsupported OS.
 #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
-pub fn create_symlink(source: &Path, destination: &Path) -> Result<(), SymlinkError> {
+pub fn create_symlink(original: &Path, link: &Path) -> Result<(), SymlinkError> {
     panic!("Cannot create link for target, target is not supported.");
 }
 

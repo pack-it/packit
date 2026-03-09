@@ -226,6 +226,8 @@ impl<'a> Installer<'a> {
         // Get the target information from the package version info
         let target = version_meta.get_target(&install_meta.target_bounds)?;
 
+        self.create_dependency_directory(&package_id, &dependencies)?;
+
         // Get build version of package
         match use_prebuild {
             true => {
@@ -333,6 +335,22 @@ impl<'a> Installer<'a> {
         // If package is installed succesfully, set it to active
         if should_set_active {
             Symlinker::new(self.config).set_active(self.register, &package_id, should_symlink)?;
+        }
+
+        Ok(())
+    }
+
+    fn create_dependency_directory(&self, current_package: &PackageId, dependencies: &HashSet<PackageId>) -> Result<()> {
+        let dependency_directory_path = Path::new(&self.config.prefix_directory).join("dependencies").join(current_package.to_string());
+        fs::create_dir_all(&dependency_directory_path)?;
+
+        // TODO: Check if it's possible to use the install path instead of manual join
+        // Create symlinks to all children
+        for dependency in dependencies {
+            let original =
+                Path::new(&self.config.prefix_directory).join("packages").join(&dependency.name).join(dependency.version.to_string());
+            let link = dependency_directory_path.join(&dependency.name);
+            io::create_symlink(&original, &link)?;
         }
 
         Ok(())
