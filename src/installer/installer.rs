@@ -275,6 +275,7 @@ impl<'a> Installer<'a> {
             &install_directory,
             false,
             false,
+            use_prebuild,
         )?;
         self.register.save_to(&PackageRegister::get_default_path(self.config))?;
 

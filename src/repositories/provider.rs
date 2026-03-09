@@ -51,14 +51,21 @@ pub fn create_metadata_provider(repository: &Repository) -> Option<Box<dyn Metad
     }
 }
 
-/// Creates a prebuild repository provider for the given repository.
-pub fn create_prebuild_provider(repository: &Repository, repo_metadata: RepositoryMeta) -> Option<Box<dyn PrebuildProvider>> {
-    let (url, provider) = get_prebuild_repository_info(repository, repo_metadata)?;
+/// Creates a prebuild repository provider for the given repository from its url and provider.
+pub fn create_prebuild_provider_from_url(url: &str, provider: Option<String>) -> Option<Box<dyn PrebuildProvider>> {
+    let provider = provider.unwrap_or(DEFAULT_PREBUILD_PROVIDER_ID.into());
 
     match provider.as_str() {
         FILESYSTEM_PREBUILD_PROVIDER_ID => boxed_prebuild(FileSystemPrebuildProvider::from_url(&url)),
         _ => None,
     }
+}
+
+/// Creates a prebuild repository provider for the given repository.
+pub fn create_prebuild_provider(repository: &Repository, repo_metadata: RepositoryMeta) -> Option<Box<dyn PrebuildProvider>> {
+    let (url, provider) = get_prebuild_repository_info(repository, repo_metadata)?;
+
+    create_prebuild_provider_from_url(&url, Some(provider))
 }
 
 fn get_prebuild_repository_info(repository: &Repository, repo_metadata: RepositoryMeta) -> Option<(String, String)> {
