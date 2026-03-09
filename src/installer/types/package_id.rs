@@ -6,7 +6,7 @@ use thiserror::Error;
 use crate::installer::types::{PackageName, Version, VersionError, package_name::PackageNameError};
 
 /// Errors that occur when creating or using the package id.
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 pub enum PackageIdError {
     #[error("Invalid package id version")]
     VersionError(#[from] VersionError),
@@ -92,28 +92,28 @@ mod tests {
 
     #[test]
     fn from_str_no_version() {
-        assert_eq!(
+        assert!(matches!(
             PackageId::from_str("test"),
             Err(PackageIdError::VersionError(VersionError::NoneError))
-        );
+        ));
     }
 
     #[test]
     fn from_str_no_name() {
-        assert_eq!(
+        assert!(matches!(
             PackageId::from_str("@3.4.1"),
             Err(PackageIdError::PackageNameError(PackageNameError::InvalidPackageName))
-        );
+        ));
     }
 
     #[test]
     fn from_str_invalid_chars() {
         let invalid_chars = "!#$%^&*()~:;{}[]<>,.?/|\\\"\'`+=";
         for char in invalid_chars.chars() {
-            assert_eq!(
+            assert!(matches!(
                 PackageId::from_str(format!("{char}@3.4.1").as_str()),
                 Err(PackageIdError::PackageNameError(PackageNameError::InvalidPackageName))
-            );
+            ));
         }
     }
 

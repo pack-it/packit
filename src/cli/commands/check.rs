@@ -6,7 +6,6 @@ use crate::{
     cli::{commands::HandleCommand, display::logging::error},
     config::Config,
     installer::types::PackageId,
-    repositories::manager::RepositoryManager,
     storage::package_register::PackageRegister,
     utils::unwrap_or_exit::UnwrapOrExit,
     verifier::Verifier,
@@ -19,11 +18,11 @@ pub struct CheckArgs {
 }
 
 impl HandleCommand for CheckArgs {
-    // TODO: We can never verify Packit files, because they are loaded before the command execution
-    fn handle(&self, config: &Config, _: &RepositoryManager) {
-        let register_dir = PackageRegister::get_default_path(config);
+    fn handle(&self) {
+        let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
+        let register_dir = PackageRegister::get_default_path(&config);
         let register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
-        let mut verifier = Verifier::new(config);
+        let mut verifier = Verifier::new(&config);
 
         // Check if the package exists before checking it with the verifier
         if let Some(package_id) = &self.package {

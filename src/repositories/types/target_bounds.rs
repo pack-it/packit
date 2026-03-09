@@ -10,7 +10,7 @@ use crate::{
 };
 
 /// Errors that occur when creating or using the target bounds.
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 pub enum TargetBoundsError {
     #[error("Target additions are not allowed for this target name")]
     AdditionNotAllowed,

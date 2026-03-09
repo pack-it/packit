@@ -1,11 +1,12 @@
 use std::{fs, str::FromStr};
 
 use crate::{
-    cli::display::logging::warning,
-    config::Config,
+    cli::display::logging::{error, warning},
+    config::{Config, Repository},
     installer::types::{PackageId, PackageName, Version},
     packager,
-    repositories::types::Checksum,
+    platforms::Target,
+    repositories::{provider, types::Checksum},
     storage::package_register::PackageRegister,
     verifier::{
         Issue,
@@ -101,7 +102,7 @@ impl<'a> Verifier<'a> {
 
                     Issue::BrokenTree(missing_dependencies)
                 },
-                Check::Alterations if !self.check_package_alterations(package_id)? => continue,
+                Check::Alterations if !self.check_package_alterations(package_id, register)? => continue,
                 Check::Alterations => Issue::AlteredPackage(vec![package_id.clone()]),
             };
 
@@ -116,7 +117,7 @@ impl<'a> Verifier<'a> {
         // Find issues with a package, maybe even package it and compare it with checksum
         let mut altered = Vec::new();
         for package in register.iterate_all() {
-            if self.check_package_alterations(&package.package_id)? {
+            if self.check_package_alterations(&package.package_id, register)? {
                 altered.push(package.package_id.clone());
             }
         }
@@ -130,17 +131,72 @@ impl<'a> Verifier<'a> {
 
     /// Checks for alterations in a single package using a checksum which is compared to the checksum from the pre-build.
     /// Returns true if the package was altered, false if not.
-    fn check_package_alterations(&self, package_id: &PackageId) -> Result<bool> {
+    fn check_package_alterations(&self, package_id: &PackageId, register: &PackageRegister) -> Result<bool> {
+        // Get the installed package from the register
+        let Some(package_version) = register.get_package_version(package_id) else {
+            error!(msg: "Cannot retrieve package '{package_id}' from register for package alterations check");
+            return Ok(false);
+        };
+
+        let mut prebuilds_url = package_version.source_prebuild_repository_url.clone();
+        let mut prebuilds_provider = package_version.source_prebuild_repository_provider.clone();
+
+        if prebuilds_url.is_none() {
+            let repository = Repository::new(&package_version.source_repository_url, &package_version.source_repository_provider);
+
+            let Some(provider) = provider::create_metadata_provider(&repository) else {
+                error!(msg: "Cannot create metadata provider for '{package_id}'.");
+                return Ok(false);
+            };
+
+            let repo_metadata = match provider.read_repository_metadata() {
+                Ok(meta) => meta,
+                Err(e) => {
+                    error!(e, "Cannot retrieve repository metadata for '{package_id}'.");
+                    return Ok(false);
+                },
+            };
+
+            prebuilds_url = repo_metadata.prebuilds_url;
+            prebuilds_provider = repo_metadata.prebuilds_provider;
+        }
+
+        let Some(prebuilds_url) = &prebuilds_url else {
+            warning!(
+                "Cannot perform alterations check for package '{package_id}', because no prebuild repository for the package can be found"
+            );
+            return Ok(false);
+        };
+
+        let provider = match provider::create_prebuild_provider_from_url(&prebuilds_url, prebuilds_provider) {
+            Some(provider) => provider,
+            None => {
+                error!(msg: "Cannot create prebuild provider for '{package_id}'.");
+                return Ok(false);
+            },
+        };
+
+        let revision = package_version.revisions.len() as u64;
+        let correct_checksum = match provider.get_prebuild_checksum(package_id, revision, &Target::current()) {
+            Ok(Some(checksum)) => checksum,
+            Ok(None) => {
+                warning!(
+                    "Cannot perform alterations check for package '{package_id}', because no prebuild version of the package can be found"
+                );
+                return Ok(false);
+            },
+            Err(e) => {
+                error!(
+                    e,
+                    "Cannot perform alterations check for package '{package_id}', because checksum cannot be read"
+                );
+                return Ok(false);
+            },
+        };
+
         let install_directory = self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
         let compressed = packager::compress(&install_directory)?;
         let checksum = Checksum::from_bytes(&compressed);
-
-        // TODO: Actually search for the correct checksum
-        let correct_checksum = Checksum {
-            sha256: [
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            ],
-        };
 
         Ok(checksum != correct_checksum)
     }

@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize, de};
 use thiserror::Error;
 
 /// Errors that occur when requesting metadata from a repository.
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 pub enum VersionError {
     #[error("Version number is none while version is requested.")]
     NoneError,
@@ -153,20 +153,20 @@ mod tests {
 
     #[test]
     fn from_str_dot_errors() {
-        assert_eq!(Version::from_str("3.4..1"), Err(VersionError::DotsError));
-        assert_eq!(Version::from_str("3.4.1."), Err(VersionError::DotsError));
-        assert_eq!(Version::from_str(".3.4.1"), Err(VersionError::DotsError));
+        assert!(matches!(Version::from_str("3.4..1"), Err(VersionError::DotsError)));
+        assert!(matches!(Version::from_str("3.4.1."), Err(VersionError::DotsError)));
+        assert!(matches!(Version::from_str(".3.4.1"), Err(VersionError::DotsError)));
     }
 
     #[test]
     fn from_str_no_input() {
-        assert_eq!(Version::from_str(""), Err(VersionError::NoneError));
+        assert!(matches!(Version::from_str(""), Err(VersionError::NoneError)));
     }
 
     #[test]
     fn from_str_illegal_char() {
-        assert_eq!(Version::from_str("3.a.1"), Err(VersionError::IllegalCharacterError));
-        assert_eq!(Version::from_str("3.-1.1"), Err(VersionError::IllegalCharacterError));
+        assert!(matches!(Version::from_str("3.a.1"), Err(VersionError::IllegalCharacterError)));
+        assert!(matches!(Version::from_str("3.-1.1"), Err(VersionError::IllegalCharacterError)));
     }
 
     #[test]

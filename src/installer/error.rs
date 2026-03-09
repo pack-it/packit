@@ -23,9 +23,6 @@ pub enum InstallerError {
     #[error("Prebuild checksum does not match")]
     ChecksumError,
 
-    #[error("Error while interacting with filesystem")]
-    IOError(#[from] std::io::Error),
-
     #[error("Could not uninstall package '{package_name}'. {e}")]
     UninstallError {
         package_name: String,
@@ -61,6 +58,16 @@ pub enum InstallerError {
         package_name: String,
     },
 
+    #[error("Canceled package installation: {reason}.")]
+    InstallationCanceled {
+        reason: String,
+    },
+
+    #[error("An unreachable state has been reached: {msg}.")]
+    UnreachableError {
+        msg: String,
+    },
+
     // Wrapped custom errors
     #[error("Cannot find a repository for installation")]
     RepositoryError(#[from] RepositoryError),
@@ -88,6 +95,9 @@ pub enum InstallerError {
 
     #[error("Cannot do tree operation")]
     TreeError(#[from] TreeError),
+
+    #[error("Error while interacting with filesystem")]
+    IOError(#[from] std::io::Error),
 }
 
 pub(super) type Result<T> = std::result::Result<T, InstallerError>;

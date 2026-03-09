@@ -11,7 +11,7 @@ use crate::{
     config::{Config, Repository},
     installer::types::{Dependency, OptionalPackageId, PackageId, PackageName},
     repositories::types::{PackageMeta, PackageVersionMeta},
-    storage::{error::RegisterError, installed_package::InstalledPackage, installed_package_version::InstalledPackageVersion},
+    storage::{error::Result, installed_package::InstalledPackage, installed_package_version::InstalledPackageVersion},
     utils::constants::REGISTER_FILENAME,
 };
 
@@ -31,7 +31,7 @@ impl PackageRegister {
     /// # Errors
     ///
     /// This function will return an error if the file cannot be opened or if the content is invalid.
-    pub fn from(path: &Path) -> Result<Self, RegisterError> {
+    pub fn from(path: &Path) -> Result<Self> {
         // If the file does not exist, we return an empty storage
         if !fs::exists(path)? {
             return Ok(PackageRegister { packages: HashMap::new() });
@@ -54,7 +54,7 @@ impl PackageRegister {
     /// # Errors
     ///
     /// This function will return an error if the data cannot be serialized or if the file cannot be written.
-    pub fn save_to(&self, path: &Path) -> Result<(), RegisterError> {
+    pub fn save_to(&self, path: &Path) -> Result<()> {
         let data = toml::to_string(self)?;
 
         // Add header text to data
@@ -90,12 +90,23 @@ impl PackageRegister {
         install_path: &PathBuf,
         symlinked: bool,
         active: bool,
-    ) -> Result<(), RegisterError> {
+        used_prebuild: bool,
+    ) -> Result<()> {
+        let (source_prebuild_repository_url, source_prebuild_repository_provider) = match used_prebuild {
+            true => (
+                source_repository.prebuilds_url.clone(),
+                source_repository.prebuilds_provider.clone(),
+            ),
+            false => (None, None),
+        };
+
         let installed_package_version = InstalledPackageVersion {
             package_id: PackageId::new(package.name.clone(), package_version.version.clone()),
             license: package_version.license.clone(),
             source_repository_url: source_repository.path.clone(),
             source_repository_provider: source_repository.provider.clone(),
+            source_prebuild_repository_url,
+            source_prebuild_repository_provider,
             dependencies: dependency_ids,
             dependents: HashSet::new(),
             install_path: install_path.into(),
@@ -235,21 +246,24 @@ impl PackageRegister {
         false
     }
 
-    /// Checks if the dependency is satisfied.
-    pub fn dependency_satisfied(&self, dependency: &Dependency) -> bool {
-        self.get_satisfying_package(dependency).is_some()
-    }
+    /// Gets the latest installed package which statisfies the given dependency.
+    pub fn get_latest_satisfying_package(&self, dependency: &Dependency) -> Option<&InstalledPackageVersion> {
+        let mut latest: Option<&InstalledPackageVersion> = None;
 
-    /// Gets an installed package which statisfies the dependency.
-    pub fn get_satisfying_package(&self, dependency: &Dependency) -> Option<&InstalledPackageVersion> {
         // Loop over all packages with the dependency name and check if they satisfy the dependency
         for package in self.packages.get(dependency.get_name())?.get_versions() {
-            if dependency.satisfied(&package.package_id.name, &package.package_id.version) {
-                return Some(package);
+            if !dependency.satisfied(&package.package_id.name, &package.package_id.version) {
+                continue;
             }
+
+            latest = match latest {
+                Some(latest) if latest.package_id.version < package.package_id.version => Some(package),
+                None => Some(package),
+                _ => continue,
+            };
         }
 
-        None
+        latest
     }
 
     /// Returns an iterator, which iterates over all nested installed package version values.
@@ -279,6 +293,8 @@ pub mod tests {
             license: None,
             source_repository_provider: "-".to_string(),
             source_repository_url: "-".to_string(),
+            source_prebuild_repository_url: None,
+            source_prebuild_repository_provider: None,
             dependencies,
             dependents,
             install_path: "-".into(),
@@ -412,6 +428,7 @@ pub mod tests {
                 &PathBuf::from("-"),
                 false,
                 false,
+                false,
             )
             .expect("Expected successful package addition in test");
 
@@ -496,23 +513,23 @@ pub mod tests {
     }
 
     #[test]
-    fn get_satisfying_package() {
+    fn get_latest_satisfying_package() {
         let register = create_register();
-        let package_a_id = PackageId::from_str("A@3.4.1").expect("Expected valid package id");
-        let dependency = create_dependency("A", "3.4.1");
-        let package_a = register.get_package_version(&package_a_id).expect("Expected package A.");
+        let package_a_id = PackageId::from_str("F@6").expect("Expected valid package id");
+        let dependency = create_dependency("F", ">5");
+        let package_a = register.get_package_version(&package_a_id).expect("Expected package F.");
 
-        match register.get_satisfying_package(&dependency) {
+        match register.get_latest_satisfying_package(&dependency) {
             Some(package) => assert_eq!(package.package_id, package_a.package_id),
             None => panic!("Expected Some(InstalledPackageVersion (..)), got None"),
         }
     }
 
     #[test]
-    fn satisfying_package_not_found() {
+    fn latest_satisfying_package_not_found() {
         let register = create_register();
         let dependency = create_dependency("A", ">3.4.1");
 
-        assert!(register.get_satisfying_package(&dependency).is_none());
+        assert!(register.get_latest_satisfying_package(&dependency).is_none());
     }
 }

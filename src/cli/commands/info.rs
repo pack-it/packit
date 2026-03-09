@@ -6,7 +6,6 @@ use crate::{
     cli::{commands::HandleCommand, display::logging::error},
     config::Config,
     installer::types::{OptionalPackageId, PackageId},
-    repositories::manager::RepositoryManager,
     storage::{installed_package::InstalledPackage, package_register::PackageRegister},
     utils::{tree::Node, unwrap_or_exit::UnwrapOrExit},
 };
@@ -26,8 +25,9 @@ pub struct InfoArgs {
 }
 
 impl HandleCommand for InfoArgs {
-    fn handle(&self, config: &Config, _: &RepositoryManager) {
-        let register_dir = PackageRegister::get_default_path(config);
+    fn handle(&self) {
+        let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
+        let register_dir = PackageRegister::get_default_path(&config);
         let register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
         // Get package information

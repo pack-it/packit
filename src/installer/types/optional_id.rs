@@ -95,20 +95,20 @@ mod tests {
 
     #[test]
     fn from_str_empty_optional() {
-        assert_eq!(
+        assert!(matches!(
             OptionalPackageId::from_str(""),
             Err(PackageIdError::PackageNameError(PackageNameError::InvalidPackageName))
-        );
+        ))
     }
 
     #[test]
     fn from_str_invalid_chars() {
         let invalid_chars = "!#$%^&*()~:;{}[]<>,.?/|\\\"\'`+=";
         for char in invalid_chars.chars() {
-            assert_eq!(
+            assert!(matches!(
                 OptionalPackageId::from_str(format!("{char}@3.4.1").as_str()),
                 Err(PackageIdError::PackageNameError(PackageNameError::InvalidPackageName))
-            );
+            ))
         }
     }
 }

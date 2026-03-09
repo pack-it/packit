@@ -18,7 +18,9 @@ pub struct SearchArgs {
 
 impl HandleCommand for SearchArgs {
     /// Handles the search command, searching a certain package.
-    fn handle(&self, _: &Config, manager: &RepositoryManager) {
+    fn handle(&self) {
+        let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
+        let manager = RepositoryManager::new(&config);
         let (repository_id, package) = match manager.read_package(&self.optional_id.name) {
             Ok(package) => package,
             Err(RepositoryError::PackageNotFoundError { .. }) => {

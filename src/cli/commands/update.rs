@@ -25,8 +25,10 @@ pub struct UpdateArgs {
 }
 
 impl HandleCommand for UpdateArgs {
-    fn handle(&self, config: &Config, manager: &RepositoryManager) {
-        let register_dir = PackageRegister::get_default_path(config);
+    fn handle(&self) {
+        let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
+        let manager = RepositoryManager::new(&config);
+        let register_dir = PackageRegister::get_default_path(&config);
         let mut register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
         let (_, package_meta) = manager.read_package(&self.optional_id.name).unwrap_or_exit(1);
@@ -43,7 +45,7 @@ impl HandleCommand for UpdateArgs {
         }
 
         let options = InstallerOptions::default().skip_active(true).skip_symlinking(true);
-        let mut installer = Installer::new(config, &mut register, manager, options);
+        let mut installer = Installer::new(&config, &mut register, &manager, options);
 
         installer.update(&self.optional_id, new_version).unwrap_or_exit(1);
 

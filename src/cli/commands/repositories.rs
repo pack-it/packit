@@ -2,16 +2,19 @@ use crate::{
     cli::{commands::HandleCommand, display::logging::warning},
     config::Config,
     repositories::manager::RepositoryManager,
+    utils::unwrap_or_exit::UnwrapOrExit,
 };
 use clap::Args;
 use colored::Colorize;
 
 #[derive(Args, Debug)]
-pub struct RepositoryArgs {}
+pub struct RepositoryArgs;
 
 impl HandleCommand for RepositoryArgs {
     /// Handles the repositories command, listing all configured repositories.
-    fn handle(&self, config: &Config, manager: &RepositoryManager) {
+    fn handle(&self) {
+        let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
+        let manager = RepositoryManager::new(&config);
         for (index, (repository_id, repository)) in config.repositories.iter().enumerate() {
             if index != 0 {
                 println!();

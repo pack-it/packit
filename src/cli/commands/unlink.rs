@@ -4,7 +4,6 @@ use crate::{
     cli::commands::HandleCommand,
     config::Config,
     installer::{Symlinker, types::PackageName},
-    repositories::manager::RepositoryManager,
     storage::package_register::PackageRegister,
     utils::unwrap_or_exit::UnwrapOrExit,
 };
@@ -16,8 +15,9 @@ pub struct UnlinkArgs {
 }
 
 impl HandleCommand for UnlinkArgs {
-    fn handle(&self, config: &Config, _: &RepositoryManager) {
-        let register_path = PackageRegister::get_default_path(config);
+    fn handle(&self) {
+        let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
+        let register_path = PackageRegister::get_default_path(&config);
         let mut register = PackageRegister::from(&register_path).unwrap_or_exit(1);
 
         // Get installed package
@@ -32,7 +32,7 @@ impl HandleCommand for UnlinkArgs {
         }
 
         // Unlink package
-        Symlinker::new(config)
+        Symlinker::new(&config)
             .unlink_package(&mut register, &self.package_name)
             .unwrap_or_exit_msg("Unable to unlink package", 1);
 

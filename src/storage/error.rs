@@ -18,4 +18,4 @@ pub enum RegisterError {
     PackageIdError(#[from] PackageIdError),
 }
 
-// TODO: Use Result<T> here as well
+pub(super) type Result<T> = std::result::Result<T, RegisterError>;

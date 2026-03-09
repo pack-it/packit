@@ -28,7 +28,6 @@ use std::{
     collections::HashSet,
     fs,
     path::{Path, PathBuf},
-    process::exit,
 };
 
 /// The installer of Packit, managing the installation of packages on the system.
@@ -181,13 +180,14 @@ impl<'a> Installer<'a> {
         }
 
         // Return early if the user doesn't want to build from source as alternative install method
-        // TODO: Look at this, now it's possible that one of the package dependencies just isn't installed
         let question = format!(
             "Prebuild package for {} cannot be found, would you like to build from source instead?",
             node.get_id()
         );
-        if ask_user(&question, QuestionResponse::Yes)?.is_no() {
-            return Ok(());
+        if ask_user(&question, QuestionResponse::Yes)?.is_no_or_invalid() {
+            return Err(InstallerError::InstallationCanceled {
+                reason: format!("package '{}' cannot be installed without building from source", node.get_id()),
+            });
         }
 
         node.expand_node_with_build(self.repository_manager, self.register)?;
@@ -275,6 +275,7 @@ impl<'a> Installer<'a> {
             &install_directory,
             false,
             false,
+            use_prebuild,
         )?;
         self.register.save_to(&PackageRegister::get_default_path(self.config))?;
 
@@ -432,8 +433,9 @@ impl<'a> Installer<'a> {
         let installed_package = match self.register.get_package(&package_id.name) {
             Some(package) => package,
             None => {
-                warning!("Package cannot be found eventhough it was found before, should be unreachable.");
-                return Ok(());
+                return Err(InstallerError::UnreachableError {
+                    msg: "Package cannot be found eventhough it was found before".to_string(),
+                });
             },
         };
 
@@ -441,8 +443,9 @@ impl<'a> Installer<'a> {
         let repository = match installed_package.get_package_version(&package_id.version) {
             Some(package_version) => Repository::new(&package_version.source_repository_url, &package_version.source_repository_provider),
             None => {
-                warning!("Package version cannot be found eventhough it was found before, should be unreachable.");
-                return Ok(());
+                return Err(InstallerError::UnreachableError {
+                    msg: "Package version cannot be found eventhough it was found before".to_string(),
+                });
             },
         };
 
@@ -496,18 +499,18 @@ impl<'a> Installer<'a> {
         // Path to the determined directory
         let directory = self.config.prefix_directory.join("packages").join(&package_name);
 
-        // Check if package was symlinked
-        if let Some(package) = self.register.get_package(package_name) {
-            if package.symlinked {
-                Symlinker::new(self.config).remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&directory))?;
-            }
-        }
-
         // Remove active path symlink
         let active_path = Path::new(&self.config.prefix_directory).join("active").join(&package_name);
         match active_path.exists() {
             true => symlink::remove_symlink(&active_path)?,
             false => warning!("Active symlink did not exist, was the package even installed succesfully?"),
+        }
+
+        // Check if package was symlinked
+        if let Some(package) = self.register.get_package(package_name) {
+            if package.symlinked {
+                Symlinker::new(self.config).remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&directory))?;
+            }
         }
 
         // Run uninstall scripts for all versions
@@ -639,8 +642,9 @@ impl<'a> Installer<'a> {
             Some(package_version) => package_version,
             None => {
                 // Theoretically unreachable
-                error!(msg: "New package version '{new_version}' was not installed correctly.");
-                exit(1);
+                return Err(InstallerError::UnreachableError {
+                    msg: format!("New package version '{new_version}' cannot be retrieved from the register"),
+                });
             },
         };
 
