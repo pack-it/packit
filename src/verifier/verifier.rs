@@ -132,12 +132,10 @@ impl<'a> Verifier<'a> {
     /// Checks for alterations in a single package using a checksum which is compared to the checksum from the pre-build.
     /// Returns true if the package was altered, false if not.
     fn check_package_alterations(&self, package_id: &PackageId, register: &PackageRegister) -> Result<bool> {
-        let package_version = match register.get_package_version(package_id) {
-            Some(package_version) => package_version,
-            None => {
-                error!(msg: "Cannot retrieve package '{package_id}' from register for package alterations check");
-                return Ok(false);
-            },
+        // Get the installed package from the register
+        let Some(package_version) = register.get_package_version(package_id) else {
+            error!(msg: "Cannot retrieve package '{package_id}' from register for package alterations check");
+            return Ok(false);
         };
 
         let mut prebuilds_url = package_version.source_prebuild_repository_url.clone();
@@ -146,12 +144,9 @@ impl<'a> Verifier<'a> {
         if prebuilds_url.is_none() {
             let repository = Repository::new(&package_version.source_repository_url, &package_version.source_repository_provider);
 
-            let provider = match provider::create_metadata_provider(&repository) {
-                Some(provider) => provider,
-                None => {
-                    error!(msg: "Cannot create metadata provider for '{package_id}'.");
-                    return Ok(false);
-                },
+            let Some(provider) = provider::create_metadata_provider(&repository) else {
+                error!(msg: "Cannot create metadata provider for '{package_id}'.");
+                return Ok(false);
             };
 
             let repo_metadata = match provider.read_repository_metadata() {
@@ -166,14 +161,11 @@ impl<'a> Verifier<'a> {
             prebuilds_provider = repo_metadata.prebuilds_provider;
         }
 
-        let prebuilds_url = match prebuilds_url {
-            Some(url) => url,
-            None => {
-                warning!(
-                    "Cannot perform alterations check for package '{package_id}', because no prebuild repository for the package can be found"
-                );
-                return Ok(false);
-            },
+        let Some(prebuilds_url) = &prebuilds_url else {
+            warning!(
+                "Cannot perform alterations check for package '{package_id}', because no prebuild repository for the package can be found"
+            );
+            return Ok(false);
         };
 
         let provider = match provider::create_prebuild_provider_from_url(&prebuilds_url, prebuilds_provider) {
