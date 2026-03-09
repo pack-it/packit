@@ -2,6 +2,7 @@
 
 Packit is a universal package manager, designed to streamline the experience of installing packages on your system.
 
+Please note Packit is still in early development, breaking changes are possible in future versions.
 
 ## Install
 TODO
@@ -11,15 +12,15 @@ TODO
 The general usage of Packit is: `pit <COMMAND>`.
 
 #### `pit install <PACKAGE-NAME>[@<VERSION>] [--build] [--keep-build] [--skip-symlinking] [--skip-active]`
-Installs the specified packages, if a version is given that version will be installed, if not the most recent version will be installed. Multiple packages can be specified by simple entering multiple names, split by a space.
+Installs the specified packages, if a version is given that version will be installed, if not the latest available version will be installed. Multiple packages can be specified by entering multiple names, split by a space.
 <br>
 If the `--build` option is given, the package is build from source, instead of installing a prebuild version.
 If the `--keep-build` option is given, the build dependencies will not be deleted after building.
 If the `--skip-symlinking` option is enabled, the package is not symlinked into the /bin, /lib, /share, etc. directories.
-If the `--skip-active` option is enabled, the package is not set to active and the current active version is kept.
+If the `--skip-active` option is enabled, the package is not set to active and the current active version is kept. If there is no current active version, this flag is ignored and the package is set to active.
 
 #### `pit uninstall <PACKAGE-NAME>[@<VERSION>]`
-Uninstalls the specified packages, if a version is given that version will be uninstalled, if not, you will be asked if you want to delete all versions of `<PACKAGE-NAME>`. Multiple packages can be specified by simple entering multiple names, split by a space.
+Uninstalls the specified packages, if a version is given that version will be uninstalled, if not, you will be asked if you want to delete all versions of `<PACKAGE-NAME>` in case there are multiple versions installed. Multiple packages can be specified by entering multiple names, split by a space.
 
 #### `pit list`
 Lists all the installed packages.
@@ -28,7 +29,7 @@ Lists all the installed packages.
 Lists all configured repositories.
 
 #### `pit search <PACKAGE-NAME>[@<VERSION>]`
-Searches a package with `<PACKAGE-NAME>`. If the version is given that specific version is searched for.
+Searches a package with `<PACKAGE-NAME>` and shows information based on the package metadata. If the version is given that specific version is searched for.
 
 #### `pit update <PACKAGE-NAME>[@<VERSION>] [<NEW-VERSION>]`
 Updates the specified package to the new version, or the latest version if no new version is specified. If multiple versions of the same package are installed, the `<VERSION>` option is required.
@@ -71,6 +72,9 @@ Packages the specified package into a prebuild and store it in the destination d
 | `prebuilds_url`      | Defines the url of the prebuilds repository for this package repository. |
 | `prebuilds_provider` | Defines the provider of the prebuilds repository, defaults to `fs`.      |
 
+Specifying a prebuild repository is optional and overrides the value specified in the repository metadata.
+
+
 ### Example config
 
 ```
@@ -98,7 +102,7 @@ The installs will go to: `/opt/packit/packages/<PACKAGE-NAME>/<PACKAGE-VERSION>/
 The currently active version of a package will be symlinked in `/opt/packit/active/<PACKAGE-NAME>`. This will link to `/opt/packit/packages/<PACKAGE-NAME>/<ACTIVE-PACKAGE-VERSION>`
 
 #### Symlinks
-The active binaries will be symlinked in: `/opt/packit/bin/<EXECUTABLE-NAME>`. This directory needs to be present in the users `PATH` in order for installed binaries to be detected by your system.
+The active binaries will be symlinked in: `/opt/packit/bin/<EXECUTABLE-NAME>`. This directory needs to be present in the users `PATH` in order for installed binaries to be detected by the system.
 
 #### Packit configs
 The Packit configs are located in: `/etc/packit/`, currently only `Config.toml`. 
@@ -115,7 +119,7 @@ The installs will go to: `/opt/packit/packages/<PACKAGE-NAME>/<PACKAGE-VERSION>/
 The currently active version of a package will be symlinked in `/opt/packit/active/<PACKAGE-NAME>`. This will link to `/opt/packit/packages/<PACKAGE-NAME>/<ACTIVE-PACKAGE-VERSION>`
 
 #### Symlinks
-The active binaries will be symlinked in: `/opt/packit/bin/<EXECUTABLE-NAME>`. This directory needs to be present in the users `PATH` in order for installed binaries to be detected by your system.
+The active binaries will be symlinked in: `/opt/packit/bin/<EXECUTABLE-NAME>`. This directory needs to be present in the users `PATH` in order for installed binaries to be detected by the system.
 
 #### Packit configs
 The Packit configs are located in: `/Library/Application Support/packit`, currently only `Config.toml`. 

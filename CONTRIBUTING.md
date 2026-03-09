@@ -52,7 +52,7 @@ To create a pull request you need to go to the official repository (https://gith
 <br><br>
 Ensure the titles describes clearly what changes you made, ideally this matches with the commit naming conventions. Add a good description, including all details of your changes.
 <br><br>
-After you done all steps above, click on the `Create pull request` button. Your pull request is now created and one of the Packit maintainers will review it as soon as possible.
+After you have done all steps above, click on the `Create pull request` button. Your pull request is now created and one of the Packit maintainers will review it as soon as possible.
 
 ## Types of contributions
 
@@ -64,7 +64,7 @@ We're open to all new ideas and improvements and will review your request as soo
 
 ### Bugs
 
-If you found a bug, make sure to create a GitHub issue for it. We would also really appreciate it if you implement a fix and create a pull request for it. We will make sure to review it as soon as possible.
+If you found a bug, make sure to create a GitHub issue for it. We would also really appreciate it if you decide to implement a fix and create a pull request for it. We will make sure to review it as soon as possible.
 
 ### Documentation improvements
 
