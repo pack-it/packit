@@ -14,7 +14,7 @@ impl HandleCommand for RepositoryArgs {
     /// Handles the repositories command, listing all configured repositories.
     fn handle(&self) {
         let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
-        let manager: RepositoryManager<'_> = RepositoryManager::new(&config);
+        let manager = RepositoryManager::new(&config);
         for (index, (repository_id, repository)) in config.repositories.iter().enumerate() {
             if index != 0 {
                 println!();
