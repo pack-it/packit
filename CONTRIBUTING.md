@@ -15,7 +15,6 @@ Click the `Fork` button on the top-right corner of the repository page. This cre
 To start working, you need the repository on your local machine. To do this, you need to clone it.
 <br><br>
 Run the commands below to clone your fork locally, replace `<your-username>` with your GitHub username.
-<br><br>
 ```
 git clone https://github.com/<your-username>/packit.git
 cd packit
@@ -25,7 +24,6 @@ cd packit
 Now you have a local copy of the repository, you need to create a new branch where you can make your changes.
 <br><br>
 Please use a name which describes your changes for the branch.
-<br><br>
 ```
 git checkout -b <branch-name>
 ```
@@ -40,7 +38,7 @@ Please ensure your commit message describes the changes correctly
 <br><br>
 You can add, commit and push by running the command below:
 ```
-git add packages/<package-name>
+git add .
 git commit -m <message>
 git push origin <branch-name>
 ```

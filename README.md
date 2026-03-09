@@ -90,53 +90,24 @@ path = "https://raw.githubusercontent.com/pack-it/core/main/"
 ## File structure
 You might be interested in how (and why) Packit manages dependencies, configs and most importantly the installs. We explain that here, ofcourse this differs a bit for each platform as they have different file structures. Luckly Packit manages this for you!
 
+### Files and directories
 
-### Linux systems
-On Linux, we use `/opt/packit` as prefix for our installed packages, to support usage of Packit by other users then the superuser.
-This directory also contains the `Installed.toml` file, which stores information about all installed packages.
-
-#### Package install files
-The installs will go to: `/opt/packit/packages/<PACKAGE-NAME>/<PACKAGE-VERSION>/`.
-
-#### Active packages
-The currently active version of a package will be symlinked in `/opt/packit/active/<PACKAGE-NAME>`. This will link to `/opt/packit/packages/<PACKAGE-NAME>/<ACTIVE-PACKAGE-VERSION>`
-
-#### Symlinks
-The active binaries will be symlinked in: `/opt/packit/bin/<EXECUTABLE-NAME>`. This directory needs to be present in the users `PATH` in order for installed binaries to be detected by the system.
-
-#### Packit configs
-The Packit configs are located in: `/etc/packit/`, currently only `Config.toml`. 
-
-
-### macOS systems
-On macOS, we use `/opt/packit` as prefix for our installed packages, to support usage of Packit by other users then the superuser.
-This directory also contains the `Installed.toml` file, which stores information about all installed packages.
+#### Prefix
+The prefix directory of Packit contains all data of installed packages.
+On Unix systems we use `/opt/packit`, on Windows we use `%PROGRAMFILES%/packit`
 
 #### Package install files
-The installs will go to: `/opt/packit/packages/<PACKAGE-NAME>/<PACKAGE-VERSION>/`.
+All installed packages will go in `<prefix>/packages/<PACKAGE-NAME>/<PACKAGE-VERSION>/`.
+
+#### Installed.toml
+The `Installed.toml` file is located inside the prefix and stores information about all installed packages. This file is managed by Packit and should not be changed directly.
 
 #### Active packages
-The currently active version of a package will be symlinked in `/opt/packit/active/<PACKAGE-NAME>`. This will link to `/opt/packit/packages/<PACKAGE-NAME>/<ACTIVE-PACKAGE-VERSION>`
+The currently active version of a package will be symlinked in `<prefix>/active/<PACKAGE-NAME>`. This will link to `<prefix>/packages/<PACKAGE-NAME>/<ACTIVE-PACKAGE-VERSION>`
 
 #### Symlinks
-The active binaries will be symlinked in: `/opt/packit/bin/<EXECUTABLE-NAME>`. This directory needs to be present in the users `PATH` in order for installed binaries to be detected by the system.
+The active binaries will be symlinked in: `<prefix>/bin/<EXECUTABLE-NAME>`. This directory needs to be present in the users `PATH` in order for installed binaries to be detected by the system.
 
 #### Packit configs
-The Packit configs are located in: `/Library/Application Support/packit`, currently only `Config.toml`. 
-
-
-### Windows
-On Windows, we use `%PROGRAMFILES%/packit` as prefix for our installed packages and configs.
-This directory also contains the `Installed.toml` file, which stores information about all installed packages.
-
-#### Package install files
-The installs will go to: `%PROGRAMFILES%/packit/packages/<PACKAGE-NAME>/<PACKAGE-VERSION>/`.
-
-#### Active packages
-The currently active version of a package will be symlinked in `%PROGRAMFILES%/packit/active/<PACKAGE-NAME>`. This will link to `%PROGRAMFILES%/packit/packages/<PACKAGE-NAME>/<ACTIVE-PACKAGE-VERSION>`
-
-#### Symlinks
-The active binaries will be symlinked in: `%PROGRAMFILES%/packit/bin/<EXECUTABLE-NAME>`
-
-#### Packit configs
-The Packit configs are located in: `%PROGRAMFILES%/packit/`, currently only `Config.toml`. 
+On Linux we use `/etc/packit` for the configs, on macOS we use `/Library/Application Support/packit` and on Windows we use `%PROGRAMFILES%/packit`.
+Currently the only config is `Config.toml`, containing all configured repositories.
