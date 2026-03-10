@@ -51,7 +51,7 @@ impl FromStr for VersionBounds {
 impl VersionBounds {
     pub fn covers(&self, version: &Version) -> bool {
         match self {
-            VersionBounds::Range(lower, upper) if lower <= version && upper >= version => true,
+            VersionBounds::Range(lower, upper) if lower <= version && upper > version => true,
             VersionBounds::Lower(lower) if version < lower => true,
             VersionBounds::LowerEqual(lower) if version <= lower => true,
             VersionBounds::Higher(higher) if version > higher => true,
