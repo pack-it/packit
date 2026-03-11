@@ -135,31 +135,32 @@ impl<'a> Installer<'a> {
             target_bounds,
         };
 
+        let mut newly_installed = HashSet::new();
         let mut tree = match self.options.build_source {
             true => {
                 let dependency_tree = Node::new_from_meta_build(&package_id, root_meta, self.repository_manager, self.register)?;
-                self.install_nodes_build(&dependency_tree)?;
+                self.install_nodes_build(&dependency_tree, &mut newly_installed)?;
                 dependency_tree
             },
             false => {
                 let mut dependency_tree = Node::new_from_meta(&package_id, root_meta, self.repository_manager, self.register)?;
-                self.install_nodes(&mut dependency_tree)?;
+                self.install_nodes(&mut dependency_tree, &mut newly_installed)?;
                 dependency_tree
             },
         };
 
         if !self.options.keep_build {
-            self.remove_build_dependencies(&mut tree)?;
+            self.remove_build_dependencies(&mut tree, &newly_installed)?;
         }
 
         Ok(())
     }
 
-    fn install_nodes(&mut self, node: &mut Node<Option<InstallMeta>, DependencyTypes>) -> Result<()> {
+    fn install_nodes(&mut self, node: &mut Node<Option<InstallMeta>, DependencyTypes>, installed: &mut HashSet<PackageId>) -> Result<()> {
         // Install childs first
         // TODO: Implement parallelization here
         for child in node.get_children_mut() {
-            self.install_nodes(child)?;
+            self.install_nodes(child, installed)?;
         }
 
         // Get the value or return early if there is no value (package is already satisfied)
@@ -167,6 +168,8 @@ impl<'a> Installer<'a> {
             Some(value) => value,
             None => return Ok(()),
         };
+
+        installed.insert(node.get_id().clone());
 
         // Install the package with a prebuild if possible
         let revision = node_value.version_metadata.revisions.len() as u64;
@@ -191,16 +194,16 @@ impl<'a> Installer<'a> {
         }
 
         node.expand_node_with_build(self.repository_manager, self.register)?;
-        self.install_nodes_build(node)?;
+        self.install_nodes_build(node, installed)?;
 
         Ok(())
     }
 
-    fn install_nodes_build(&mut self, node: &Node<Option<InstallMeta>, DependencyTypes>) -> Result<()> {
+    fn install_nodes_build(&mut self, node: &Node<Option<InstallMeta>, DependencyTypes>, installed: &mut HashSet<PackageId>) -> Result<()> {
         // Install childs first
         // TODO: Implement parallelization here
         for child in node.get_children() {
-            self.install_nodes_build(child)?;
+            self.install_nodes_build(child, installed)?;
         }
 
         // Get the value or return early if there is no value (package is already satisfied)
@@ -208,6 +211,8 @@ impl<'a> Installer<'a> {
             Some(value) => value,
             None => return Ok(()),
         };
+
+        installed.insert(node.get_id().clone());
 
         // Install the current node
         self.install_package(node_value, node.get_children_ids(Some(DependencyTypes::Normal)), false)?;
@@ -350,7 +355,16 @@ impl<'a> Installer<'a> {
         Ok(())
     }
 
-    fn remove_build_dependencies(&mut self, node: &mut Node<Option<InstallMeta>, DependencyTypes>) -> Result<()> {
+    fn remove_build_dependencies(
+        &mut self,
+        node: &mut Node<Option<InstallMeta>, DependencyTypes>,
+        installed: &HashSet<PackageId>,
+    ) -> Result<()> {
+        // Return early if the package has not just been installed
+        if !installed.contains(node.get_id()) {
+            return Ok(());
+        }
+
         // Remove current before childs (parents before children)
         let optional_id = &OptionalPackageId::from(node.get_id().clone());
         if self.register.get_package_version(node.get_id()).is_some()
@@ -362,7 +376,7 @@ impl<'a> Installer<'a> {
 
         // Remove children
         for child in node.get_children_mut() {
-            self.remove_build_dependencies(child)?;
+            self.remove_build_dependencies(child, installed)?;
         }
 
         Ok(())
