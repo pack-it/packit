@@ -329,7 +329,7 @@ impl<'a> Verifier<'a> {
 
     fn check_packit_group(&self) -> Option<Issue> {
         if !self.config.multiuser {
-            return None; // We don't need the packit group if multiuser mode is enabled
+            return None; // We don't need the packit group if multiuser mode is not enabled
         }
 
         #[cfg(any(target_os = "macos", target_os = "linux"))]

@@ -58,10 +58,11 @@ Packages the specified package into a prebuild and store it in the destination d
 
 ## Config
 
-| Field               | Explanation                                                |
-| ------------------- | ---------------------------------------------------------- |
+| Field               | Explanation                                                       |
+| ------------------- | ----------------------------------------------------------------- |
 | `prefix_directory`  | Defines the directory used for installing packages, see [File structure](#file-structure) for the defaults on each platform. |
-| `repositories_rank` | Defines the order of repositories to search for a package. |
+| `repositories_rank` | Defines the order of repositories to search for a package.        |
+| `multiuser`         | True to run Packit in multiuser mode, false for single user mode. |
 
 ### Repositories
 

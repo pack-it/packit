@@ -151,12 +151,13 @@ mod platform {
     use super::Result;
 
     pub fn is_writable_specific(_path: &PathBuf, _metadata: Metadata) -> Result<bool> {
-        //TODO
-        Ok(false)
+        // TODO
+        Ok(true)
     }
 
     pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool, recurse: bool) -> Result<()> {
-        todo!()
+        // TODO
+        Ok(())
     }
 }
 
