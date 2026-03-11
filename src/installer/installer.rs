@@ -226,7 +226,7 @@ impl<'a> Installer<'a> {
         // Get the target information from the package version info
         let target = version_meta.get_target(&install_meta.target_bounds)?;
 
-        self.create_dependency_directory(&package_id, &dependencies)?;
+        self.create_dependency_symlinks(&package_id, &dependencies)?;
 
         // Get build version of package
         match use_prebuild {
@@ -340,7 +340,7 @@ impl<'a> Installer<'a> {
         Ok(())
     }
 
-    fn create_dependency_directory(&self, current_package: &PackageId, dependencies: &HashSet<PackageId>) -> Result<()> {
+    fn create_dependency_symlinks(&self, current_package: &PackageId, dependencies: &HashSet<PackageId>) -> Result<()> {
         let dependency_directory_path = Path::new(&self.config.prefix_directory).join("dependencies").join(current_package.to_string());
         fs::create_dir_all(&dependency_directory_path)?;
 
@@ -483,6 +483,10 @@ impl<'a> Installer<'a> {
         // Run uninstall script
         self.run_uninstall_script(&repository, &package_id, &directory)?;
 
+        // Remove the dependency symlinks
+        let dependency_directory_path = Path::new(&self.config.prefix_directory).join("dependencies").join(package_id.to_string());
+        fs::remove_dir_all(dependency_directory_path)?;
+
         // Check if the package was symlinked
         if installed_package.active_version == package_id.version && installed_package.symlinked {
             io::remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&directory))?;
@@ -559,6 +563,11 @@ impl<'a> Installer<'a> {
         for package_version in &installed_versions {
             // Load source repository
             let repository = Repository::new(&package_version.source_repository_url, &package_version.source_repository_provider);
+
+            // Remove the dependency symlinks
+            let dependency_directory_path =
+                Path::new(&self.config.prefix_directory).join("dependencies").join(package_version.package_id.to_string());
+            fs::remove_dir_all(dependency_directory_path)?;
 
             // Run uninstall script
             self.run_uninstall_script(&repository, &package_version.package_id, &directory)?;
