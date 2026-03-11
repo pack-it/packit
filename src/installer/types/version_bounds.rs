@@ -7,6 +7,7 @@ use crate::installer::types::{Version, VersionError};
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Deserialize)]
 pub enum VersionBounds {
     Range(Version, Version),
+    IncludingRange(Version, Version),
     Lower(Version),
     LowerEqual(Version),
     Higher(Version),
@@ -21,6 +22,13 @@ impl FromStr for VersionBounds {
         // Check if the statement is a two sided range
         if let Some(index) = version.chars().position(|c| c == '-') {
             if let Some((lower, upper)) = version.split_at_checked(index) {
+                if upper.starts_with("-=") {
+                    return Ok(VersionBounds::IncludingRange(
+                        Version::from_str(lower)?,
+                        Version::from_str(&upper[2..])?,
+                    ));
+                }
+
                 // Remove '-' from upper before passing it to Version
                 return Ok(VersionBounds::Range(Version::from_str(lower)?, Version::from_str(&upper[1..])?));
             }
@@ -51,11 +59,12 @@ impl FromStr for VersionBounds {
 impl VersionBounds {
     pub fn covers(&self, version: &Version) -> bool {
         match self {
-            VersionBounds::Range(lower, upper) if lower <= version && upper > version => true,
-            VersionBounds::Lower(lower) if version < lower => true,
-            VersionBounds::LowerEqual(lower) if version <= lower => true,
-            VersionBounds::Higher(higher) if version > higher => true,
-            VersionBounds::HigherEqual(higher) if version >= higher => true,
+            VersionBounds::Range(low, high) if low <= version && high > version => true,
+            VersionBounds::IncludingRange(low, high) if low <= version && high >= version => true,
+            VersionBounds::Lower(low) if version < low => true,
+            VersionBounds::LowerEqual(low) if version <= low => true,
+            VersionBounds::Higher(high) if version > high => true,
+            VersionBounds::HigherEqual(high) if version >= high => true,
             VersionBounds::Equal(equal) if version == equal => true,
             _ => false,
         }
