@@ -135,30 +135,34 @@ impl<'a> Installer<'a> {
             target_bounds,
         };
 
-        let mut newly_installed = Vec::new();
+        let mut installed_build_deps = Vec::new();
         match self.options.build_source {
             true => {
                 let dependency_tree = Node::new_from_meta_build(&package_id, root_meta, self.repository_manager, self.register)?;
-                self.install_nodes_build(&dependency_tree, &mut newly_installed)?;
+                self.install_nodes_build(&dependency_tree, &mut installed_build_deps)?;
             },
             false => {
                 let mut dependency_tree = Node::new_from_meta(&package_id, root_meta, self.repository_manager, self.register)?;
-                self.install_nodes(&mut dependency_tree, &mut newly_installed)?;
+                self.install_nodes(&mut dependency_tree, &mut installed_build_deps)?;
             },
         }
 
         if !self.options.keep_build {
-            self.remove_build_dependencies(&newly_installed)?;
+            self.remove_build_dependencies(&installed_build_deps)?;
         }
 
         Ok(())
     }
 
-    fn install_nodes(&mut self, node: &mut Node<Option<InstallMeta>, DependencyTypes>, installed: &mut Vec<PackageId>) -> Result<()> {
+    fn install_nodes(
+        &mut self,
+        node: &mut Node<Option<InstallMeta>, DependencyTypes>,
+        installed_build_deps: &mut Vec<PackageId>,
+    ) -> Result<()> {
         // Install childs first
         // TODO: Implement parallelization here
         for child in node.get_children_mut() {
-            self.install_nodes(child, installed)?;
+            self.install_nodes(child, installed_build_deps)?;
         }
 
         // Get the value or return early if there is no value (package is already satisfied)
@@ -190,16 +194,20 @@ impl<'a> Installer<'a> {
         }
 
         node.expand_node_with_build(self.repository_manager, self.register)?;
-        self.install_nodes_build(node, installed)?;
+        self.install_nodes_build(node, installed_build_deps)?;
 
         Ok(())
     }
 
-    fn install_nodes_build(&mut self, node: &Node<Option<InstallMeta>, DependencyTypes>, installed: &mut Vec<PackageId>) -> Result<()> {
+    fn install_nodes_build(
+        &mut self,
+        node: &Node<Option<InstallMeta>, DependencyTypes>,
+        installed_build_deps: &mut Vec<PackageId>,
+    ) -> Result<()> {
         // Install childs first
         // TODO: Implement parallelization here
         for child in node.get_children() {
-            self.install_nodes_build(child, installed)?;
+            self.install_nodes_build(child, installed_build_deps)?;
         }
 
         // Get the value or return early if there is no value (package is already satisfied)
@@ -209,7 +217,7 @@ impl<'a> Installer<'a> {
         };
 
         if *node.get_label() == DependencyTypes::Build {
-            installed.push(node.get_id().clone());
+            installed_build_deps.push(node.get_id().clone());
         }
 
         // Install the current node
