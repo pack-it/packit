@@ -66,6 +66,7 @@ impl VersionIntervals {
             // a lower bound the intervals are either not in order or are overlapping.
             let low_version = match bound {
                 VersionBounds::Range(low, _) => low,
+                VersionBounds::IncludingRange(low, _) => low,
                 VersionBounds::Lower(_) => return false,
                 VersionBounds::LowerEqual(_) => return false,
                 VersionBounds::Higher(version) => version,
@@ -76,7 +77,8 @@ impl VersionIntervals {
             // Here we don't have to compare each bound type with each other bound type, again because the intervals
             // need to be in order.
             match valued_previous {
-                VersionBounds::Range(_, high) if *low_version <= *high => return false,
+                VersionBounds::Range(_, high) if *low_version < *high => return false,
+                VersionBounds::IncludingRange(_, high) if *low_version <= *high => return false,
                 VersionBounds::Lower(version) if low_version < version => return false,
                 VersionBounds::LowerEqual(version) if low_version <= version => return false,
                 VersionBounds::Higher(_) => return false,
