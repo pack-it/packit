@@ -135,31 +135,34 @@ impl<'a> Installer<'a> {
             target_bounds,
         };
 
-        let mut tree = match self.options.build_source {
+        let mut installed_build_deps = Vec::new();
+        match self.options.build_source {
             true => {
                 let dependency_tree = Node::new_from_meta_build(&package_id, root_meta, self.repository_manager, self.register)?;
-                self.install_nodes_build(&dependency_tree)?;
-                dependency_tree
+                self.install_nodes_build(&dependency_tree, &mut installed_build_deps)?;
             },
             false => {
                 let mut dependency_tree = Node::new_from_meta(&package_id, root_meta, self.repository_manager, self.register)?;
-                self.install_nodes(&mut dependency_tree)?;
-                dependency_tree
+                self.install_nodes(&mut dependency_tree, &mut installed_build_deps)?;
             },
-        };
+        }
 
         if !self.options.keep_build {
-            self.remove_build_dependencies(&mut tree)?;
+            self.remove_build_dependencies(&installed_build_deps)?;
         }
 
         Ok(())
     }
 
-    fn install_nodes(&mut self, node: &mut Node<Option<InstallMeta>, DependencyTypes>) -> Result<()> {
+    fn install_nodes(
+        &mut self,
+        node: &mut Node<Option<InstallMeta>, DependencyTypes>,
+        installed_build_deps: &mut Vec<PackageId>,
+    ) -> Result<()> {
         // Install childs first
         // TODO: Implement parallelization here
         for child in node.get_children_mut() {
-            self.install_nodes(child)?;
+            self.install_nodes(child, installed_build_deps)?;
         }
 
         // Get the value or return early if there is no value (package is already satisfied)
@@ -191,16 +194,20 @@ impl<'a> Installer<'a> {
         }
 
         node.expand_node_with_build(self.repository_manager, self.register)?;
-        self.install_nodes_build(node)?;
+        self.install_nodes_build(node, installed_build_deps)?;
 
         Ok(())
     }
 
-    fn install_nodes_build(&mut self, node: &Node<Option<InstallMeta>, DependencyTypes>) -> Result<()> {
+    fn install_nodes_build(
+        &mut self,
+        node: &Node<Option<InstallMeta>, DependencyTypes>,
+        installed_build_deps: &mut Vec<PackageId>,
+    ) -> Result<()> {
         // Install childs first
         // TODO: Implement parallelization here
         for child in node.get_children() {
-            self.install_nodes_build(child)?;
+            self.install_nodes_build(child, installed_build_deps)?;
         }
 
         // Get the value or return early if there is no value (package is already satisfied)
@@ -208,6 +215,10 @@ impl<'a> Installer<'a> {
             Some(value) => value,
             None => return Ok(()),
         };
+
+        if *node.get_label() == DependencyTypes::Build {
+            installed_build_deps.push(node.get_id().clone());
+        }
 
         // Install the current node
         self.install_package(node_value, node.get_children_ids(Some(DependencyTypes::Normal)), false)?;
@@ -350,19 +361,18 @@ impl<'a> Installer<'a> {
         Ok(())
     }
 
-    fn remove_build_dependencies(&mut self, node: &mut Node<Option<InstallMeta>, DependencyTypes>) -> Result<()> {
-        // Remove current before childs (parents before children)
-        let optional_id = &OptionalPackageId::from(node.get_id().clone());
-        if self.register.get_package_version(node.get_id()).is_some()
-            && !self.register.is_dependency(optional_id)
-            && *node.get_label() == DependencyTypes::Build
-        {
-            self.uninstall(optional_id)?;
-        }
+    fn remove_build_dependencies(&mut self, installed: &Vec<PackageId>) -> Result<()> {
+        // Loop through the installed build dependencies in reverse, because then the dependents
+        // are uninstalled before the dependencies due to the install order.
+        for package_id in installed.iter().rev() {
+            let optional_id = &OptionalPackageId::from(package_id.clone());
 
-        // Remove children
-        for child in node.get_children_mut() {
-            self.remove_build_dependencies(child)?;
+            // Continue if the package is None (already removed in a previous iteration) or if it's also a dependency
+            if self.register.get_package_version(package_id).is_some() && self.register.is_dependency(optional_id) {
+                continue;
+            }
+
+            self.uninstall(optional_id)?;
         }
 
         Ok(())
