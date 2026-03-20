@@ -7,6 +7,7 @@ use crate::{
     installer::{
         builder::Builder,
         error::{InstallerError, Result},
+        install_tree::{DependencyTypes, InstallMeta, InstallNode},
         options::InstallerOptions,
         scripts::{self, ScriptData},
         symlinker::Symlinker,
@@ -18,10 +19,10 @@ use crate::{
         error::RepositoryError,
         manager::RepositoryManager,
         provider,
-        types::{Checksum, PackageMeta, PackageTarget, PackageVersionMeta, TargetBounds},
+        types::{Checksum, PackageTarget},
     },
     storage::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
-    utils::tree::Node,
+    utils::tree::TreeBuilder,
 };
 
 use std::{
@@ -36,39 +37,6 @@ pub struct Installer<'a> {
     register: &'a mut PackageRegister,
     repository_manager: &'a RepositoryManager<'a>,
     options: InstallerOptions,
-}
-
-/// A label enum for the install/dependency tree
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum DependencyTypes {
-    Normal,
-    Build,
-}
-
-/// A helper struct for the installer to move around nodes from the dependency trees
-#[derive(Debug)]
-pub struct InstallMeta {
-    pub package_metadata: PackageMeta,
-    pub version_metadata: PackageVersionMeta,
-    pub repository_id: String,
-    pub target_bounds: TargetBounds,
-}
-
-impl InstallMeta {
-    pub fn new(
-        package_metadata: PackageMeta,
-        version_metadata: PackageVersionMeta,
-        repository_id: String,
-    ) -> std::result::Result<Self, RepositoryError> {
-        let target_bounds = version_metadata.get_best_target(&Target::current())?;
-
-        Ok(Self {
-            package_metadata,
-            version_metadata,
-            repository_id,
-            target_bounds,
-        })
-    }
 }
 
 impl<'a> Installer<'a> {
@@ -138,11 +106,19 @@ impl<'a> Installer<'a> {
         let mut installed_build_deps = Vec::new();
         match self.options.build_source {
             true => {
-                let dependency_tree = Node::new_from_meta_build(&package_id, root_meta, self.repository_manager, self.register)?;
+                let dependency_tree = TreeBuilder::new()
+                    .root(package_id, Some(root_meta), DependencyTypes::Normal)
+                    .expander(InstallNode::expander_with_build)
+                    .populator(|(d, l)| InstallNode::populator(self.register, self.repository_manager, &d, l))
+                    .build()?;
                 self.install_nodes_build(&dependency_tree, &mut installed_build_deps)?;
             },
             false => {
-                let mut dependency_tree = Node::new_from_meta(&package_id, root_meta, self.repository_manager, self.register)?;
+                let mut dependency_tree = TreeBuilder::new()
+                    .root(package_id, Some(root_meta), DependencyTypes::Normal)
+                    .expander(InstallNode::expander)
+                    .populator(|(d, l)| InstallNode::populator(self.register, self.repository_manager, &d, l))
+                    .build()?;
                 self.install_nodes(&mut dependency_tree, &mut installed_build_deps)?;
             },
         }
@@ -154,11 +130,7 @@ impl<'a> Installer<'a> {
         Ok(())
     }
 
-    fn install_nodes(
-        &mut self,
-        node: &mut Node<Option<InstallMeta>, DependencyTypes>,
-        installed_build_deps: &mut Vec<PackageId>,
-    ) -> Result<()> {
+    fn install_nodes(&mut self, node: &mut InstallNode, installed_build_deps: &mut Vec<PackageId>) -> Result<()> {
         // Install childs first
         // TODO: Implement parallelization here
         for child in node.get_children_mut() {
@@ -193,17 +165,13 @@ impl<'a> Installer<'a> {
             });
         }
 
-        node.expand_node_with_build(self.repository_manager, self.register)?;
+        node.expand_with_build(self.register, self.repository_manager)?;
         self.install_nodes_build(node, installed_build_deps)?;
 
         Ok(())
     }
 
-    fn install_nodes_build(
-        &mut self,
-        node: &Node<Option<InstallMeta>, DependencyTypes>,
-        installed_build_deps: &mut Vec<PackageId>,
-    ) -> Result<()> {
+    fn install_nodes_build(&mut self, node: &InstallNode, installed_build_deps: &mut Vec<PackageId>) -> Result<()> {
         // Install childs first
         // TODO: Implement parallelization here
         for child in node.get_children() {
