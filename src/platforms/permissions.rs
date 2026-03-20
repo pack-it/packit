@@ -105,13 +105,15 @@ pub mod platform {
 
         fs::set_permissions(&path, old_permissions)?;
 
-        if recurse && path.is_dir() {
-            let dir = fs::read_dir(&path)?;
-            for entry in dir {
-                let entry = entry?;
+        if !recurse || !path.is_dir() {
+            return Ok(());
+        }
 
-                set_file_permissions(&entry.path(), entry.metadata()?.permissions(), group_id, recurse)?;
-            }
+        let dir = fs::read_dir(&path)?;
+        for entry in dir {
+            let entry = entry?;
+
+            set_file_permissions(&entry.path(), entry.metadata()?.permissions(), group_id, recurse)?;
         }
 
         Ok(())
