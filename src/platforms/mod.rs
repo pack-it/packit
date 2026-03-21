@@ -1,5 +1,6 @@
 mod defaults;
 mod os;
+pub mod permissions;
 pub mod symlink;
 mod target;
 mod target_architecture;

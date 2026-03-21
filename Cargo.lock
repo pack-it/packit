@@ -1076,6 +1076,7 @@ dependencies = [
  "flate2",
  "hex",
  "indicatif",
+ "libc",
  "regex",
  "reqwest",
  "serde",
