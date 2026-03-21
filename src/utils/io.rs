@@ -5,7 +5,7 @@ use crate::{
     platforms::symlink::{self, SymlinkError},
 };
 
-pub fn create_folder_symlinks(source_dir: &Path, destination_dir: &Path, keep_subdirectories: bool) -> Result<(), SymlinkError> {
+pub fn create_folder_symlinks(source_dir: &Path, destination_dir: &Path) -> Result<(), SymlinkError> {
     // Create destination if it does not exist
     if !destination_dir.exists() {
         fs::create_dir_all(&destination_dir)?;
@@ -22,16 +22,9 @@ pub fn create_folder_symlinks(source_dir: &Path, destination_dir: &Path, keep_su
 
         let destination = destination_dir.join(file.file_name());
 
-        // Handle directories
+        // Create the symlinks for the subdirectory
         if file.file_type()?.is_dir() {
-            // If we want to keep subdirectories, create the symlinks for the subdirectory
-            // TODO: Handle subdirectories properly
-            if keep_subdirectories {
-                create_folder_symlinks(&file.path(), &destination, true)?;
-            } else {
-                dbg!("Skipping subdirectory", file);
-            }
-
+            create_folder_symlinks(&file.path(), &destination)?;
             continue;
         }
 

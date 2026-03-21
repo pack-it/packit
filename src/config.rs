@@ -23,10 +23,6 @@ pub struct Config {
     /// Contains the ranks of all repositories
     pub repositories_rank: Vec<String>,
 
-    /// False to use the repositories rank to resolve package conflicts, true to ask for confirmation
-    #[serde(default = "Config::default_prompt_repo_conflicts")]
-    pub prompt_repo_conflicts: bool, //TODO: maybe remove this option? or should it be optional for extra safety?
-
     #[serde(default = "Config::default_prefix_directory")]
     pub prefix_directory: PathBuf,
 
@@ -105,10 +101,6 @@ impl Config {
     /// Gets the default path of the Packit config file.
     pub fn get_default_path() -> PathBuf {
         Path::new(DEFAULT_CONFIG_DIR).join(CONFIG_FILENAME)
-    }
-
-    fn default_prompt_repo_conflicts() -> bool {
-        false
     }
 
     fn default_prefix_directory() -> PathBuf {

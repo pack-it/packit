@@ -103,7 +103,6 @@ impl<'a> Repairer<'a> {
             // Temporarily remove the package from the storage
             // We have to uninstall and install, because we can't know the repository source otherwise
             // Remove the symlinks first
-            // TODO: Use uninstall scripts here in the future
             if symlinked {
                 remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&package_directory))?;
             }

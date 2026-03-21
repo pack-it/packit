@@ -29,7 +29,7 @@ impl<'a> Symlinker<'a> {
             let package_dir_path = package_directory.join(dir_name);
             let prefix_dir_path = prefix_dir.join(dir_name);
 
-            create_folder_symlinks(&package_dir_path, &prefix_dir_path, true)?;
+            create_folder_symlinks(&package_dir_path, &prefix_dir_path)?;
         }
 
         Ok(())

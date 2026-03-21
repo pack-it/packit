@@ -89,14 +89,6 @@ impl PackageVersionMeta {
         }
     }
 
-    pub fn has_target(&self, target: &TargetBounds) -> Result<bool> {
-        match self.get_target(target) {
-            Ok(_) => Ok(true),
-            Err(RepositoryError::TargetError) => Ok(false),
-            Err(e) => Err(e),
-        }
-    }
-
     pub fn get_target(&self, target: &TargetBounds) -> Result<&PackageTarget> {
         self.targets.get(target).ok_or(RepositoryError::TargetError)
     }
