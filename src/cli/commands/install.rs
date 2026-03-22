@@ -3,7 +3,7 @@ use clap::Args;
 use crate::{
     cli::{commands::HandleCommand, display::logging::error},
     config::Config,
-    installer::{Installer, InstallerOptions, types::OptionalPackageId},
+    installer::{InstallTypes, Installer, InstallerOptions, types::OptionalPackageId},
     repositories::manager::RepositoryManager,
     storage::package_register::PackageRegister,
     utils::unwrap_or_exit::UnwrapOrExit,
@@ -16,8 +16,12 @@ pub struct InstallArgs {
     pub packages: Vec<OptionalPackageId>,
 
     /// True to build from source locally, false to use a prebuild version
-    #[arg(long, default_value = "false")]
+    #[arg(long, default_value = "false", conflicts_with = "build_all")]
     pub build: bool,
+
+    /// True to build everything from source locally, false to use a prebuild version
+    #[arg(long, default_value = "false", conflicts_with = "build")]
+    pub build_all: bool,
 
     /// True to skip symlinking the package, false to use defaults specified for the package
     #[arg(long, default_value = "false")]
@@ -39,8 +43,17 @@ impl HandleCommand for InstallArgs {
         let register_dir = PackageRegister::get_default_path(&config);
         let mut register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
+        // Determine the install type. Note that clap already check if build and build-all are both set (which should not be possible).
+        let install_type = if self.build {
+            InstallTypes::Build { is_dependency: false }
+        } else if self.build_all {
+            InstallTypes::BuildAll { is_dependency: false }
+        } else {
+            InstallTypes::Prebuild { is_dependency: false }
+        };
+
         let installer_options = InstallerOptions::default()
-            .build_source(self.build)
+            .install_type(install_type)
             .skip_symlinking(self.skip_symlinking)
             .skip_active(self.skip_active)
             .keep_build(self.keep_build);

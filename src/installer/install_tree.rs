@@ -12,9 +12,26 @@ use crate::{
 
 /// A label enum for the install/dependency tree
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum DependencyTypes {
-    Normal,
-    Build,
+pub enum InstallTypes {
+    Prebuild {
+        is_dependency: bool,
+    },
+    Build {
+        is_dependency: bool,
+    },
+    BuildAll {
+        is_dependency: bool,
+    },
+}
+
+impl InstallTypes {
+    pub fn is_dependency(&self) -> bool {
+        match self {
+            InstallTypes::Prebuild { is_dependency } => *is_dependency,
+            InstallTypes::Build { is_dependency } => *is_dependency,
+            InstallTypes::BuildAll { is_dependency } => *is_dependency,
+        }
+    }
 }
 
 /// A helper struct for the installer to move around nodes from the dependency trees
@@ -27,11 +44,7 @@ pub struct InstallMeta {
 }
 
 impl InstallMeta {
-    fn new(
-        package_metadata: PackageMeta,
-        version_metadata: PackageVersionMeta,
-        repository_id: String,
-    ) -> std::result::Result<Self, RepositoryError> {
+    fn new(package_metadata: PackageMeta, version_metadata: PackageVersionMeta, repository_id: String) -> Result<Self, RepositoryError> {
         let target_bounds = version_metadata.get_best_target(&Target::current())?;
 
         Ok(Self {
@@ -43,59 +56,67 @@ impl InstallMeta {
     }
 }
 
-pub type InstallNode = Node<Option<InstallMeta>, DependencyTypes>;
+pub type InstallNode = Node<Option<InstallMeta>, InstallTypes>;
 
 impl InstallNode {
-    pub fn expander(parent: &InstallNode) -> tree::Result<Vec<(Dependency, DependencyTypes)>> {
+    pub fn expander(parent: &InstallNode) -> tree::Result<Vec<(Dependency, InstallTypes)>> {
         let install_meta = match parent.get_value() {
             Some(install_meta) => install_meta,
             None => return Ok(Vec::new()),
         };
 
+        // Determine the (build) dependency types of the children based on the parent
+        // TODO: Refactor to not depent on Option
+        let (install_type, build_install_type) = match *parent.get_label() {
+            InstallTypes::Prebuild { .. } => (InstallTypes::Prebuild { is_dependency: true }, None),
+            InstallTypes::Build { .. } => (
+                InstallTypes::Prebuild { is_dependency: true },
+                Some(InstallTypes::Prebuild { is_dependency: false }),
+            ),
+            InstallTypes::BuildAll { .. } => (
+                InstallTypes::BuildAll { is_dependency: true },
+                Some(InstallTypes::BuildAll { is_dependency: false }),
+            ),
+        };
+
         let target = install_meta.version_metadata.get_target(&install_meta.target_bounds)?;
+
+        if let Some(build_install_type) = build_install_type {
+            let build_dependencies = install_meta
+                .version_metadata
+                .build_dependencies
+                .iter()
+                .chain(target.build_dependencies.iter())
+                .cloned()
+                .map(|d| (d, build_install_type.clone()));
+
+            let dependencies = install_meta
+                .version_metadata
+                .dependencies
+                .iter()
+                .chain(target.dependencies.iter())
+                .cloned()
+                .map(|d| (d, install_type.clone()));
+
+            return Ok(build_dependencies.chain(dependencies).collect());
+        }
+
         Ok(install_meta
             .version_metadata
             .dependencies
             .iter()
             .chain(target.dependencies.iter())
             .cloned()
-            .map(|d| (d, DependencyTypes::Normal))
+            .map(|d| (d, install_type.clone()))
             .collect())
-    }
-
-    pub fn expander_with_build(parent: &InstallNode) -> tree::Result<Vec<(Dependency, DependencyTypes)>> {
-        // Return early if the value was not set, it means that this node is already installed
-        let install_meta = match parent.get_value() {
-            Some(install_meta) => install_meta,
-            None => return Ok(Vec::new()),
-        };
-
-        let target = install_meta.version_metadata.get_target(&install_meta.target_bounds)?;
-        let build_dependencies = install_meta
-            .version_metadata
-            .build_dependencies
-            .iter()
-            .chain(target.build_dependencies.iter())
-            .cloned()
-            .map(|d| (d, DependencyTypes::Build));
-
-        let dependencies = install_meta
-            .version_metadata
-            .dependencies
-            .iter()
-            .chain(target.dependencies.iter())
-            .cloned()
-            .map(|d| (d, parent.get_label().clone()));
-
-        Ok(build_dependencies.chain(dependencies).collect())
     }
 
     pub fn populator(
         register: &PackageRegister,
         manager: &RepositoryManager,
         dependency: &Dependency,
-        label: DependencyTypes,
-    ) -> tree::Result<(PackageId, Option<InstallMeta>, DependencyTypes)> {
+        label: InstallTypes,
+    ) -> tree::Result<(PackageId, Option<InstallMeta>, InstallTypes)> {
         // If the package is already satisfied don't expand the dependency tree further
         if let Some(package) = register.get_latest_satisfying_package(dependency) {
             return Ok((package.package_id.clone(), None, label));
@@ -111,6 +132,11 @@ impl InstallNode {
     }
 
     pub fn expand_with_build(&mut self, register: &PackageRegister, manager: &RepositoryManager) -> tree::Result<()> {
-        self.expand(&Self::expander_with_build, &|(d, l)| Self::populator(register, manager, &d, l))
+        self.set_label(InstallTypes::Build {
+            is_dependency: self.get_label().is_dependency(),
+        });
+
+        // TODO: Check if this doesn't give double children (because some children already exist)
+        self.expand(&Self::expander, &|(d, l)| Self::populator(register, manager, &d, l))
     }
 }

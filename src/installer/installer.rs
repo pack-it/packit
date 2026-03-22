@@ -7,7 +7,7 @@ use crate::{
     installer::{
         builder::Builder,
         error::{InstallerError, Result},
-        install_tree::{DependencyTypes, InstallMeta, InstallNode},
+        install_tree::{InstallMeta, InstallNode, InstallTypes},
         options::InstallerOptions,
         scripts::{self, ScriptData},
         symlinker::Symlinker,
@@ -103,38 +103,27 @@ impl<'a> Installer<'a> {
             target_bounds,
         };
 
-        let mut installed_build_deps = Vec::new();
-        match self.options.build_source {
-            true => {
-                let dependency_tree = TreeBuilder::new()
-                    .root(package_id, Some(root_meta), DependencyTypes::Normal)
-                    .expander(InstallNode::expander_with_build)
-                    .populator(|(d, l)| InstallNode::populator(self.register, self.repository_manager, &d, l))
-                    .build()?;
-                self.install_nodes_build(&dependency_tree, &mut installed_build_deps)?;
-            },
-            false => {
-                let mut dependency_tree = TreeBuilder::new()
-                    .root(package_id, Some(root_meta), DependencyTypes::Normal)
-                    .expander(InstallNode::expander)
-                    .populator(|(d, l)| InstallNode::populator(self.register, self.repository_manager, &d, l))
-                    .build()?;
-                self.install_nodes(&mut dependency_tree, &mut installed_build_deps)?;
-            },
-        }
+        // Create the install tree based on the install type
+        let mut dependency_tree = TreeBuilder::new()
+            .root(package_id, Some(root_meta), self.options.install_type.clone())
+            .expander(InstallNode::expander)
+            .populator(|(d, l)| InstallNode::populator(self.register, self.repository_manager, &d, l))
+            .build()?;
+
+        self.install_nodes(&mut dependency_tree)?;
 
         if !self.options.keep_build {
-            self.remove_build_dependencies(&installed_build_deps)?;
+            self.remove_build_dependencies(&dependency_tree, &dependency_tree)?;
         }
 
         Ok(())
     }
 
-    fn install_nodes(&mut self, node: &mut InstallNode, installed_build_deps: &mut Vec<PackageId>) -> Result<()> {
+    fn install_nodes(&mut self, node: &mut InstallNode) -> Result<()> {
         // Install childs first
         // TODO: Implement parallelization here
         for child in node.get_children_mut() {
-            self.install_nodes(child, installed_build_deps)?;
+            self.install_nodes(child)?;
         }
 
         // Get the value or return early if there is no value (package is already satisfied)
@@ -143,11 +132,19 @@ impl<'a> Installer<'a> {
             None => return Ok(()),
         };
 
+        let children = node.get_children_ids(Some(InstallTypes::is_dependency));
+
+        // Check if the current package should be build from source
+        if matches!(*node.get_label(), InstallTypes::Build { .. }) || matches!(*node.get_label(), InstallTypes::BuildAll { .. }) {
+            // Install the current node without prebuild
+            return self.install_package(node_value, children, false);
+        }
+
         // Install the package with a prebuild if possible
         let revision = node_value.version_metadata.revisions.len() as u64;
         match self.repository_manager.get_prebuild_url(&node_value.repository_id, node.get_id(), revision, &Target::current()) {
             Ok(Some(_)) => {
-                self.install_package(node_value, node.get_children_ids(Some(DependencyTypes::Normal)), true)?;
+                self.install_package(node_value, children, true)?;
                 return Ok(());
             },
             Ok(None) | Err(RepositoryError::RepositoryNotFoundError { .. }) => (),
@@ -166,30 +163,7 @@ impl<'a> Installer<'a> {
         }
 
         node.expand_with_build(self.register, self.repository_manager)?;
-        self.install_nodes_build(node, installed_build_deps)?;
-
-        Ok(())
-    }
-
-    fn install_nodes_build(&mut self, node: &InstallNode, installed_build_deps: &mut Vec<PackageId>) -> Result<()> {
-        // Install childs first
-        // TODO: Implement parallelization here
-        for child in node.get_children() {
-            self.install_nodes_build(child, installed_build_deps)?;
-        }
-
-        // Get the value or return early if there is no value (package is already satisfied)
-        let node_value = match node.get_value() {
-            Some(value) => value,
-            None => return Ok(()),
-        };
-
-        if *node.get_label() == DependencyTypes::Build {
-            installed_build_deps.push(node.get_id().clone());
-        }
-
-        // Install the current node
-        self.install_package(node_value, node.get_children_ids(Some(DependencyTypes::Normal)), false)?;
+        self.install_nodes(node)?;
 
         Ok(())
     }
@@ -332,18 +306,19 @@ impl<'a> Installer<'a> {
         Ok(())
     }
 
-    fn remove_build_dependencies(&mut self, installed: &Vec<PackageId>) -> Result<()> {
-        // Loop through the installed build dependencies in reverse, because then the dependents
-        // are uninstalled before the dependencies due to the install order.
-        for package_id in installed.iter().rev() {
-            let optional_id = &OptionalPackageId::from(package_id.clone());
+    fn remove_build_dependencies(&mut self, parent: &InstallNode, root: &InstallNode) -> Result<()> {
+        let optional_id = &OptionalPackageId::from(parent.get_id().clone());
+        if self.register.get_package_version(parent.get_id()).is_none() || self.register.is_dependency(optional_id) {
+            return Ok(());
+        }
 
-            // Continue if the package is None (already removed in a previous iteration) or if it's also a dependency
-            if self.register.get_package_version(package_id).is_some() && self.register.is_dependency(optional_id) {
-                continue;
-            }
-
+        // Don't remove the package if it's the root
+        if parent.get_id() != root.get_id() {
             self.uninstall(optional_id)?;
+        }
+
+        for child in parent.get_children() {
+            self.remove_build_dependencies(child, root)?;
         }
 
         Ok(())

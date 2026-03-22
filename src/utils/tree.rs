@@ -159,9 +159,12 @@ impl<V, L: Eq> Node<V, L> {
     }
 
     /// Gets the children ids of a node in a hashset. If a label has been given it will only return the children with that label.
-    pub fn get_children_ids(&self, label: Option<L>) -> HashSet<PackageId> {
-        if let Some(label) = label {
-            return self.children.iter().filter(|c| c.label == label).map(|c| c.id.clone()).collect();
+    pub fn get_children_ids<F>(&self, filter: Option<F>) -> HashSet<PackageId>
+    where
+        F: Fn(&L) -> bool,
+    {
+        if let Some(filter) = filter {
+            return self.children.iter().filter(|c| filter(&c.label)).map(|c| c.id.clone()).collect();
         }
 
         self.children.iter().map(|c| c.id.clone()).collect()
@@ -180,6 +183,11 @@ impl<V, L: Eq> Node<V, L> {
     /// Gets the label.
     pub fn get_label(&self) -> &L {
         &self.label
+    }
+
+    /// Sets a new label.
+    pub fn set_label(&mut self, new_label: L) {
+        self.label = new_label;
     }
 }
 
