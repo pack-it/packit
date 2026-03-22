@@ -3,7 +3,7 @@ use clap::Args;
 use crate::{
     cli::{commands::HandleCommand, display::logging::error},
     config::Config,
-    installer::{InstallTypes, Installer, InstallerOptions, types::OptionalPackageId},
+    installer::{InstallLabel, InstallTypes, Installer, InstallerOptions, types::OptionalPackageId},
     repositories::manager::RepositoryManager,
     storage::package_register::PackageRegister,
     utils::unwrap_or_exit::UnwrapOrExit,
@@ -45,15 +45,17 @@ impl HandleCommand for InstallArgs {
 
         // Determine the install type. Note that clap already check if build and build-all are both set (which should not be possible).
         let install_type = if self.build {
-            InstallTypes::Build { is_dependency: false }
+            InstallTypes::Build
         } else if self.build_all {
-            InstallTypes::BuildAll { is_dependency: false }
+            InstallTypes::BuildAll
         } else {
-            InstallTypes::Prebuild { is_dependency: false }
+            InstallTypes::Prebuild
         };
 
+        let install_label = InstallLabel::new(install_type, false);
+
         let installer_options = InstallerOptions::default()
-            .install_type(install_type)
+            .install_label(install_label)
             .skip_symlinking(self.skip_symlinking)
             .skip_active(self.skip_active)
             .keep_build(self.keep_build);

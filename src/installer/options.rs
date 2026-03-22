@@ -1,7 +1,7 @@
-use crate::installer::install_tree::InstallTypes;
+use crate::installer::{InstallLabel, install_tree::InstallTypes};
 
 pub struct InstallerOptions {
-    pub install_type: InstallTypes,
+    pub install_label: InstallLabel,
     pub skip_symlinking: bool,
     pub skip_active: bool,
     pub keep_build: bool,
@@ -10,7 +10,7 @@ pub struct InstallerOptions {
 impl Default for InstallerOptions {
     fn default() -> Self {
         Self {
-            install_type: InstallTypes::Prebuild { is_dependency: false },
+            install_label: InstallLabel::new(InstallTypes::Prebuild, false),
             skip_symlinking: false,
             skip_active: false,
             keep_build: false,
@@ -19,8 +19,8 @@ impl Default for InstallerOptions {
 }
 
 impl InstallerOptions {
-    pub fn install_type(mut self, install_type: InstallTypes) -> Self {
-        self.install_type = install_type;
+    pub fn install_label(mut self, install_label: InstallLabel) -> Self {
+        self.install_label = install_label;
         self
     }
 

@@ -9,6 +9,7 @@ mod symlinker;
 pub mod types;
 pub mod unpack;
 
+pub use self::install_tree::InstallLabel;
 pub use self::install_tree::InstallTypes;
 
 pub use self::installer::Installer;

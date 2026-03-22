@@ -5,6 +5,7 @@ use crate::{
     },
     config::{Config, Repository},
     installer::{
+        InstallLabel,
         builder::Builder,
         error::{InstallerError, Result},
         install_tree::{InstallMeta, InstallNode, InstallTypes},
@@ -105,7 +106,7 @@ impl<'a> Installer<'a> {
 
         // Create the install tree based on the install type
         let mut dependency_tree = TreeBuilder::new()
-            .root(package_id, Some(root_meta), self.options.install_type.clone())
+            .root(package_id, Some(root_meta), self.options.install_label.clone())
             .expander(InstallNode::expander)
             .populator(|(d, l)| InstallNode::populator(self.register, self.repository_manager, &d, l))
             .build()?;
@@ -132,10 +133,10 @@ impl<'a> Installer<'a> {
             None => return Ok(()),
         };
 
-        let children = node.get_children_ids(Some(InstallTypes::is_dependency));
+        let children = node.get_children_ids(Some(InstallLabel::is_dependency));
 
         // Check if the current package should be build from source
-        if matches!(*node.get_label(), InstallTypes::Build { .. }) || matches!(*node.get_label(), InstallTypes::BuildAll { .. }) {
+        if matches!(node.get_label().get_type(), InstallTypes::Build) || matches!(node.get_label().get_type(), InstallTypes::BuildAll) {
             // Install the current node without prebuild
             return self.install_package(node_value, children, false);
         }
