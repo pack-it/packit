@@ -138,7 +138,10 @@ impl InstallNode {
             is_dependency: self.get_label().is_dependency(),
         });
 
-        // TODO: Check if this doesn't give double children (because some children already exist)
+        // Clear all the children to avoid duplicates
+        self.get_children_mut().clear();
+
+        // Expand the node again, but now for build
         self.expand(&Self::expander, &|(d, l)| Self::populator(register, manager, &d, l))
     }
 }
