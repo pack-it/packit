@@ -60,6 +60,7 @@ pub type InstallNode = Node<Option<InstallMeta>, InstallTypes>;
 
 impl InstallNode {
     pub fn expander(parent: &InstallNode) -> tree::Result<Vec<(Dependency, InstallTypes)>> {
+        // Return early if the node value is None (meaning that the package is already installed)
         let install_meta = match parent.get_value() {
             Some(install_meta) => install_meta,
             None => return Ok(Vec::new()),

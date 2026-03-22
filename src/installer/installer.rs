@@ -307,6 +307,12 @@ impl<'a> Installer<'a> {
     }
 
     fn remove_build_dependencies(&mut self, parent: &InstallNode, root: &InstallNode) -> Result<()> {
+        // Return early if the node value is None (meaning that the package was already installed)
+        if parent.get_value().is_none() {
+            return Ok(());
+        }
+
+        // Return early if the package doesn't exist (removed in earlier iteration) or if it's a dependency
         let optional_id = &OptionalPackageId::from(parent.get_id().clone());
         if self.register.get_package_version(parent.get_id()).is_none() || self.register.is_dependency(optional_id) {
             return Ok(());
