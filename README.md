@@ -11,10 +11,11 @@ TODO
 ## Usage
 The general usage of Packit is: `pit <COMMAND>`.
 
-#### `pit install <PACKAGE-NAME>[@<VERSION>] [--build] [--keep-build] [--skip-symlinking] [--skip-active]`
+#### `pit install <PACKAGE-NAME>[@<VERSION>] [--build] [--build-all] [--keep-build] [--skip-symlinking] [--skip-active]`
 Installs the specified packages, if a version is given that version will be installed, if not the latest available version will be installed. Multiple packages can be specified by entering multiple names, split by a space.
 <br>
 If the `--build` option is given, the package is build from source, instead of installing a prebuild version.
+If the `--build-all` option is given, the package and all its dependencies are build from source, instead of installing prebuild versions.
 If the `--keep-build` option is given, the build dependencies will not be deleted after building.
 If the `--skip-symlinking` option is enabled, the package is not symlinked into the /bin, /lib, /share, etc. directories.
 If the `--skip-active` option is enabled, the package is not set to active and the current active version is kept. If there is no current active version, this flag is ignored and the package is set to active.
@@ -58,16 +59,16 @@ Packages the specified package into a prebuild and store it in the destination d
 
 ## Config
 
-| Field               | Explanation                                                       |
-| ------------------- | ----------------------------------------------------------------- |
+| Field               | Explanation                                                                                                                  |
+|---------------------|------------------------------------------------------------------------------------------------------------------------------|
 | `prefix_directory`  | Defines the directory used for installing packages, see [File structure](#file-structure) for the defaults on each platform. |
-| `repositories_rank` | Defines the order of repositories to search for a package.        |
-| `multiuser`         | True to run Packit in multiuser mode, false for single user mode. |
+| `repositories_rank` | Defines the order of repositories to search for a package.                                                                   |
+| `multiuser`         | True to run Packit in multiuser mode, false for single user mode.                                                            |
 
 ### Repositories
 
 | Field                | Explanation                                                              |
-| -------------------- | ------------------------------------------------------------------------ |
+|----------------------|--------------------------------------------------------------------------|
 | `path`               | Defines the path to the repository.                                      |
 | `provider`           | Defines the provider of the repository, defaults to `web`.               |
 | `prebuilds_url`      | Defines the url of the prebuilds repository for this package repository. |

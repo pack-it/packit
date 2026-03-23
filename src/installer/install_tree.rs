@@ -10,7 +10,7 @@ use crate::{
     utils::tree::{self, Node},
 };
 
-/// A label enum for the install/dependency tree
+/// Represents the different types of installing a package.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum InstallTypes {
     Prebuild,
@@ -18,6 +18,7 @@ pub enum InstallTypes {
     BuildAll,
 }
 
+/// Label for the install tree.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct InstallLabel {
     install_type: InstallTypes,
@@ -66,6 +67,9 @@ impl InstallMeta {
 pub type InstallNode = Node<Option<InstallMeta>, InstallLabel>;
 
 impl InstallNode {
+    /// Expands a tree based on metadata and also takes into account already installed packages.
+    /// The children install types are based on the parent install type and determine how the tree
+    /// is further expanded (with or without build dependencies).
     pub fn expander(parent: &InstallNode) -> tree::Result<Vec<(Dependency, InstallLabel)>> {
         // Return early if the node value is None (meaning that the package is already installed)
         let install_meta = match parent.get_value() {
@@ -81,26 +85,6 @@ impl InstallNode {
         };
 
         let target = install_meta.version_metadata.get_target(&install_meta.target_bounds)?;
-
-        if *parent.get_label().get_type() == InstallTypes::Prebuild {
-            return Ok(install_meta
-                .version_metadata
-                .dependencies
-                .iter()
-                .chain(target.dependencies.iter())
-                .cloned()
-                .map(|d| (d, InstallLabel::new(install_type.clone(), true)))
-                .collect());
-        }
-
-        let build_dependencies = install_meta
-            .version_metadata
-            .build_dependencies
-            .iter()
-            .chain(target.build_dependencies.iter())
-            .cloned()
-            .map(|d| (d, InstallLabel::new(install_type.clone(), false)));
-
         let dependencies = install_meta
             .version_metadata
             .dependencies
@@ -109,9 +93,25 @@ impl InstallNode {
             .cloned()
             .map(|d| (d, InstallLabel::new(install_type.clone(), true)));
 
+        // Only return normal dependencies when the parent is a prebuild
+        if *parent.get_label().get_type() == InstallTypes::Prebuild {
+            return Ok(dependencies.collect());
+        }
+
+        // Get the build dependencies
+        let build_dependencies = install_meta
+            .version_metadata
+            .build_dependencies
+            .iter()
+            .chain(target.build_dependencies.iter())
+            .cloned()
+            .map(|d| (d, InstallLabel::new(install_type.clone(), false)));
+
         Ok(build_dependencies.chain(dependencies).collect())
     }
 
+    /// Populates the tree with metadata info. If a package is already installed it is added
+    /// to the tree without a value and children.
     pub fn populator(
         register: &PackageRegister,
         manager: &RepositoryManager,
@@ -132,6 +132,8 @@ impl InstallNode {
         Ok((dependency_id, Some(install_meta), label))
     }
 
+    /// Expands an install tree after it has been build. The current node will be changed to a build node
+    /// and its children will be updated accordingly.
     pub fn expand_with_build(&mut self, register: &PackageRegister, manager: &RepositoryManager) -> tree::Result<()> {
         self.set_label(InstallLabel {
             install_type: InstallTypes::Build,

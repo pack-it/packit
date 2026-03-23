@@ -120,6 +120,7 @@ impl<'a> Installer<'a> {
         Ok(())
     }
 
+    /// Installs all packages recursively. For each package the install type is considered.
     fn install_nodes(&mut self, node: &mut InstallNode) -> Result<()> {
         // Install childs first
         // TODO: Implement parallelization here
@@ -133,19 +134,19 @@ impl<'a> Installer<'a> {
             None => return Ok(()),
         };
 
-        let children = node.get_children_ids(Some(InstallLabel::is_dependency));
+        let dependencies = node.get_children_ids(Some(InstallLabel::is_dependency));
 
         // Check if the current package should be build from source
         if matches!(node.get_label().get_type(), InstallTypes::Build) || matches!(node.get_label().get_type(), InstallTypes::BuildAll) {
             // Install the current node without prebuild
-            return self.install_package(node_value, children, false);
+            return self.install_package(node_value, dependencies, false);
         }
 
         // Install the package with a prebuild if possible
         let revision = node_value.version_metadata.revisions.len() as u64;
         match self.repository_manager.get_prebuild_url(&node_value.repository_id, node.get_id(), revision, &Target::current()) {
             Ok(Some(_)) => {
-                self.install_package(node_value, children, true)?;
+                self.install_package(node_value, dependencies, true)?;
                 return Ok(());
             },
             Ok(None) | Err(RepositoryError::RepositoryNotFoundError { .. }) => (),
@@ -169,7 +170,8 @@ impl<'a> Installer<'a> {
         Ok(())
     }
 
-    fn install_package(&mut self, install_meta: &InstallMeta, children: HashSet<PackageId>, use_prebuild: bool) -> Result<()> {
+    /// Downloads and installs a package. This is done with a build from the source repository or with prebuilds.
+    fn install_package(&mut self, install_meta: &InstallMeta, dependencies: HashSet<PackageId>, use_prebuild: bool) -> Result<()> {
         // Create the package id and install directory
         let package_id = PackageId::new(
             install_meta.package_metadata.name.clone(),
@@ -227,7 +229,7 @@ impl<'a> Installer<'a> {
         self.register.add_package(
             &install_meta.package_metadata,
             &install_meta.version_metadata,
-            children,
+            dependencies,
             source_repository,
             &install_directory,
             false,
@@ -307,6 +309,8 @@ impl<'a> Installer<'a> {
         Ok(())
     }
 
+    /// Removes the build dependencies recursively. There are early returns to make sure that the
+    /// package is not removed if it was already installed, is not installed anymore or is a dependency.
     fn remove_build_dependencies(&mut self, parent: &InstallNode, root: &InstallNode) -> Result<()> {
         // Return early if the node value is None (meaning that the package was already installed)
         if parent.get_value().is_none() {
