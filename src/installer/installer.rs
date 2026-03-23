@@ -136,7 +136,7 @@ impl<'a> Installer<'a> {
             None => return Ok(()),
         };
 
-        let dependencies = node.get_children_ids(Some(InstallLabel::is_dependency));
+        let dependencies = node.get_children_ids_filtered(InstallLabel::is_dependency);
 
         // Check if the current package should be build from source
         if matches!(node.get_label().get_type(), InstallType::Build | InstallType::BuildAll) {

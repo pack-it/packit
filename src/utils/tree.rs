@@ -110,8 +110,16 @@ impl<V, L: Eq> Node<V, L> {
         E: Fn(&Node<V, L>) -> Result<Vec<T>>,
         P: Fn(T) -> Result<(PackageId, V, L)>,
     {
+        let existing_childs = self.get_children_ids();
+
         for child in expander(&self)? {
             let (id, value, label) = populator(child)?;
+
+            // Node already exists, skip adding
+            if existing_childs.contains(&id) {
+                continue;
+            }
+
             let mut child_node = Node {
                 id,
                 value,
@@ -158,15 +166,16 @@ impl<V, L: Eq> Node<V, L> {
         &self.value
     }
 
-    /// Gets the children ids of a node in a hashset. If a label has been given it will only return the children with that label.
-    pub fn get_children_ids<F>(&self, filter: Option<F>) -> HashSet<PackageId>
+    /// Gets the children ids of the node in a hashset. Checks for a filter on the label and will only return the children that satisfy the filter.
+    pub fn get_children_ids_filtered<F>(&self, filter: F) -> HashSet<PackageId>
     where
         F: Fn(&L) -> bool,
     {
-        if let Some(filter) = filter {
-            return self.children.iter().filter(|c| filter(&c.label)).map(|c| c.id.clone()).collect();
-        }
+        self.children.iter().filter(|c| filter(&c.label)).map(|c| c.id.clone()).collect()
+    }
 
+    /// Gets the children ids of the node in a hashset.
+    pub fn get_children_ids(&self) -> HashSet<PackageId> {
         self.children.iter().map(|c| c.id.clone()).collect()
     }
 
