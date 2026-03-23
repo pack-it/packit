@@ -12,7 +12,7 @@ use crate::{
 
 /// Represents the different types of installing a package.
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum InstallTypes {
+pub enum InstallType {
     Prebuild,
     Build,
     BuildAll,
@@ -21,19 +21,19 @@ pub enum InstallTypes {
 /// Label for the install tree.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct InstallLabel {
-    install_type: InstallTypes,
+    install_type: InstallType,
     is_dependency: bool,
 }
 
 impl InstallLabel {
-    pub fn new(install_type: InstallTypes, is_dependency: bool) -> Self {
+    pub fn new(install_type: InstallType, is_dependency: bool) -> Self {
         Self {
             install_type,
             is_dependency,
         }
     }
 
-    pub fn get_type(&self) -> &InstallTypes {
+    pub fn get_type(&self) -> &InstallType {
         &self.install_type
     }
 
@@ -79,9 +79,9 @@ impl InstallNode {
 
         // Determine the (build) dependency types of the children based on the parent
         let install_type = match *parent.get_label().get_type() {
-            InstallTypes::Prebuild => InstallTypes::Prebuild,
-            InstallTypes::Build => InstallTypes::Prebuild,
-            InstallTypes::BuildAll => InstallTypes::BuildAll,
+            InstallType::Prebuild => InstallType::Prebuild,
+            InstallType::Build => InstallType::Prebuild,
+            InstallType::BuildAll => InstallType::BuildAll,
         };
 
         let target = install_meta.version_metadata.get_target(&install_meta.target_bounds)?;
@@ -94,7 +94,7 @@ impl InstallNode {
             .map(|d| (d, InstallLabel::new(install_type.clone(), true)));
 
         // Only return normal dependencies when the parent is a prebuild
-        if *parent.get_label().get_type() == InstallTypes::Prebuild {
+        if *parent.get_label().get_type() == InstallType::Prebuild {
             return Ok(dependencies.collect());
         }
 
@@ -136,7 +136,7 @@ impl InstallNode {
     /// and its children will be updated accordingly.
     pub fn expand_with_build(&mut self, register: &PackageRegister, manager: &RepositoryManager) -> tree::Result<()> {
         self.set_label(InstallLabel {
-            install_type: InstallTypes::Build,
+            install_type: InstallType::Build,
             is_dependency: self.get_label().is_dependency(),
         });
 

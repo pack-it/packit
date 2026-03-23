@@ -8,7 +8,7 @@ use crate::{
         InstallLabel,
         builder::Builder,
         error::{InstallerError, Result},
-        install_tree::{InstallMeta, InstallNode, InstallTypes},
+        install_tree::{InstallMeta, InstallNode, InstallType},
         options::InstallerOptions,
         scripts::{self, ScriptData},
         symlinker::Symlinker,
@@ -104,9 +104,11 @@ impl<'a> Installer<'a> {
             target_bounds,
         };
 
+        let install_label = InstallLabel::new(self.options.install_type.clone(), false);
+
         // Create the install tree based on the install type
         let mut dependency_tree = TreeBuilder::new()
-            .root(package_id, Some(root_meta), self.options.install_label.clone())
+            .root(package_id, Some(root_meta), install_label)
             .expander(InstallNode::expander)
             .populator(|(d, l)| InstallNode::populator(self.register, self.repository_manager, &d, l))
             .build()?;
@@ -114,7 +116,7 @@ impl<'a> Installer<'a> {
         self.install_nodes(&mut dependency_tree)?;
 
         if !self.options.keep_build {
-            self.remove_build_dependencies(&dependency_tree, &dependency_tree)?;
+            self.remove_build_dependencies(&dependency_tree, true)?;
         }
 
         Ok(())
@@ -137,7 +139,7 @@ impl<'a> Installer<'a> {
         let dependencies = node.get_children_ids(Some(InstallLabel::is_dependency));
 
         // Check if the current package should be build from source
-        if matches!(node.get_label().get_type(), InstallTypes::Build) || matches!(node.get_label().get_type(), InstallTypes::BuildAll) {
+        if matches!(node.get_label().get_type(), InstallType::Build | InstallType::BuildAll) {
             // Install the current node without prebuild
             return self.install_package(node_value, dependencies, false);
         }
@@ -311,7 +313,7 @@ impl<'a> Installer<'a> {
 
     /// Removes the build dependencies recursively. There are early returns to make sure that the
     /// package is not removed if it was already installed, is not installed anymore or is a dependency.
-    fn remove_build_dependencies(&mut self, parent: &InstallNode, root: &InstallNode) -> Result<()> {
+    fn remove_build_dependencies(&mut self, parent: &InstallNode, is_root: bool) -> Result<()> {
         // Return early if the node value is None (meaning that the package was already installed)
         if parent.get_value().is_none() {
             return Ok(());
@@ -324,12 +326,12 @@ impl<'a> Installer<'a> {
         }
 
         // Don't remove the package if it's the root
-        if parent.get_id() != root.get_id() {
+        if !is_root {
             self.uninstall(optional_id)?;
         }
 
         for child in parent.get_children() {
-            self.remove_build_dependencies(child, root)?;
+            self.remove_build_dependencies(child, false)?;
         }
 
         Ok(())

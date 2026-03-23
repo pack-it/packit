@@ -42,7 +42,7 @@ impl HandleCommand for InfoArgs {
         // Display tree if tree flag is given
         if self.tree {
             if let Some(package_id) = self.package.versioned() {
-                let tree = EmptyNode::build_simple(package_id, &register).unwrap_or_exit(1);
+                let tree = EmptyNode::build_simple_tree(package_id, &register).unwrap_or_exit(1);
                 println!("{tree}");
                 return;
             } else {

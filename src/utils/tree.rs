@@ -195,7 +195,7 @@ pub type EmptyNode = Node<(), ()>;
 
 /// An empty node implementation (node without values or labels).
 impl EmptyNode {
-    pub fn build_simple(package_id: PackageId, register: &PackageRegister) -> Result<EmptyNode> {
+    pub fn build_simple_tree(package_id: PackageId, register: &PackageRegister) -> Result<EmptyNode> {
         TreeBuilder::new()
             .root(package_id, (), ())
             .expander(|p| EmptyNode::expander(p, register))
