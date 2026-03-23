@@ -1,5 +1,7 @@
+use crate::installer::install_tree::InstallType;
+
 pub struct InstallerOptions {
-    pub build_source: bool,
+    pub install_type: InstallType,
     pub skip_symlinking: bool,
     pub skip_active: bool,
     pub keep_build: bool,
@@ -8,7 +10,7 @@ pub struct InstallerOptions {
 impl Default for InstallerOptions {
     fn default() -> Self {
         Self {
-            build_source: false,
+            install_type: InstallType::Prebuild,
             skip_symlinking: false,
             skip_active: false,
             keep_build: false,
@@ -17,8 +19,8 @@ impl Default for InstallerOptions {
 }
 
 impl InstallerOptions {
-    pub fn build_source(mut self, build_source: bool) -> Self {
-        self.build_source = build_source;
+    pub fn install_type(mut self, install_type: InstallType) -> Self {
+        self.install_type = install_type;
         self
     }
 
