@@ -10,6 +10,7 @@ use crate::{
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
+/// Links the specified package into the /bin, /lib, /share, etc. directories.
 #[derive(Args, Debug)]
 pub struct LinkArgs {
     /// The name of the package to link

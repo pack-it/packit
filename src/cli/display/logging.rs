@@ -10,7 +10,7 @@ pub fn warning_impl(message: std::fmt::Arguments) {
     log_impl("WARNING".yellow().to_string(), message);
 }
 
-// Macro for displaying warnings
+/// Macro for displaying warnings.
 macro_rules! warning {
     ($message:ident) => {
         $crate::cli::display::logging::warning_impl(format_args!("{}", $message))
@@ -21,6 +21,7 @@ macro_rules! warning {
 }
 pub(crate) use warning;
 
+/// Traces the error and creates a message which includes each cause.
 fn trace_error<T: Error>(error: T) -> String {
     let mut message = error.to_string();
     let mut source = error.source();
@@ -44,6 +45,7 @@ pub fn error_with_msg_impl<T: Error>(error: T, message: std::fmt::Arguments) {
     error_msg_impl(format_args!("{message}\nCaused by: {}", trace_error(error)));
 }
 
+/// Macro for displaying errors. Can take an error type as argument or a `msg` field.
 macro_rules! error {
     ($error:expr, $message:ident) => {
         $crate::cli::display::logging::error_with_msg_impl($error, format_args!("{}", $message))
@@ -72,6 +74,7 @@ pub static DEBUG_ENABLED: LazyLock<bool> = LazyLock::new(|| match std::env::var(
     Err(_) => false,
 });
 
+/// Macro for displaying debug information. Only shows info when debug is enabled.
 macro_rules! debug {
     ($($arg:tt)*) => {
         if *$crate::cli::display::logging::DEBUG_ENABLED {

@@ -12,28 +12,32 @@ pub enum SymlinkError {
     IOError(#[from] std::io::Error),
 }
 
+/// Creates a symlink on MacOs and Linux from link to original.
 #[cfg(any(target_os = "macos", target_os = "linux"))]
-pub fn create_symlink(source: &Path, destination: &Path) -> Result<(), SymlinkError> {
-    std::os::unix::fs::symlink(source, destination)?;
+pub fn create_symlink(original: &Path, link: &Path) -> Result<(), SymlinkError> {
+    std::os::unix::fs::symlink(original, link)?;
 
     Ok(())
 }
 
+/// Creates a symlink on Windows from link to original.
 #[cfg(target_os = "windows")]
-pub fn create_symlink(source: &Path, destination: &Path) -> Result<(), SymlinkError> {
+pub fn create_symlink(original: &Path, link: &Path) -> Result<(), SymlinkError> {
     match source.is_dir() {
-        true => std::os::windows::fs::symlink_dir(source, destination)?,
-        false => std::os::windows::fs::symlink_file(source, destination)?,
+        true => std::os::windows::fs::symlink_dir(original, link)?,
+        false => std::os::windows::fs::symlink_file(original, link)?,
     }
 
     Ok(())
 }
 
+/// Panics for any unsupported OS.
 #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
 pub fn create_symlink(source: &Path, destination: &Path) -> Result<(), SymlinkError> {
     panic!("Cannot create link for target, target is not supported.");
 }
 
+/// Removes the given symlink. This is platform independent.
 pub fn remove_symlink(symlink: &Path) -> Result<(), SymlinkError> {
     if !symlink.is_symlink() {
         return Err(SymlinkError::NonSymlink);

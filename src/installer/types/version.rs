@@ -8,7 +8,7 @@ use std::{
 use serde::{Deserialize, Serialize, de};
 use thiserror::Error;
 
-/// Errors that occur when requesting metadata from a repository.
+/// Errors that occur when parsing version related structs.
 #[derive(Error, Debug)]
 pub enum VersionError {
     #[error("Version number is none while version is requested.")]
@@ -27,12 +27,14 @@ pub enum VersionError {
     ParseError(#[from] ParseIntError),
 }
 
+/// Represents a version.
 #[derive(Debug, Eq, Clone, Hash)]
 pub struct Version {
     numbers: Vec<u32>,
 }
 
 impl<'de> Deserialize<'de> for Version {
+    /// Parses a string into a `Version` struct.
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -43,6 +45,7 @@ impl<'de> Deserialize<'de> for Version {
 }
 
 impl Serialize for Version {
+    /// Parses a `Version` struct into a string.
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -52,6 +55,7 @@ impl Serialize for Version {
 }
 
 impl Ord for Version {
+    /// Compares `self` to another version and returns an Ordering type.
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         let iterations = max(self.numbers.len(), other.numbers.len());
         for i in 0..iterations {
@@ -83,6 +87,7 @@ impl Ord for Version {
 }
 
 impl PartialEq for Version {
+    /// Checks equality of `self` and another version.
     fn eq(&self, other: &Self) -> bool {
         match self.cmp(other) {
             Ordering::Less => false,
@@ -93,12 +98,14 @@ impl PartialEq for Version {
 }
 
 impl PartialOrd for Version {
+    /// Gets an ordering between `self` and another version. An ordering can always be found, None is never returned.
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
 impl Display for Version {
+    /// Formats a `Version` struct into the following format: <version_number>[.version_number]...
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let version_string = self.numbers.iter().map(|d| d.to_string()).collect::<Vec<_>>().join(".");
         write!(f, "{}", version_string)
@@ -108,13 +115,15 @@ impl Display for Version {
 impl FromStr for Version {
     type Err = VersionError;
 
-    fn from_str(version_num: &str) -> Result<Self, Self::Err> {
-        if version_num.len() == 0 {
+    /// Parses a string into a `Version` struct.
+    /// Could return a `VersionError` error.
+    fn from_str(string: &str) -> Result<Self, Self::Err> {
+        if string.len() == 0 {
             return Err(VersionError::NoneError);
         }
 
         let mut version_parts = Vec::new();
-        for num in version_num.split('.') {
+        for num in string.split('.') {
             if num.is_empty() {
                 return Err(VersionError::DotsError);
             }
@@ -131,6 +140,7 @@ impl FromStr for Version {
     }
 }
 
+/// Implements the from trait for `&[u32]`.
 impl From<&[u32]> for Version {
     fn from(value: &[u32]) -> Self {
         Self { numbers: Vec::from(value) }

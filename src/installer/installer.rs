@@ -41,7 +41,7 @@ pub struct Installer<'a> {
 }
 
 impl<'a> Installer<'a> {
-    /// Creates new installer
+    /// Creates a new installer.
     pub fn new(
         config: &'a Config,
         register: &'a mut PackageRegister,
@@ -57,6 +57,7 @@ impl<'a> Installer<'a> {
     }
 
     /// Installs the given package and its dependencies.
+    /// Returns an `InstallerError::PermissionsError` if the current user doesn't have the correct permissions.
     pub fn install(&mut self, optional_id: &OptionalPackageId) -> Result<()> {
         // Check if we can write to the prefix directory
         if !self.can_write_prefix_dir()? {
@@ -123,6 +124,7 @@ impl<'a> Installer<'a> {
     }
 
     /// Installs all packages recursively. For each package the install type is considered.
+    /// Returns an `InstallerError::InstallationCanceled` if the installation has been canceled (by the user).
     fn install_nodes(&mut self, node: &mut InstallNode) -> Result<()> {
         // Install childs first
         // TODO: Implement parallelization here
@@ -172,7 +174,7 @@ impl<'a> Installer<'a> {
         Ok(())
     }
 
-    /// Downloads and installs a package. This is done with a build from the source repository or with prebuilds.
+    /// Downloads and installs a package. This is done with a build from the source code or with pre-builds.
     fn install_package(&mut self, install_meta: &InstallMeta, dependencies: HashSet<PackageId>, use_prebuild: bool) -> Result<()> {
         // Create the package id and install directory
         let package_id = PackageId::new(
@@ -215,13 +217,7 @@ impl<'a> Installer<'a> {
                 let revision = install_meta.version_metadata.revisions.len() as u64;
                 self.download_prebuild(&install_meta.repository_id, &package_id, revision, &install_directory)?
             },
-            false => Builder::new(self.config, self.register, self.repository_manager).build(
-                &install_meta.target_bounds,
-                &install_meta.package_metadata,
-                &version_meta,
-                &install_meta.repository_id,
-                &install_directory,
-            )?,
+            false => Builder::new(self.config, self.register, self.repository_manager).build(&install_meta, &install_directory)?,
         }
 
         // Set correct permissions for the installed package
@@ -263,6 +259,8 @@ impl<'a> Installer<'a> {
         Ok(())
     }
 
+    /// Determines if a package should be active. If it should be, symlinks are created and the appropriate
+    /// fields in the register are adjusted.
     fn determine_active(&mut self, install_meta: &InstallMeta, package_id: &PackageId, target: &PackageTarget) -> Result<()> {
         // Check if symlinking should be skipped
         let mut should_symlink = !self.options.skip_symlinking
@@ -337,6 +335,8 @@ impl<'a> Installer<'a> {
         Ok(())
     }
 
+    /// Downloads a package pre-build and unpacks it into the given destination directory.
+    /// Returns an `InstallerError::ChecksumError` if the pre-build checksum doesn't match.
     fn download_prebuild(&self, repository_id: &str, package: &PackageId, revision: u64, destination_dir: impl AsRef<Path>) -> Result<()> {
         let (extension, bytes) = self.repository_manager.read_prebuild(repository_id, package, revision, &Target::current())?;
         let checksum = self.repository_manager.get_prebuild_checksum(repository_id, package, revision, &Target::current())?;
@@ -356,7 +356,10 @@ impl<'a> Installer<'a> {
         Ok(())
     }
 
-    /// Uninstalls a package version if specified, otherwise it will uninstall the entire package directory.
+    /// Uninstalls a package version if specified, otherwise it will uninstall the entire package directory (after
+    /// asking the user if this is the intended behaviour).
+    /// Returns an `InstallerError::PermissionsError` error if the current user doesn't have the correct permissions
+    /// or an `InstallerError::DependencyError` error if the given package is a dependency.
     pub fn uninstall(&mut self, optional_id: &OptionalPackageId) -> Result<()> {
         // Check if we can write to the prefix directory
         if !self.can_write_prefix_dir()? {
@@ -381,8 +384,9 @@ impl<'a> Installer<'a> {
         Ok(())
     }
 
-    /// Checks if the directory exists. If so, it gets the remove directory for a package version, if there only exists one
-    /// version it will return the package directory.
+    /// Uninstalls a specific package. If it is the only installed version the entire package directory is removed as well.
+    /// Return an `InstallerError::PackageNotFound` error if a package cannot be found. Contains an `InstallerError::UnreachableError`
+    /// which as its name suggests should be unreachable.
     fn uninstall_single(&mut self, package_id: &PackageId) -> Result<()> {
         // Return an existError if the package to uninstall doesn't exist
         if self.register.get_package_version(package_id).is_none() {
@@ -438,7 +442,7 @@ impl<'a> Installer<'a> {
         }
 
         // Delete the determined directory
-        self.remove_dir_all(&directory, &package_id.name)?;
+        fs::remove_dir_all(directory)?;
 
         // Remove package from installed package toml
         self.register.remove_package_version(package_id);
@@ -446,7 +450,9 @@ impl<'a> Installer<'a> {
         Ok(())
     }
 
-    // Checks if there exists at least one version of the specified package. If so, it returns the package directory.
+    /// Uninstalls an entire package directory. The user is first asked if this is
+    /// the intended behaviour (this is skipped if only one version exists).
+    /// Returns an `InstallerError::PackageNotFound` error if the package cannot be found.
     fn uninstall_all(&mut self, package_name: &PackageName) -> Result<()> {
         let installed_versions = self.register.get_all_package_versions(package_name);
 
@@ -491,7 +497,7 @@ impl<'a> Installer<'a> {
             self.run_uninstall_script(&repository, &package_version.package_id, &directory)?;
         }
 
-        self.remove_dir_all(&directory, package_name)?;
+        fs::remove_dir_all(directory)?;
 
         // Delete the installed package from toml
         self.register.remove_package(package_name);
@@ -499,6 +505,8 @@ impl<'a> Installer<'a> {
         Ok(())
     }
 
+    /// Downloads and runs the uninstall script of a given package.
+    /// Could return an `InstallerError`.
     fn run_uninstall_script(&self, repository: &Repository, package_id: &PackageId, install_directory: &PathBuf) -> Result<()> {
         // Create repository provider for source repository
         let provider = match provider::create_metadata_provider(&repository) {
@@ -536,20 +544,15 @@ impl<'a> Installer<'a> {
         Ok(())
     }
 
-    /// Wraps around the fs::remove_dir_all to map its error.
-    fn remove_dir_all(&self, directory: &PathBuf, package_name: &str) -> Result<()> {
-        fs::remove_dir_all(directory).map_err(|e| InstallerError::UninstallError {
-            package_name: package_name.into(),
-            e,
-        })?;
-
-        Ok(())
-    }
-
+    /// Checks if the Packit prefix directory is writable. Return true if it is, false otherwise.
+    /// Could return a `PermissionError` error.
     fn can_write_prefix_dir(&self) -> Result<bool> {
         Ok(permissions::is_writable(&self.config.prefix_directory)?)
     }
 
+    /// Updates a package to a newer version.
+    /// Returns an `InstallerError::VersionTooLowError` if the old version is newer then the given new version
+    /// or an `InstallerError::AlreadyInstalledError` if the new package version is already installed.
     pub fn update(&mut self, optional_id: &OptionalPackageId, new_version: &Version) -> Result<()> {
         let old_package = self.get_specific_package_update(optional_id)?;
         let new_package_id = PackageId::new(old_package.package_id.name.clone(), new_version.clone());
@@ -639,8 +642,12 @@ impl<'a> Installer<'a> {
         Ok(())
     }
 
+    /// Gets a specific installed package version. If a version is specified that version is used.
+    /// If the version is not specified, but only one version exists that version is used.
+    /// Returns an `InstallerError::PackageNotFound` if the package cannot be found or
+    /// an `InstallerError::SpecificityError` if multiple versions exist, but the version isn't specified.
     fn get_specific_package_update(&self, optional_id: &OptionalPackageId) -> Result<&InstalledPackageVersion> {
-        // If a version is specified multiple installed versions are okay
+        // Use the specified version if it exists
         if let Some(package_id) = optional_id.versioned() {
             return Ok(
                 self.register.get_package_version(&package_id).ok_or(InstallerError::PackageNotFound {

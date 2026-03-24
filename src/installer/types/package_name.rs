@@ -17,6 +17,7 @@ pub enum PackageNameError {
 pub struct PackageName(String);
 
 impl<'de> Deserialize<'de> for PackageName {
+    /// Parses a string into a `PackageName` struct.
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -27,8 +28,8 @@ impl<'de> Deserialize<'de> for PackageName {
 }
 
 impl Serialize for PackageName {
-    /// Serializes the PackageName. Note that this doesn't check its validity, it assumes
-    /// that the PackageName validity is always checked upon creation.
+    /// Serializes the `PackageName`. Note that this doesn't check its validity, it assumes
+    /// that the `PackageName` validity is always checked upon creation.
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -38,6 +39,7 @@ impl Serialize for PackageName {
 }
 
 impl Display for PackageName {
+    /// Formats a `PackageName` into the following format: <name>.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", &self.0)?;
         Ok(())
@@ -47,6 +49,8 @@ impl Display for PackageName {
 impl FromStr for PackageName {
     type Err = PackageNameError;
 
+    /// Parses a string into a `PackageName` struct.
+    /// Could return a `PackageNameError::InvalidPackageName` error.
     fn from_str(string: &str) -> Result<Self, Self::Err> {
         let re = Regex::new(VALID_PACKAGE_NAME).expect("Expected valid regex");
         if !re.is_match(string) {
@@ -57,6 +61,7 @@ impl FromStr for PackageName {
     }
 }
 
+/// Implements `Deref` for `PackageName`.
 impl Deref for PackageName {
     type Target = String;
 
@@ -65,6 +70,7 @@ impl Deref for PackageName {
     }
 }
 
+/// Implements `AsRef<Path>` for `PackageName`.
 impl AsRef<Path> for PackageName {
     fn as_ref(&self) -> &Path {
         Path::new(&self.0)

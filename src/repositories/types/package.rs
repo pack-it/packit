@@ -22,6 +22,7 @@ pub struct PackageMeta {
 }
 
 impl PackageMeta {
+    /// Gets the latest supported version for the current target.
     pub fn get_latest_version(&self, target: &Target) -> Result<&Version> {
         let target = match TargetBounds::get_best_target(&target, self.supported_versions.keys().collect()) {
             Some(target) => target,
@@ -48,6 +49,7 @@ impl PackageMeta {
         Ok(current_highest.ok_or(RepositoryError::SupportError(self.name.to_string()))?)
     }
 
+    /// Gets the latest supported version for the current target which also satisfies the given dependency.
     pub fn get_latest_dependency_version(&self, dependency: &Dependency, target: &Target) -> Result<&Version> {
         let target = match TargetBounds::get_best_target(&target, self.supported_versions.keys().collect()) {
             Some(target) => target,

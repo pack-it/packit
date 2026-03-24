@@ -54,7 +54,7 @@ Links the specified package into the /bin, /lib, /share, etc. directories. If th
 Unlinks the specified package, causing the package to be unavailable from the `PATH` environment variable.
 
 #### `pit package <PACKAGE-NAME>@<VERSION> <DESTINATION>`
-Packages the specified package into a prebuild and store it in the destination directory, together with a checksum of the prebuild.
+Packages the specified package into a prebuild and stores it in the destination directory, together with a checksum of the prebuild.
 
 
 ## Config

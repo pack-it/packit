@@ -4,12 +4,14 @@ use serde::{Deserialize, de};
 
 use crate::installer::types::{Version, VersionBounds, VersionError};
 
+/// Represents multiple `VersionBounds`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct VersionIntervals {
     version_bounds: Vec<VersionBounds>,
 }
 
 impl<'de> Deserialize<'de> for VersionIntervals {
+    /// Parses a string into a `VersionIntervals` struct.
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -23,6 +25,8 @@ impl<'de> Deserialize<'de> for VersionIntervals {
 impl FromStr for VersionIntervals {
     type Err = VersionError;
 
+    /// Parses a string into a `VersionIntervals` struct.
+    /// Could return a `VersionError` error.
     fn from_str(intervals: &str) -> Result<Self, Self::Err> {
         // Check for empty input
         if intervals.is_empty() {
@@ -93,6 +97,8 @@ impl VersionIntervals {
         true
     }
 
+    /// Checks if all the version bounds in the current version interval cover a given version.
+    /// Returns true if it does, false otherwise.
     pub fn covers(&self, version: &Version) -> bool {
         // If version bounds are empty, version satisfies the bounds
         if self.is_empty() {
@@ -109,10 +115,12 @@ impl VersionIntervals {
         false
     }
 
+    /// Checks if the version bounds vec is empty. Returns true if it is, false otherwise.
     pub fn is_empty(&self) -> bool {
         self.version_bounds.is_empty()
     }
 
+    /// Gets a reference to the version bounds vec.
     pub fn get_version_bounds(&self) -> &Vec<VersionBounds> {
         &self.version_bounds
     }

@@ -5,43 +5,45 @@ use crate::{
     platforms::symlink::{self, SymlinkError},
 };
 
-pub fn create_folder_symlinks(source_dir: &Path, destination_dir: &Path) -> Result<(), SymlinkError> {
+/// Recursively creates symlinks from a link directory to the original directory.
+/// Note that there is an early return when the original doesn't exist. Non-existant link directories are created.
+pub fn create_folder_symlinks(original_dir: &Path, link_dir: &Path) -> Result<(), SymlinkError> {
     // Create destination if it does not exist
-    if !destination_dir.exists() {
-        fs::create_dir_all(&destination_dir)?;
+    if !link_dir.exists() {
+        fs::create_dir_all(&link_dir)?;
     }
 
     // Skip symlinking if source does not exist
-    if !source_dir.exists() {
+    if !original_dir.exists() {
         return Ok(());
     }
 
     // Symlink files
-    for file in fs::read_dir(source_dir)? {
+    for file in fs::read_dir(original_dir)? {
         let file = file?;
 
-        let destination = destination_dir.join(file.file_name());
+        let link_path = link_dir.join(file.file_name());
 
         // Create the symlinks for the subdirectory
         if file.file_type()?.is_dir() {
-            create_folder_symlinks(&file.path(), &destination)?;
+            create_folder_symlinks(&file.path(), &link_path)?;
             continue;
         }
 
         // Check if file already exists
-        if fs::exists(&destination)? {
-            warning!("Symlink {:?} already exists in {:?}", file.file_name(), destination_dir);
+        if fs::exists(&link_path)? {
+            warning!("Symlink {:?} already exists in {:?}", file.file_name(), link_dir);
             continue;
         }
 
-        // Symlink file in destination directory
-        symlink::create_symlink(&file.path(), &destination)?;
+        // Symlink file in link path
+        symlink::create_symlink(&file.path(), &link_path)?;
     }
 
     Ok(())
 }
 
-/// Searches for symlinks with a certain destination (destinations inside of the destination are also a match).
+/// Searches for symlinks with a certain destination (destinations inside of the destination are also a match) and removes them.
 pub fn remove_symlinks(search_dir: &Path, destination_dir: &Path) -> Result<(), SymlinkError> {
     for file in fs::read_dir(search_dir)? {
         let file = file?;

@@ -213,10 +213,12 @@ impl PackageRegister {
         None
     }
 
+    /// Gets a package, returns None if it doesn't exist.
     pub fn get_package(&self, package_name: &PackageName) -> Option<&InstalledPackage> {
         self.packages.get(package_name)
     }
 
+    /// Gets a package mutably, returns None if it doesn't exist.
     pub fn get_package_mut(&mut self, package_name: &PackageName) -> Option<&mut InstalledPackage> {
         self.packages.get_mut(package_name)
     }

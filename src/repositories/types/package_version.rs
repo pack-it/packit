@@ -59,6 +59,7 @@ pub struct PackageVersionMeta {
 }
 
 impl PackageVersionMeta {
+    /// Gets the best satisfying target bound for the given target. Wraps around the `TargetBounds::get_best_target` method.
     pub fn get_best_target(&self, target: &Target) -> Result<TargetBounds> {
         match TargetBounds::get_best_target(&target, self.targets.keys().collect()) {
             Some(target) => Ok(target.clone()),
@@ -66,11 +67,13 @@ impl PackageVersionMeta {
         }
     }
 
-    pub fn get_source(&self, target: &TargetBounds) -> Result<&Source> {
+    /// Gets the `Source`.
+    /// Returns a `RepositoryError::ValidationError` if the target does not specify a source or if an unknown source was referenced.
+    pub fn get_source(&self, target_bounds: &TargetBounds) -> Result<&Source> {
         match &self.sources {
             Sources::Single(source) => Ok(source),
             Sources::Named(sources) => {
-                let target = self.get_target(target)?;
+                let target = self.get_target(target_bounds)?;
                 let source =
                     target.source.as_ref().ok_or(RepositoryError::ValidationError("Package target does not specify source".into()))?;
 
@@ -79,6 +82,8 @@ impl PackageVersionMeta {
         }
     }
 
+    /// Gets the script path based on the `use_version_specific` parameter and given script.
+    /// `use_version_specific` is only used if the script is None. The version is from `Self`.
     fn get_script_path(&self, use_version_specific: bool, script: &Option<Script>, default_script_name: &str) -> String {
         match script {
             Some(Script::NameOnly(name)) => format!("{name}.{SCRIPT_EXTENSION}"),
@@ -89,44 +94,56 @@ impl PackageVersionMeta {
         }
     }
 
-    pub fn get_target(&self, target: &TargetBounds) -> Result<&PackageTarget> {
-        self.targets.get(target).ok_or(RepositoryError::TargetError)
+    /// Gets a target with the given target bounds.
+    /// Returns a `RepositoryError::TargetError` if the target cannot be found.
+    pub fn get_target(&self, target_bounds: &TargetBounds) -> Result<&PackageTarget> {
+        self.targets.get(target_bounds).ok_or(RepositoryError::TargetError)
     }
 
-    pub fn get_build_script_path(&self, target: &TargetBounds) -> Result<String> {
-        let target = self.get_target(target)?;
+    /// Gets the build script path with the given target bounds.
+    /// Returns a `RepositoryError::TargetError` if the target cannot be found.
+    pub fn get_build_script_path(&self, target_bounds: &TargetBounds) -> Result<String> {
+        let target = self.get_target(target_bounds)?;
 
         Ok(self.get_script_path(self.use_version_specific_build, &target.build_script, "build"))
     }
 
-    pub fn get_preinstall_script_path(&self, target: &TargetBounds) -> Result<String> {
-        let target = self.get_target(target)?;
+    /// Gets the pre-install script path with the given target bounds.
+    /// Returns a `RepositoryError::TargetError` if the target cannot be found.
+    pub fn get_preinstall_script_path(&self, target_bounds: &TargetBounds) -> Result<String> {
+        let target = self.get_target(target_bounds)?;
 
         Ok(self.get_script_path(self.use_version_specific_preinstall, &target.preinstall_script, "preinstall"))
     }
 
-    pub fn get_postinstall_script_path(&self, target: &TargetBounds) -> Result<String> {
-        let target = self.get_target(target)?;
+    /// Gets the post-install script path with the given target bounds.
+    /// Returns a `RepositoryError::TargetError` if the target cannot be found.
+    pub fn get_postinstall_script_path(&self, target_bounds: &TargetBounds) -> Result<String> {
+        let target = self.get_target(target_bounds)?;
 
         Ok(self.get_script_path(self.use_version_specific_postinstall, &target.postinstall_script, "postinstall"))
     }
 
-    pub fn get_test_script_path(&self, target: &TargetBounds) -> Result<String> {
-        let target = self.get_target(target)?;
+    /// Gets the test script path with the given target bounds.
+    /// Returns a `RepositoryError::TargetError` if the target cannot be found.
+    pub fn get_test_script_path(&self, target_bounds: &TargetBounds) -> Result<String> {
+        let target = self.get_target(target_bounds)?;
 
         Ok(self.get_script_path(self.use_version_specific_test, &target.test_script, "test"))
     }
 
-    pub fn get_uninstall_script_path(&self, target: &TargetBounds) -> Result<String> {
-        let target = self.get_target(target)?;
+    /// Gets the uninstall script path with the given target bounds.
+    /// Returns a `RepositoryError::TargetError` if the target cannot be found.
+    pub fn get_uninstall_script_path(&self, target_bounds: &TargetBounds) -> Result<String> {
+        let target = self.get_target(target_bounds)?;
 
         Ok(self.get_script_path(self.use_version_specific_uninstall, &target.uninstall_script, "uninstall"))
     }
 
     /// Gets the script arguments for the given target.
     /// Returns None when the target cannot be found.
-    pub fn get_script_args(&self, target: &TargetBounds) -> Result<HashMap<&str, &str>> {
-        let target = self.get_target(target)?;
+    pub fn get_script_args(&self, target_bounds: &TargetBounds) -> Result<HashMap<&str, &str>> {
+        let target = self.get_target(target_bounds)?;
 
         Ok(self.script_args.iter().chain(target.script_args.iter()).map(|(key, value)| (key.as_str(), value.as_str())).collect())
     }

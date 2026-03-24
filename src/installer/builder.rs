@@ -7,14 +7,11 @@ use crate::{
     config::Config,
     installer::{
         build_env::BuildEnv,
+        install_tree::InstallMeta,
         scripts::{self, ScriptData, ScriptError},
         unpack::{ArchiveExtension, UnpackError, unpack},
     },
-    repositories::{
-        error::RepositoryError,
-        manager::RepositoryManager,
-        types::{Checksum, PackageMeta, PackageVersionMeta, TargetBounds},
-    },
+    repositories::{error::RepositoryError, manager::RepositoryManager, types::Checksum},
     storage::package_register::PackageRegister,
 };
 
@@ -68,21 +65,19 @@ impl<'a> Builder<'a> {
         }
     }
 
-    pub fn build(
-        &self,
-        target_bounds: &TargetBounds,
-        package: &PackageMeta,
-        package_version: &PackageVersionMeta,
-        repository_id: &str,
-        destination_dir: impl AsRef<Path>,
-    ) -> Result<()> {
-        let target = package_version.get_target(target_bounds)?;
+    /// Builds a package from the given metadata.
+    /// Returns a `BuilderError::MissingDependencyError` if a dependency is missing, a `BuilderError::RequestUnsuccessful`
+    /// if a request was unsuccessful or a `BuilderError::ChecksumError` if the checksums don't match.
+    pub fn build(&self, install_meta: &InstallMeta, destination_dir: impl AsRef<Path>) -> Result<()> {
+        let package_name = &install_meta.package_metadata.name;
+        let version = &install_meta.version_metadata.version;
+        let target = install_meta.version_metadata.get_target(&install_meta.target_bounds)?;
 
         let mut installed_dependencies = Vec::new();
         let mut installed_build_dependencies = Vec::new();
 
         // Check if the normal dependencies are installed and get installed package for each dependency.
-        let dependencies = package_version.dependencies.iter().chain(target.dependencies.iter());
+        let dependencies = install_meta.version_metadata.dependencies.iter().chain(target.dependencies.iter());
         for dependency in dependencies {
             if let Some(package) = self.register.get_latest_satisfying_package(dependency) {
                 installed_dependencies.push(package);
@@ -98,7 +93,7 @@ impl<'a> Builder<'a> {
         }
 
         // Check if the build dependencies are installed and get installed package for each dependency.
-        let build_dependencies = package_version.build_dependencies.iter().chain(target.build_dependencies.iter());
+        let build_dependencies = install_meta.version_metadata.build_dependencies.iter().chain(target.build_dependencies.iter());
         for build_dependency in build_dependencies {
             if let Some(package) = self.register.get_latest_satisfying_package(build_dependency) {
                 installed_build_dependencies.push(package);
@@ -114,11 +109,11 @@ impl<'a> Builder<'a> {
         }
 
         // Get source from the package version
-        let source = package_version.get_source(target_bounds)?;
+        let source = install_meta.version_metadata.get_source(&install_meta.target_bounds)?;
 
         // Show download spinner
         let spinner = Spinner::new();
-        spinner.show("Downloading ".to_string() + &package.name);
+        spinner.show(format!("Downloading {package_name}"));
 
         // Download the build files
         let mut response = reqwest::blocking::get(&source.url)?;
@@ -144,7 +139,7 @@ impl<'a> Builder<'a> {
         }
 
         // Finish download spinner
-        spinner.finish("Downloading ".to_string() + &package.name + " successful");
+        spinner.finish(format!("Downloading {package_name} successful"));
 
         // Unpack the package to the temp directory
         let unpack_directory = TempDir::new()?;
@@ -159,13 +154,13 @@ impl<'a> Builder<'a> {
         );
 
         // Construct args for the build script
-        let script_args = package_version.get_script_args(target_bounds)?;
+        let script_args = install_meta.version_metadata.get_script_args(&install_meta.target_bounds)?;
 
         // Download and run build script
-        let script_path = package_version.get_build_script_path(target_bounds)?;
-        let script_path = scripts::download_script(self.repository_manager, &script_path, &package.name, &repository_id)?
+        let script_path = install_meta.version_metadata.get_build_script_path(&install_meta.target_bounds)?;
+        let script_path = scripts::download_script(self.repository_manager, &script_path, &package_name, &install_meta.repository_id)?
             .ok_or(ScriptError::ScriptNotFound("build".into()))?;
-        let script_data = ScriptData::new(&script_path, &destination_dir, &package_version.version, self.config, &script_args);
+        let script_data = ScriptData::new(&script_path, &destination_dir, &version, self.config, &script_args);
 
         scripts::run_build_script(&script_data, &unpack_directory, env)?;
 

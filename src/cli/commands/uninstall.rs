@@ -9,6 +9,9 @@ use crate::{
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
+/// Uninstalls the specified packages, if a version is given that version will be uninstalled, if not,
+/// you will be asked if you want to delete all versions of <PACKAGE-NAME> in case there are multiple
+/// versions installed. Multiple packages can be specified by entering multiple names, split by a space.
 #[derive(Args, Debug)]
 pub struct UninstallArgs {
     /// The name of the packages to install, with an optional version specified with NAME@VERSION

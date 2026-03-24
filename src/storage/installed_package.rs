@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{installer::types::Version, repositories::types::PackageMeta, storage::installed_package_version::InstalledPackageVersion};
 
-/// The installed package holds package specific info and a mapping from versions to package versions.
+/// The installed package holds package specific info and a mapping from the installed versions to package versions.
 #[derive(Deserialize, Serialize, Debug)]
 pub struct InstalledPackage {
     #[serde(flatten)]

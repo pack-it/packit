@@ -95,7 +95,7 @@ impl<'a> Verifier<'a> {
             let issue = match check {
                 Check::StorageConsistency if self.package_storage_is_consistent(package_id)? => continue,
                 Check::StorageConsistency => Issue::InconsistentStorage(vec![package_id.clone()]),
-                Check::RegisterConsistency if self.register_package_is_consistent(package_id, register)? => continue,
+                Check::RegisterConsistency if self.register_package_is_consistent(package_id, register) => continue,
                 Check::RegisterConsistency => Issue::InconsistentRegister(vec![package_id.clone()]),
                 Check::DependencyTree => {
                     let missing_dependencies = self.check_package_dependency_tree(package_id, register);
@@ -277,14 +277,14 @@ impl<'a> Verifier<'a> {
 
     /// Checks if a specific package exists in the register. Note that it doesn't check if the package also exists in storage.
     /// Returns false if the package register isn't consistent, true if it is.
-    fn register_package_is_consistent(&self, package_id: &PackageId, register: &PackageRegister) -> Result<bool> {
+    fn register_package_is_consistent(&self, package_id: &PackageId, register: &PackageRegister) -> bool {
         // Return no issue if the package exists in the register
         if register.get_package_version(package_id).is_some() {
-            return Ok(true);
+            return true;
         }
 
         // Return an inconsistent register issue if the package exists in storage, but not in the register
-        Ok(false)
+        false
     }
 
     /// Checks the completeness of the depedency trees from the packages.
@@ -327,6 +327,7 @@ impl<'a> Verifier<'a> {
         missing
     }
 
+    /// Checks if the packit group exists if enabled in the config. Returns the issue if present None otherwise.
     fn check_packit_group(&self) -> Option<Issue> {
         if !self.config.multiuser {
             return None; // We don't need the packit group if multiuser mode is not enabled

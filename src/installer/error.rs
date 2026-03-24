@@ -23,12 +23,6 @@ pub enum InstallerError {
     #[error("Prebuild checksum does not match")]
     ChecksumError,
 
-    #[error("Could not uninstall package '{package_name}'. {e}")]
-    UninstallError {
-        package_name: String,
-        e: std::io::Error,
-    },
-
     #[error("Package '{package_name}' with version '{}' is not installed.", version.clone().unwrap_or("any".to_string()))]
     PackageNotFound {
         package_name: String,

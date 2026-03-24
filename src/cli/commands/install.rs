@@ -9,6 +9,9 @@ use crate::{
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
+/// Installs the specified packages, if a version is given that version will be installed,
+/// if not the latest available version will be installed. Multiple packages can be specified
+/// by entering multiple names, split by a space.
 #[derive(Args, Debug)]
 pub struct InstallArgs {
     /// The name of the packages to install, with an optional version specified with NAME@VERSION

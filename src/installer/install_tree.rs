@@ -42,7 +42,7 @@ impl InstallLabel {
     }
 }
 
-/// A helper struct for the installer to move around nodes from the dependency trees
+/// A helper struct for the installer which contains the necessary metadata for installation of a package.
 #[derive(Debug)]
 pub struct InstallMeta {
     pub package_metadata: PackageMeta,
@@ -52,6 +52,7 @@ pub struct InstallMeta {
 }
 
 impl InstallMeta {
+    /// Creates a new `InstallMeta` struct.
     fn new(package_metadata: PackageMeta, version_metadata: PackageVersionMeta, repository_id: String) -> Result<Self, RepositoryError> {
         let target_bounds = version_metadata.get_best_target(&Target::current())?;
 

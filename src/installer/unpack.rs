@@ -22,6 +22,7 @@ pub enum UnpackError {
 
 type Result<T> = core::result::Result<T, UnpackError>;
 
+/// The different supported ArchiveExtensions. Also contains an Unknown type.
 pub enum ArchiveExtension {
     GZ,
     ZIP,
@@ -30,6 +31,7 @@ pub enum ArchiveExtension {
 }
 
 impl ArchiveExtension {
+    /// Creates `Self` from a path.
     pub fn from_path(path: &str) -> Self {
         let extension_index = match path.chars().rev().position(|x| x == '.') {
             Some(index) => index,
@@ -46,7 +48,7 @@ impl ArchiveExtension {
     }
 }
 
-// Unpacks files and saves them to the provided destination directory
+/// Unpacks files and saves them to the provided destination directory.
 pub fn unpack<P: AsRef<Path>>(extension: ArchiveExtension, bytes: Bytes, destination_directory: P) -> Result<()> {
     let size = bytes.len();
     let cursor = Cursor::new(bytes);
@@ -61,6 +63,8 @@ pub fn unpack<P: AsRef<Path>>(extension: ArchiveExtension, bytes: Bytes, destina
     }
 }
 
+/// Unpacks gz archives into the provided destination directory.
+/// Could return an IO error.
 fn unpack_gz<P: AsRef<Path>>(reader: ReaderWithProgress<Cursor<Bytes>>, destination_directory: P) -> Result<()> {
     let tar = GzDecoder::new(reader);
     let mut archive = Archive::new(tar);
@@ -70,6 +74,8 @@ fn unpack_gz<P: AsRef<Path>>(reader: ReaderWithProgress<Cursor<Bytes>>, destinat
     Ok(())
 }
 
+/// Unpacks zip xz archives into the provided destination directory.
+/// Could return an IO error.
 fn unpack_zip_xz<P: AsRef<Path>>(reader: ReaderWithProgress<Cursor<Bytes>>, destination_directory: P) -> Result<()> {
     let mut archive = ZipArchive::new(reader)?;
     archive.extract(destination_directory)?;

@@ -31,15 +31,21 @@ pub struct Node<V, L: Eq> {
     label: L,
 }
 
+/// A tree builder to build trees from a root with an expander and populator.
 #[derive(Debug)]
 pub struct TreeBuilder<E, P, T, V, L: Eq>
 where
     E: Fn(&Node<V, L>) -> Result<Vec<T>>,
     P: Fn(T) -> Result<(PackageId, V, L)>,
 {
+    /// Root of the tree.
     root: Option<Node<V, L>>,
-    expander: Option<E>,  // Specifies how to get children of a certain package id
-    populator: Option<P>, // Specifies how to populate the tree with the expander return values
+
+    /// Specifies how to get children of a certain package id.
+    expander: Option<E>,
+
+    /// Specifies how to populate the tree with the expander return values.
+    populator: Option<P>,
 }
 
 // Static string prefixes for the tree display
@@ -71,6 +77,7 @@ where
         self
     }
 
+    /// Sets the root of the tree. Its children are initialized to an empty vec.
     pub fn root(mut self, package_id: PackageId, value: V, label: L) -> Self {
         self.root = Some(Node {
             id: package_id,
@@ -82,6 +89,8 @@ where
         self
     }
 
+    /// Builds the tree. Returns a result which contains the root if successful. If any of
+    /// the tree builder attributes are None a MissingBuildAttributes error is returned instead.
     pub fn build(self) -> Result<Node<V, L>> {
         let mut root = match self.root {
             Some(root) => root,
@@ -105,6 +114,8 @@ where
 
 /// Generic node implementation.
 impl<V, L: Eq> Node<V, L> {
+    /// Expands a node. The expander is used in combination with the populator to get its child nodes.
+    /// If a child already exists it's not added again.
     pub fn expand<E, P, T>(&mut self, expander: &E, populator: &P) -> Result<()>
     where
         E: Fn(&Node<V, L>) -> Result<Vec<T>>,
@@ -204,6 +215,7 @@ pub type EmptyNode = Node<(), ()>;
 
 /// An empty node implementation (node without values or labels).
 impl EmptyNode {
+    /// Builds a simple tree based on the installed packages.
     pub fn build_simple_tree(package_id: PackageId, register: &PackageRegister) -> Result<EmptyNode> {
         TreeBuilder::new()
             .root(package_id, (), ())
@@ -212,11 +224,13 @@ impl EmptyNode {
             .build()
     }
 
+    /// Gets the children based on the installed packages.
     fn expander(parent: &EmptyNode, register: &PackageRegister) -> Result<Vec<PackageId>> {
         let package = register.get_package_version(parent.get_id()).ok_or(TreeError::NotFound(parent.get_id().clone()))?;
         Ok(package.dependencies.iter().cloned().collect())
     }
 
+    /// Populates nodes with empty values and labels.
     fn populator(package_id: PackageId) -> Result<(PackageId, (), ())> {
         Ok((package_id, (), ()))
     }

@@ -15,6 +15,7 @@ pub enum PackageIdError {
     PackageNameError(#[from] PackageNameError),
 }
 
+/// Identifies a package with a name and version.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PackageId {
     pub name: PackageName,
@@ -22,12 +23,15 @@ pub struct PackageId {
 }
 
 impl PackageId {
+    /// Creates a new `PackageId` from a `PackageName` and `Version`.
     pub fn new(name: PackageName, version: Version) -> Self {
         Self { name, version }
     }
 }
 
 impl<'de> Deserialize<'de> for PackageId {
+    /// Parses a string into a `PackageId` struct.
+    /// Could return errors from the `FromStr` trait implementation.
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -38,6 +42,7 @@ impl<'de> Deserialize<'de> for PackageId {
 }
 
 impl Serialize for PackageId {
+    /// Parses a `PackageId` struct into a string.
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -47,6 +52,7 @@ impl Serialize for PackageId {
 }
 
 impl Display for PackageId {
+    /// Formats the `PackageId` into the following format: <name>@<version>.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}@{}", &self.name, &self.version)?;
         Ok(())
@@ -56,6 +62,8 @@ impl Display for PackageId {
 impl FromStr for PackageId {
     type Err = PackageIdError;
 
+    /// Parses a string into a `PackageId`.
+    /// Could return a `PackageIdError`.
     fn from_str(string: &str) -> Result<Self, Self::Err> {
         let index = string.chars().position(|c| c == '@');
 

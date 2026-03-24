@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{config::Repository, installer::types::PackageId};
 
-/// Represents a package which is installed on the system.
+/// Represents a specific package version which is installed on the system.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct InstalledPackageVersion {
     pub package_id: PackageId,

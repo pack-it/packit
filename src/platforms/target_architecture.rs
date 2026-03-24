@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use crate::platforms::Os;
 
+/// Holds all supported architectures. Also contains an Unknown type which could hold the unknown type as a string.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TargetArchitecture {
     MacOsX86_64,
@@ -15,6 +16,7 @@ pub enum TargetArchitecture {
 }
 
 impl Display for TargetArchitecture {
+    /// Formats all architectures.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let string = match self {
             Self::MacOsX86_64 => "x86_64-apple-darwin",
@@ -33,6 +35,7 @@ impl Display for TargetArchitecture {
 }
 
 impl TargetArchitecture {
+    /// Gets the architecture of the current machine. Returns Unknown if the type isn't supported.
     pub fn current() -> Self {
         #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
         return Self::MacOsX86_64;
@@ -67,6 +70,7 @@ impl TargetArchitecture {
         Self::Unknown(None)
     }
 
+    /// Gets the OS based on the TargetArchitecture.
     pub fn get_os(&self) -> Os {
         match self {
             Self::MacOsX86_64 | Self::MacOsAarch64 => Os::MacOs,
@@ -76,6 +80,7 @@ impl TargetArchitecture {
         }
     }
 
+    /// Checks if the current architecture is unknown. Return true if it is, false otherwise.
     pub fn is_unknown(&self) -> bool {
         match self {
             Self::Unknown(_) => true,
@@ -83,6 +88,8 @@ impl TargetArchitecture {
         }
     }
 
+    /// Creates a TargetArchitecture from a string. Returns an Unknown type with a string
+    /// value if the given type is not supported/
     pub fn from_str(string: &str) -> Self {
         match string {
             "x86_64-apple-darwin" => Self::MacOsX86_64,

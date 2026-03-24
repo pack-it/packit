@@ -3,11 +3,11 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum PermissionError {
-    #[error("Error while fetching permissions")]
-    IOError(#[from] std::io::Error),
-
     #[error("Group does not exist")]
     GroupDoesNotExist,
+
+    #[error("Error while fetching permissions")]
+    IOError(#[from] std::io::Error),
 
     #[error("String contains a nul byte")]
     NulError(#[from] std::ffi::NulError),
@@ -15,6 +15,7 @@ pub enum PermissionError {
 
 type Result<T> = core::result::Result<T, PermissionError>;
 
+/// A platform independent wrapper function to check if a directory is writeable.
 pub fn is_writable(path: &PathBuf) -> Result<bool> {
     if !fs::exists(path)? {
         return Ok(false);
@@ -29,11 +30,13 @@ pub fn is_writable(path: &PathBuf) -> Result<bool> {
     }
 
     // Use platform specific writable checks
-    platform::is_writable(path, metadata)
+    Ok(platform::is_writable(path, metadata))
 }
 
+/// A platform indepdendent wrapper function to set permissions.
 pub use platform::set_packit_permissions;
 
+/// Permissions implementation for Unix platforms.
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 pub mod platform {
     use std::{
@@ -52,37 +55,40 @@ pub mod platform {
 
     pub const PACKIT_GROUP_NAME: &str = "packit";
 
-    pub(super) fn is_writable(_path: &PathBuf, metadata: Metadata) -> Result<bool> {
+    /// Checks if a directory is writeable. Returns true if it is, false otherwise.
+    pub(super) fn is_writable(_path: &PathBuf, metadata: Metadata) -> bool {
         let mode = metadata.mode();
 
         // Check if path is writable for everyone
         if mode & 0o002 != 0 {
-            return Ok(true);
+            return true;
         }
 
         // Check if path is writable for group
         let current_group = unsafe { libc::getegid() };
         let group = metadata.gid();
         if current_group == group && mode & 0o020 != 0 {
-            return Ok(true);
+            return true;
         }
 
         // Check if path is writable for user
         let current_user = unsafe { libc::geteuid() };
         let user = metadata.uid();
         if current_user == user && mode & 0o200 != 0 {
-            return Ok(true);
+            return true;
         }
 
-        Ok(false)
+        false
     }
 
+    /// A wrapper around the recursive `set_file_permissions` method which gets the group_id (if it exists).
+    /// Could return a `PermissionError::GroupDoesNotExist`, IO error or any error returned by `set_file_permissions`.
     pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool, recurse: bool) -> Result<()> {
         let group_id = match is_multiuser {
             true => match get_group_id(PACKIT_GROUP_NAME) {
                 Ok(uid) => Some(uid),
                 Err(PermissionError::GroupDoesNotExist) => {
-                    warning!("The 'packit' group does not exist. Please run 'pit fix' to fix your Packit installation");
+                    warning!("The 'packit' group does not exist. Consider running 'pit fix' to fix your Packit installation");
                     return Err(PermissionError::GroupDoesNotExist);
                 },
                 Err(e) => return Err(e),
@@ -94,6 +100,8 @@ pub mod platform {
         set_file_permissions(path, metadata.permissions(), group_id, recurse)
     }
 
+    /// Sets the permissions of a given directory. It does so recursively if the recurse parameter is true.
+    /// Could return an IO error.
     fn set_file_permissions(path: &PathBuf, mut old_permissions: Permissions, group_id: Option<u32>, recurse: bool) -> Result<()> {
         if let Some(group_id) = group_id {
             set_ownership(path, None, Some(group_id))?;
@@ -119,6 +127,8 @@ pub mod platform {
         Ok(())
     }
 
+    /// Set ownership of a directory based on the provided user and group id.
+    /// Could return an IO error.
     pub fn set_ownership(path: &PathBuf, uid: Option<u32>, gid: Option<u32>) -> Result<()> {
         // If the path is a symlink, set symlink ownership
         if path.is_symlink() {
@@ -132,6 +142,7 @@ pub mod platform {
         Ok(())
     }
 
+    /// Gets the group id based on the given name.
     pub fn get_group_id(name: &str) -> Result<u32> {
         let c_name = CString::new(name)?;
         let group = unsafe { libc::getgrnam(c_name.as_ptr()) };
