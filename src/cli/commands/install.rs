@@ -15,7 +15,7 @@ use crate::{
 #[derive(Args, Debug)]
 pub struct InstallArgs {
     /// The name of the packages to install, with an optional version specified with NAME@VERSION
-    #[arg(num_args(0..))]
+    #[arg(required = true)]
     pub packages: Vec<OptionalPackageId>,
 
     /// True to build from source locally, false to use a prebuild version
