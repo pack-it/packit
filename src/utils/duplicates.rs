@@ -16,7 +16,9 @@ pub fn get_duplicates(packages: &Vec<OptionalPackageId>) -> HashSet<String> {
             continue;
         }
 
-        if packages.iter().any(|p| p.name == package.name) {
+        // Check if any of the packages have the same name.
+        // Also make sure not to match on the same package item in the vec by checking the pointer.
+        if packages.iter().any(|p| !std::ptr::eq(p, package) && p.name == package.name) {
             duplicates.insert(package.name.to_string());
         }
     }
