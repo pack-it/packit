@@ -6,6 +6,7 @@ pub struct InstallerOptions {
     pub skip_symlinking: bool,
     pub skip_active: bool,
     pub keep_build: bool,
+    pub verbose: bool,
 }
 
 impl Default for InstallerOptions {
@@ -16,6 +17,7 @@ impl Default for InstallerOptions {
             skip_symlinking: false,
             skip_active: false,
             keep_build: false,
+            verbose: false,
         }
     }
 }
@@ -42,6 +44,11 @@ impl InstallerOptions {
     /// Sets the keep build field.
     pub fn keep_build(mut self, keep_build: bool) -> Self {
         self.keep_build = keep_build;
+        self
+    }
+
+    pub fn verbose(mut self, verbose: bool) -> Self {
+        self.verbose = verbose;
         self
     }
 }

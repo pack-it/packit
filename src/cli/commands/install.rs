@@ -39,6 +39,10 @@ pub struct InstallArgs {
     /// Flag to keep build dependencies after building from source
     #[arg(long, default_value = "false")]
     pub keep_build: bool,
+
+    /// True if verbose information should be shown
+    #[arg(short, long, default_value = "false")]
+    verbose: bool,
 }
 
 impl HandleCommand for InstallArgs {
@@ -74,7 +78,8 @@ impl HandleCommand for InstallArgs {
             .install_type(install_type)
             .skip_symlinking(self.skip_symlinking)
             .skip_active(self.skip_active)
-            .keep_build(self.keep_build);
+            .keep_build(self.keep_build)
+            .verbose(self.verbose);
         let mut installer = Installer::new(&config, &mut register, &manager, installer_options);
 
         // TODO: Check if this exists as an external package (possibly leading to conflicts) (if so, add to external packages)

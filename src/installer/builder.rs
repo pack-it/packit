@@ -53,15 +53,17 @@ pub struct Builder<'a> {
     config: &'a Config,
     register: &'a mut PackageRegister,
     repository_manager: &'a RepositoryManager<'a>,
+    verbose: bool,
 }
 
 impl<'a> Builder<'a> {
     /// Creates new builder
-    pub fn new(config: &'a Config, register: &'a mut PackageRegister, repository_manager: &'a RepositoryManager) -> Self {
+    pub fn new(config: &'a Config, register: &'a mut PackageRegister, repository_manager: &'a RepositoryManager, verbose: bool) -> Self {
         Self {
             config,
             register,
             repository_manager,
+            verbose,
         }
     }
 
@@ -168,7 +170,16 @@ impl<'a> Builder<'a> {
             .ok_or(ScriptError::ScriptNotFound("build".into()))?;
         let script_data = ScriptData::new(&script_path, &destination_dir, &version, self.config, &script_args);
 
-        scripts::run_build_script(&script_data, &unpack_directory, env)?;
+        // Show build spinner
+        let spinner = Spinner::new();
+        let spinner_message = format!("Building {package_name}@{version}");
+        spinner.show(spinner_message.clone());
+
+        // Run build script
+        scripts::run_build_script(&script_data, &unpack_directory, env, self.verbose)?;
+
+        // Finish build spinner
+        spinner.finish(format!("{spinner_message} successful"));
 
         Ok(())
     }

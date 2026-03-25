@@ -210,7 +210,7 @@ impl<'a> Installer<'a> {
             scripts::download_script(self.repository_manager, &script_path, &package_id.name, &install_meta.repository_id)?;
         if let Some(script_file) = downloaded_script {
             let script_data = ScriptData::new(&script_file, &install_directory, &version_meta.version, self.config, &script_args);
-            scripts::run_pre_script(&script_data, &install_directory)?;
+            scripts::run_pre_script(&script_data, &install_directory, self.options.verbose)?;
         }
 
         // Get source repository for installed storage before actually installing package
@@ -225,7 +225,8 @@ impl<'a> Installer<'a> {
                 let revision = install_meta.version_metadata.revisions.len() as u64;
                 self.download_prebuild(&install_meta.repository_id, &package_id, revision, &install_directory)?
             },
-            false => Builder::new(self.config, self.register, self.repository_manager).build(&install_meta, &install_directory)?,
+            false => Builder::new(self.config, self.register, self.repository_manager, self.options.verbose)
+                .build(&install_meta, &install_directory)?,
         }
 
         // Set correct permissions for the installed package
@@ -250,7 +251,7 @@ impl<'a> Installer<'a> {
             scripts::download_script(self.repository_manager, &script_path, &package_id.name, &install_meta.repository_id)?;
         if let Some(script_file) = downloaded_script {
             let script_data = ScriptData::new(&script_file, &install_directory, &version_meta.version, self.config, &script_args);
-            scripts::run_post_script(&script_data)?;
+            scripts::run_post_script(&script_data, self.options.verbose)?;
         }
 
         self.determine_active(install_meta, &package_id, target)?;
@@ -261,7 +262,7 @@ impl<'a> Installer<'a> {
             scripts::download_script(self.repository_manager, &script_path, &package_id.name, &install_meta.repository_id)?;
         if let Some(script_file) = downloaded_script {
             let script_data = ScriptData::new(&script_file, &install_directory, &version_meta.version, self.config, &script_args);
-            scripts::run_test_script(&script_data)?;
+            scripts::run_test_script(&script_data, self.options.verbose)?;
         }
 
         Ok(())
@@ -462,12 +463,12 @@ impl<'a> Installer<'a> {
 
         // Delete the determined directory
         if let Some(directory) = directory.to_str() {
-            println!("Remove the package directory: {directory}");
+            debug!("Remove the package directory: {directory}");
         }
         fs::remove_dir_all(directory)?;
 
         // Remove package from the register
-        println!("Remove {package_id} from the package register");
+        debug!("Remove {package_id} from the package register");
         self.register.remove_package_version(&package_id);
 
         Ok(vec![package_id])
@@ -500,7 +501,7 @@ impl<'a> Installer<'a> {
         let directory = self.config.prefix_directory.join("packages").join(&package_name);
 
         // Remove active path symlink
-        println!("Unlink the active path");
+        debug!("Unlink the active path");
         let active_path = Path::new(&self.config.prefix_directory).join("active").join(&package_name);
         match active_path.exists() {
             true => symlink::remove_symlink(&active_path)?,
@@ -510,7 +511,7 @@ impl<'a> Installer<'a> {
         // Check if package was symlinked
         if let Some(package) = self.register.get_package(package_name) {
             if package.symlinked {
-                println!("Unlink '{package_name}'");
+                debug!("Unlink '{package_name}'");
                 io::remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&directory))?;
             }
         }
@@ -525,14 +526,14 @@ impl<'a> Installer<'a> {
         }
 
         if let Some(directory) = directory.to_str() {
-            println!("Remove the package directory: {directory}");
+            debug!("Remove the package directory: {directory}");
         }
         fs::remove_dir_all(directory)?;
 
         let uninstalled = installed_versions.iter().map(|p| p.package_id.clone()).collect();
 
         // Delete the installed package from toml
-        println!("Remove {package_name} from the package register");
+        debug!("Remove {package_name} from the package register");
         self.register.remove_package(package_name);
 
         Ok(uninstalled)
@@ -571,7 +572,7 @@ impl<'a> Installer<'a> {
             // Run script
             let script_args = package_version.get_script_args(&target_bounds)?;
             let script_data = ScriptData::new(&script_path, &install_directory, &package_id.version, self.config, &script_args);
-            scripts::run_uninstall_script(&script_data)?
+            scripts::run_uninstall_script(&script_data, self.options.verbose)?
         }
 
         Ok(())
