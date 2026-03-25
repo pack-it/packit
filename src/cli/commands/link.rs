@@ -99,5 +99,7 @@ impl HandleCommand for LinkArgs {
 
         // Save package register
         register.save_to(&register_path).unwrap_or_exit(1);
+
+        println!("Successfully linked {}", self.package_name);
     }
 }

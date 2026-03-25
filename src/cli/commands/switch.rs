@@ -65,5 +65,10 @@ impl HandleCommand for SwitchArgs {
 
         // Save package register
         register.save_to(&register_path).unwrap_or_exit(1);
+
+        println!(
+            "Successfully switched '{}' active version to {}",
+            self.package_name, self.package_version
+        )
     }
 }

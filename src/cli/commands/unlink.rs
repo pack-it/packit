@@ -37,6 +37,8 @@ impl HandleCommand for UnlinkArgs {
             .unlink_package(&mut register, &self.package_name)
             .unwrap_or_exit_msg("Unable to unlink package", 1);
 
+        println!("Successfully unlinked {}", self.package_name);
+
         // Save package register
         register.save_to(&register_path).unwrap_or_exit(1);
     }

@@ -374,7 +374,7 @@ impl<'a> Installer<'a> {
 
     /// Uninstalls a package version if specified, otherwise it will uninstall the entire package directory (after
     /// asking the user if this is the intended behaviour).
-    /// Returns a `PackageId` from the installed package if successful.
+    /// Returns a `Vec<PackageId>` from the uninstalled packages if successful.
     /// Returns an `InstallerError::PermissionsError` error if the current user doesn't have the correct permissions
     /// or an `InstallerError::DependencyError` error if the given package is a dependency.
     pub fn uninstall(&mut self, optional_id: &OptionalPackageId) -> Result<Vec<PackageId>> {
@@ -402,7 +402,7 @@ impl<'a> Installer<'a> {
     }
 
     /// Uninstalls a specific package. If it is the only installed version the entire package directory is removed as well.
-    /// Returns a `PackageId` from the installed package if successful.
+    /// Returns a `Vec<PackageId>` from the uninstalled packages if successful.
     /// Return an `InstallerError::PackageNotFound` error if a package cannot be found. Contains an `InstallerError::UnreachableError`
     /// which as its name suggests should be unreachable.
     fn uninstall_single(&mut self, package_id: PackageId) -> Result<Vec<PackageId>> {
@@ -455,14 +455,19 @@ impl<'a> Installer<'a> {
             other_versions.sort_by_key(|x| &x.package_id.version);
 
             if let Some(newest) = other_versions.last() {
+                println!("Set active package to version `{}`", newest.package_id);
                 Symlinker::new(self.config).set_active(self.register, &newest.package_id.clone(), installed_package.symlinked)?;
             }
         }
 
         // Delete the determined directory
+        if let Some(directory) = directory.to_str() {
+            println!("Remove the package directory: {directory}");
+        }
         fs::remove_dir_all(directory)?;
 
-        // Remove package from installed package toml
+        // Remove package from the register
+        println!("Remove {package_id} from the package register");
         self.register.remove_package_version(&package_id);
 
         Ok(vec![package_id])
@@ -470,7 +475,7 @@ impl<'a> Installer<'a> {
 
     /// Uninstalls an entire package directory. The user is first asked if this is
     /// the intended behaviour (this is skipped if only one version exists).
-    /// Returns a `PackageId` from the installed package if successful.
+    /// Returns a `Vec<PackageId>` from the uninstalled packages if successful.
     /// Returns an `InstallerError::PackageNotFound` error if the package cannot be found.
     fn uninstall_all(&mut self, package_name: &PackageName) -> Result<Vec<PackageId>> {
         let installed_versions = self.register.get_all_package_versions(package_name);
@@ -495,6 +500,7 @@ impl<'a> Installer<'a> {
         let directory = self.config.prefix_directory.join("packages").join(&package_name);
 
         // Remove active path symlink
+        println!("Unlink the active path");
         let active_path = Path::new(&self.config.prefix_directory).join("active").join(&package_name);
         match active_path.exists() {
             true => symlink::remove_symlink(&active_path)?,
@@ -504,6 +510,7 @@ impl<'a> Installer<'a> {
         // Check if package was symlinked
         if let Some(package) = self.register.get_package(package_name) {
             if package.symlinked {
+                println!("Unlink '{package_name}'");
                 io::remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&directory))?;
             }
         }
@@ -517,11 +524,15 @@ impl<'a> Installer<'a> {
             self.run_uninstall_script(&repository, &package_version.package_id, &directory)?;
         }
 
+        if let Some(directory) = directory.to_str() {
+            println!("Remove the package directory: {directory}");
+        }
         fs::remove_dir_all(directory)?;
 
         let uninstalled = installed_versions.iter().map(|p| p.package_id.clone()).collect();
 
         // Delete the installed package from toml
+        println!("Remove {package_name} from the package register");
         self.register.remove_package(package_name);
 
         Ok(uninstalled)
@@ -573,9 +584,10 @@ impl<'a> Installer<'a> {
     }
 
     /// Updates a package to a newer version.
+    /// Returns a `PackageId` from the updated package if successful.
     /// Returns an `InstallerError::VersionTooLowError` if the old version is newer then the given new version
     /// or an `InstallerError::AlreadyInstalledError` if the new package version is already installed.
-    pub fn update(&mut self, optional_id: &OptionalPackageId, new_version: &Version) -> Result<()> {
+    pub fn update(&mut self, optional_id: &OptionalPackageId, new_version: &Version) -> Result<PackageId> {
         let old_package = self.get_specific_package_update(optional_id)?;
         let new_package_id = PackageId::new(old_package.package_id.name.clone(), new_version.clone());
 
@@ -661,7 +673,7 @@ impl<'a> Installer<'a> {
         // Uninstall the package
         self.uninstall(&old_package_id.into())?;
 
-        Ok(())
+        Ok(new_package_id)
     }
 
     /// Gets a specific installed package version. If a version is specified that version is used.
