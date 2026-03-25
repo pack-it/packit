@@ -16,7 +16,7 @@ use crate::{
 /// versions installed. Multiple packages can be specified by entering multiple names, split by a space.
 #[derive(Args, Debug)]
 pub struct UninstallArgs {
-    /// The names of the packages to install, with an optional version specified with NAME@VERSION
+    /// The names of the packages to install, with an optional version specified with `<name>[@version]`.
     #[arg(required = true)]
     pub packages: Vec<OptionalPackageId>,
 }
@@ -29,6 +29,7 @@ impl HandleCommand for UninstallArgs {
             let mut duplicate_string = String::new();
             for duplicate in duplicates {
                 duplicate_string.push_str(&duplicate.to_string());
+                duplicate_string.push(' ');
             }
 
             error!(msg: "Duplicate package arguments are not allowed. The following duplicates were found: {duplicate_string}");
@@ -44,8 +45,16 @@ impl HandleCommand for UninstallArgs {
 
         // Uninstall all specified packages
         for optional_id in &self.packages {
-            if let Err(error) = installer.uninstall(&optional_id) {
-                error!(error, "Cannot uninstall package {optional_id}");
+            match installer.uninstall(&optional_id) {
+                Ok(uninstalled_packages) => {
+                    let mut uninstalled_string = String::new();
+                    for package in uninstalled_packages {
+                        uninstalled_string.push_str(&package.to_string());
+                        uninstalled_string.push(' ');
+                    }
+                    println!("Successfully uninstalled: {uninstalled_string}");
+                },
+                Err(error) => error!(error, "Cannot uninstall package {optional_id}"),
             }
         }
 

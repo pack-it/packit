@@ -49,6 +49,7 @@ impl HandleCommand for InstallArgs {
             let mut duplicate_string = String::new();
             for duplicate in duplicates {
                 duplicate_string.push_str(&duplicate.to_string());
+                duplicate_string.push(' ');
             }
 
             error!(msg: "Duplicate package arguments are not allowed. The following duplicates were found: {duplicate_string}");
@@ -80,8 +81,9 @@ impl HandleCommand for InstallArgs {
 
         // Install all packages
         for package_id in &self.packages {
-            if let Err(error) = installer.install(&package_id) {
-                error!(error, "Cannot install package {package_id}");
+            match installer.install(&package_id) {
+                Ok(installed_package) => println!("Successfully installed {installed_package}"),
+                Err(error) => error!(error, "Cannot install package {package_id}"),
             }
         }
 
