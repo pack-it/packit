@@ -83,3 +83,12 @@ macro_rules! debug {
     };
 }
 pub(crate) use debug;
+
+macro_rules! debug_error {
+    ($($arg:tt)*) => {
+        if *$crate::cli::display::logging::DEBUG_ENABLED {
+            error!($($arg)*);
+        }
+    };
+}
+pub(crate) use debug_error;
