@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use bytes::Bytes;
 
 use crate::{
-    cli::display::logging::{debug, debug_error, error, warning},
+    cli::display::logging::{debug, error, warning},
     config::Config,
     installer::{
         types::{PackageId, PackageName},
@@ -95,7 +95,7 @@ impl<'a> RepositoryManager<'a> {
             let package = match provider.read_package(package) {
                 Ok(package) => package,
                 Err(e) => {
-                    debug_error!(e, "Unable to read {package} from repository {repository_id}, continuing...",);
+                    debug!(e, "Unable to read {package} from repository {repository_id}, continuing...");
                     continue;
                 },
             };

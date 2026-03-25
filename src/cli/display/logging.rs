@@ -69,6 +69,11 @@ pub fn debug_impl(message: std::fmt::Arguments) {
     log_impl("DEBUG".blue().to_string(), message);
 }
 
+pub fn debug_error_impl<T: Error>(message: std::fmt::Arguments, error: T) {
+    let message = format_args!("{message}\nCaused by: {}", trace_error(error));
+    log_impl("DEBUG ERROR".purple().to_string(), message);
+}
+
 pub static DEBUG_ENABLED: LazyLock<bool> = LazyLock::new(|| match std::env::var("PACKIT_DEBUG") {
     Ok(value) => value == "true" || value == "1",
     Err(_) => false,
@@ -76,6 +81,11 @@ pub static DEBUG_ENABLED: LazyLock<bool> = LazyLock::new(|| match std::env::var(
 
 /// Macro for displaying debug information. Only shows info when debug is enabled.
 macro_rules! debug {
+    ($error:expr, $($arg:tt)*) => {
+        if *$crate::cli::display::logging::DEBUG_ENABLED {
+            $crate::cli::display::logging::debug_error_impl(format_args!($($arg)*), $error);
+        }
+    };
     ($($arg:tt)*) => {
         if *$crate::cli::display::logging::DEBUG_ENABLED {
             $crate::cli::display::logging::debug_impl(format_args!($($arg)*));
@@ -83,12 +93,3 @@ macro_rules! debug {
     };
 }
 pub(crate) use debug;
-
-macro_rules! debug_error {
-    ($($arg:tt)*) => {
-        if *$crate::cli::display::logging::DEBUG_ENABLED {
-            error!($($arg)*);
-        }
-    };
-}
-pub(crate) use debug_error;
