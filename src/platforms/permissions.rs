@@ -15,7 +15,7 @@ pub enum PermissionError {
 
 type Result<T> = core::result::Result<T, PermissionError>;
 
-/// A platform independent wrapper function to check if a directory is writeable.
+/// Checks if a path is writable by the current user. Returns true if it is, false otherwise.
 pub fn is_writable(path: &PathBuf) -> Result<bool> {
     if !fs::exists(path)? {
         return Ok(false);
@@ -33,7 +33,7 @@ pub fn is_writable(path: &PathBuf) -> Result<bool> {
     Ok(platform::is_writable(path, metadata))
 }
 
-/// A platform indepdendent wrapper function to set permissions.
+/// Sets the permissions of packit files
 pub use platform::set_packit_permissions;
 
 /// Permissions implementation for Unix platforms.
@@ -64,14 +64,14 @@ pub mod platform {
             return true;
         }
 
-        // Check if path is writable for group
+        // Check if path is writable for current group
         let current_group = unsafe { libc::getegid() };
         let group = metadata.gid();
         if current_group == group && mode & 0o020 != 0 {
             return true;
         }
 
-        // Check if path is writable for user
+        // Check if path is writable for current user
         let current_user = unsafe { libc::geteuid() };
         let user = metadata.uid();
         if current_user == user && mode & 0o200 != 0 {
@@ -81,8 +81,8 @@ pub mod platform {
         false
     }
 
-    /// A wrapper around the recursive `set_file_permissions` method which gets the group_id (if it exists).
-    /// Could return a `PermissionError::GroupDoesNotExist`, IO error or any error returned by `set_file_permissions`.
+    /// Sets the permissions of packit files.
+    /// Could return a `PermissionError::GroupDoesNotExist` if the packit group does not exist when using multiuser mode or an IO error.
     pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool, recurse: bool) -> Result<()> {
         let group_id = match is_multiuser {
             true => match get_group_id(PACKIT_GROUP_NAME) {

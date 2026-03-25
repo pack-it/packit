@@ -30,7 +30,7 @@ impl PackageId {
 }
 
 impl<'de> Deserialize<'de> for PackageId {
-    /// Parses a string into a `PackageId` struct.
+    /// Deserializes a string into a `PackageId` struct.
     /// Could return errors from the `FromStr` trait implementation.
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -42,7 +42,7 @@ impl<'de> Deserialize<'de> for PackageId {
 }
 
 impl Serialize for PackageId {
-    /// Parses a `PackageId` struct into a string.
+    /// Serializes a `PackageId` struct into a string.
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,

@@ -18,7 +18,7 @@ pub enum InstallType {
     BuildAll,
 }
 
-/// Label for the install tree.
+/// Represents the label for the install tree.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct InstallLabel {
     install_type: InstallType,
@@ -42,7 +42,7 @@ impl InstallLabel {
     }
 }
 
-/// A helper struct for the installer which contains the necessary metadata for installation of a package.
+/// Helper struct for the installer, containing the necessary metadata for installation of a package.
 #[derive(Debug)]
 pub struct InstallMeta {
     pub package_metadata: PackageMeta,

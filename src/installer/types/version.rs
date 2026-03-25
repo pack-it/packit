@@ -34,7 +34,7 @@ pub struct Version {
 }
 
 impl<'de> Deserialize<'de> for Version {
-    /// Parses a string into a `Version` struct.
+    /// Deserializes a string into a `Version`.
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -45,7 +45,7 @@ impl<'de> Deserialize<'de> for Version {
 }
 
 impl Serialize for Version {
-    /// Parses a `Version` struct into a string.
+    /// Serializes a `Version` into a string.
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -55,7 +55,7 @@ impl Serialize for Version {
 }
 
 impl Ord for Version {
-    /// Compares `self` to another version and returns an Ordering type.
+    /// Compares this version to another version and returns an Ordering type.
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         let iterations = max(self.numbers.len(), other.numbers.len());
         for i in 0..iterations {
@@ -87,7 +87,7 @@ impl Ord for Version {
 }
 
 impl PartialEq for Version {
-    /// Checks equality of `self` and another version.
+    /// Checks equality of this version and another version.
     fn eq(&self, other: &Self) -> bool {
         match self.cmp(other) {
             Ordering::Less => false,
@@ -98,14 +98,14 @@ impl PartialEq for Version {
 }
 
 impl PartialOrd for Version {
-    /// Gets an ordering between `self` and another version. An ordering can always be found, None is never returned.
+    /// Gets an ordering between this version and another version. An ordering can always be found, None is never returned.
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
 impl Display for Version {
-    /// Formats a `Version` struct into the following format: <version_number>[.version_number]...
+    /// Formats a `Version` into the following format: <version_number>[.version_number]...
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let version_string = self.numbers.iter().map(|d| d.to_string()).collect::<Vec<_>>().join(".");
         write!(f, "{}", version_string)
@@ -115,7 +115,7 @@ impl Display for Version {
 impl FromStr for Version {
     type Err = VersionError;
 
-    /// Parses a string into a `Version` struct.
+    /// Parses a string into a `Version`.
     /// Could return a `VersionError` error.
     fn from_str(string: &str) -> Result<Self, Self::Err> {
         if string.len() == 0 {

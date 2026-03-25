@@ -5,7 +5,7 @@ use crate::{
     installer::types::Version,
 };
 
-/// Represents an OS type. Also contains an Unknown type.
+/// Represents an operating system type.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Os {
     MacOs,
@@ -24,7 +24,7 @@ impl Os {
     }
 }
 
-/// Represents an OS version. In case of Linux this also includes the distro and distro version. Also contains an Unknown type.
+/// Represents an OS version. In case of Linux this also includes the distro and distro version.
 #[derive(Clone, Debug)]
 #[allow(dead_code)]
 pub enum OsVersion {
@@ -42,19 +42,19 @@ pub enum OsVersion {
     Unknown,
 }
 
-/// Lazily gets the current OS version.
+/// Global variable keeping the current OS version.
 static CURRENT_VERSION: LazyLock<OsVersion> = LazyLock::new(|| match OsVersion::get_version() {
     Some(value) => value,
     None => OsVersion::Unknown,
 });
 
 impl OsVersion {
-    /// Returns the OsVersion which is based on the version of the current machine.
+    /// Returns the OsVersion of the current system.
     pub fn current() -> Self {
         CURRENT_VERSION.clone()
     }
 
-    /// Gets the MacOs version.
+    /// Gets the macOS version.
     /// Returns None if the version cannot be fetched or parsed.
     #[cfg(target_os = "macos")]
     fn get_version() -> Option<Self> {

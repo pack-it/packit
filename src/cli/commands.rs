@@ -25,7 +25,7 @@ use crate::cli::{
     display::logging::error,
 };
 
-/// Creates a CLI interface with clap.
+/// Represents the CLI interface with clap.
 #[derive(Parser, Debug)]
 #[command(name = "Packit", version, about)]
 #[command(long_about = "The universal package manager, designed to streamline the experience of installing packages on your system.")]

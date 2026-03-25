@@ -66,8 +66,9 @@ impl<'a> Builder<'a> {
     }
 
     /// Builds a package from the given metadata.
-    /// Returns a `BuilderError::MissingDependencyError` if a dependency is missing, a `BuilderError::RequestUnsuccessful`
-    /// if a request was unsuccessful or a `BuilderError::ChecksumError` if the checksums don't match.
+    /// Returns a `BuilderError::MissingDependencyError` if a dependency is missing,
+    /// a `BuilderError::RequestUnsuccessful` if a request was unsuccessful or
+    /// a `BuilderError::ChecksumError` if the checksums don't match.
     pub fn build(&self, install_meta: &InstallMeta, destination_dir: impl AsRef<Path>) -> Result<()> {
         let package_name = &install_meta.package_metadata.name;
         let version = &install_meta.version_metadata.version;

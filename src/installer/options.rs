@@ -9,7 +9,7 @@ pub struct InstallerOptions {
 }
 
 impl Default for InstallerOptions {
-    /// Creates and returns `Self` with default settings.
+    /// Creates a default InstallerOptions instance.
     fn default() -> Self {
         Self {
             install_type: InstallType::Prebuild,

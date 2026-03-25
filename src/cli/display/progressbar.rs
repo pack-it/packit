@@ -1,6 +1,6 @@
 use indicatif::{ProgressBar as IndicatifProgressBar, ProgressStyle};
 
-/// Displays a progress bar for a load process.
+/// Represents a progress bar for a load process.
 pub struct ProgressBar {
     bar: IndicatifProgressBar,
     size: u64,

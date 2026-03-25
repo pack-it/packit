@@ -3,7 +3,7 @@ use std::str::FromStr;
 use serde::{Deserialize, de};
 use sha2::{Digest, Sha256};
 
-/// A wrapper around a byte array which represents a checksum.
+/// Represents a checksum, wraps around a byte array.
 #[derive(Debug, PartialEq, Eq)]
 pub struct Checksum {
     pub sha256: [u8; 32],

@@ -57,7 +57,7 @@ pub struct ScriptData<'a> {
 }
 
 impl<'a> ScriptData<'a> {
-    /// Creates a new `ScriptData` struct.
+    /// Creates a new `ScriptData` instance.
     pub fn new(
         path: &'a impl AsRef<Path>,
         package_install_path: &'a impl AsRef<Path>,

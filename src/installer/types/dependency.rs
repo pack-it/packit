@@ -12,7 +12,7 @@ pub struct Dependency {
 }
 
 impl<'de> Deserialize<'de> for Dependency {
-    /// Parses a string into a Dependency.
+    /// Deserializes a string into a Dependency.
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -38,7 +38,7 @@ impl<'de> Deserialize<'de> for Dependency {
 }
 
 impl Serialize for Dependency {
-    /// Parses a Dependency into a string.
+    /// Serializes a Dependency into a string.
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,

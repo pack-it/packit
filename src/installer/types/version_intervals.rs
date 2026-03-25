@@ -11,7 +11,7 @@ pub struct VersionIntervals {
 }
 
 impl<'de> Deserialize<'de> for VersionIntervals {
-    /// Parses a string into a `VersionIntervals` struct.
+    /// Deserializes a string into `VersionIntervals`.
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -25,7 +25,7 @@ impl<'de> Deserialize<'de> for VersionIntervals {
 impl FromStr for VersionIntervals {
     type Err = VersionError;
 
-    /// Parses a string into a `VersionIntervals` struct.
+    /// Parses a string into `VersionIntervals`.
     /// Could return a `VersionError` error.
     fn from_str(intervals: &str) -> Result<Self, Self::Err> {
         // Check for empty input
@@ -97,7 +97,7 @@ impl VersionIntervals {
         true
     }
 
-    /// Checks if all the version bounds in the current version interval cover a given version.
+    /// Checks if any of the version bounds in the current version interval cover a given version.
     /// Returns true if it does, false otherwise.
     pub fn covers(&self, version: &Version) -> bool {
         // If version bounds are empty, version satisfies the bounds
@@ -115,7 +115,7 @@ impl VersionIntervals {
         false
     }
 
-    /// Checks if the version bounds vec is empty. Returns true if it is, false otherwise.
+    /// Checks if the version bounds are empty. Returns true if it is, false otherwise.
     pub fn is_empty(&self) -> bool {
         self.version_bounds.is_empty()
     }

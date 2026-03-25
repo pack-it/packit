@@ -9,10 +9,10 @@ use crate::{
     },
     platforms::symlink,
     storage::package_register::PackageRegister,
-    utils::io::{create_folder_symlinks, remove_symlinks},
+    utils::io,
 };
 
-/// Does symlink opperations for the install process.
+/// Manages symlink operations for installing, uninstalling and changing active and symlink states of packages.
 pub struct Symlinker<'a> {
     config: &'a Config,
 }
@@ -34,21 +34,14 @@ impl<'a> Symlinker<'a> {
             let package_dir_path = package_directory.join(dir_name);
             let prefix_dir_path = prefix_dir.join(dir_name);
 
-            create_folder_symlinks(&package_dir_path, &prefix_dir_path)?;
+            io::create_folder_symlinks(&package_dir_path, &prefix_dir_path)?;
         }
 
         Ok(())
     }
 
-    /// A wrapper around the `remove_symlinks` method from IO utils, which removes a symlinks in a given
-    /// directory which have a given destination directory.
-    /// Could return an IO error.
-    pub(super) fn remove_symlinks(&self, search_dir: &Path, destination_dir: &Path) -> Result<()> {
-        Ok(remove_symlinks(search_dir, destination_dir)?)
-    }
-
     /// Sets a package to active and creates the appropiate symlinks for it, based on the `should_symlink` parameter.
-    /// Could return a `InstallerError::PackageNotFound`, a `RegisterError` or an IO error.
+    /// Could return an `InstallerError::PackageNotFound`, a `RegisterError` or an IO error.
     pub fn set_active(&self, register: &mut PackageRegister, package_id: &PackageId, should_symlink: bool) -> Result<()> {
         // Get package to set to active
         let package_version = match register.get_package_version(package_id) {
@@ -66,7 +59,7 @@ impl<'a> Symlinker<'a> {
 
         // Remove old symlinks
         let package_directory = self.config.prefix_directory.join("packages").join(&package_id.name);
-        remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&package_directory))?;
+        io::remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&package_directory))?;
 
         // Create active symlink
         fs::create_dir_all(global_active_path)?;
@@ -98,7 +91,7 @@ impl<'a> Symlinker<'a> {
     }
 
     /// Unlinks a package based on a given package name.
-    /// Could return a `InstallerError::PackageNotFound`, a `RegisterError` or an IO error.
+    /// Could return an `InstallerError::PackageNotFound`, a `RegisterError` or an IO error.
     pub fn unlink_package(&self, register: &mut PackageRegister, package_name: &PackageName) -> Result<()> {
         let package = register.get_package(&package_name).ok_or(InstallerError::PackageNotFound {
             package_name: package_name.to_string(),
@@ -123,7 +116,7 @@ impl<'a> Symlinker<'a> {
             let entry = entry?;
 
             if entry.file_type()?.is_dir() && entry.file_name() != "active" {
-                remove_symlinks(&entry.path(), &install_path)?;
+                io::remove_symlinks(&entry.path(), &install_path)?;
             }
         }
 

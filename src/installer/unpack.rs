@@ -22,7 +22,7 @@ pub enum UnpackError {
 
 type Result<T> = core::result::Result<T, UnpackError>;
 
-/// The different supported ArchiveExtensions. Also contains an Unknown type.
+/// The different supported ArchiveExtensions.
 pub enum ArchiveExtension {
     GZ,
     ZIP,
@@ -31,7 +31,7 @@ pub enum ArchiveExtension {
 }
 
 impl ArchiveExtension {
-    /// Creates `Self` from a path.
+    /// Creates an ArchiveExtension from a path.
     pub fn from_path(path: &str) -> Self {
         let extension_index = match path.chars().rev().position(|x| x == '.') {
             Some(index) => index,

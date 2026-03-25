@@ -23,7 +23,7 @@ use crate::{
         types::{Checksum, PackageTarget},
     },
     storage::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
-    utils::tree::TreeBuilder,
+    utils::{io, tree::TreeBuilder},
 };
 
 use std::{
@@ -259,8 +259,7 @@ impl<'a> Installer<'a> {
         Ok(())
     }
 
-    /// Determines if a package should be active. If it should be, symlinks are created and the appropriate
-    /// fields in the register are adjusted.
+    /// Determines if a package should be active. If it should be, symlinks are created and the appropriate fields in the register are adjusted.
     fn determine_active(&mut self, install_meta: &InstallMeta, package_id: &PackageId, target: &PackageTarget) -> Result<()> {
         // Check if symlinking should be skipped
         let mut should_symlink = !self.options.skip_symlinking
@@ -427,7 +426,7 @@ impl<'a> Installer<'a> {
 
         // Check if the package was symlinked
         if installed_package.active_version == package_id.version && installed_package.symlinked {
-            Symlinker::new(self.config).remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&directory))?;
+            io::remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&directory))?;
         }
 
         // Change active package when uninstalled package is currently active
@@ -484,7 +483,7 @@ impl<'a> Installer<'a> {
         // Check if package was symlinked
         if let Some(package) = self.register.get_package(package_name) {
             if package.symlinked {
-                Symlinker::new(self.config).remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&directory))?;
+                io::remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&directory))?;
             }
         }
 
@@ -643,7 +642,7 @@ impl<'a> Installer<'a> {
     }
 
     /// Gets a specific installed package version. If a version is specified that version is used.
-    /// If the version is not specified, but only one version exists that version is used.
+    /// If the version is not specified, but only one version exists, then that version is used.
     /// Returns an `InstallerError::PackageNotFound` if the package cannot be found or
     /// an `InstallerError::SpecificityError` if multiple versions exist, but the version isn't specified.
     fn get_specific_package_update(&self, optional_id: &OptionalPackageId) -> Result<&InstalledPackageVersion> {

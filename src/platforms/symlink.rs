@@ -12,7 +12,7 @@ pub enum SymlinkError {
     IOError(#[from] std::io::Error),
 }
 
-/// Creates a symlink on MacOs and Linux from link to original.
+/// Creates a symlink on macOS and Linux from link to original.
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 pub fn create_symlink(original: &Path, link: &Path) -> Result<(), SymlinkError> {
     std::os::unix::fs::symlink(original, link)?;

@@ -87,8 +87,8 @@ impl<'a> BuildEnv<'a> {
         }
     }
 
-    /// Creates the path for the `Environment`. The path will include the bin directories of all (build) dependencies
-    /// and standard Unix system bin paths (if on Unix).
+    /// Creates the `PATH` for the `Environment`. The path will include the bin directories
+    /// of all (build) dependencies and standard Unix system bin paths (if on Unix).
     fn create_path(&self) -> String {
         let mut parts = Vec::new();
 
@@ -125,7 +125,7 @@ impl<'a> BuildEnv<'a> {
         parts.join(":")
     }
 
-    /// Creates the path to pkgconfig inside of the lib and share directories of the (build) dependencies.
+    /// Creates the `PKG_CONFIG_PATH` to pkgconfig inside of the lib and share directories of the (build) dependencies.
     /// It also adds the necessary platform specific paths.
     fn create_pkg_config_path(&self) -> String {
         let mut parts: Vec<String> = Vec::new();
@@ -173,7 +173,7 @@ impl<'a> BuildEnv<'a> {
         parts.join(":")
     }
 
-    /// Creates the path with the (build) dependency install paths.
+    /// Creates the `CMAKE_PREFIX_PATH` with the (build) dependency install paths.
     fn create_cmake_prefix_path(&self) -> String {
         let mut parts: Vec<String> = Vec::new();
 
@@ -207,7 +207,7 @@ impl<'a> BuildEnv<'a> {
         parts.join(":")
     }
 
-    /// Creates the aclocal path from the share/aclocal in each (build) dependency.
+    /// Creates the `ACLOCAL_PATH` from the share/aclocal in each (build) dependency.
     fn create_aclocal_path(&self) -> String {
         let mut parts: Vec<String> = Vec::new();
 

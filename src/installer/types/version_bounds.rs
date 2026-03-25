@@ -19,7 +19,7 @@ pub enum VersionBounds {
 impl FromStr for VersionBounds {
     type Err = VersionError;
 
-    /// Parses from a string to a `VersionBounds` struct.
+    /// Parses from a string to `VersionBounds`.
     /// Could return a `VersionError` error.
     fn from_str(string: &str) -> Result<Self, Self::Err> {
         // Check if the statement is a two sided range

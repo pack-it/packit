@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use indicatif::{ProgressBar, ProgressStyle};
 
-/// Displays a spinner for a load process.
+/// Represents a spinner for a load process.
 pub struct Spinner {
     progress_bar: ProgressBar,
 }

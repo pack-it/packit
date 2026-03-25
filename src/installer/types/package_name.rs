@@ -6,7 +6,7 @@ use thiserror::Error;
 
 const VALID_PACKAGE_NAME: &str = r"^[a-zA-Z0-9\-_]+$";
 
-/// Errors that occur when creating or using the package id.
+/// Errors that occur when creating or parsing the package name.
 #[derive(Error, Debug)]
 pub enum PackageNameError {
     #[error("Package name cannot be empty and can only contain characters: 'a-z', 'A-Z', '0-9', '-' and '_'")]
@@ -17,7 +17,7 @@ pub enum PackageNameError {
 pub struct PackageName(String);
 
 impl<'de> Deserialize<'de> for PackageName {
-    /// Parses a string into a `PackageName` struct.
+    /// Deserializes a string into a `PackageName`.
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -28,7 +28,7 @@ impl<'de> Deserialize<'de> for PackageName {
 }
 
 impl Serialize for PackageName {
-    /// Serializes the `PackageName`. Note that this doesn't check its validity, it assumes
+    /// Serializes the `PackageName` into a string. Note that this doesn't check its validity, it assumes
     /// that the `PackageName` validity is always checked upon creation.
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -49,7 +49,7 @@ impl Display for PackageName {
 impl FromStr for PackageName {
     type Err = PackageNameError;
 
-    /// Parses a string into a `PackageName` struct.
+    /// Parses a string into a `PackageName`.
     /// Could return a `PackageNameError::InvalidPackageName` error.
     fn from_str(string: &str) -> Result<Self, Self::Err> {
         let re = Regex::new(VALID_PACKAGE_NAME).expect("Expected valid regex");

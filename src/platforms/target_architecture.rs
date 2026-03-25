@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use crate::platforms::Os;
 
-/// Holds all supported architectures. Also contains an Unknown type which could hold the unknown type as a string.
+/// Represents all supported architectures, contains an Unknown type which could hold an unknown architecture as a string.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TargetArchitecture {
     MacOsX86_64,
@@ -88,8 +88,8 @@ impl TargetArchitecture {
         }
     }
 
-    /// Creates a TargetArchitecture from a string. Returns an Unknown type with a string
-    /// value if the given type is not supported/
+    /// Creates a TargetArchitecture from a string. Returns an the TargetArchitecture, or an Unknown type
+    /// containing the string value if the given target is not supported.
     pub fn from_str(string: &str) -> Self {
         match string {
             "x86_64-apple-darwin" => Self::MacOsX86_64,

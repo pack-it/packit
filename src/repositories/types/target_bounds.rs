@@ -25,7 +25,7 @@ pub enum TargetBoundsError {
     VersionError(#[from] VersionError),
 }
 
-/// Represents a target, a target in this case can be a group (e.g. Unix for MacOs and Linux).
+/// Represents a target, a target can be a group (e.g. Unix for MacOs and Linux), an operating system or a specific architecture.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TargetName {
     Architecture(TargetArchitecture),
@@ -37,7 +37,7 @@ impl FromStr for TargetName {
     type Err = TargetBoundsError;
 
     /// Converts a string to a TargetName struct. A `TargetBoundsError::InvalidTargetName` is
-    /// returned if nothing matches the given string.
+    /// returned if the given string is not a valid target.
     fn from_str(string: &str) -> Result<Self, Self::Err> {
         if string == "unix" {
             return Ok(Self::Unix);
@@ -60,7 +60,7 @@ impl FromStr for TargetName {
 }
 
 impl TargetName {
-    /// Checks if the target name is for a Unix target. Returns true if it is, false otherwise.
+    /// Checks if the target name is a Unix target. Returns true if it is, false otherwise.
     pub fn is_unix(&self) -> bool {
         match self {
             TargetName::Architecture(architecture) => architecture.get_os().is_unix(),
@@ -69,7 +69,7 @@ impl TargetName {
         }
     }
 
-    /// Gets the OS from the target name. Returns an option with the OS or None if the target
+    /// Gets the operating system from the target name. Returns an option containing the OS or None if the target
     /// name is too broad to specify a specific OS (e.g. Unix).
     pub fn get_os(&self) -> Option<Os> {
         match self {
@@ -89,7 +89,7 @@ pub struct TargetBounds {
 }
 
 impl<'de> Deserialize<'de> for TargetBounds {
-    /// Parse a string into a TargetBounds struct.
+    /// Deserializes a string into a TargetBounds struct.
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -168,7 +168,7 @@ impl TargetBounds {
     }
 
     /// Calculates the priority of the current target bound. The more specific target bound will
-    /// have a higher priority and vise versa (e.g. MacOs has a higher priority then Unix).
+    /// have a higher priority and vice versa (e.g. 'MacOs' has a higher priority then 'Unix').
     fn calculate_priority(&self) -> u32 {
         if self.addition.is_none() && self.version_intervals.is_empty() {
             match self.name {

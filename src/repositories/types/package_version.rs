@@ -67,7 +67,7 @@ impl PackageVersionMeta {
         }
     }
 
-    /// Gets the `Source`.
+    /// Gets the `Source` for the given target bounds.
     /// Returns a `RepositoryError::ValidationError` if the target does not specify a source or if an unknown source was referenced.
     pub fn get_source(&self, target_bounds: &TargetBounds) -> Result<&Source> {
         match &self.sources {

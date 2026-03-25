@@ -3,15 +3,15 @@ use std::fmt::Display;
 
 use crate::installer::types::PackageId;
 
-/// This holds a single issue and the data regarding that issue.
+/// Holds a single issue and the data regarding that issue.
 pub enum Issue {
     /// A list of parents and their missing dependencies `<parent> : <missing>`.
     BrokenTree(Vec<(PackageId, PackageId)>),
 
-    /// A list of packages which are present in the Installed.toml, but not in the packit package directory.
+    /// A list of packages which are present in the Installed.toml, but not in the package directory.
     InconsistentStorage(Vec<PackageId>),
 
-    /// A list of packages which are present in the packit package directory, but not in the Installed.toml.
+    /// A list of packages which are present in the package directory, but not in the Installed.toml.
     InconsistentRegister(Vec<PackageId>),
 
     /// A list of packages which are changed (when they shouldn't be).

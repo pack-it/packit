@@ -22,7 +22,7 @@ impl From<PackageId> for OptionalPackageId {
 impl FromStr for OptionalPackageId {
     type Err = PackageIdError;
 
-    /// Parses a string into an optional id.
+    /// Parses a string into an `OptionalPackageId`.
     /// Could return a `PackageIdError`.
     fn from_str(string: &str) -> Result<Self, Self::Err> {
         if string.contains("@") {
@@ -63,7 +63,7 @@ impl OptionalPackageId {
         }
     }
 
-    /// Returns a `PackageId` or the given version if the version is not specified in `Self`.
+    /// Returns a `PackageId` with the current version, or the given version if the `OptionalPackageId` does not contain a version.
     pub fn versioned_or(&self, version: Version) -> PackageId {
         let version = match &self.version {
             Some(version) => version.clone(),

@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 
-/// Used to normalize the environment before a build.
+/// Represents an environment, containing environment variables and variables to be stripped.
 pub struct Environment {
     pub env_vars: HashMap<String, String>,
     pub stripped_vars: Vec<String>,
 }
 
 impl Environment {
+    /// Creates a new empty environment.
     pub fn new() -> Self {
         Environment {
             env_vars: HashMap::new(),
