@@ -1,6 +1,6 @@
 use crate::{
     cli::display::{
-        QuestionResponse, ask_user,
+        QuestionResponse, Spinner, ask_user,
         logging::{error, warning},
     },
     config::{Config, Repository},
@@ -337,8 +337,16 @@ impl<'a> Installer<'a> {
     /// Downloads a package pre-build and unpacks it into the given destination directory.
     /// Returns an `InstallerError::ChecksumError` if the pre-build checksum doesn't match.
     fn download_prebuild(&self, repository_id: &str, package: &PackageId, revision: u64, destination_dir: impl AsRef<Path>) -> Result<()> {
+        // Show download spinner
+        let spinner = Spinner::new();
+        let spinner_message = format!("Downloading {} prebuild from '{}'", &package.name, repository_id);
+        spinner.show(spinner_message.clone());
+
         let (extension, bytes) = self.repository_manager.read_prebuild(repository_id, package, revision, &Target::current())?;
         let checksum = self.repository_manager.get_prebuild_checksum(repository_id, package, revision, &Target::current())?;
+
+        // Finish download spinner
+        spinner.finish(format!("{spinner_message} successful"));
 
         // Calculate the checksum
         let calculated_checksum = Checksum::from_bytes(&bytes);
@@ -350,7 +358,7 @@ impl<'a> Installer<'a> {
         }
 
         // Unpack the prebuild to the destination
-        unpack(extension, bytes, &destination_dir)?;
+        unpack(package.name.to_string(), extension, bytes, &destination_dir)?;
 
         Ok(())
     }

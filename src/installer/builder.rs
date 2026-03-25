@@ -114,7 +114,7 @@ impl<'a> Builder<'a> {
 
         // Show download spinner
         let spinner = Spinner::new();
-        spinner.show(format!("Downloading {package_name}"));
+        spinner.show(format!("Downloading {package_name} from {}", &source.url));
 
         // Download the build files
         let mut response = reqwest::blocking::get(&source.url)?;
@@ -140,11 +140,16 @@ impl<'a> Builder<'a> {
         }
 
         // Finish download spinner
-        spinner.finish(format!("Downloading {package_name} successful"));
+        spinner.finish(format!("Downloading {package_name} from {} successful", &source.url));
 
         // Unpack the package to the temp directory
         let unpack_directory = TempDir::new()?;
-        unpack(ArchiveExtension::from_path(&source.url), bytes, &unpack_directory)?;
+        unpack(
+            package_name.to_string(),
+            ArchiveExtension::from_path(&source.url),
+            bytes,
+            &unpack_directory,
+        )?;
 
         // Create build env
         let env = BuildEnv::new(

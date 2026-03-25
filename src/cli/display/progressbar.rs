@@ -8,13 +8,12 @@ pub struct ProgressBar {
 
 impl ProgressBar {
     /// Creates a new progress bar with the given size.
-    pub fn new(size: u64) -> Self {
+    pub fn new(size: u64, prefix: String) -> Self {
         let bar = IndicatifProgressBar::new(size);
 
         // Set the style of the progress bar
-        let style = ProgressStyle::with_template("[{wide_bar:.white}] [{percent}%]")
-            .expect("Expected template to be correct.")
-            .progress_chars("=> ");
+        let template = format!("{prefix} [{{wide_bar:.white}}] [{{percent}}%]");
+        let style = ProgressStyle::with_template(&template).expect("Expected template to be correct.").progress_chars("=> ");
         bar.set_style(style);
 
         Self { bar, size }
