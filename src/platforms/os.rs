@@ -129,6 +129,10 @@ impl OsVersion {
         let mut distro = None;
         let mut distro_version = None;
         for line in distro_info.split("\n") {
+            if line.trim().is_empty() {
+                continue;
+            }
+
             let (key, value) = match line.split_once("=") {
                 Some(val) => val,
                 None => {

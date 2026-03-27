@@ -166,15 +166,20 @@ impl<'a> Builder<'a> {
         let script_data = ScriptData::new(&script_path, &destination_dir, &version, self.config, &script_args, self.verbose);
 
         // Show build spinner
-        let spinner = Spinner::new();
-        let spinner_message = format!("Building {package_name}@{version}");
-        spinner.show(spinner_message.clone());
+        if !self.verbose {
+            let spinner = Spinner::new();
+            let spinner_message = format!("Building {package_name}@{version}");
+            spinner.show(spinner_message.clone());
 
-        // Run build script
-        scripts::run_build_script(&script_data, &unpack_directory, env)?;
+            // Run build script
+            scripts::run_build_script(&script_data, &unpack_directory, env)?;
 
-        // Finish build spinner
-        spinner.finish(format!("{spinner_message} successful"));
+            // Finish build spinner
+            spinner.finish(format!("{spinner_message} successful"));
+        } else {
+            // Run build script
+            scripts::run_build_script(&script_data, &unpack_directory, env)?;
+        }
 
         Ok(())
     }
