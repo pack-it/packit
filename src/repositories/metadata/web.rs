@@ -36,6 +36,8 @@ impl MetadataProvider for WebMetadataProvider {
         Ok(toml::de::from_str(&data)?)
     }
 
+    /// Reads a script and returns its content as a string. If the script doesn't exist Ok(None) is returned.
+    /// Returns a response error if `reqwest::blocking::get` or `Response::text` fails.
     fn read_script(&self, package: &PackageName, script_path: &str) -> Result<Option<String>> {
         let response = reqwest::blocking::get(format!("{}/packages/{package}/{script_path}", self.url))?;
 

@@ -7,6 +7,7 @@ use crate::{
 use clap::Args;
 use colored::Colorize;
 
+/// Lists all configured repositories.
 #[derive(Args, Debug)]
 pub struct RepositoryArgs;
 

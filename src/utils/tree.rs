@@ -7,7 +7,7 @@ use thiserror::Error;
 
 use crate::{installer::types::PackageId, repositories::error::RepositoryError, storage::package_register::PackageRegister};
 
-/// Errors which could occur while doing tree operations
+/// The errors that occur while doing tree operations.
 #[derive(Error, Debug)]
 pub enum TreeError {
     #[error("Package id '{0}' cannot be found")]
@@ -22,7 +22,7 @@ pub enum TreeError {
 
 pub type Result<T> = std::result::Result<T, TreeError>;
 
-/// A node to create a dependency tree with generic values and labels.
+/// Represents a node in a dependency tree with generic values and labels.
 #[derive(Debug)]
 pub struct Node<V, L: Eq> {
     id: PackageId,
@@ -31,15 +31,21 @@ pub struct Node<V, L: Eq> {
     label: L,
 }
 
+/// A tree builder to build trees from a root, an expander and a populator.
 #[derive(Debug)]
 pub struct TreeBuilder<E, P, T, V, L: Eq>
 where
     E: Fn(&Node<V, L>) -> Result<Vec<T>>,
     P: Fn(T) -> Result<(PackageId, V, L)>,
 {
+    /// The root of the tree.
     root: Option<Node<V, L>>,
-    expander: Option<E>,  // Specifies how to get children of a certain package id
-    populator: Option<P>, // Specifies how to populate the tree with the expander return values
+
+    /// Closure specifying how to get children of a certain package id.
+    expander: Option<E>,
+
+    /// Closure specifying how to populate the tree with the expander return values.
+    populator: Option<P>,
 }
 
 // Static string prefixes for the tree display
@@ -71,6 +77,7 @@ where
         self
     }
 
+    /// Sets the root of the tree. Its children are initialized to an empty vec.
     pub fn root(mut self, package_id: PackageId, value: V, label: L) -> Self {
         self.root = Some(Node {
             id: package_id,
@@ -82,6 +89,8 @@ where
         self
     }
 
+    /// Builds the tree. Returns a result containing the root if successful. If any of
+    /// the tree builder attributes are None a MissingBuildAttributes error is returned instead.
     pub fn build(self) -> Result<Node<V, L>> {
         let mut root = match self.root {
             Some(root) => root,
@@ -103,8 +112,10 @@ where
     }
 }
 
-/// Generic node implementation.
+// Generic node implementation.
 impl<V, L: Eq> Node<V, L> {
+    /// Expands a node. The expander is used in combination with the populator to get its child nodes.
+    /// If a child already exists it's not added again.
     pub fn expand<E, P, T>(&mut self, expander: &E, populator: &P) -> Result<()>
     where
         E: Fn(&Node<V, L>) -> Result<Vec<T>>,
@@ -166,7 +177,8 @@ impl<V, L: Eq> Node<V, L> {
         &self.value
     }
 
-    /// Gets the children ids of the node in a hashset. Checks for a filter on the label and will only return the children that satisfy the filter.
+    /// Gets the ids of the children of the node in a hashset.
+    /// Checks for a filter on the label and will only return the children that satisfy the filter.
     pub fn get_children_ids_filtered<F>(&self, filter: F) -> HashSet<PackageId>
     where
         F: Fn(&L) -> bool,
@@ -174,17 +186,17 @@ impl<V, L: Eq> Node<V, L> {
         self.children.iter().filter(|c| filter(&c.label)).map(|c| c.id.clone()).collect()
     }
 
-    /// Gets the children ids of the node in a hashset.
+    /// Gets the ids of the children of the node in a hashset.
     pub fn get_children_ids(&self) -> HashSet<PackageId> {
         self.children.iter().map(|c| c.id.clone()).collect()
     }
 
-    /// Gets references to the child nodes.
+    /// Gets the child nodes as reference.
     pub fn get_children(&self) -> &Vec<Node<V, L>> {
         &self.children
     }
 
-    /// Gets mutable references to the child nodes.
+    /// Gets the child nodes as mutable reference.
     pub fn get_children_mut(&mut self) -> &mut Vec<Node<V, L>> {
         &mut self.children
     }
@@ -200,10 +212,12 @@ impl<V, L: Eq> Node<V, L> {
     }
 }
 
+/// Represents an empty node, without any value or label.
 pub type EmptyNode = Node<(), ()>;
 
-/// An empty node implementation (node without values or labels).
+// An empty node implementation, without any values or labels.
 impl EmptyNode {
+    /// Builds a simple tree based on the installed packages.
     pub fn build_simple_tree(package_id: PackageId, register: &PackageRegister) -> Result<EmptyNode> {
         TreeBuilder::new()
             .root(package_id, (), ())
@@ -212,17 +226,19 @@ impl EmptyNode {
             .build()
     }
 
+    /// Gets the children based on the installed packages.
     fn expander(parent: &EmptyNode, register: &PackageRegister) -> Result<Vec<PackageId>> {
         let package = register.get_package_version(parent.get_id()).ok_or(TreeError::NotFound(parent.get_id().clone()))?;
         Ok(package.dependencies.iter().cloned().collect())
     }
 
+    /// Populates nodes with empty values and labels.
     fn populator(package_id: PackageId) -> Result<(PackageId, (), ())> {
         Ok((package_id, (), ()))
     }
 }
 
-/// Display trait for nice display of a tree.
+// Display trait for nice display of a tree.
 impl<V, L: Eq> Display for Node<V, L> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.display_impl(f, self, "")?;

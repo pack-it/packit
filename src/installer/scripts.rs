@@ -47,6 +47,7 @@ pub enum ScriptError {
 
 pub type Result<T> = core::result::Result<T, ScriptError>;
 
+/// Holds data necessary for script execution.
 pub struct ScriptData<'a> {
     path: &'a dyn AsRef<Path>,
     package_install_path: &'a dyn AsRef<Path>,
@@ -56,6 +57,7 @@ pub struct ScriptData<'a> {
 }
 
 impl<'a> ScriptData<'a> {
+    /// Creates a new `ScriptData` instance.
     pub fn new(
         path: &'a impl AsRef<Path>,
         package_install_path: &'a impl AsRef<Path>,

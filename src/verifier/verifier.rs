@@ -14,7 +14,7 @@ use crate::{
     },
 };
 
-/// An enum which represents a specific check.
+/// Represents a specific check.
 enum Check {
     StorageConsistency,
     RegisterConsistency,
@@ -32,7 +32,7 @@ const VERIFY_ORDER: &[Check] = &[
     Check::DependencyTree,
 ];
 
-/// Verifier which scans the Packit environment for issues.
+/// Verifier that scans the Packit environment for issues.
 pub struct Verifier<'a> {
     config: &'a Config,
     current_issue: usize,
@@ -49,8 +49,8 @@ impl<'a> Verifier<'a> {
         }
     }
 
-    /// Gets the next issue in the correct order, defined in VERIFY_ORDER.
-    /// None is returned if there are no more issues to return.
+    /// Gets the next issue in the order defined in VERIFY_ORDER.
+    /// Returns None if there are no more issues to return.
     pub fn next_issue(&mut self, register: &PackageRegister) -> Result<Option<Issue>> {
         loop {
             let check = match VERIFY_ORDER.get(self.current_issue) {
@@ -79,8 +79,8 @@ impl<'a> Verifier<'a> {
         }
     }
 
-    /// Gets the next issue for a specific package in the correct order, defined in VERIFY_ORDER.
-    /// None is returned if there are no more issues to return.
+    /// Gets the next issue for a specific package in the order defined in VERIFY_ORDER.
+    /// Returns None if there are no more issues to return.
     /// Note that this method assumes that the package exists.
     pub fn next_package_issue(&mut self, package_id: &PackageId, register: &PackageRegister) -> Result<Option<Issue>> {
         loop {
@@ -95,7 +95,7 @@ impl<'a> Verifier<'a> {
             let issue = match check {
                 Check::StorageConsistency if self.package_storage_is_consistent(package_id)? => continue,
                 Check::StorageConsistency => Issue::InconsistentStorage(vec![package_id.clone()]),
-                Check::RegisterConsistency if self.register_package_is_consistent(package_id, register)? => continue,
+                Check::RegisterConsistency if self.register_package_is_consistent(package_id, register) => continue,
                 Check::RegisterConsistency => Issue::InconsistentRegister(vec![package_id.clone()]),
                 Check::DependencyTree => {
                     let missing_dependencies = self.check_package_dependency_tree(package_id, register);
@@ -116,9 +116,9 @@ impl<'a> Verifier<'a> {
     }
 
     /// Checks for alterations in all packages using a checksum which is compared to the checksum from the pre-build.
-    /// Returns an alteration issue or None if there are no packages which are altered.
+    /// Returns an alteration issue or None if no packages can be found that are altered.
     fn check_alterations(&self, register: &PackageRegister) -> Result<Option<Issue>> {
-        // Find issues with a package, maybe even package it and compare it with checksum
+        // Check issue for all installed packages
         let mut altered = Vec::new();
         for package in register.iterate_all() {
             if self.check_package_alterations(&package.package_id, register)? {
@@ -205,7 +205,7 @@ impl<'a> Verifier<'a> {
         Ok(checksum != correct_checksum)
     }
 
-    /// Checks if all packages in the register also exist in the Packit package storage.
+    /// Checks if all packages in the register also exist in the package storage in the prefix directory.
     /// Returns a storage consistency issue or None if there are no packages missing from storage.
     fn check_storage_consistency(&self, register: &PackageRegister) -> Result<Option<Issue>> {
         let mut missing = Vec::new();
@@ -223,7 +223,7 @@ impl<'a> Verifier<'a> {
     }
 
     /// Checks if a specific package exists in storage. Note that it doesn't check if the package also exists in the register.
-    /// Returns false if the package storage isn't consistent, true if it is.
+    /// Returns false if the package can not be found in the storage, true if it can be found.
     fn package_storage_is_consistent(&self, package_id: &PackageId) -> Result<bool> {
         let installed_directory = self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
 
@@ -235,7 +235,7 @@ impl<'a> Verifier<'a> {
         Ok(false)
     }
 
-    /// Checks if all packages in storage also exist in the Packit register.
+    /// Checks if all packages in storage also exist in the register.
     /// Returns a register consistency issue or None if there are packages missing from the register.
     fn check_register_consistency(&self, register: &PackageRegister) -> Result<Option<Issue>> {
         let package_directory = self.config.prefix_directory.join("packages");
@@ -277,14 +277,14 @@ impl<'a> Verifier<'a> {
 
     /// Checks if a specific package exists in the register. Note that it doesn't check if the package also exists in storage.
     /// Returns false if the package register isn't consistent, true if it is.
-    fn register_package_is_consistent(&self, package_id: &PackageId, register: &PackageRegister) -> Result<bool> {
+    fn register_package_is_consistent(&self, package_id: &PackageId, register: &PackageRegister) -> bool {
         // Return no issue if the package exists in the register
         if register.get_package_version(package_id).is_some() {
-            return Ok(true);
+            return true;
         }
 
         // Return an inconsistent register issue if the package exists in storage, but not in the register
-        Ok(false)
+        false
     }
 
     /// Checks the completeness of the depedency trees from the packages.
@@ -327,6 +327,8 @@ impl<'a> Verifier<'a> {
         missing
     }
 
+    /// Checks if the packit group exists if multiuser mode is enabled in the config.
+    /// Returns the issue if the group does not exist, None otherwise.
     fn check_packit_group(&self) -> Option<Issue> {
         if !self.config.multiuser {
             return None; // We don't need the packit group if multiuser mode is not enabled
@@ -345,6 +347,7 @@ impl<'a> Verifier<'a> {
     }
 
     /// Get the issues found states.
+    /// Returns true if issues are found, false otherwise.
     pub fn issues_found(&self) -> bool {
         self.issues_found
     }

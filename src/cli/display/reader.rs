@@ -20,8 +20,8 @@ impl<R: Read + Seek> ReaderWithProgress<R> {
     }
 }
 
+// Implements read, to update the progress bar.
 impl<R: Read + Seek> Read for ReaderWithProgress<R> {
-    // Implements read, so it updates the progress bar.
     fn read(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
         let n_bytes = self.reader.read(buffer)?;
 

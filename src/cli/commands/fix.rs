@@ -12,6 +12,7 @@ use crate::{
     verifier::{Repairer, Verifier},
 };
 
+/// Fixes all issues found by the check command. The user will be asked if they want to fix an issue for each issue type.
 #[derive(Args, Debug)]
 pub struct FixArgs;
 

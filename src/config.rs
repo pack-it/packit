@@ -23,9 +23,11 @@ pub struct Config {
     /// Contains the ranks of all repositories
     pub repositories_rank: Vec<String>,
 
+    /// The prefix directory to use
     #[serde(default = "Config::default_prefix_directory")]
     pub prefix_directory: PathBuf,
 
+    /// True to enable multiuser mode, false to use singleuser mode
     #[serde(default = "Config::default_multiuser")]
     pub multiuser: bool,
 }
@@ -33,7 +35,7 @@ pub struct Config {
 /// Represents a repository, containing connection information.
 #[derive(Deserialize, Debug)]
 pub struct Repository {
-    /// Path to the repository
+    /// The path to the repository
     pub path: String,
 
     /// The repository provider, defaults to the packit repository format
@@ -48,6 +50,7 @@ pub struct Repository {
 }
 
 impl Repository {
+    /// Creates a new repository with the specified path and provider
     pub fn new(path: &str, provider: &str) -> Self {
         Self {
             path: path.to_string(),
@@ -57,6 +60,7 @@ impl Repository {
         }
     }
 
+    /// Specifies the default repository provider id
     pub fn default_repository_provider() -> String {
         DEFAULT_METADATA_PROVIDER_ID.into()
     }

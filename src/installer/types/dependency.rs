@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize, de};
 
 use crate::installer::types::{PackageName, Version, VersionBounds, version_intervals::VersionIntervals};
 
+/// Holds a dependency name and its allowed versions.
 #[derive(Debug, Clone)]
 pub struct Dependency {
     name: PackageName,
@@ -11,6 +12,7 @@ pub struct Dependency {
 }
 
 impl<'de> Deserialize<'de> for Dependency {
+    /// Deserializes a string into a Dependency.
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -36,6 +38,7 @@ impl<'de> Deserialize<'de> for Dependency {
 }
 
 impl Serialize for Dependency {
+    /// Serializes a Dependency into a string.
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -45,6 +48,7 @@ impl Serialize for Dependency {
 }
 
 impl Display for Dependency {
+    /// Formats the current dependency in the following style: `<name>[@version-intervals]`.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // Return only the name if the version isn't specified
         if self.version_intervals.is_empty() {
@@ -75,10 +79,13 @@ impl Display for Dependency {
 }
 
 impl Dependency {
+    /// Gets the dependency name.
     pub fn get_name(&self) -> &PackageName {
         &self.name
     }
 
+    /// Checks if a given name and version satisfy the current dependency.
+    /// Returns true if it does, false otherwise.
     pub fn satisfied(&self, name: &PackageName, version: &Version) -> bool {
         if self.name != *name {
             return false;
@@ -106,9 +113,9 @@ pub mod tests {
         let package_name = PackageName::from_str("test").expect("Expected valid package name.");
         let dependency = create_dependency("test", "3.4.1-3.4.8");
 
-        assert!(dependency.satisfied(&package_name, &Version::from_str("3.4.8").expect("Expected Version.")));
+        assert!(dependency.satisfied(&package_name, &Version::from_str("3.4.7").expect("Expected Version.")));
         assert!(!dependency.satisfied(&package_name, &Version::from_str("3.4.0").expect("Expected version")));
-        assert!(!dependency.satisfied(&package_name, &Version::from_str("3.4.9").expect("Expected version")));
+        assert!(!dependency.satisfied(&package_name, &Version::from_str("3.4.8").expect("Expected version")));
     }
 
     #[test]

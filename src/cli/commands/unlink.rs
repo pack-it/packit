@@ -8,6 +8,7 @@ use crate::{
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
+/// Unlinks the specified package, causing the package to be unavailable from the PATH environment variable.
 #[derive(Args, Debug)]
 pub struct UnlinkArgs {
     /// The name of the package to unlink

@@ -1,3 +1,7 @@
+/*
+ * File containing the platform dependent defaults.
+ */
+
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 pub const DEFAULT_PREFIX: &str = "/opt/packit";
 

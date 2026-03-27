@@ -17,7 +17,7 @@ use crate::{
     repositories::{error::RepositoryError, types::Checksum},
 };
 
-/// The errors that occur during installation.
+/// The errors that occur while packaging a package.
 #[derive(Error, Debug)]
 pub enum PackagerError {
     #[error("Cannot parse filename, because it contains invalid unicode")]
@@ -30,6 +30,8 @@ pub enum PackagerError {
     IOError(#[from] std::io::Error),
 }
 
+/// Packages a package to a given destination. If the destination doesn't exist an IO [NotADirectory](std::io::ErrorKind::NotADirectory) error is returned.
+/// The revision is used to create a unique filename for different package revisions.
 pub fn package(config: &Config, package_id: &PackageId, destination: &PathBuf, revisions: usize) -> Result<(), PackagerError> {
     warning!("This is an experimental feature, checksums calculated with the packager for pre-builds might not be accurate.");
     let install_directory = config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
@@ -42,7 +44,7 @@ pub fn package(config: &Config, package_id: &PackageId, destination: &PathBuf, r
     // Compress the package
     let compressed = compress(&install_directory)?;
 
-    // Calculate checksum for the compressed
+    // Calculate checksum for the compressed package
     let checksum = Checksum::from_bytes(&compressed);
 
     // Create the file names
@@ -62,6 +64,7 @@ pub fn package(config: &Config, package_id: &PackageId, destination: &PathBuf, r
     Ok(())
 }
 
+/// Compresses a given directory using a normalized tar and returns the compressed bytes.
 pub fn compress(source_directory: &PathBuf) -> Result<Vec<u8>, PackagerError> {
     let buffer = Vec::new();
     let encoder = GzBuilder::new().mtime(0).write(buffer, Compression::default());
@@ -71,77 +74,14 @@ pub fn compress(source_directory: &PathBuf) -> Result<Vec<u8>, PackagerError> {
     create_normalized_tar(&mut tar_builder, &PathBuf::from("."), source_directory)?;
     tar_builder.finish()?;
 
-    // Finish writing
+    // Build tar into bytes vec
     let encoder = tar_builder.into_inner()?;
     let encoded = encoder.finish()?;
 
     Ok(encoded)
 }
 
-fn normalized_header(header: &mut Header, data_length: u64, tar_path: &PathBuf, file_path: &PathBuf) -> Result<(), PackagerError> {
-    // For symlink do symlink_metadata() instead of metadata()
-    let mode = match header.entry_type() == EntryType::Symlink {
-        true => fs::symlink_metadata(file_path)?.permissions().mode(),
-        false => fs::metadata(file_path)?.permissions().mode(),
-    };
-
-    header.set_size(data_length);
-    header.set_mode(mode);
-    header.set_uid(0);
-    header.set_gid(0);
-    header.set_mtime(0);
-    header.set_path(tar_path)?;
-
-    Ok(())
-}
-
-fn add_file(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, file_path: &PathBuf) -> Result<(), PackagerError> {
-    // Get file
-    let file = File::open(file_path)?;
-
-    // Create regular file header
-    let mut header = Header::new_ustar();
-    header.set_entry_type(EntryType::Regular);
-    normalized_header(&mut header, file.metadata()?.len() as u64, tar_path, file_path)?;
-
-    // Reset header checksum (different from our checksum)
-    header.set_cksum();
-
-    builder.append_data(&mut header, tar_path, file)?;
-
-    Ok(())
-}
-
-fn add_directory(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, file_path: &PathBuf) -> Result<(), PackagerError> {
-    // Create directory header
-    let mut header = Header::new_ustar();
-    header.set_entry_type(EntryType::Directory);
-    normalized_header(&mut header, 0, tar_path, file_path)?;
-
-    // Reset header checksum (different from our checksum)
-    header.set_cksum();
-
-    builder.append_data(&mut header, tar_path, io::empty())?;
-
-    Ok(())
-}
-
-fn add_symlink(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, file_path: &PathBuf) -> Result<(), PackagerError> {
-    let target = fs::read_link(file_path)?;
-
-    // Create symlink header
-    let mut header = Header::new_ustar();
-    header.set_entry_type(EntryType::Symlink);
-    normalized_header(&mut header, 0, tar_path, file_path)?;
-
-    // Reset header checksum (different from our checksum)
-    header.set_cksum();
-
-    builder.append_link(&mut header, tar_path, target)?;
-
-    Ok(())
-}
-
+/// Creates a normalized tar by recursively adding files to the tar from a given directory while maintaining the directory structure.
 fn create_normalized_tar(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, file_path: &PathBuf) -> Result<(), PackagerError> {
     add_directory(builder, tar_path, file_path)?;
 
@@ -160,22 +100,89 @@ fn create_normalized_tar(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &P
         let filename = entry.file_name().expect("Expected a valid path termination");
         let filename = filename.to_str().ok_or(PackagerError::InvalidUnicodeError)?;
 
-        // Check for symlink first
+        // Add symlink to tar
         if entry.is_symlink() {
             add_symlink(builder, &tar_path.join(filename), &entry)?;
             continue;
         }
 
+        // Add directory to tar
         if entry.is_dir() {
             create_normalized_tar(builder, &tar_path.join(filename), &entry)?;
             continue;
         }
 
+        // Add file to tar
         if entry.is_file() {
             add_file(builder, &tar_path.join(filename), &entry)?;
             continue;
         }
     }
+
+    Ok(())
+}
+
+/// Adds a normalized directory to a tar file.
+fn add_directory(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, file_path: &PathBuf) -> Result<(), PackagerError> {
+    // Create directory header
+    let mut header = Header::new_ustar();
+    header.set_entry_type(EntryType::Directory);
+    normalize_header(&mut header, 0, tar_path, file_path)?;
+
+    // Add directory to builder
+    builder.append_data(&mut header, tar_path, io::empty())?;
+
+    Ok(())
+}
+
+/// Adds a normalized file to a tar file.
+fn add_file(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, file_path: &PathBuf) -> Result<(), PackagerError> {
+    let file = File::open(file_path)?;
+
+    // Create regular file header
+    let mut header = Header::new_ustar();
+    header.set_entry_type(EntryType::Regular);
+    normalize_header(&mut header, file.metadata()?.len() as u64, tar_path, file_path)?;
+
+    // Add file to builder
+    builder.append_data(&mut header, tar_path, file)?;
+
+    Ok(())
+}
+
+/// Adds a normalized symlink to a tar file.
+fn add_symlink(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, file_path: &PathBuf) -> Result<(), PackagerError> {
+    let target = fs::read_link(file_path)?;
+
+    // Create symlink header
+    let mut header = Header::new_ustar();
+    header.set_entry_type(EntryType::Symlink);
+    normalize_header(&mut header, 0, tar_path, file_path)?;
+
+    // Add symlink to builder
+    builder.append_link(&mut header, tar_path, target)?;
+
+    Ok(())
+}
+
+/// Normalizes a tar header. Most fields are set to zero. The data length and path fields are set based on
+/// the given parameters. The mode field is set based on the entry type of the existing/given header.
+fn normalize_header(header: &mut Header, data_length: u64, tar_path: &PathBuf, file_path: &PathBuf) -> Result<(), PackagerError> {
+    // For symlink do symlink_metadata() instead of metadata()
+    let mode = match header.entry_type() == EntryType::Symlink {
+        true => fs::symlink_metadata(file_path)?.permissions().mode(),
+        false => fs::metadata(file_path)?.permissions().mode(),
+    };
+
+    header.set_size(data_length);
+    header.set_mode(mode);
+    header.set_uid(0);
+    header.set_gid(0);
+    header.set_mtime(0);
+    header.set_path(tar_path)?;
+
+    // Reset header checksum
+    header.set_cksum();
 
     Ok(())
 }

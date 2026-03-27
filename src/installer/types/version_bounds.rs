@@ -4,6 +4,7 @@ use serde::Deserialize;
 
 use crate::installer::types::{Version, VersionError};
 
+/// Holds different types of version bounds.
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Deserialize)]
 pub enum VersionBounds {
     Range(Version, Version),
@@ -18,10 +19,12 @@ pub enum VersionBounds {
 impl FromStr for VersionBounds {
     type Err = VersionError;
 
-    fn from_str(version: &str) -> Result<Self, Self::Err> {
+    /// Parses from a string to `VersionBounds`.
+    /// Could return a `VersionError` error.
+    fn from_str(string: &str) -> Result<Self, Self::Err> {
         // Check if the statement is a two sided range
-        if let Some(index) = version.chars().position(|c| c == '-') {
-            if let Some((lower, upper)) = version.split_at_checked(index) {
+        if let Some(index) = string.chars().position(|c| c == '-') {
+            if let Some((lower, upper)) = string.split_at_checked(index) {
                 if upper.starts_with("-=") {
                     return Ok(VersionBounds::IncludingRange(
                         Version::from_str(lower)?,
@@ -35,28 +38,29 @@ impl FromStr for VersionBounds {
         }
 
         // Check lower equal before lower
-        if let Some(version) = version.strip_prefix("<=") {
+        if let Some(version) = string.strip_prefix("<=") {
             return Ok(VersionBounds::LowerEqual(Version::from_str(version)?));
         }
 
-        if let Some(version) = version.strip_prefix('<') {
+        if let Some(version) = string.strip_prefix('<') {
             return Ok(VersionBounds::Lower(Version::from_str(version)?));
         }
 
         // Check higher equal before higher
-        if let Some(version) = version.strip_prefix(">=") {
+        if let Some(version) = string.strip_prefix(">=") {
             return Ok(VersionBounds::HigherEqual(Version::from_str(version)?));
         }
 
-        if let Some(version) = version.strip_prefix('>') {
+        if let Some(version) = string.strip_prefix('>') {
             return Ok(VersionBounds::Higher(Version::from_str(version)?));
         }
 
-        return Ok(VersionBounds::Equal(Version::from_str(version)?));
+        return Ok(VersionBounds::Equal(Version::from_str(string)?));
     }
 }
 
 impl VersionBounds {
+    /// Checks if the current version bound covers a given version. Returns true if it does, false otherwise.
     pub fn covers(&self, version: &Version) -> bool {
         match self {
             VersionBounds::Range(low, high) if low <= version && high > version => true,

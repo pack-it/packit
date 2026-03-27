@@ -15,6 +15,8 @@ use crate::{
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
+/// Updates the specified package to the new version, or the latest version if no new version is specified.
+/// If multiple versions of the same package are installed, the <VERSION> option is required.
 #[derive(Args, Debug)]
 pub struct UpdateArgs {
     /// The name of the package to update, with an optional version specified with NAME@VERSION.

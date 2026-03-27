@@ -16,7 +16,7 @@ use crate::{
     },
 };
 
-/// Repairer which gets issues with the verifier and fixes them.
+/// Repairer that fixes issues found by the verifier.
 pub struct Repairer<'a> {
     config: &'a Config,
     manager: &'a RepositoryManager<'a>,
@@ -49,7 +49,7 @@ impl<'a> Repairer<'a> {
                 continue;
             }
 
-            // Install and save
+            // Install the package
             let installer_options = InstallerOptions::default().skip_symlinking(true);
             let mut installer = Installer::new(&self.config, register, &self.manager, installer_options);
             installer.install(&missing_package.clone().into())?;
@@ -107,7 +107,7 @@ impl<'a> Repairer<'a> {
                 remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&package_directory))?;
             }
 
-            // Remove the packages
+            // Remove the package
             fs::remove_dir_all(&package_directory.join(&package_id.name).join(package_id.version.to_string()))?;
 
             // Re-install the package

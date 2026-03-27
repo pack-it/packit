@@ -10,6 +10,7 @@ use crate::{
     utils::{tree::EmptyNode, unwrap_or_exit::UnwrapOrExit},
 };
 
+/// Shows info about the specified installed package.
 #[derive(Args, Debug)]
 pub struct InfoArgs {
     /// Optional package id

@@ -4,6 +4,7 @@ use crate::{
     cli::commands::HandleCommand, config::Config, storage::package_register::PackageRegister, utils::unwrap_or_exit::UnwrapOrExit,
 };
 
+/// Lists all the installed packages.
 // TODO: Expand command to list updateable packages
 #[derive(Args, Debug)]
 pub struct ListArgs;

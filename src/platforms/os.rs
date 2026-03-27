@@ -5,6 +5,7 @@ use crate::{
     installer::types::Version,
 };
 
+/// Represents an operating system type.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Os {
     MacOs,
@@ -14,6 +15,7 @@ pub enum Os {
 }
 
 impl Os {
+    /// Checks if the current OS is Unix based.
     pub fn is_unix(&self) -> bool {
         match self {
             Self::MacOs | Self::Linux => true,
@@ -22,6 +24,7 @@ impl Os {
     }
 }
 
+/// Represents an OS version. In case of Linux this also includes the distro and distro version.
 #[derive(Clone, Debug)]
 #[allow(dead_code)]
 pub enum OsVersion {
@@ -39,16 +42,20 @@ pub enum OsVersion {
     Unknown,
 }
 
+/// Global variable keeping the current OS version.
 static CURRENT_VERSION: LazyLock<OsVersion> = LazyLock::new(|| match OsVersion::get_version() {
     Some(value) => value,
     None => OsVersion::Unknown,
 });
 
 impl OsVersion {
+    /// Returns the OsVersion of the current system.
     pub fn current() -> Self {
         CURRENT_VERSION.clone()
     }
 
+    /// Gets the macOS version.
+    /// Returns None if the version cannot be fetched or parsed.
     #[cfg(target_os = "macos")]
     fn get_version() -> Option<Self> {
         use std::process::Command;
@@ -82,6 +89,8 @@ impl OsVersion {
         Some(Self::MacOs { version })
     }
 
+    /// Gets the Linux version, represented with the distro name, distro version and kernel version.
+    /// Returns None if version information cannot be read or parsed, although an error message might sometimes be shown.
     #[cfg(target_os = "linux")]
     fn get_version() -> Option<Self> {
         use std::fs;
@@ -172,6 +181,7 @@ impl OsVersion {
         })
     }
 
+    /// Gets the current Windows version.
     #[cfg(target_os = "windows")]
     fn get_version() -> Option<Self> {
         let windows_version = windows_version::OsVersion::current();
@@ -186,11 +196,13 @@ impl OsVersion {
         Some(Self::Windows { version })
     }
 
+    /// Returns None for any unsupported OS.
     #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
     fn get_version() -> Option<Self> {
         None
     }
 
+    /// Gets the current OS type.
     pub fn get_os(&self) -> Os {
         match self {
             Self::MacOs { .. } => Os::MacOs,

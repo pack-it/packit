@@ -11,6 +11,7 @@ use crate::{
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
+/// Switches the active version of the specified package to the specified version.
 #[derive(Args, Debug)]
 pub struct SwitchArgs {
     /// The name of the package to switch

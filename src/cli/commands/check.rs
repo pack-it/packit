@@ -11,6 +11,7 @@ use crate::{
     verifier::Verifier,
 };
 
+/// Checks for any inconsistencies or mistakes in the installed packages or in the Packit files itself.
 #[derive(Args, Debug)]
 pub struct CheckArgs {
     /// Optional package id, to limit the check to the specified package

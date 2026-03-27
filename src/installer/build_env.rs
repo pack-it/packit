@@ -20,6 +20,7 @@ const STRIPPED_VARS: &'static [&'static str] = &[
     "MACOSX_DEPLOYMENT_TARGET", "SDKROOT", "DEVELOPER_DIR"
 ];
 
+/// Holds all the data necessary to build a normalized build environment.
 pub struct BuildEnv<'a> {
     prefix_directory: &'a PathBuf,
     dependencies: Vec<&'a InstalledPackageVersion>,
@@ -28,6 +29,7 @@ pub struct BuildEnv<'a> {
 }
 
 impl<'a> Into<Environment> for BuildEnv<'a> {
+    /// Converts the `BuildEnv` struct into a normalized `Environment` struct.
     fn into(self) -> Environment {
         let mut env = Environment::new();
 
@@ -70,6 +72,7 @@ impl<'a> Into<Environment> for BuildEnv<'a> {
 }
 
 impl<'a> BuildEnv<'a> {
+    /// Creates a new `BuildEnv`.
     pub fn new(
         prefix_directory: &'a PathBuf,
         dependencies: Vec<&'a InstalledPackageVersion>,
@@ -84,6 +87,8 @@ impl<'a> BuildEnv<'a> {
         }
     }
 
+    /// Creates the `PATH` for the `Environment`. The path will include the bin directories
+    /// of all (build) dependencies and standard Unix system bin paths (if on Unix).
     fn create_path(&self) -> String {
         let mut parts = Vec::new();
 
@@ -111,7 +116,7 @@ impl<'a> BuildEnv<'a> {
             };
         }
 
-        // Add standard unix system bin paths to PATH
+        // Add standard Unix system bin paths to PATH
         #[cfg(any(target_os = "macos", target_os = "linux"))]
         {
             parts.append(&mut vec!["/usr/bin", "/bin", "/usr/sbin", "/sbin"].into_iter().map(String::from).collect());
@@ -120,6 +125,8 @@ impl<'a> BuildEnv<'a> {
         parts.join(":")
     }
 
+    /// Creates the `PKG_CONFIG_PATH` to pkgconfig inside of the lib and share directories of the (build) dependencies.
+    /// It also adds the necessary platform specific paths.
     fn create_pkg_config_path(&self) -> String {
         let mut parts: Vec<String> = Vec::new();
 
@@ -166,6 +173,7 @@ impl<'a> BuildEnv<'a> {
         parts.join(":")
     }
 
+    /// Creates the `CMAKE_PREFIX_PATH` with the (build) dependency install paths.
     fn create_cmake_prefix_path(&self) -> String {
         let mut parts: Vec<String> = Vec::new();
 
@@ -199,6 +207,7 @@ impl<'a> BuildEnv<'a> {
         parts.join(":")
     }
 
+    /// Creates the `ACLOCAL_PATH` from the share/aclocal in each (build) dependency.
     fn create_aclocal_path(&self) -> String {
         let mut parts: Vec<String> = Vec::new();
 

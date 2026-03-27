@@ -10,6 +10,8 @@ use crate::{
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
+/// Searches a package with <PACKAGE-NAME> and shows information based on the package metadata.
+/// If the version is given that specific version is searched for.
 #[derive(Args, Debug)]
 pub struct SearchArgs {
     /// The name of the package to install, with an optional version specified with NAME@VERSION

@@ -11,6 +11,7 @@ use crate::{
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
+/// Packages the specified package into a prebuild and store it in the destination directory, together with a checksum of the prebuild.
 #[derive(Args, Debug)]
 pub struct PackageArgs {
     /// The package id of the package
