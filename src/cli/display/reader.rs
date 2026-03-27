@@ -11,10 +11,10 @@ pub struct ReaderWithProgress<R: Read + Seek> {
 
 impl<R: Read + Seek> ReaderWithProgress<R> {
     /// Creates a new reader with a progress bar.
-    pub fn new(reader: R, size: u64, prefix: String) -> Self {
+    pub fn new(reader: R, size: u64, bar_prefix: String) -> Self {
         Self {
             reader,
-            bar: ProgressBar::new(size, prefix),
+            bar: ProgressBar::new(size, bar_prefix),
             total: 0,
         }
     }

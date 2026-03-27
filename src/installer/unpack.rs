@@ -5,7 +5,7 @@ use tar::Archive;
 use thiserror::Error;
 use zip::ZipArchive;
 
-use crate::cli::display::ReaderWithProgress;
+use crate::{cli::display::ReaderWithProgress, installer::types::PackageName};
 
 /// The errors that occur during unpacking.
 #[derive(Error, Debug)]
@@ -49,7 +49,7 @@ impl ArchiveExtension {
 }
 
 // Unpacks files and saves them to the provided destination directory.
-pub fn unpack<P: AsRef<Path>>(package: String, extension: ArchiveExtension, bytes: Bytes, destination_directory: P) -> Result<()> {
+pub fn unpack<P: AsRef<Path>>(package: &PackageName, extension: ArchiveExtension, bytes: Bytes, destination_directory: P) -> Result<()> {
     let size = bytes.len();
     let cursor = Cursor::new(bytes);
 
