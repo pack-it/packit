@@ -11,7 +11,7 @@ use crate::{
 
 /// The errors that occur during binary operations.
 #[derive(Error, Debug)]
-pub enum BinaryError {
+pub enum BinaryPatcherError {
     #[error("Binary '{path}' cannot be parsed.")]
     CannotParseBinary {
         path: PathBuf,
@@ -30,7 +30,7 @@ pub enum BinaryError {
     OsStringConversionError,
 }
 
-type Result<T> = std::result::Result<T, BinaryError>;
+type Result<T> = std::result::Result<T, BinaryPatcherError>;
 
 pub struct BinaryPatcher<'a> {
     config: &'a Config,
@@ -66,7 +66,9 @@ impl<'a> BinaryPatcher<'a> {
                 // If the entry is a file, try to patch it
                 if metadata.is_file() {
                     match self.patch_binary(&entry.path(), package) {
-                        Ok(_) | Err(BinaryError::CannotParseBinary { .. }) | Err(BinaryError::UnsupportedBinaryType { .. }) => (),
+                        Ok(_)
+                        | Err(BinaryPatcherError::CannotParseBinary { .. })
+                        | Err(BinaryPatcherError::UnsupportedBinaryType { .. }) => (),
                         Err(e) => return Err(e),
                     }
                 }
@@ -91,12 +93,12 @@ impl<'a> BinaryPatcher<'a> {
                 todo!();
             },
             Some(Binary::COFF(_)) => {
-                return Err(BinaryError::UnsupportedBinaryType {
+                return Err(BinaryPatcherError::UnsupportedBinaryType {
                     path: path.clone(),
                     bin_type: "COFF".into(),
                 });
             },
-            None => return Err(BinaryError::CannotParseBinary { path: path.clone() }),
+            None => return Err(BinaryPatcherError::CannotParseBinary { path: path.clone() }),
         }
 
         Ok(())
@@ -128,8 +130,8 @@ impl<'a> BinaryPatcher<'a> {
                         continue;
                     }
 
-                    let dependency_name = parts[0].as_os_str().to_str().ok_or(BinaryError::OsStringConversionError)?;
-                    let dependency_version = parts[1].as_os_str().to_str().ok_or(BinaryError::OsStringConversionError)?;
+                    let dependency_name = parts[0].as_os_str().to_str().ok_or(BinaryPatcherError::OsStringConversionError)?;
+                    let dependency_version = parts[1].as_os_str().to_str().ok_or(BinaryPatcherError::OsStringConversionError)?;
 
                     // Check if the dependency links to the package itself
                     if dependency_name == *package.name && dependency_version == package.version.to_string() {
@@ -140,7 +142,7 @@ impl<'a> BinaryPatcher<'a> {
                     let new_suffix: PathBuf = parts.iter().skip(2).collect();
                     let new_path = new_prefix.join(new_suffix);
 
-                    library.set_name(new_path.to_str().ok_or(BinaryError::OsStringConversionError)?);
+                    library.set_name(new_path.to_str().ok_or(BinaryPatcherError::OsStringConversionError)?);
 
                     changed = true;
                 }
@@ -154,7 +156,7 @@ impl<'a> BinaryPatcher<'a> {
                 binary.write_with_config(path, config);
 
                 // Sign binary
-                let path = path.to_str().ok_or(BinaryError::OsStringConversionError)?;
+                let path = path.to_str().ok_or(BinaryPatcherError::OsStringConversionError)?;
                 match Command::new("/usr/bin/codesign").args(["--sign", "-", "--force", path]).status() {
                     Ok(code) if !code.success() => {
                         error!(msg: "Cannot resign binary, exit code {code}");
