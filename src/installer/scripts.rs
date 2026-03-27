@@ -54,6 +54,7 @@ pub struct ScriptData<'a> {
     package_version: &'a Version,
     config: &'a Config,
     args: &'a HashMap<&'a str, &'a str>,
+    verbose: bool,
 }
 
 impl<'a> ScriptData<'a> {
@@ -64,6 +65,7 @@ impl<'a> ScriptData<'a> {
         package_version: &'a Version,
         config: &'a Config,
         args: &'a HashMap<&str, &str>,
+        verbose: bool,
     ) -> Self {
         Self {
             path,
@@ -71,6 +73,7 @@ impl<'a> ScriptData<'a> {
             package_version,
             config,
             args,
+            verbose,
         }
     }
 }
@@ -78,36 +81,36 @@ impl<'a> ScriptData<'a> {
 /// Runs the given pre install script, in the given directory.
 /// Note that the script should be a `.sh` script on Linux and macOS and a `.bat` on Windows.
 pub fn run_pre_script(script_data: &ScriptData, run_dir: impl AsRef<Path>) -> Result<()> {
-    run_script(script_data, run_dir, Environment::new())
+    run_script(script_data, run_dir, Environment::new(), true)
 }
 
 /// Runs the given build script, in the given directory.
 /// Note that the script should be a `.sh` script on Linux and macOS and a `.bat` on Windows.
 pub fn run_build_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, build_env: BuildEnv) -> Result<()> {
-    run_script(script_data, run_dir, build_env.into())
+    run_script(script_data, run_dir, build_env.into(), script_data.verbose)
 }
 
 /// Runs the given post install script, in the package install directory.
 /// Note that the script should be a `.sh` script on Linux and macOS and a `.bat` on Windows.
 pub fn run_post_script(script_data: &ScriptData) -> Result<()> {
-    run_script(script_data, &script_data.package_install_path, Environment::new())
+    run_script(script_data, &script_data.package_install_path, Environment::new(), true)
 }
 
 /// Runs the given test script, in the package install directory.
 /// Note that the script should be a `.sh` script on Linux and macOS and a `.bat` on Windows.
 pub fn run_test_script(script_data: &ScriptData) -> Result<()> {
-    run_script(script_data, script_data.package_install_path, Environment::new())
+    run_script(script_data, script_data.package_install_path, Environment::new(), true)
 }
 
 /// Runs the given uninstall script, in the package install directory.
 /// Note that the script should be a `.sh` script on Linux and macOS and a `.bat` on Windows.
 pub fn run_uninstall_script(script_data: &ScriptData) -> Result<()> {
-    run_script(script_data, script_data.package_install_path, Environment::new())
+    run_script(script_data, script_data.package_install_path, Environment::new(), true)
 }
 
 /// Runs the script at the given path, in the given directory.
 /// Note that the script should be a `.sh` script on Linux and macOS and a `.bat` on Windows.
-fn run_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, env: Environment) -> Result<()> {
+fn run_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, env: Environment, show_output: bool) -> Result<()> {
     let path = to_absolute_path(&script_data.path)?;
 
     let package_install_path = to_absolute_path(script_data.package_install_path)?;
@@ -116,12 +119,16 @@ fn run_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, env: Environm
     let mut command = create_command(path);
     command
         .current_dir(run_dir)
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
         .env("PACKIT_PREFIX_PATH", &script_data.config.prefix_directory)
         .env("PACKIT_TARGET", TargetArchitecture::current().to_string())
         .env("PACKIT_PACKAGE_PATH", package_install_path)
-        .env("PACKIT_PACKAGE_VERSION", script_data.package_version.to_string());
+        .env("PACKIT_PACKAGE_VERSION", script_data.package_version.to_string())
+        .env("PACKIT_VERBOSE", if script_data.verbose { "1" } else { "0" });
+
+    // Only display build logging if verbose is enabled
+    if show_output {
+        command.stdout(Stdio::inherit()).stderr(Stdio::inherit());
+    }
 
     // Remove stripped environment variables
     for key in env.stripped_vars {

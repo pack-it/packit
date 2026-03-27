@@ -1,7 +1,7 @@
 use crate::{
     cli::display::{
-        QuestionResponse, ask_user,
-        logging::{error, warning},
+        QuestionResponse, Spinner, ask_user,
+        logging::{debug, error, warning},
     },
     config::{Config, Repository},
     installer::{
@@ -57,8 +57,11 @@ impl<'a> Installer<'a> {
     }
 
     /// Installs the given package and its dependencies.
+    /// Returns a `PackageId` from the installed package if successful.
     /// Returns an `InstallerError::PermissionsError` if the current user doesn't have the correct permissions.
-    pub fn install(&mut self, optional_id: &OptionalPackageId) -> Result<()> {
+    /// Returns an `InstallerError::AlreadyInstalledError` if the package already exists.
+    /// Returns an `InstallerError::InstallationCanceled` if the installation is canceled.
+    pub fn install(&mut self, optional_id: &OptionalPackageId) -> Result<PackageId> {
         // Check if we can write to the prefix directory
         if !self.can_write_prefix_dir()? {
             return Err(InstallerError::PermissionsError);
@@ -71,15 +74,17 @@ impl<'a> Installer<'a> {
         if optional_id.version.is_none() {
             if let Some(package) = self.register.get_package(&optional_id.name) {
                 if package.get_package_version(latest_version).is_some() {
-                    println!("The latest version '{latest_version}' of '{optional_id}' is already installed.");
-                    return Ok(());
+                    let package_id = optional_id.versioned_or(latest_version.clone());
+                    return Err(InstallerError::AlreadyInstalledError { package_id });
                 }
 
                 let question = format!(
                     "The package '{optional_id}' is already installed, but a newer version '{latest_version}' is available. Do you wish to install the latest version as well?"
                 );
                 if ask_user(&question, QuestionResponse::No)?.is_no_or_invalid() {
-                    return Ok(());
+                    return Err(InstallerError::InstallationCanceled {
+                        reason: "A version of this package was already installed".to_string(),
+                    });
                 }
             }
         }
@@ -89,8 +94,7 @@ impl<'a> Installer<'a> {
 
         // Check if this package version is already installed
         if self.register.get_package_version(&package_id).is_some() {
-            println!("Package '{}' already installed.", package_id);
-            return Ok(());
+            return Err(InstallerError::AlreadyInstalledError { package_id });
         }
 
         // Get package version info
@@ -108,19 +112,23 @@ impl<'a> Installer<'a> {
         let install_label = InstallLabel::new(self.options.install_type.clone(), false);
 
         // Create the install tree based on the install type
+        println!("Building dependency tree");
         let mut dependency_tree = TreeBuilder::new()
-            .root(package_id, Some(root_meta), install_label)
+            .root(package_id.clone(), Some(root_meta), install_label)
             .expander(InstallNode::expander)
             .populator(|(d, l)| InstallNode::populator(self.register, self.repository_manager, &d, l))
             .build()?;
 
+        println!("Installing the following packages:");
+        println!("{dependency_tree}");
         self.install_nodes(&mut dependency_tree)?;
 
-        if !self.options.keep_build {
+        if !self.options.keep_build && self.options.install_type != InstallType::Prebuild {
+            println!("Removing build dependencies");
             self.remove_build_dependencies(&dependency_tree, true)?;
         }
 
-        Ok(())
+        Ok(package_id)
     }
 
     /// Installs all packages recursively. For each package the install type is considered.
@@ -201,7 +209,14 @@ impl<'a> Installer<'a> {
         let downloaded_script =
             scripts::download_script(self.repository_manager, &script_path, &package_id.name, &install_meta.repository_id)?;
         if let Some(script_file) = downloaded_script {
-            let script_data = ScriptData::new(&script_file, &install_directory, &version_meta.version, self.config, &script_args);
+            let script_data = ScriptData::new(
+                &script_file,
+                &install_directory,
+                &version_meta.version,
+                self.config,
+                &script_args,
+                self.options.verbose,
+            );
             scripts::run_pre_script(&script_data, &install_directory)?;
         }
 
@@ -217,7 +232,8 @@ impl<'a> Installer<'a> {
                 let revision = install_meta.version_metadata.revisions.len() as u64;
                 self.download_prebuild(&install_meta.repository_id, &package_id, revision, &install_directory)?
             },
-            false => Builder::new(self.config, self.register, self.repository_manager).build(&install_meta, &install_directory)?,
+            false => Builder::new(self.config, self.register, self.repository_manager, self.options.verbose)
+                .build(&install_meta, &install_directory)?,
         }
 
         // Set correct permissions for the installed package
@@ -241,7 +257,14 @@ impl<'a> Installer<'a> {
         let downloaded_script =
             scripts::download_script(self.repository_manager, &script_path, &package_id.name, &install_meta.repository_id)?;
         if let Some(script_file) = downloaded_script {
-            let script_data = ScriptData::new(&script_file, &install_directory, &version_meta.version, self.config, &script_args);
+            let script_data = ScriptData::new(
+                &script_file,
+                &install_directory,
+                &version_meta.version,
+                self.config,
+                &script_args,
+                self.options.verbose,
+            );
             scripts::run_post_script(&script_data)?;
         }
 
@@ -252,7 +275,14 @@ impl<'a> Installer<'a> {
         let downloaded_script =
             scripts::download_script(self.repository_manager, &script_path, &package_id.name, &install_meta.repository_id)?;
         if let Some(script_file) = downloaded_script {
-            let script_data = ScriptData::new(&script_file, &install_directory, &version_meta.version, self.config, &script_args);
+            let script_data = ScriptData::new(
+                &script_file,
+                &install_directory,
+                &version_meta.version,
+                self.config,
+                &script_args,
+                self.options.verbose,
+            );
             scripts::run_test_script(&script_data)?;
         }
 
@@ -324,6 +354,7 @@ impl<'a> Installer<'a> {
 
         // Don't remove the package if it's the root
         if !is_root {
+            println!("Remove build dependency {}", parent.get_id());
             self.uninstall(optional_id)?;
         }
 
@@ -337,29 +368,38 @@ impl<'a> Installer<'a> {
     /// Downloads a package pre-build and unpacks it into the given destination directory.
     /// Returns an `InstallerError::ChecksumError` if the pre-build checksum doesn't match.
     fn download_prebuild(&self, repository_id: &str, package: &PackageId, revision: u64, destination_dir: impl AsRef<Path>) -> Result<()> {
+        // Show download spinner
+        let spinner = Spinner::new();
+        let spinner_message = format!("Downloading {} prebuild from '{}'", &package.name, repository_id);
+        spinner.show(spinner_message.clone());
+
         let (extension, bytes) = self.repository_manager.read_prebuild(repository_id, package, revision, &Target::current())?;
         let checksum = self.repository_manager.get_prebuild_checksum(repository_id, package, revision, &Target::current())?;
+
+        // Finish download spinner
+        spinner.finish(format!("{spinner_message} successful"));
 
         // Calculate the checksum
         let calculated_checksum = Checksum::from_bytes(&bytes);
 
         // Check equality of checksum
         match checksum {
-            Some(checksum) if checksum == calculated_checksum => (),
+            Some(checksum) if checksum == calculated_checksum => debug!("{package} prebuild checksum matches"),
             _ => return Err(InstallerError::ChecksumError),
         }
 
         // Unpack the prebuild to the destination
-        unpack(extension, bytes, &destination_dir)?;
+        unpack(&package.name, extension, bytes, &destination_dir)?;
 
         Ok(())
     }
 
     /// Uninstalls a package version if specified, otherwise it will uninstall the entire package directory (after
     /// asking the user if this is the intended behaviour).
+    /// Returns a `Vec<PackageId>` from the uninstalled packages if successful.
     /// Returns an `InstallerError::PermissionsError` error if the current user doesn't have the correct permissions
     /// or an `InstallerError::DependencyError` error if the given package is a dependency.
-    pub fn uninstall(&mut self, optional_id: &OptionalPackageId) -> Result<()> {
+    pub fn uninstall(&mut self, optional_id: &OptionalPackageId) -> Result<Vec<PackageId>> {
         // Check if we can write to the prefix directory
         if !self.can_write_prefix_dir()? {
             return Err(InstallerError::PermissionsError);
@@ -375,20 +415,21 @@ impl<'a> Installer<'a> {
         // This determines the directory to remove. If there are multiple versions and the version is
         // specified only the specified version directory will be deleted. The entire package directory
         // is deleted if the version isn't specified or if the package directory only contains one version.
-        match optional_id.versioned() {
-            Some(package_id) => self.uninstall_single(&package_id)?,
+        let uninstalled = match optional_id.versioned() {
+            Some(package_id) => self.uninstall_single(package_id)?,
             None => self.uninstall_all(&optional_id.name)?,
-        }
+        };
 
-        Ok(())
+        Ok(uninstalled)
     }
 
     /// Uninstalls a specific package. If it is the only installed version the entire package directory is removed as well.
+    /// Returns a `Vec<PackageId>` from the uninstalled packages if successful.
     /// Return an `InstallerError::PackageNotFound` error if a package cannot be found. Contains an `InstallerError::UnreachableError`
     /// which as its name suggests should be unreachable.
-    fn uninstall_single(&mut self, package_id: &PackageId) -> Result<()> {
+    fn uninstall_single(&mut self, package_id: PackageId) -> Result<Vec<PackageId>> {
         // Return an existError if the package to uninstall doesn't exist
-        if self.register.get_package_version(package_id).is_none() {
+        if self.register.get_package_version(&package_id).is_none() {
             return Err(InstallerError::PackageNotFound {
                 package_name: package_id.name.to_string(),
                 version: Some(package_id.version.to_string()),
@@ -422,7 +463,7 @@ impl<'a> Installer<'a> {
         };
 
         // Run uninstall script
-        self.run_uninstall_script(&repository, package_id, &directory)?;
+        self.run_uninstall_script(&repository, &package_id, &directory)?;
 
         // Check if the package was symlinked
         if installed_package.active_version == package_id.version && installed_package.symlinked {
@@ -436,30 +477,37 @@ impl<'a> Installer<'a> {
             other_versions.sort_by_key(|x| &x.package_id.version);
 
             if let Some(newest) = other_versions.last() {
+                println!("Set active package to version `{}`", newest.package_id);
                 Symlinker::new(self.config).set_active(self.register, &newest.package_id.clone(), installed_package.symlinked)?;
             }
         }
 
         // Delete the determined directory
+        if let Some(directory) = directory.to_str() {
+            debug!("Removing the package directory: {directory}");
+        }
         fs::remove_dir_all(directory)?;
 
-        // Remove package from installed package toml
-        self.register.remove_package_version(package_id);
+        // Remove package from the register
+        debug!("Removing {package_id} from the package register");
+        self.register.remove_package_version(&package_id);
 
-        Ok(())
+        Ok(vec![package_id])
     }
 
     /// Uninstalls an entire package directory. The user is first asked if this is
     /// the intended behaviour (this is skipped if only one version exists).
+    /// Returns a `Vec<PackageId>` from the uninstalled packages if successful.
     /// Returns an `InstallerError::PackageNotFound` error if the package cannot be found.
-    fn uninstall_all(&mut self, package_name: &PackageName) -> Result<()> {
+    fn uninstall_all(&mut self, package_name: &PackageName) -> Result<Vec<PackageId>> {
         let installed_versions = self.register.get_all_package_versions(package_name);
 
         // Ask the user if he/she wants to continue when version isn't specified and there are multiple versions installed
         let question = "Version is not specified, do you wish to uninstall all versions of this package?";
         if installed_versions.len() > 1 && ask_user(question, QuestionResponse::No)?.is_no_or_invalid() {
-            println!("Canceled uninstall of package: {package_name}");
-            return Ok(());
+            return Err(InstallerError::InstallationCanceled {
+                reason: format!("Prevent uninstall of all {package_name} versions"),
+            });
         }
 
         // Make sure at least one version exists
@@ -474,6 +522,7 @@ impl<'a> Installer<'a> {
         let directory = self.config.prefix_directory.join("packages").join(&package_name);
 
         // Remove active path symlink
+        debug!("Unlinking the active path");
         let active_path = Path::new(&self.config.prefix_directory).join("active").join(&package_name);
         match active_path.exists() {
             true => symlink::remove_symlink(&active_path)?,
@@ -483,12 +532,13 @@ impl<'a> Installer<'a> {
         // Check if package was symlinked
         if let Some(package) = self.register.get_package(package_name) {
             if package.symlinked {
+                debug!("Unlinking '{package_name}'");
                 io::remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&directory))?;
             }
         }
 
         // Run uninstall scripts for all versions
-        for package_version in installed_versions {
+        for package_version in &installed_versions {
             // Load source repository
             let repository = Repository::new(&package_version.source_repository_url, &package_version.source_repository_provider);
 
@@ -496,12 +546,18 @@ impl<'a> Installer<'a> {
             self.run_uninstall_script(&repository, &package_version.package_id, &directory)?;
         }
 
+        if let Some(directory) = directory.to_str() {
+            debug!("Removing the package directory: {directory}");
+        }
         fs::remove_dir_all(directory)?;
 
+        let uninstalled = installed_versions.iter().map(|p| p.package_id.clone()).collect();
+
         // Delete the installed package from toml
+        debug!("Removing {package_name} from the package register");
         self.register.remove_package(package_name);
 
-        Ok(())
+        Ok(uninstalled)
     }
 
     /// Downloads and runs the uninstall script of a given package.
@@ -536,7 +592,14 @@ impl<'a> Installer<'a> {
 
             // Run script
             let script_args = package_version.get_script_args(&target_bounds)?;
-            let script_data = ScriptData::new(&script_path, &install_directory, &package_id.version, self.config, &script_args);
+            let script_data = ScriptData::new(
+                &script_path,
+                &install_directory,
+                &package_id.version,
+                self.config,
+                &script_args,
+                self.options.verbose,
+            );
             scripts::run_uninstall_script(&script_data)?
         }
 
@@ -550,9 +613,10 @@ impl<'a> Installer<'a> {
     }
 
     /// Updates a package to a newer version.
+    /// Returns a `PackageId` from the updated package if successful.
     /// Returns an `InstallerError::VersionTooLowError` if the old version is newer then the given new version
     /// or an `InstallerError::AlreadyInstalledError` if the new package version is already installed.
-    pub fn update(&mut self, optional_id: &OptionalPackageId, new_version: &Version) -> Result<()> {
+    pub fn update(&mut self, optional_id: &OptionalPackageId, new_version: &Version) -> Result<PackageId> {
         let old_package = self.get_specific_package_update(optional_id)?;
         let new_package_id = PackageId::new(old_package.package_id.name.clone(), new_version.clone());
 
@@ -638,7 +702,7 @@ impl<'a> Installer<'a> {
         // Uninstall the package
         self.uninstall(&old_package_id.into())?;
 
-        Ok(())
+        Ok(new_package_id)
     }
 
     /// Gets a specific installed package version. If a version is specified that version is used.

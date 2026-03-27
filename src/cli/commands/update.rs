@@ -49,7 +49,9 @@ impl HandleCommand for UpdateArgs {
         let options = InstallerOptions::default().skip_active(true).skip_symlinking(true);
         let mut installer = Installer::new(&config, &mut register, &manager, options);
 
-        installer.update(&self.optional_id, new_version).unwrap_or_exit(1);
+        let new_package_id = installer.update(&self.optional_id, new_version).unwrap_or_exit(1);
+
+        println!("Successfully updated {} to {new_package_id}", self.optional_id);
 
         // Save changes
         register.save_to(&register_dir).unwrap_or_exit(1);

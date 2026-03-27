@@ -53,15 +53,17 @@ pub struct Builder<'a> {
     config: &'a Config,
     register: &'a mut PackageRegister,
     repository_manager: &'a RepositoryManager<'a>,
+    verbose: bool,
 }
 
 impl<'a> Builder<'a> {
     /// Creates new builder
-    pub fn new(config: &'a Config, register: &'a mut PackageRegister, repository_manager: &'a RepositoryManager) -> Self {
+    pub fn new(config: &'a Config, register: &'a mut PackageRegister, repository_manager: &'a RepositoryManager, verbose: bool) -> Self {
         Self {
             config,
             register,
             repository_manager,
+            verbose,
         }
     }
 
@@ -114,7 +116,7 @@ impl<'a> Builder<'a> {
 
         // Show download spinner
         let spinner = Spinner::new();
-        spinner.show(format!("Downloading {package_name}"));
+        spinner.show(format!("Downloading {package_name} from {}", &source.url));
 
         // Download the build files
         let mut response = reqwest::blocking::get(&source.url)?;
@@ -140,11 +142,11 @@ impl<'a> Builder<'a> {
         }
 
         // Finish download spinner
-        spinner.finish(format!("Downloading {package_name} successful"));
+        spinner.finish(format!("Downloading {package_name} from {} successful", &source.url));
 
         // Unpack the package to the temp directory
         let unpack_directory = TempDir::new()?;
-        unpack(ArchiveExtension::from_path(&source.url), bytes, &unpack_directory)?;
+        unpack(package_name, ArchiveExtension::from_path(&source.url), bytes, &unpack_directory)?;
 
         // Create build env
         let env = BuildEnv::new(
@@ -161,9 +163,18 @@ impl<'a> Builder<'a> {
         let script_path = install_meta.version_metadata.get_build_script_path(&install_meta.target_bounds)?;
         let script_path = scripts::download_script(self.repository_manager, &script_path, &package_name, &install_meta.repository_id)?
             .ok_or(ScriptError::ScriptNotFound("build".into()))?;
-        let script_data = ScriptData::new(&script_path, &destination_dir, &version, self.config, &script_args);
+        let script_data = ScriptData::new(&script_path, &destination_dir, &version, self.config, &script_args, self.verbose);
 
+        // Show build spinner
+        let spinner = Spinner::new();
+        let spinner_message = format!("Building {package_name}@{version}");
+        spinner.show(spinner_message.clone());
+
+        // Run build script
         scripts::run_build_script(&script_data, &unpack_directory, env)?;
+
+        // Finish build spinner
+        spinner.finish(format!("{spinner_message} successful"));
 
         Ok(())
     }
