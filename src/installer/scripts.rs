@@ -54,6 +54,7 @@ pub struct ScriptData<'a> {
     package_version: &'a Version,
     config: &'a Config,
     args: &'a HashMap<&'a str, &'a str>,
+    verbose: bool,
 }
 
 impl<'a> ScriptData<'a> {
@@ -64,6 +65,7 @@ impl<'a> ScriptData<'a> {
         package_version: &'a Version,
         config: &'a Config,
         args: &'a HashMap<&str, &str>,
+        verbose: bool,
     ) -> Self {
         Self {
             path,
@@ -71,6 +73,7 @@ impl<'a> ScriptData<'a> {
             package_version,
             config,
             args,
+            verbose,
         }
     }
 }
@@ -83,8 +86,8 @@ pub fn run_pre_script(script_data: &ScriptData, run_dir: impl AsRef<Path>) -> Re
 
 /// Runs the given build script, in the given directory.
 /// Note that the script should be a `.sh` script on Linux and macOS and a `.bat` on Windows.
-pub fn run_build_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, build_env: BuildEnv, verbose: bool) -> Result<()> {
-    run_script(script_data, run_dir, build_env.into(), verbose)
+pub fn run_build_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, build_env: BuildEnv) -> Result<()> {
+    run_script(script_data, run_dir, build_env.into(), script_data.verbose)
 }
 
 /// Runs the given post install script, in the package install directory.
@@ -119,7 +122,8 @@ fn run_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, env: Environm
         .env("PACKIT_PREFIX_PATH", &script_data.config.prefix_directory)
         .env("PACKIT_TARGET", TargetArchitecture::current().to_string())
         .env("PACKIT_PACKAGE_PATH", package_install_path)
-        .env("PACKIT_PACKAGE_VERSION", script_data.package_version.to_string());
+        .env("PACKIT_PACKAGE_VERSION", script_data.package_version.to_string())
+        .env("PACKIT_VERBOSE", if script_data.verbose { "1" } else { "0" });
 
     // Only display build logging if verbose is enabled
     if show_output {

@@ -209,7 +209,14 @@ impl<'a> Installer<'a> {
         let downloaded_script =
             scripts::download_script(self.repository_manager, &script_path, &package_id.name, &install_meta.repository_id)?;
         if let Some(script_file) = downloaded_script {
-            let script_data = ScriptData::new(&script_file, &install_directory, &version_meta.version, self.config, &script_args);
+            let script_data = ScriptData::new(
+                &script_file,
+                &install_directory,
+                &version_meta.version,
+                self.config,
+                &script_args,
+                self.options.verbose,
+            );
             scripts::run_pre_script(&script_data, &install_directory)?;
         }
 
@@ -250,7 +257,14 @@ impl<'a> Installer<'a> {
         let downloaded_script =
             scripts::download_script(self.repository_manager, &script_path, &package_id.name, &install_meta.repository_id)?;
         if let Some(script_file) = downloaded_script {
-            let script_data = ScriptData::new(&script_file, &install_directory, &version_meta.version, self.config, &script_args);
+            let script_data = ScriptData::new(
+                &script_file,
+                &install_directory,
+                &version_meta.version,
+                self.config,
+                &script_args,
+                self.options.verbose,
+            );
             scripts::run_post_script(&script_data)?;
         }
 
@@ -261,7 +275,14 @@ impl<'a> Installer<'a> {
         let downloaded_script =
             scripts::download_script(self.repository_manager, &script_path, &package_id.name, &install_meta.repository_id)?;
         if let Some(script_file) = downloaded_script {
-            let script_data = ScriptData::new(&script_file, &install_directory, &version_meta.version, self.config, &script_args);
+            let script_data = ScriptData::new(
+                &script_file,
+                &install_directory,
+                &version_meta.version,
+                self.config,
+                &script_args,
+                self.options.verbose,
+            );
             scripts::run_test_script(&script_data)?;
         }
 
@@ -571,7 +592,14 @@ impl<'a> Installer<'a> {
 
             // Run script
             let script_args = package_version.get_script_args(&target_bounds)?;
-            let script_data = ScriptData::new(&script_path, &install_directory, &package_id.version, self.config, &script_args);
+            let script_data = ScriptData::new(
+                &script_path,
+                &install_directory,
+                &package_id.version,
+                self.config,
+                &script_args,
+                self.options.verbose,
+            );
             scripts::run_uninstall_script(&script_data)?
         }
 

@@ -163,7 +163,7 @@ impl<'a> Builder<'a> {
         let script_path = install_meta.version_metadata.get_build_script_path(&install_meta.target_bounds)?;
         let script_path = scripts::download_script(self.repository_manager, &script_path, &package_name, &install_meta.repository_id)?
             .ok_or(ScriptError::ScriptNotFound("build".into()))?;
-        let script_data = ScriptData::new(&script_path, &destination_dir, &version, self.config, &script_args);
+        let script_data = ScriptData::new(&script_path, &destination_dir, &version, self.config, &script_args, self.verbose);
 
         // Show build spinner
         let spinner = Spinner::new();
@@ -171,7 +171,7 @@ impl<'a> Builder<'a> {
         spinner.show(spinner_message.clone());
 
         // Run build script
-        scripts::run_build_script(&script_data, &unpack_directory, env, self.verbose)?;
+        scripts::run_build_script(&script_data, &unpack_directory, env)?;
 
         // Finish build spinner
         spinner.finish(format!("{spinner_message} successful"));
