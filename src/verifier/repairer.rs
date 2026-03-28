@@ -104,7 +104,7 @@ impl<'a> Repairer<'a> {
             // We have to uninstall and install, because we can't know the repository source otherwise
             // Remove the symlinks first
             if symlinked {
-                remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&package_directory))?;
+                remove_symlinks(Path::new(&self.config.prefix_directory), &package_directory)?;
             }
 
             // Remove the package

@@ -491,7 +491,7 @@ impl<'a> Installer<'a> {
 
         // Check if the package was symlinked
         if installed_package.active_version == package_id.version && installed_package.symlinked {
-            io::remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&directory))?;
+            io::remove_symlinks(Path::new(&self.config.prefix_directory), &directory)?;
         }
 
         // Change active package when uninstalled package is currently active
@@ -557,7 +557,7 @@ impl<'a> Installer<'a> {
         if let Some(package) = self.register.get_package(package_name) {
             if package.symlinked {
                 debug!("Unlinking '{package_name}'");
-                io::remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&directory))?;
+                io::remove_symlinks(Path::new(&self.config.prefix_directory), &directory)?;
             }
         }
 

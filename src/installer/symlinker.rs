@@ -57,9 +57,14 @@ impl<'a> Symlinker<'a> {
 
         let package_install_path = package_version.install_path.clone();
 
-        // Remove old symlinks
         let package_directory = self.config.prefix_directory.join("packages").join(&package_id.name);
-        io::remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&package_directory))?;
+
+        // Symlink directories bin, include, lib and share
+        for dir_name in vec!["bin", "include", "lib", "share", "active"] {
+            let prefix_dir_path = self.config.prefix_directory.join(dir_name);
+
+            io::remove_symlinks(&prefix_dir_path, &package_directory)?;
+        }
 
         // Create active symlink
         fs::create_dir_all(global_active_path)?;

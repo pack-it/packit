@@ -45,6 +45,10 @@ pub fn create_folder_symlinks(original_dir: &Path, link_dir: &Path) -> Result<()
 
 /// Searches for symlinks with a certain destination (destinations inside of the destination are also a match) and removes them.
 pub fn remove_symlinks(search_dir: &Path, destination_dir: &Path) -> Result<(), SymlinkError> {
+    if !search_dir.exists() {
+        return Ok(());
+    }
+
     for file in fs::read_dir(search_dir)? {
         let file = file?;
         let file_type = file.file_type()?;
