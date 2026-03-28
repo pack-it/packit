@@ -709,12 +709,19 @@ impl<'a> Installer<'a> {
         // Set the dependents of the old package for the new package
         package_version.dependents = dependents.clone();
 
-        // Change the register dependency entries to the new package version
-        for package_id in &dependents {
-            if let Some(dependent) = self.register.get_package_version_mut(package_id) {
+        let install_path = package_version.install_path.clone();
+
+        // Update dependents to use the new package version
+        for dependent_id in &dependents {
+            if let Some(dependent) = self.register.get_package_version_mut(dependent_id) {
                 dependent.dependencies.remove(&old_package_id);
                 dependent.dependencies.insert(new_package_id.clone());
             }
+
+            // Switch dependents to use new version
+            let link_path = self.config.prefix_directory.join("dependencies").join(dependent_id.to_string()).join(&new_package_id.name);
+            symlink::remove_symlink(&link_path)?;
+            symlink::create_symlink(&install_path, &link_path)?;
         }
 
         // Set the active and symlinked state for the new package (to the old package state)
