@@ -146,7 +146,13 @@ impl<'a> Builder<'a> {
 
         // Unpack the package to the temp directory
         let unpack_directory = TempDir::new()?;
-        unpack(package_name, ArchiveExtension::from_path(&source.url), bytes, &unpack_directory)?;
+        unpack(
+            package_name,
+            ArchiveExtension::from_path(&source.url),
+            bytes,
+            &unpack_directory,
+            true,
+        )?;
 
         // Create build env
         let env = BuildEnv::new(

@@ -389,7 +389,7 @@ impl<'a> Installer<'a> {
         }
 
         // Unpack the prebuild to the destination
-        unpack(&package.name, extension, bytes, &destination_dir)?;
+        unpack(&package.name, extension, bytes, &destination_dir, false)?;
 
         Ok(())
     }
