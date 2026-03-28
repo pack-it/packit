@@ -157,7 +157,7 @@ impl<'a> Builder<'a> {
         // Create build env
         let env = BuildEnv::new(
             &self.config.prefix_directory,
-            installed_dependencies,
+            installed_dependencies.clone(),
             installed_build_dependencies,
             self.register,
         );
@@ -189,7 +189,7 @@ impl<'a> Builder<'a> {
 
         // Patch binaries
         let package_id = PackageId::new(package_name.clone(), version.clone());
-        BinaryPatcher::new(self.config).patch_binaries_in(&destination_dir.as_ref().to_path_buf(), &package_id)?;
+        BinaryPatcher::new(self.config).patch_binaries_in(&destination_dir.as_ref().to_path_buf(), &package_id, installed_dependencies)?;
 
         Ok(())
     }

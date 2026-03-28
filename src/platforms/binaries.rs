@@ -7,6 +7,7 @@ use crate::{
     cli::display::logging::{debug, error},
     config::Config,
     installer::types::PackageId,
+    storage::installed_package_version::InstalledPackageVersion,
 };
 
 /// The errors that occur during binary operations.
@@ -23,11 +24,11 @@ pub enum BinaryPatcherError {
         bin_type: String,
     },
 
-    #[error("Error while interacting with filesystem")]
-    IOError(#[from] std::io::Error),
-
     #[error("Cannot convert OsString to string")]
     OsStringConversionError,
+
+    #[error("Error while interacting with filesystem")]
+    IOError(#[from] std::io::Error),
 }
 
 type Result<T> = std::result::Result<T, BinaryPatcherError>;
@@ -41,12 +42,12 @@ impl<'a> BinaryPatcher<'a> {
         Self { config }
     }
 
-    pub fn patch_binaries_in(&self, path: &PathBuf, package: &PackageId) -> Result<()> {
+    pub fn patch_binaries_in(&self, path: &PathBuf, package: &PackageId, dependencies: Vec<&InstalledPackageVersion>) -> Result<()> {
         let metadata = fs::metadata(path)?;
 
         // If the given path is a file, patch the file directly
         if metadata.is_file() {
-            return self.patch_binary(path, package);
+            return self.patch_binary(path, package, &dependencies);
         }
 
         let mut queue = VecDeque::from([path.clone()]);
@@ -65,7 +66,7 @@ impl<'a> BinaryPatcher<'a> {
 
                 // If the entry is a file, try to patch it
                 if metadata.is_file() {
-                    match self.patch_binary(&entry.path(), package) {
+                    match self.patch_binary(&entry.path(), package, &dependencies) {
                         Ok(_)
                         | Err(BinaryPatcherError::CannotParseBinary { .. })
                         | Err(BinaryPatcherError::UnsupportedBinaryType { .. }) => (),
@@ -78,11 +79,11 @@ impl<'a> BinaryPatcher<'a> {
         Ok(())
     }
 
-    fn patch_binary(&self, path: &PathBuf, package: &PackageId) -> Result<()> {
+    fn patch_binary(&self, path: &PathBuf, package: &PackageId, dependencies: &Vec<&InstalledPackageVersion>) -> Result<()> {
         match Binary::parse(path) {
             Some(Binary::ELF(binary)) => {
                 debug!("Patching ELF binary at '{}'", path.display());
-                self.patch_elf(binary, path, package)?;
+                self.patch_elf(binary, path, package, dependencies)?;
             },
             Some(Binary::MachO(binary)) => {
                 debug!("Patching MachO binary at '{}'", path.display());
@@ -174,8 +175,51 @@ impl<'a> BinaryPatcher<'a> {
         Ok(())
     }
 
-    fn patch_elf(&self, binary: elf::Binary, path: &PathBuf, package: &PackageId) -> Result<()> {
-        todo!();
+    fn patch_elf(
+        &self,
+        mut binary: elf::Binary,
+        path: &PathBuf,
+        package: &PackageId,
+        dependencies: &Vec<&InstalledPackageVersion>,
+    ) -> Result<()> {
+        let mut rpaths = Vec::new();
+
+        for entry in binary.dynamic_entries() {
+            let library = match entry {
+                elf::dynamic::Entries::Library(lib) => lib,
+                _ => continue,
+            };
+
+            for dependency in dependencies {
+                let lib_path = dependency.install_path.join("lib").join(library.name());
+
+                if lib_path.exists() {
+                    debug!("Found Packit dependency, adding to rpath");
+
+                    let dependency_path =
+                        self.config.prefix_directory.join("dependencies").join(package.to_string()).join(&dependency.package_id.name);
+                    rpaths.push(dependency_path);
+                }
+            }
+        }
+
+        // Add rpaths to binary
+        if !rpaths.is_empty() {
+            debug!("Changed binary {path:?}, writing changes");
+
+            for rpath in rpaths {
+                let mut string_path = rpath.to_str().ok_or(BinaryPatcherError::OsStringConversionError)?.to_string();
+                if !string_path.ends_with("/") {
+                    string_path.push('/');
+                }
+
+                binary.add_dynamic_entry(&elf::dynamic::Rpath::new(&string_path));
+            }
+
+            let config = elf::builder::Config::default();
+            binary.write_with_config(path, config);
+        }
+
         Ok(())
     }
 }
