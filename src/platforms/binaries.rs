@@ -193,8 +193,13 @@ impl<'a> BinaryPatcher<'a> {
                 if lib_path.exists() {
                     debug!("Found Packit dependency, adding to rpath");
 
-                    let dependency_path =
-                        self.config.prefix_directory.join("dependencies").join(package.to_string()).join(&dependency.package_id.name);
+                    let dependency_path = self
+                        .config
+                        .prefix_directory
+                        .join("dependencies")
+                        .join(package.to_string())
+                        .join(&dependency.package_id.name)
+                        .join("lib");
                     rpaths.push(dependency_path);
                 }
             }
