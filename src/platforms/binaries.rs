@@ -51,9 +51,7 @@ impl<'a> BinaryPatcher<'a> {
         }
 
         let mut queue = VecDeque::from([path.clone()]);
-        while queue.len() != 0 {
-            let item = queue.pop_front().expect("Expected an element in the queue");
-
+        while let Some(item) = queue.pop_front() {
             for entry in fs::read_dir(item)? {
                 let entry = entry?;
 
@@ -192,7 +190,6 @@ impl<'a> BinaryPatcher<'a> {
 
             for dependency in dependencies {
                 let lib_path = dependency.install_path.join("lib").join(library.name());
-
                 if lib_path.exists() {
                     debug!("Found Packit dependency, adding to rpath");
 

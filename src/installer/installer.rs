@@ -483,9 +483,11 @@ impl<'a> Installer<'a> {
         // Run uninstall script
         self.run_uninstall_script(&repository, &package_id, &directory)?;
 
-        // Remove the dependency symlinks
+        // Remove the dependency symlinks if they exist
         let dependency_directory_path = Path::new(&self.config.prefix_directory).join("dependencies").join(package_id.to_string());
-        fs::remove_dir_all(dependency_directory_path)?;
+        if fs::exists(&dependency_directory_path)? {
+            fs::remove_dir_all(dependency_directory_path)?;
+        }
 
         // Check if the package was symlinked
         if installed_package.active_version == package_id.version && installed_package.symlinked {
@@ -567,7 +569,9 @@ impl<'a> Installer<'a> {
             // Remove the dependency symlinks
             let dependency_directory_path =
                 Path::new(&self.config.prefix_directory).join("dependencies").join(package_version.package_id.to_string());
-            fs::remove_dir_all(dependency_directory_path)?;
+            if fs::exists(&dependency_directory_path)? {
+                fs::remove_dir_all(dependency_directory_path)?;
+            }
 
             // Run uninstall script
             self.run_uninstall_script(&repository, &package_version.package_id, &directory)?;
