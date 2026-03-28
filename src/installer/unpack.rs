@@ -49,7 +49,13 @@ impl ArchiveExtension {
 }
 
 // Unpacks files and saves them to the provided destination directory.
-pub fn unpack<P: AsRef<Path>>(package: &PackageName, extension: ArchiveExtension, bytes: Bytes, destination_directory: P) -> Result<()> {
+pub fn unpack<P: AsRef<Path>>(
+    package: &PackageName,
+    extension: ArchiveExtension,
+    bytes: Bytes,
+    destination_directory: P,
+    keep_timestamp: bool,
+) -> Result<()> {
     let size = bytes.len();
     let cursor = Cursor::new(bytes);
 
@@ -58,7 +64,7 @@ pub fn unpack<P: AsRef<Path>>(package: &PackageName, extension: ArchiveExtension
     let reader = ReaderWithProgress::new(cursor, size as u64, bar_prefix);
 
     match extension {
-        ArchiveExtension::GZ => unpack_gz(reader, destination_directory),
+        ArchiveExtension::GZ => unpack_gz(reader, destination_directory, keep_timestamp),
         ArchiveExtension::ZIP | ArchiveExtension::XZ => unpack_zip_xz(reader, destination_directory),
         _ => Err(UnpackError::ExtensionNotSupported),
     }
@@ -66,10 +72,10 @@ pub fn unpack<P: AsRef<Path>>(package: &PackageName, extension: ArchiveExtension
 
 /// Unpacks gz archives into the provided destination directory.
 /// Could return an IO error.
-fn unpack_gz<P: AsRef<Path>>(reader: ReaderWithProgress<Cursor<Bytes>>, destination_directory: P) -> Result<()> {
+fn unpack_gz<P: AsRef<Path>>(reader: ReaderWithProgress<Cursor<Bytes>>, destination_directory: P, keep_timestamp: bool) -> Result<()> {
     let tar = GzDecoder::new(reader);
     let mut archive = Archive::new(tar);
-    archive.set_preserve_mtime(false);
+    archive.set_preserve_mtime(keep_timestamp);
     archive.unpack(destination_directory)?;
 
     Ok(())
