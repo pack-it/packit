@@ -340,17 +340,23 @@ impl<'a> Installer<'a> {
         Ok(())
     }
 
+    /// Creates the symlinks for all package dependencies in the `dependencies` directory.
     fn create_dependency_symlinks(&self, current_package: &PackageId, dependencies: &HashSet<PackageId>) -> Result<()> {
+        // Prevent creating an empty directory
+        if dependencies.is_empty() {
+            return Ok(());
+        }
+
+        // Create package dependencies directory
         let dependency_directory_path = Path::new(&self.config.prefix_directory).join("dependencies").join(current_package.to_string());
         fs::create_dir_all(&dependency_directory_path)?;
 
-        // TODO: Check if it's possible to use the install path instead of manual join
-        // Create symlinks to all children
+        // Create symlinks to all dependencies
         for dependency in dependencies {
             let original =
                 Path::new(&self.config.prefix_directory).join("packages").join(&dependency.name).join(dependency.version.to_string());
             let link = dependency_directory_path.join(&dependency.name);
-            io::create_symlink(&original, &link)?;
+            symlink::create_symlink(&original, &link)?;
         }
 
         Ok(())

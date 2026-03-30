@@ -1,10 +1,15 @@
-use std::{collections::VecDeque, fs, path::PathBuf, process::Command};
+use std::{
+    collections::VecDeque,
+    fs,
+    path::PathBuf,
+    process::{Command, Stdio},
+};
 
 use lief::{Binary, elf, macho};
 use thiserror::Error;
 
 use crate::{
-    cli::display::logging::{debug, error},
+    cli::display::logging::{self, debug, error},
     config::Config,
     installer::types::PackageId,
     storage::installed_package_version::InstalledPackageVersion,
@@ -156,7 +161,13 @@ impl<'a> BinaryPatcher<'a> {
 
                 // Sign binary
                 let path = path.to_str().ok_or(BinaryPatcherError::OsStringConversionError)?;
-                match Command::new("/usr/bin/codesign").args(["--sign", "-", "--force", path]).status() {
+                let mut command = Command::new("/usr/bin/codesign");
+                let mut command = command.args(["--sign", "-", "--force", path]).stdout(Stdio::null()).stderr(Stdio::null());
+                if *logging::DEBUG_ENABLED {
+                    command = command.stdout(Stdio::inherit()).stderr(Stdio::inherit());
+                }
+
+                match command.status() {
                     Ok(code) if !code.success() => {
                         error!(msg: "Cannot resign binary, exit code {code}");
                         continue;

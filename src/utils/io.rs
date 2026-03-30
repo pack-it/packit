@@ -69,14 +69,3 @@ pub fn remove_symlinks(search_dir: &Path, destination_dir: &Path) -> Result<(), 
 
     Ok(())
 }
-
-pub fn create_symlink(original: &Path, link: &Path) -> Result<(), SymlinkError> {
-    if !fs::exists(original)? {
-        return Err(SymlinkError::OriginalNotFound {
-            original: original.to_path_buf(),
-        });
-    }
-
-    symlink::create_symlink(original, link)?;
-    Ok(())
-}
