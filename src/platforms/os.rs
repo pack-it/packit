@@ -22,6 +22,35 @@ impl Os {
             _ => false,
         }
     }
+
+    #[cfg(target_os = "macos")]
+    pub fn current() -> Self {
+        Self::MacOs
+    }
+
+    #[cfg(target_os = "linux")]
+    pub fn current() -> Self {
+        Self::Linux
+    }
+
+    #[cfg(target_os = "windows")]
+    pub fn current() -> Self {
+        Self::Windows
+    }
+
+    #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+    pub fn current() -> Self {
+        Self::Unknown
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::MacOs => "mac",
+            Self::Linux => "linux",
+            Self::Windows => "windows",
+            Self::Unknown => "unknown",
+        }
+    }
 }
 
 /// Represents an OS version. In case of Linux this also includes the distro and distro version.

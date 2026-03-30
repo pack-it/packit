@@ -15,7 +15,7 @@ use crate::{
         build_env::BuildEnv,
         types::{PackageName, Version},
     },
-    platforms::TargetArchitecture,
+    platforms::{Os, TargetArchitecture},
     repositories::{error::RepositoryError, manager::RepositoryManager},
     utils::env::Environment,
 };
@@ -121,6 +121,7 @@ fn run_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, env: Environm
         .current_dir(run_dir)
         .env("PACKIT_PREFIX_PATH", &script_data.config.prefix_directory)
         .env("PACKIT_TARGET", TargetArchitecture::current().to_string())
+        .env("PACKIT_OS", Os::current().as_str())
         .env("PACKIT_PACKAGE_PATH", package_install_path)
         .env("PACKIT_PACKAGE_VERSION", script_data.package_version.to_string())
         .env("PACKIT_VERBOSE", if script_data.verbose { "1" } else { "0" });
