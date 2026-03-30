@@ -15,7 +15,7 @@ use crate::{
         types::{OptionalPackageId, PackageId, PackageName, Version},
         unpack::unpack,
     },
-    platforms::{Target, permissions, symlink},
+    platforms::{DEFAULT_PREFIX, Target, permissions, symlink},
     repositories::{
         error::RepositoryError,
         manager::RepositoryManager,
@@ -87,6 +87,18 @@ impl<'a> Installer<'a> {
                     });
                 }
             }
+        }
+
+        // Ask user to build all packages if the prefix directory is not the default prefix
+        if self.config.prefix_directory != PathBuf::from(DEFAULT_PREFIX) {
+            let question = format!("You're not using the default prefix, would you like to build all packages from source instead?");
+            if ask_user(&question, QuestionResponse::Yes)?.is_no_or_invalid() {
+                return Err(InstallerError::InstallationCanceled {
+                    reason: format!("packages cannot be installed without building from source"),
+                });
+            }
+
+            self.options.install_type = InstallType::BuildAll;
         }
 
         // Create a package id of the current package
