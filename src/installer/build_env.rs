@@ -23,7 +23,7 @@ const STRIPPED_VARS: &'static [&'static str] = &[
 /// Holds all the data necessary to build a normalized build environment.
 pub struct BuildEnv<'a> {
     prefix_directory: &'a PathBuf,
-    dependencies: Vec<&'a InstalledPackageVersion>,
+    dependencies: &'a Vec<&'a InstalledPackageVersion>,
     build_dependencies: Vec<&'a InstalledPackageVersion>,
     register: &'a PackageRegister,
 }
@@ -75,7 +75,7 @@ impl<'a> BuildEnv<'a> {
     /// Creates a new `BuildEnv`.
     pub fn new(
         prefix_directory: &'a PathBuf,
-        dependencies: Vec<&'a InstalledPackageVersion>,
+        dependencies: &'a Vec<&'a InstalledPackageVersion>,
         build_dependencies: Vec<&'a InstalledPackageVersion>,
         register: &'a PackageRegister,
     ) -> Self {
@@ -131,7 +131,7 @@ impl<'a> BuildEnv<'a> {
         let mut parts: Vec<String> = Vec::new();
 
         // Add dependencies to PKG_CONFIG_PATH
-        for dependency in &self.dependencies {
+        for dependency in self.dependencies {
             let lib_path = dependency.install_path.join("lib").join("pkgconfig");
             let share_path = dependency.install_path.join("share").join("pkgconfig");
 
@@ -178,7 +178,7 @@ impl<'a> BuildEnv<'a> {
         let mut parts: Vec<String> = Vec::new();
 
         // Add non symlinked dependencies to CMAKE_PREFIX_PATH
-        for dependency in &self.dependencies {
+        for dependency in self.dependencies {
             if let Some(package) = self.register.get_package(&dependency.package_id.name) {
                 if package.symlinked {
                     continue;
@@ -212,7 +212,7 @@ impl<'a> BuildEnv<'a> {
         let mut parts: Vec<String> = Vec::new();
 
         // Add non symlinked dependencies to ACLOCAL_PATH
-        for dependency in &self.dependencies {
+        for dependency in self.dependencies {
             if let Some(package) = self.register.get_package(&dependency.package_id.name) {
                 if package.symlinked {
                     continue;
