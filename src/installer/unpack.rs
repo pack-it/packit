@@ -3,6 +3,7 @@ use flate2::read::GzDecoder;
 use std::{io::Cursor, path::Path};
 use tar::Archive;
 use thiserror::Error;
+use xz2::read::XzDecoder;
 use zip::ZipArchive;
 
 use crate::{cli::display::ReaderWithProgress, installer::types::PackageName};
@@ -65,7 +66,8 @@ pub fn unpack<P: AsRef<Path>>(
 
     match extension {
         ArchiveExtension::GZ => unpack_gz(reader, destination_directory, keep_timestamp),
-        ArchiveExtension::ZIP | ArchiveExtension::XZ => unpack_zip_xz(reader, destination_directory),
+        ArchiveExtension::XZ => unpack_xz(reader, destination_directory, keep_timestamp),
+        ArchiveExtension::ZIP => unpack_zip(reader, destination_directory),
         _ => Err(UnpackError::ExtensionNotSupported),
     }
 }
@@ -81,9 +83,20 @@ fn unpack_gz<P: AsRef<Path>>(reader: ReaderWithProgress<Cursor<Bytes>>, destinat
     Ok(())
 }
 
-/// Unpacks zip xz archives into the provided destination directory.
+/// Unpacks xz archives into the provided destination directory.
 /// Could return an IO error.
-fn unpack_zip_xz<P: AsRef<Path>>(reader: ReaderWithProgress<Cursor<Bytes>>, destination_directory: P) -> Result<()> {
+fn unpack_xz<P: AsRef<Path>>(reader: ReaderWithProgress<Cursor<Bytes>>, destination_directory: P, keep_timestamp: bool) -> Result<()> {
+    let tar = XzDecoder::new(reader);
+    let mut archive = Archive::new(tar);
+    archive.set_preserve_mtime(keep_timestamp);
+    archive.unpack(destination_directory)?;
+
+    Ok(())
+}
+
+/// Unpacks zip archives into the provided destination directory.
+/// Could return an IO error.
+fn unpack_zip<P: AsRef<Path>>(reader: ReaderWithProgress<Cursor<Bytes>>, destination_directory: P) -> Result<()> {
     let mut archive = ZipArchive::new(reader)?;
     archive.extract(destination_directory)?;
 
