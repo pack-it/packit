@@ -9,8 +9,10 @@ use crate::{
         build_env::BuildEnv,
         install_tree::InstallMeta,
         scripts::{self, ScriptData, ScriptError},
+        types::PackageId,
         unpack::{ArchiveExtension, UnpackError, unpack},
     },
+    platforms::binaries::{BinaryPatcher, BinaryPatcherError},
     repositories::{error::RepositoryError, manager::RepositoryManager, types::Checksum},
     storage::package_register::PackageRegister,
 };
@@ -38,6 +40,9 @@ pub enum BuilderError {
 
     #[error("Cannot find a repository for building")]
     RepositoryError(#[from] RepositoryError),
+
+    #[error("Cannot patch binaries")]
+    PatchError(#[from] BinaryPatcherError),
 
     #[error("Cannot request files for building")]
     RequestError(#[from] reqwest::Error),
@@ -152,7 +157,7 @@ impl<'a> Builder<'a> {
         // Create build env
         let env = BuildEnv::new(
             &self.config.prefix_directory,
-            installed_dependencies,
+            &installed_dependencies,
             installed_build_dependencies,
             self.register,
         );
@@ -181,6 +186,10 @@ impl<'a> Builder<'a> {
             // Run build script
             scripts::run_build_script(&script_data, &unpack_directory, env)?;
         }
+
+        // Patch binaries
+        let package_id = PackageId::new(package_name.clone(), version.clone());
+        BinaryPatcher::new(self.config).patch_binaries_in(&destination_dir.as_ref().to_path_buf(), &package_id, installed_dependencies)?;
 
         Ok(())
     }

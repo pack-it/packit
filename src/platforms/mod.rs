@@ -1,3 +1,4 @@
+pub mod binaries;
 mod defaults;
 mod os;
 pub mod permissions;

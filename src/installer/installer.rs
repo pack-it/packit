@@ -226,6 +226,8 @@ impl<'a> Installer<'a> {
         // Get the target information from the package version info
         let target = version_meta.get_target(&install_meta.target_bounds)?;
 
+        self.create_dependency_symlinks(&package_id, &dependencies)?;
+
         // Get build version of package
         match use_prebuild {
             true => {
@@ -333,6 +335,27 @@ impl<'a> Installer<'a> {
         // If package is installed succesfully, set it to active
         if should_set_active {
             Symlinker::new(self.config).set_active(self.register, &package_id, should_symlink)?;
+        }
+
+        Ok(())
+    }
+
+    /// Creates the symlinks for all package dependencies in the `dependencies` directory.
+    fn create_dependency_symlinks(&self, current_package: &PackageId, dependencies: &HashSet<PackageId>) -> Result<()> {
+        // Prevent creating an empty directory
+        if dependencies.is_empty() {
+            return Ok(());
+        }
+
+        // Create package dependencies directory
+        let dependency_directory_path = self.config.prefix_directory.join("dependencies").join(current_package.to_string());
+        fs::create_dir_all(&dependency_directory_path)?;
+
+        // Create symlinks to all dependencies
+        for dependency in dependencies {
+            let original = self.config.prefix_directory.join("packages").join(&dependency.name).join(dependency.version.to_string());
+            let link = dependency_directory_path.join(&dependency.name);
+            symlink::create_symlink(&original, &link)?;
         }
 
         Ok(())
@@ -465,9 +488,15 @@ impl<'a> Installer<'a> {
         // Run uninstall script
         self.run_uninstall_script(&repository, &package_id, &directory)?;
 
+        // Remove the dependency symlinks if they exist
+        let dependency_directory_path = self.config.prefix_directory.join("dependencies").join(package_id.to_string());
+        if fs::exists(&dependency_directory_path)? {
+            fs::remove_dir_all(dependency_directory_path)?;
+        }
+
         // Check if the package was symlinked
         if installed_package.active_version == package_id.version && installed_package.symlinked {
-            io::remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&directory))?;
+            io::remove_symlinks(&self.config.prefix_directory, &directory)?;
         }
 
         // Change active package when uninstalled package is currently active
@@ -523,7 +552,7 @@ impl<'a> Installer<'a> {
 
         // Remove active path symlink
         debug!("Unlinking the active path");
-        let active_path = Path::new(&self.config.prefix_directory).join("active").join(&package_name);
+        let active_path = self.config.prefix_directory.join("active").join(&package_name);
         match active_path.exists() {
             true => symlink::remove_symlink(&active_path)?,
             false => warning!("Active symlink did not exist, was the package even installed succesfully?"),
@@ -533,7 +562,7 @@ impl<'a> Installer<'a> {
         if let Some(package) = self.register.get_package(package_name) {
             if package.symlinked {
                 debug!("Unlinking '{package_name}'");
-                io::remove_symlinks(Path::new(&self.config.prefix_directory), Path::new(&directory))?;
+                io::remove_symlinks(&self.config.prefix_directory, &directory)?;
             }
         }
 
@@ -541,6 +570,12 @@ impl<'a> Installer<'a> {
         for package_version in &installed_versions {
             // Load source repository
             let repository = Repository::new(&package_version.source_repository_url, &package_version.source_repository_provider);
+
+            // Remove the dependency symlinks
+            let dependency_directory_path = self.config.prefix_directory.join("dependencies").join(package_version.package_id.to_string());
+            if fs::exists(&dependency_directory_path)? {
+                fs::remove_dir_all(dependency_directory_path)?;
+            }
 
             // Run uninstall script
             self.run_uninstall_script(&repository, &package_version.package_id, &directory)?;
@@ -678,12 +713,19 @@ impl<'a> Installer<'a> {
         // Set the dependents of the old package for the new package
         package_version.dependents = dependents.clone();
 
-        // Change the register dependency entries to the new package version
-        for package_id in &dependents {
-            if let Some(dependent) = self.register.get_package_version_mut(package_id) {
+        let install_path = package_version.install_path.clone();
+
+        // Update dependents to use the new package version
+        for dependent_id in &dependents {
+            if let Some(dependent) = self.register.get_package_version_mut(dependent_id) {
                 dependent.dependencies.remove(&old_package_id);
                 dependent.dependencies.insert(new_package_id.clone());
             }
+
+            // Switch dependents to use new version
+            let link_path = self.config.prefix_directory.join("dependencies").join(dependent_id.to_string()).join(&new_package_id.name);
+            symlink::remove_symlink(&link_path)?;
+            symlink::create_symlink(&install_path, &link_path)?;
         }
 
         // Set the active and symlinked state for the new package (to the old package state)

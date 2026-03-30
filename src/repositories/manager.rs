@@ -95,7 +95,7 @@ impl<'a> RepositoryManager<'a> {
             let package = match provider.read_package(package) {
                 Ok(package) => package,
                 Err(e) => {
-                    debug!(e, "Unable to read {package} from repository {repository_id}, continuing...");
+                    debug!(err: e, "Unable to read {package} from repository {repository_id}, continuing...");
                     continue;
                 },
             };

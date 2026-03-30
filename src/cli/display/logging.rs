@@ -81,7 +81,7 @@ pub static DEBUG_ENABLED: LazyLock<bool> = LazyLock::new(|| match std::env::var(
 
 /// Macro for displaying debug information. Only shows info when debug is enabled.
 macro_rules! debug {
-    ($error:expr, $($arg:tt)*) => {
+    (err: $error:expr, $($arg:tt)*) => {
         if *$crate::cli::display::logging::DEBUG_ENABLED {
             $crate::cli::display::logging::debug_error_impl(format_args!($($arg)*), $error);
         }
