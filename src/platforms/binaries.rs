@@ -38,6 +38,7 @@ pub enum BinaryPatcherError {
 
 type Result<T> = std::result::Result<T, BinaryPatcherError>;
 
+/// Binary patcher, used for patching linker paths in binaries after building.
 pub struct BinaryPatcher<'a> {
     config: &'a Config,
 }
@@ -47,6 +48,7 @@ impl<'a> BinaryPatcher<'a> {
         Self { config }
     }
 
+    /// Patches all binaries in the given directory.
     pub fn patch_binaries_in(&self, path: &PathBuf, package: &PackageId, dependencies: Vec<&InstalledPackageVersion>) -> Result<()> {
         let metadata = fs::metadata(path)?;
 
@@ -82,6 +84,7 @@ impl<'a> BinaryPatcher<'a> {
         Ok(())
     }
 
+    /// Patches the binary at the given path. Currently supports ELF and MachO binaries.
     fn patch_binary(&self, path: &PathBuf, package: &PackageId, dependencies: &Vec<&InstalledPackageVersion>) -> Result<()> {
         match Binary::parse(path) {
             Some(Binary::ELF(binary)) => {
@@ -108,6 +111,7 @@ impl<'a> BinaryPatcher<'a> {
         Ok(())
     }
 
+    /// Patches the given MachO binary.
     fn patch_macho(&self, binary: macho::FatBinary, path: &PathBuf, package: &PackageId) -> Result<()> {
         for mut binary in binary.iter() {
             let mut changed = false;
@@ -184,6 +188,7 @@ impl<'a> BinaryPatcher<'a> {
         Ok(())
     }
 
+    /// Patches the given ELF binary.
     fn patch_elf(
         &self,
         mut binary: elf::Binary,

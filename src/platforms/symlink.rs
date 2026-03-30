@@ -20,6 +20,7 @@ pub enum SymlinkError {
     IOError(#[from] std::io::Error),
 }
 
+/// Creates a symlink at `link`, pointing to `original`. Checks if the original exists and calls platform specific code.
 pub fn create_symlink(original: &Path, link: &Path) -> Result<(), SymlinkError> {
     if !fs::exists(original)? {
         return Err(SymlinkError::OriginalNotFound {
