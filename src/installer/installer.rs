@@ -112,7 +112,7 @@ impl<'a> Installer<'a> {
         let install_label = InstallLabel::new(self.options.install_type.clone(), false);
 
         // Create the install tree based on the install type
-        println!("Building dependency tree");
+        println!("Building dependency tree for {package_id}");
         let mut dependency_tree = TreeBuilder::new()
             .root(package_id.clone(), Some(root_meta), install_label)
             .expander(InstallNode::expander)

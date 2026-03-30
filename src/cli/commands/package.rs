@@ -36,5 +36,7 @@ impl HandleCommand for PackageArgs {
         };
 
         packager::package(&config, &self.package_id, &self.destination, package_version.revisions.len()).unwrap_or_exit(1);
+
+        println!("Successfully packaged {} to {:?}", self.package_id, self.destination);
     }
 }

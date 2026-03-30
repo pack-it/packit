@@ -10,7 +10,6 @@ use tar::{Builder, EntryType, Header};
 use thiserror::Error;
 
 use crate::{
-    cli::display::logging::warning,
     config::Config,
     installer::types::PackageId,
     platforms::TargetArchitecture,
@@ -33,7 +32,6 @@ pub enum PackagerError {
 /// Packages a package to a given destination. If the destination doesn't exist an IO [NotADirectory](std::io::ErrorKind::NotADirectory) error is returned.
 /// The revision is used to create a unique filename for different package revisions.
 pub fn package(config: &Config, package_id: &PackageId, destination: &PathBuf, revisions: usize) -> Result<(), PackagerError> {
-    warning!("This is an experimental feature, checksums calculated with the packager for pre-builds might not be accurate.");
     let install_directory = config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
 
     // Return an error if the destination is not a directory
