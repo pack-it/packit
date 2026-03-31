@@ -7,7 +7,7 @@ use crate::{
     platforms::Target,
     repositories::{
         error::{RepositoryError, Result},
-        types::target_bounds::TargetBounds,
+        types::TargetBounds,
     },
 };
 

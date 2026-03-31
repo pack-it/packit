@@ -10,11 +10,7 @@ use crate::{
     platforms::Target,
     repositories::{
         error::{RepositoryError, Result},
-        types::{
-            PackageTarget, Script,
-            common::{Source, Sources},
-            target_bounds::TargetBounds,
-        },
+        types::{Licenses, PackageTarget, Script, Source, Sources, TargetBounds},
     },
 };
 
@@ -30,8 +26,8 @@ pub struct PackageVersionMeta {
     #[serde(rename = "source")]
     pub sources: Sources,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub license: Option<String>,
+    #[serde(skip_serializing_if = "Licenses::is_none", default)]
+    pub license: Licenses,
 
     #[serde(default = "PackageVersionMeta::default_skip_symlinking")]
     pub skip_symlinking: bool,

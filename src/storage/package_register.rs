@@ -281,7 +281,7 @@ pub mod tests {
     use crate::installer::types::VersionIntervals;
     use crate::installer::types::dependency_tests::create_dependency;
     use crate::platforms::TargetArchitecture;
-    use crate::repositories::types::{Checksum, Source, Sources, TargetBounds};
+    use crate::repositories::types::{Checksum, Licenses, Source, Sources, TargetBounds};
 
     use super::*;
 
@@ -292,7 +292,7 @@ pub mod tests {
     ) -> InstalledPackageVersion {
         InstalledPackageVersion {
             package_id,
-            license: None,
+            license: Licenses::None,
             source_repository_provider: "-".to_string(),
             source_repository_url: "-".to_string(),
             source_prebuild_repository_url: None,
@@ -400,7 +400,7 @@ pub mod tests {
                 checksum: Checksum { sha256: [0; 32] },
                 mirrors: Vec::new(),
             }),
-            license: None,
+            license: Licenses::None,
             skip_symlinking: false,
             script_args: HashMap::new(),
             use_version_specific_build: false,
