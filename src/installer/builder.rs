@@ -121,10 +121,10 @@ impl<'a> Builder<'a> {
 
         // Show download spinner
         let spinner = Spinner::new();
-        spinner.show(format!("Downloading {package_name} from {}", &source.url));
+        spinner.show(format!("Downloading '{package_name}' from {}", &source.url));
+        let mut finish_message = format!("Downloading '{package_name}' from {} successful", &source.url);
 
         // Download the build files
-        // TODO: Update the download spinner
         let mut mirrors = source.mirrors.iter();
         let mut response = reqwest::blocking::get(&source.url).map_err(|e| BuilderError::RequestError(e));
         if let Ok(status_response) = &response
@@ -137,6 +137,11 @@ impl<'a> Builder<'a> {
         while response.is_err()
             && let Some(mirror) = mirrors.next()
         {
+            // Update spinner for new download url
+            spinner.show(format!("Downloading '{package_name}' from alternative {}", &mirror));
+            finish_message = format!("Downloading '{package_name}' from alternative {} successful", &mirror);
+
+            // Get response from alternative mirror
             response = reqwest::blocking::get(mirror).map_err(|e| BuilderError::RequestError(e));
 
             // Check if the response itself is unsuccessful
@@ -159,7 +164,7 @@ impl<'a> Builder<'a> {
         }
 
         // Finish download spinner
-        spinner.finish(format!("Downloading {package_name} from {} successful", &source.url));
+        spinner.finish(finish_message);
 
         // Unpack the package to the temp directory
         let unpack_directory = TempDir::new()?;
