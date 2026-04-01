@@ -11,6 +11,7 @@ mod switch;
 mod uninstall;
 mod unlink;
 mod update;
+mod util;
 
 use std::process::exit;
 
@@ -20,7 +21,7 @@ use crate::cli::{
     commands::{
         check::CheckArgs, fix::FixArgs, info::InfoArgs, install::InstallArgs, link::LinkArgs, list::ListArgs, package::PackageArgs,
         repositories::RepositoryArgs, search::SearchArgs, switch::SwitchArgs, uninstall::UninstallArgs, unlink::UnlinkArgs,
-        update::UpdateArgs,
+        update::UpdateArgs, util::UtilArgs,
     },
     display::logging::error,
 };
@@ -74,6 +75,10 @@ enum Commands {
 
     /// Update an installed package
     Update(UpdateArgs),
+
+    /// Several utils for advanced users
+    #[clap(subcommand)]
+    Util(UtilArgs),
 }
 
 impl Cli {
@@ -113,6 +118,7 @@ impl Cli {
             Commands::Package(args) => args,
             Commands::Info(args) => args,
             Commands::Update(args) => args,
+            Commands::Util(args) => args,
         };
 
         args.handle();
