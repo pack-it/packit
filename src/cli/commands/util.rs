@@ -40,14 +40,14 @@ impl UtilArgs {
         let response = match reqwest::blocking::get(url.as_str()) {
             Ok(response) => response,
             Err(e) => {
-                spinner.stop();
+                spinner.finish("Downloading file unsuccessful".into());
                 error!(e, "Unable to request file");
                 exit(1);
             },
         };
 
         if !response.status().is_success() {
-            spinner.stop();
+            spinner.finish("Downloading file unsuccessful".into());
             error!(msg: "File request returned status code {}", response.status().as_u16());
             exit(1);
         }
@@ -55,7 +55,7 @@ impl UtilArgs {
         let bytes = match response.bytes() {
             Ok(bytes) => bytes,
             Err(e) => {
-                spinner.stop();
+                spinner.finish("Downloading file unsuccessful".into());
                 error!(e, "Unable to get file bytes");
                 exit(1);
             },
@@ -63,6 +63,7 @@ impl UtilArgs {
 
         let checksum = Checksum::from_bytes(&bytes);
 
-        spinner.finish(format!("Found checksum {}", checksum.to_string()));
+        spinner.finish("Downloading file successful".into());
+        println!("Found checksum {}", checksum.to_string());
     }
 }

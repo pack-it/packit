@@ -31,9 +31,4 @@ impl Spinner {
     pub fn finish(&self, message: String) {
         self.progress_bar.finish_with_message(message);
     }
-
-    /// Stops the spinner and removes the message.
-    pub fn stop(&self) {
-        self.progress_bar.finish_and_clear();
-    }
 }
