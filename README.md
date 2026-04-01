@@ -57,6 +57,9 @@ Unlinks the specified package, causing the package to be unavailable from the `P
 #### `pit package <PACKAGE-NAME>@<VERSION> <DESTINATION>`
 Packages the specified package into a prebuild and stores it in the destination directory, together with a checksum of the prebuild.
 
+#### `pit util checksum <URL>`
+Calculates the checksum of the file at the given url.
+
 
 ## Config
 
