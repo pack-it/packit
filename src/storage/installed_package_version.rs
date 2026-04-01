@@ -9,7 +9,7 @@ use crate::{config::Repository, installer::types::PackageId, repositories::types
 pub struct InstalledPackageVersion {
     pub package_id: PackageId,
 
-    #[serde(skip_serializing_if = "Licenses::is_none", default)]
+    #[serde(skip_serializing_if = "Licenses::is_unknown", default)]
     pub license: Licenses,
 
     #[serde(default = "Repository::default_repository_provider")]

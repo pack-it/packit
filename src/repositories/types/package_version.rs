@@ -26,7 +26,7 @@ pub struct PackageVersionMeta {
     #[serde(rename = "source")]
     pub sources: Sources,
 
-    #[serde(skip_serializing_if = "Licenses::is_none", default)]
+    #[serde(skip_serializing_if = "Licenses::is_unknown", default)]
     pub license: Licenses,
 
     #[serde(default = "PackageVersionMeta::default_skip_symlinking")]

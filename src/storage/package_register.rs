@@ -292,7 +292,7 @@ pub mod tests {
     ) -> InstalledPackageVersion {
         InstalledPackageVersion {
             package_id,
-            license: Licenses::None,
+            license: Licenses::Unknown,
             source_repository_provider: "-".to_string(),
             source_repository_url: "-".to_string(),
             source_prebuild_repository_url: None,
@@ -400,7 +400,7 @@ pub mod tests {
                 checksum: Checksum { sha256: [0; 32] },
                 mirrors: Vec::new(),
             }),
-            license: Licenses::None,
+            license: Licenses::Unknown,
             skip_symlinking: false,
             script_args: HashMap::new(),
             use_version_specific_build: false,

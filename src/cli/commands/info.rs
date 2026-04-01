@@ -97,7 +97,7 @@ impl InfoArgs {
             println!("Homepage: {homepage}");
         }
 
-        if !package_version.license.is_none() {
+        if !package_version.license.is_unknown() {
             println!("License: {}", package_version.license);
         }
 
