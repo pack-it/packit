@@ -2,15 +2,15 @@ use std::{collections::HashSet, path::PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{config::Repository, installer::types::PackageId};
+use crate::{config::Repository, installer::types::PackageId, repositories::types::Licenses};
 
 /// Represents a specific package version which is installed on the system.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct InstalledPackageVersion {
     pub package_id: PackageId,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub license: Option<String>,
+    #[serde(skip_serializing_if = "Licenses::is_unknown", default)]
+    pub license: Licenses,
 
     #[serde(default = "Repository::default_repository_provider")]
     #[serde(skip_serializing_if = "is_repository_provider_default")]

@@ -97,8 +97,8 @@ impl InfoArgs {
             println!("Homepage: {homepage}");
         }
 
-        if let Some(license) = &package_version.license {
-            println!("License: {}", license);
+        if !package_version.license.is_unknown() {
+            println!("License: {}", package_version.license);
         }
 
         println!(

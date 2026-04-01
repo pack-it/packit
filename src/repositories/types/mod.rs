@@ -1,5 +1,6 @@
 mod checksum;
 mod common;
+mod license;
 mod package;
 mod package_target;
 mod package_version;
@@ -16,9 +17,9 @@ pub use self::package_version::PackageVersionMeta;
 pub use self::checksum::Checksum;
 pub use self::common::Script;
 
-#[cfg(test)]
 pub use self::common::Source;
-#[cfg(test)]
 pub use self::common::Sources;
+
+pub use self::license::Licenses;
 
 pub use self::target_bounds::TargetBounds;
