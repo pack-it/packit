@@ -35,6 +35,7 @@ impl HandleCommand for RepositoryArgs {
             // Print repository information
             println!("{} ({repository_id})", metadata.name.bold().blue());
             println!("{}", metadata.description.green());
+            println!("License: {}", metadata.license);
             println!("Maintainers: {}", metadata.maintainers.join(", "));
             println!("Repository provider: {}, path: {}", repository.provider, repository.path);
         }
