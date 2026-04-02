@@ -41,7 +41,7 @@ impl ArchiveExtension {
         let (_, extension) = path.split_at(path.len() - extension_index);
 
         match extension.to_lowercase().as_str() {
-            "gz" => Self::GZ,
+            "gz" | "tgz" => Self::GZ,
             "zip" => Self::ZIP,
             "xz" => Self::XZ,
             _ => Self::Unknown,
