@@ -9,6 +9,7 @@ use crate::{
         display::{Spinner, logging::error},
     },
     repositories::types::Checksum,
+    utils::requests,
 };
 
 /// Provides several utils for advanced users.
@@ -37,7 +38,7 @@ impl UtilArgs {
         let spinner = Spinner::new();
         spinner.show("Downloading file".into());
 
-        let response = match reqwest::blocking::get(url.as_str()) {
+        let response = match requests::get(url.as_str()) {
             Ok(response) => response,
             Err(e) => {
                 spinner.finish("Downloading file unsuccessful".into());
