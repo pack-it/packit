@@ -221,6 +221,15 @@ impl<'a> BinaryPatcher<'a> {
             }
         }
 
+        // Check if the binary already contains a RunPath
+        let mut has_runpath = false;
+        for entry in binary.dynamic_entries() {
+            if let elf::dynamic::Entries::RunPath(_) = entry {
+                has_runpath = true;
+                break;
+            }
+        }
+
         // Add rpaths to binary
         if !rpaths.is_empty() {
             debug!("Changed binary {path:?}, writing changes");
@@ -231,7 +240,10 @@ impl<'a> BinaryPatcher<'a> {
                     string_path.push('/');
                 }
 
-                binary.add_dynamic_entry(&elf::dynamic::Rpath::new(&string_path));
+                match has_runpath {
+                    true => binary.add_dynamic_entry(&elf::dynamic::RunPath::new(&string_path)),
+                    false => binary.add_dynamic_entry(&elf::dynamic::Rpath::new(&string_path)),
+                };
             }
 
             let config = elf::builder::Config::default();
