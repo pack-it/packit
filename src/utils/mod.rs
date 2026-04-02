@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 pub mod constants;
 pub mod duplicates;
 pub mod env;

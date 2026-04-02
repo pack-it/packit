@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use indicatif::{ProgressBar as IndicatifProgressBar, ProgressStyle};
 
 /// Represents a progress bar for a load process.

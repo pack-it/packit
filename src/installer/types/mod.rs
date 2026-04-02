@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 mod dependency;
 mod optional_id;
 mod package_id;

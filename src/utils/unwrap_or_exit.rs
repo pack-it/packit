@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use std::{error::Error, process::exit};
 
 use crate::cli::display::logging::error;

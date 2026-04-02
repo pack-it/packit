@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use std::{path::PathBuf, process::exit};
 
 use clap::Args;

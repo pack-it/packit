@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use crate::installer::install_tree::InstallType;
 
 /// Holds the install options.

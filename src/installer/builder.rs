@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use std::path::Path;
 use tempfile::TempDir;
 use thiserror::Error;
