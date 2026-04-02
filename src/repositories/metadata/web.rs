@@ -8,6 +8,7 @@ use crate::{
         provider::MetadataProvider,
         types::{PackageMeta, PackageVersionMeta, RepositoryMeta},
     },
+    utils::requests,
 };
 
 pub const WEB_METADATA_PROVIDER_ID: &str = "web";
@@ -19,27 +20,27 @@ pub struct WebMetadataProvider {
 
 impl MetadataProvider for WebMetadataProvider {
     fn read_repository_metadata(&self) -> Result<RepositoryMeta> {
-        let data = reqwest::blocking::get(format!("{}/repository.toml", self.url))?.text()?;
+        let data = requests::get(format!("{}/repository.toml", self.url))?.text()?;
 
         Ok(toml::de::from_str(&data)?)
     }
 
     fn read_package(&self, package: &PackageName) -> Result<PackageMeta> {
-        let data = reqwest::blocking::get(format!("{}/packages/{package}/package.toml", self.url))?.text()?;
+        let data = requests::get(format!("{}/packages/{package}/package.toml", self.url))?.text()?;
 
         Ok(toml::de::from_str(&data)?)
     }
 
     fn read_package_version(&self, package: &PackageName, version: &Version) -> Result<PackageVersionMeta> {
-        let data = reqwest::blocking::get(format!("{}/packages/{package}/{version}/targets.toml", self.url))?.text()?;
+        let data = requests::get(format!("{}/packages/{package}/{version}/targets.toml", self.url))?.text()?;
 
         Ok(toml::de::from_str(&data)?)
     }
 
     /// Reads a script and returns its content as a string. If the script doesn't exist Ok(None) is returned.
-    /// Returns a response error if `reqwest::blocking::get` or `Response::text` fails.
+    /// Returns a response error if `requests::get` or `Response::text` fails.
     fn read_script(&self, package: &PackageName, script_path: &str) -> Result<Option<String>> {
-        let response = reqwest::blocking::get(format!("{}/packages/{package}/{script_path}", self.url))?;
+        let response = requests::get(format!("{}/packages/{package}/{script_path}", self.url))?;
 
         if response.status() == StatusCode::NOT_FOUND {
             return Ok(None);

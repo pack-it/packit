@@ -15,6 +15,7 @@ use crate::{
     platforms::binaries::{BinaryPatcher, BinaryPatcherError},
     repositories::{error::RepositoryError, manager::RepositoryManager, types::Checksum},
     storage::package_register::PackageRegister,
+    utils::requests,
 };
 
 /// The errors that occur during building.
@@ -126,7 +127,7 @@ impl<'a> Builder<'a> {
 
         // Download the build files
         let mut mirrors = source.mirrors.iter();
-        let mut response = reqwest::blocking::get(&source.url).map_err(|e| BuilderError::RequestError(e));
+        let mut response = requests::get(&source.url).map_err(|e| BuilderError::RequestError(e));
         if let Ok(status_response) = &response
             && !status_response.status().is_success()
         {
@@ -142,7 +143,7 @@ impl<'a> Builder<'a> {
             finish_message = format!("Downloading '{package_name}' from alternative {} successful", &mirror);
 
             // Get response from alternative mirror
-            response = reqwest::blocking::get(mirror).map_err(|e| BuilderError::RequestError(e));
+            response = requests::get(mirror).map_err(|e| BuilderError::RequestError(e));
 
             // Check if the response itself is unsuccessful
             if let Ok(status_response) = &response
