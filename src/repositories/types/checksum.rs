@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use std::str::FromStr;
 
 use serde::{Deserialize, de};

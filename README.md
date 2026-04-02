@@ -8,6 +8,10 @@ Please note Packit is still in early development, breaking changes are possible 
 TODO
 
 
+## License
+The Packit repository is licensed under the GNU General Public License v3.0. See [LICENSE](LICENSE) for the full license.
+
+
 ## Usage
 The general usage of Packit is: `pit <COMMAND>`.
 

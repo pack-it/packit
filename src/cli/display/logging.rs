@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use std::{error::Error, sync::LazyLock};
 
 use colored::Colorize;

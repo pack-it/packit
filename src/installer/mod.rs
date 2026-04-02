@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 mod build_env;
 mod builder;
 pub mod error;

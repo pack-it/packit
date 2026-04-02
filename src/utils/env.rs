@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use std::collections::HashMap;
 
 /// Represents an environment, containing environment variables and variables to be stripped.

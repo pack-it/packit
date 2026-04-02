@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use crate::platforms::{OsVersion, TargetArchitecture};
 
 /// Represents a target, which is its architecture and OS version combined.

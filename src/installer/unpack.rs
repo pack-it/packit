@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use bytes::Bytes;
 use flate2::read::GzDecoder;
 use std::{io::Cursor, path::Path};

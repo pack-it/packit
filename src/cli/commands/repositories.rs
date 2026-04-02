@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use crate::{
     cli::{commands::HandleCommand, display::logging::warning},
     config::Config,
