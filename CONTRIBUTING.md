@@ -52,6 +52,16 @@ Ensure the titles describes clearly what changes you made, ideally this matches 
 <br><br>
 After you have done all steps above, click on the `Create pull request` button. Your pull request is now created and one of the Packit maintainers will review it as soon as possible.
 
+
+## License
+
+This project is licensed under the GNU General Public License v3.0. See [LICENSE](LICENSE) for the full license.
+
+By contributing to this project, you agree that your contributions will be licensed under the same license.
+
+You must ensure that your contributions are your own original work or that you have the right to submit them under the project's license.
+
+
 ## Types of contributions
 
 ### Feature request or implementation
