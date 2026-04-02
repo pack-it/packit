@@ -20,7 +20,7 @@ use crate::{
 /// The errors that occur during building.
 #[derive(Error, Debug)]
 pub enum BuilderError {
-    #[error("Build files download unsuccessful")]
+    #[error("Build files download unsuccessful, with status code: {0}.")]
     RequestUnsuccessful(reqwest::StatusCode),
 
     #[error("Dependency '{package_name}' of type '{dependency_type}' is not installed.")]
@@ -121,22 +121,39 @@ impl<'a> Builder<'a> {
 
         // Show download spinner
         let spinner = Spinner::new();
-        spinner.show(format!("Downloading {package_name} from {}", &source.url));
+        spinner.show(format!("Downloading '{package_name}' from {}", &source.url));
+        let mut finish_message = format!("Downloading '{package_name}' from {} successful", &source.url);
 
         // Download the build files
-        let mut response = reqwest::blocking::get(&source.url)?;
         let mut mirrors = source.mirrors.iter();
-        while !response.status().is_success() && mirrors.len() > 0 {
-            response = reqwest::blocking::get(mirrors.next().expect("Expected mirror URL"))?;
+        let mut response = reqwest::blocking::get(&source.url).map_err(|e| BuilderError::RequestError(e));
+        if let Ok(status_response) = &response
+            && !status_response.status().is_success()
+        {
+            response = Err(BuilderError::RequestUnsuccessful(status_response.status()));
         }
 
-        // Check if download is succesfull
-        if !response.status().is_success() {
-            return Err(BuilderError::RequestUnsuccessful(response.status()));
+        // Loop through mirrors for alternatives in case of error
+        while response.is_err()
+            && let Some(mirror) = mirrors.next()
+        {
+            // Update spinner for new download url
+            spinner.show(format!("Downloading '{package_name}' from alternative {}", &mirror));
+            finish_message = format!("Downloading '{package_name}' from alternative {} successful", &mirror);
+
+            // Get response from alternative mirror
+            response = reqwest::blocking::get(mirror).map_err(|e| BuilderError::RequestError(e));
+
+            // Check if the response itself is unsuccessful
+            if let Ok(status_response) = &response
+                && !status_response.status().is_success()
+            {
+                response = Err(BuilderError::RequestUnsuccessful(status_response.status()));
+            }
         }
 
         // Get the bytes from the response
-        let bytes = response.bytes()?;
+        let bytes = response?.bytes()?;
 
         // Calculate the checksum
         let checksum = Checksum::from_bytes(&bytes);
@@ -147,7 +164,7 @@ impl<'a> Builder<'a> {
         }
 
         // Finish download spinner
-        spinner.finish(format!("Downloading {package_name} from {} successful", &source.url));
+        spinner.finish(finish_message);
 
         // Unpack the package to the temp directory
         let unpack_directory = TempDir::new()?;
