@@ -7,7 +7,7 @@ authors = ["The Packit Team"]
 repository = "https://github.com/pack-it/packit"
 categories = ["command-line-utilities", "development-tools"]
 edition = "2024"
-rust-version = "1.85.0" # Earliest stable compiler for rust 2024 edition
+rust-version = "1.85.0"                                      # Earliest stable compiler for rust 2024 edition
 
 [dependencies]
 thiserror = "2.0.18"
@@ -37,3 +37,4 @@ libc = "0.2.182"
 [target.'cfg(target_os = "windows")'.dependencies]
 windows-version = "0.1.7"
 enable-ansi-support = "0.3.1"
+windows = "0.62.2"
