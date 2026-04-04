@@ -186,19 +186,25 @@ pub fn download_script(
 
 /// Downloads a script and saves it as a temp file.
 pub fn write_script_to_tempfile(script_text: &str) -> Result<NamedTempFile> {
-    #[allow(unused_mut)]
-    let mut builder = tempfile::Builder::new();
-
-    // Ensure .bat extension on Windows
-    #[cfg(target_os = "windows")]
-    builder.suffix(".bat");
+    let file = create_tempfile()?;
 
     // Write script to file
-    let file = builder.tempfile().map_err(ScriptError::SaveError)?;
     fs::write(&file, &script_text).map_err(ScriptError::SaveError)?;
 
     // Return created tempfile
     Ok(file)
+}
+
+#[cfg(not(target_os = "windows"))]
+fn create_tempfile() -> Result<NamedTempFile> {
+    NamedTempFile::new().map_err(ScriptError::SaveError)
+}
+
+#[cfg(target_os = "windows")]
+fn create_tempfile() -> Result<NamedTempFile> {
+    let mut builder = tempfile::Builder::new();
+    builder.suffix(".bat");
+    builder.tempfile().map_err(ScriptError::SaveError)
 }
 
 fn to_absolute_path<P: AsRef<Path>>(path: P) -> Result<PathBuf> {
