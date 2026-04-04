@@ -31,7 +31,7 @@ pub fn is_writable(path: &PathBuf) -> Result<bool> {
     }
 
     // Use platform specific writable checks
-    Ok(platform::is_writable(path, metadata))
+    platform::is_writable(path, metadata)
 }
 
 /// Sets the permissions of packit files
@@ -57,29 +57,29 @@ pub mod platform {
     pub const PACKIT_GROUP_NAME: &str = "packit";
 
     /// Checks if a directory is writeable. Returns true if it is, false otherwise.
-    pub(super) fn is_writable(_path: &PathBuf, metadata: Metadata) -> bool {
+    pub(super) fn is_writable(_path: &PathBuf, metadata: Metadata) -> Result<bool> {
         let mode = metadata.mode();
 
         // Check if path is writable for everyone
         if mode & 0o002 != 0 {
-            return true;
+            return Ok(true);
         }
 
         // Check if path is writable for current group
         let current_group = unsafe { libc::getegid() };
         let group = metadata.gid();
         if current_group == group && mode & 0o020 != 0 {
-            return true;
+            return Ok(true);
         }
 
         // Check if path is writable for current user
         let current_user = unsafe { libc::geteuid() };
         let user = metadata.uid();
         if current_user == user && mode & 0o200 != 0 {
-            return true;
+            return Ok(true);
         }
 
-        false
+        Ok(false)
     }
 
     /// Sets the permissions of packit files.
@@ -164,7 +164,7 @@ mod platform {
 
     use super::Result;
 
-    pub fn is_writable_specific(_path: &PathBuf, _metadata: Metadata) -> Result<bool> {
+    pub(super) fn is_writable(_path: &PathBuf, _metadata: Metadata) -> Result<bool> {
         // TODO
         Ok(true)
     }
@@ -181,7 +181,7 @@ mod platform {
 
     use super::Result;
 
-    pub fn is_writable_specific(_path: &PathBuf, _metadata: Metadata) -> Result<bool> {
+    pub(super) fn is_writable(_path: &PathBuf, _metadata: Metadata) -> Result<bool> {
         panic!("Cannot check write permissions for target, target is not supported.");
     }
 

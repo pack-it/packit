@@ -186,8 +186,15 @@ pub fn download_script(
 
 /// Downloads a script and saves it as a temp file.
 pub fn write_script_to_tempfile(script_text: &str) -> Result<NamedTempFile> {
+    #[allow(unused_mut)]
+    let mut builder = tempfile::Builder::new();
+
+    // Ensure .bat extension on Windows
+    #[cfg(target_os = "windows")]
+    builder.suffix(".bat");
+
     // Write script to file
-    let file = NamedTempFile::new().map_err(ScriptError::SaveError)?;
+    let file = builder.tempfile().map_err(ScriptError::SaveError)?;
     fs::write(&file, &script_text).map_err(ScriptError::SaveError)?;
 
     // Return created tempfile
@@ -209,7 +216,7 @@ fn create_command<P: AsRef<Path>>(path: P) -> Command {
 #[cfg(target_os = "windows")]
 fn create_command<P: AsRef<Path>>(path: P) -> Command {
     let mut command = Command::new("cmd");
-    command.arg("/C").arg(path.as_ref());
+    command.arg("/Q").arg("/C").arg(path.as_ref());
 
     command
 }
