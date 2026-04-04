@@ -33,15 +33,13 @@ pub fn create_symlink(original: &Path, link: &Path) -> Result<(), SymlinkError> 
     Ok(())
 }
 
-/// Removes the given symlink. This is platform independent.
+/// Removes the given symlink. Checks if the path is a symlink and calls platform specific code.
 pub fn remove_symlink(symlink: &Path) -> Result<(), SymlinkError> {
     if !symlink.is_symlink() {
         return Err(SymlinkError::NonSymlink);
     }
 
-    std::fs::remove_file(symlink)?;
-
-    Ok(())
+    platform::remove_symlink(symlink)
 }
 
 #[cfg(any(target_os = "macos", target_os = "linux"))]
@@ -53,6 +51,13 @@ pub mod platform {
     /// Creates a symlink on macOS and Linux from link to original.
     pub fn create_symlink(original: &Path, link: &Path) -> Result<(), SymlinkError> {
         std::os::unix::fs::symlink(original, link)?;
+
+        Ok(())
+    }
+
+    /// Removes the given symlink on macOS and Linux.
+    pub fn remove_symlink(symlink: &Path) -> Result<(), SymlinkError> {
+        std::fs::remove_file(symlink)?;
 
         Ok(())
     }
@@ -73,6 +78,16 @@ pub mod platform {
 
         Ok(())
     }
+
+    /// Removes the given symlink on macOS and Linux.
+    pub fn remove_symlink(symlink: &Path) -> Result<(), SymlinkError> {
+        match symlink.is_dir() {
+            true => std::fs::remove_dir(symlink)?,
+            false => std::fs::remove_file(symlink)?,
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
@@ -84,5 +99,10 @@ pub mod platform {
     /// Panics for any unsupported OS.
     pub fn create_symlink(original: &Path, link: &Path) -> Result<(), SymlinkError> {
         panic!("Cannot create link for target, target is not supported.");
+    }
+
+    /// Panics for any unsupported OS.
+    pub fn remove_symlink(symlink: &Path) -> Result<(), SymlinkError> {
+        panic!("Cannot remove link for target, target is not supported.");
     }
 }

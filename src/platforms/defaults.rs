@@ -7,7 +7,7 @@
 pub const DEFAULT_PREFIX: &str = "/opt/packit";
 
 #[cfg(target_os = "windows")]
-pub const DEFAULT_PREFIX: &str = "%PROGRAMFILES%/packit";
+pub const DEFAULT_PREFIX: &str = "C:\\Program Files\\packit";
 
 #[cfg(any(target_os = "linux"))]
 pub const DEFAULT_CONFIG_DIR: &str = "/etc/packit";
@@ -16,4 +16,4 @@ pub const DEFAULT_CONFIG_DIR: &str = "/etc/packit";
 pub const DEFAULT_CONFIG_DIR: &str = "/Library/Application Support/packit";
 
 #[cfg(target_os = "windows")]
-pub const DEFAULT_CONFIG_DIR: &str = "%PROGRAMFILES%/packit";
+pub const DEFAULT_CONFIG_DIR: &str = "C:\\Program Files\\packit";
