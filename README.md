@@ -93,6 +93,7 @@ repositories_rank = ["core"]
 [repositories]
 
 [repositories.core]
+provider = "web"
 path = "https://raw.githubusercontent.com/pack-it/core/main/"
 ```
 
