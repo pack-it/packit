@@ -7,9 +7,9 @@ VERSION="0.0.1"
 CURRENT_OS="$(uname -s)"
 
 # Get the OS name
-if [ $CURRENT_OS = "Darwin" ]
+if [ $CURRENT_OS = "Darwin" ];
     CURRENT_OS_NAME = "apple-darwin"
-else if [ $CURRENT_OS = "Linux" ]
+else if [ $CURRENT_OS = "Linux" ];
     if [ echo "$(ldd --version)" | grep -q "musl" ]
         CURRENT_OS_NAME = "unknown-linux-musl"
     else if [ echo "$(ldd --version)" | grep -q "GLIBC" ]
@@ -24,9 +24,9 @@ else
 fi
 
 # Get the current architecture
-if [ "$(uname -m)" = "aarch64" ] || [ "$(uname -m)" = "arm64" ]
+if [ "$(uname -m)" = "aarch64" ] || [ "$(uname -m)" = "arm64" ];
     CURRENT_ARCH="aarch64"
-else if [ "$(uname -m)" = "x86_64" ]
+else if [ "$(uname -m)" = "x86_64" ];
     CURRENT_ARCH="x86_64"
 else
     echo "Current architecture unsupported, stopping install"
@@ -49,13 +49,64 @@ else
 fi
 
 # Go into the prefix directory 
-mkdir -p $PREFIX_DIR/packages/packit/$VERSION
-cd $PREFIX_DIR/packages/packit/$VERSION
+mkdir -p $PREFIX_DIR/packages/packit/$VERSION/bin
+cd $PREFIX_DIR/packages/packit/$VERSION/bin
 
 # Install Packit to the prefix directory
 curl --proto "=https" -sSf $SOURCE_PREBUILD_REPOSITORY_URL
-tar -xf packit@0.0.1-0-$TARGET.tar.gz
-rm packit@0.0.1-0-$TARGET.tar.gz
+if [ $? ]; then
+    tar -xf packit@0.0.1-0-$TARGET.tar.gz
+    rm packit@0.0.1-0-$TARGET.tar.gz
+else
+    echo "Retrieving prebuilds failed. Do you wish to build Packit from source? (Y/n)"
+    read answer
+    if ! { [ $answer = "y" ] || [ $answer = "" ] || [ $answer = "yes" ]; }; then
+        echo "Canceling installation of Packit"
+        exit(1)
+    fi
+
+    RUSTUP_INSTALLED=0
+
+    # Make sure cargo exists before building Packit
+    command -v cargo
+    if [ !$? ]; then
+        echo "Cargo is not installed, do you wish to install it to build Packit? (y/N)"
+        read answer
+        if ! { [ $answer = "y" ] || [ $answer = "yes" ]; }; then
+            echo "Canceling installation of Packit"
+            exit(1)
+        fi
+
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+        # Make sure that the rustup install was successful
+        command -v cargo
+        if [ !$? ]; then
+            echo "Installing rustup failed, canceling Packit installation"
+            exit(1)
+        fi
+
+        RUSTUP_INSTALLED=1
+    fi
+
+    curl --proto "=https" -sSf $SOURCE_REPOSITORY_URL
+    tar -xf packit@0.0.1-0-$TARGET.tar.gz # TODO: Target is different when installing source instead of prebuild
+    rm packit@0.0.1-0-$TARGET.tar.gz
+    cargo build
+    mkdir ./bin
+    mv ./target/release/packit ./bin
+    rm -r ./target
+
+    if [ $RUSTUP_INSTALLED ]; then
+        echo "You installed rustup to install Packit. This installation is not registered in Packit. Do you wish to uninstall it? (Y/n)"
+        read answer
+
+        if [ $answer = "y" ] || [ $answer = "yes" ]; then
+            echo "Uninstalling rustup"
+            rustup self uninstall
+        fi
+    fi
+fi
 ln -s ./packit ./pit
 
 # Go into prefix/bin
