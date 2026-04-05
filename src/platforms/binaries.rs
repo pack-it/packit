@@ -98,7 +98,7 @@ impl<'a> BinaryPatcher<'a> {
             },
             Some(Binary::PE(_binary)) => {
                 debug!("Patching PE binary at '{}'", path.display());
-                todo!();
+                println!("Cannot patch binary because PE patching is not yet implemented!");
             },
             Some(Binary::COFF(_)) => {
                 return Err(BinaryPatcherError::UnsupportedBinaryType {

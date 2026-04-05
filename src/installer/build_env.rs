@@ -21,6 +21,12 @@ const STRIPPED_VARS: &'static [&'static str] = &[
     "MACOSX_DEPLOYMENT_TARGET", "SDKROOT", "DEVELOPER_DIR"
 ];
 
+#[cfg(target_family = "unix")]
+const PATH_SEPARATOR: &str = ":";
+
+#[cfg(target_os = "windows")]
+const PATH_SEPARATOR: &str = ";";
+
 /// Holds all the data necessary to build a normalized build environment.
 pub struct BuildEnv<'a> {
     prefix_directory: &'a PathBuf,
@@ -123,7 +129,23 @@ impl<'a> BuildEnv<'a> {
             parts.append(&mut vec!["/usr/bin", "/bin", "/usr/sbin", "/sbin"].into_iter().map(String::from).collect());
         }
 
-        parts.join(":")
+        // Add standard Windows system bin paths to PATH
+        #[cfg(any(target_os = "windows"))]
+        {
+            parts.append(
+                &mut vec![
+                    "C:\\Windows",
+                    "C:\\Windows\\system32",
+                    "C:\\Windows\\System32\\Wbem",
+                    "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\",
+                ]
+                .into_iter()
+                .map(String::from)
+                .collect(),
+            );
+        }
+
+        parts.join(PATH_SEPARATOR)
     }
 
     /// Creates the `PKG_CONFIG_PATH` to pkgconfig inside of the lib and share directories of the (build) dependencies.
@@ -171,7 +193,7 @@ impl<'a> BuildEnv<'a> {
             parts.push("/usr/lib/pkgconfig".into());
         }
 
-        parts.join(":")
+        parts.join(PATH_SEPARATOR)
     }
 
     /// Creates the `CMAKE_PREFIX_PATH` with the (build) dependency install paths.
@@ -205,7 +227,7 @@ impl<'a> BuildEnv<'a> {
             None => warning!("Cannot add Packit prefix directory to build env CMAKE_PREFIX_PATH: cannot convert PathBuf to string"),
         };
 
-        parts.join(":")
+        parts.join(PATH_SEPARATOR)
     }
 
     /// Creates the `ACLOCAL_PATH` from the share/aclocal in each (build) dependency.
@@ -245,6 +267,6 @@ impl<'a> BuildEnv<'a> {
             None => warning!("Cannot add Packit prefix directory to build env ACLOCAL_PATH: cannot convert PathBuf to string"),
         };
 
-        parts.join(":")
+        parts.join(PATH_SEPARATOR)
     }
 }

@@ -148,6 +148,13 @@ impl From<&[u32]> for Version {
     }
 }
 
+/// Implements the from trait for `&[u32; N]`.
+impl<const N: usize> From<&[u32; N]> for Version {
+    fn from(value: &[u32; N]) -> Self {
+        Self { numbers: Vec::from(value) }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

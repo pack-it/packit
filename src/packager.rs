@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#[cfg(target_family = "unix")]
+use std::os::unix::fs::PermissionsExt;
 use std::{
     fs::{self, File},
     io::{self, Write},
-    os::unix::fs::PermissionsExt,
     path::PathBuf,
 };
 
@@ -167,14 +168,17 @@ fn add_symlink(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, fi
 /// Normalizes a tar header. Most fields are set to zero. The data length and path fields are set based on
 /// the given parameters. The mode field is set based on the entry type of the existing/given header.
 fn normalize_header(header: &mut Header, data_length: u64, tar_path: &PathBuf, file_path: &PathBuf) -> Result<(), PackagerError> {
-    // For symlink do symlink_metadata() instead of metadata()
-    let mode = match header.entry_type() == EntryType::Symlink {
-        true => fs::symlink_metadata(file_path)?.permissions().mode(),
-        false => fs::metadata(file_path)?.permissions().mode(),
-    };
+    #[cfg(target_family = "unix")]
+    {
+        // For symlink do symlink_metadata() instead of metadata()
+        let mode = match header.entry_type() == EntryType::Symlink {
+            true => fs::symlink_metadata(file_path)?.permissions().mode(),
+            false => fs::metadata(file_path)?.permissions().mode(),
+        };
+        header.set_mode(mode);
+    }
 
     header.set_size(data_length);
-    header.set_mode(mode);
     header.set_uid(0);
     header.set_gid(0);
     header.set_mtime(0);

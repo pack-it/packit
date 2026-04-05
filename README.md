@@ -104,7 +104,7 @@ You might be interested in how (and why) Packit manages dependencies, configs an
 
 #### Prefix
 The prefix directory of Packit contains all data of installed packages.
-On Unix systems we use `/opt/packit`, on Windows we use `%PROGRAMFILES%/packit`
+On Unix systems we use `/opt/packit`, on Windows we use `C:\Program Files\packit`
 
 #### Package install files
 All installed packages will go in `<prefix>/packages/<PACKAGE-NAME>/<PACKAGE-VERSION>/`.
@@ -119,5 +119,5 @@ The currently active version of a package will be symlinked in `<prefix>/active/
 The active binaries will be symlinked in: `<prefix>/bin/<EXECUTABLE-NAME>`. This directory needs to be present in the users `PATH` in order for installed binaries to be detected by the system.
 
 #### Packit configs
-On Linux we use `/etc/packit` for the configs, on macOS we use `/Library/Application Support/packit` and on Windows we use `%PROGRAMFILES%/packit`.
+On Linux we use `/etc/packit` for the configs, on macOS we use `/Library/Application Support/packit` and on Windows we use `C:\Program Files\packit`.
 Currently the only config is `Config.toml`, containing all configured repositories.

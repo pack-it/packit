@@ -18,6 +18,8 @@ use std::process::exit;
 
 use clap::{Parser, Subcommand, builder::Styles};
 
+#[cfg(target_os = "windows")]
+use crate::cli::display::logging::debug;
 use crate::cli::{
     commands::{
         check::CheckArgs, fix::FixArgs, info::InfoArgs, install::InstallArgs, link::LinkArgs, list::ListArgs, package::PackageArgs,
@@ -85,13 +87,30 @@ enum Commands {
 impl Cli {
     /// Gets an instance of the `Cli`.
     pub fn get_instance() -> Self {
+        // Try to enable ANSI support for Windows
+        #[cfg(target_os = "windows")]
+        {
+            match enable_ansi_support::enable_ansi_support() {
+                Ok(_) => debug!("Enabled ANSI support for windows!"),
+                Err(_) => {
+                    debug!("Cannot enable ANSI support for windows, disabling coloring!");
+                    colored::control::set_override(false);
+                },
+            }
+        }
+
+        // Parse command
         match Cli::try_parse() {
             Ok(cli) => cli,
             Err(e) => {
                 let styles = Styles::default();
                 let prefix = format!("{}error:{:#} ", styles.get_error(), styles.get_error());
 
-                let msg = e.render().ansi().to_string();
+                let msg = match colored::control::SHOULD_COLORIZE.should_colorize() {
+                    true => e.render().ansi().to_string(),
+                    false => e.render().to_string(),
+                };
+
                 match msg.strip_prefix(&prefix) {
                     Some(msg) => error!(msg: msg),
                     None => println!("{msg}"),
