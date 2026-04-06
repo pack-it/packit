@@ -4,6 +4,8 @@ use reqwest::{
     blocking::{Client, Response},
 };
 
+const USER_AGENT: &str = concat!("Packit/", env!("CARGO_PKG_VERSION"));
+
 /// Sends a `GET` request to the provided url using reqwest.
 pub fn get<T: IntoUrl>(url: T) -> Result<Response, Error> {
     build_client()?.get(url).send()
@@ -11,5 +13,5 @@ pub fn get<T: IntoUrl>(url: T) -> Result<Response, Error> {
 
 /// Builds a request client
 fn build_client() -> Result<Client, Error> {
-    reqwest::blocking::ClientBuilder::new().user_agent("Packit/0.0.1").build()
+    reqwest::blocking::ClientBuilder::new().user_agent(USER_AGENT).build()
 }
