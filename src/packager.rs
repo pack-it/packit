@@ -31,9 +31,11 @@ pub enum PackagerError {
     IOError(#[from] std::io::Error),
 }
 
+pub type Result<T> = core::result::Result<T, PackagerError>;
+
 /// Packages a package to a given destination. If the destination doesn't exist an IO [NotADirectory](std::io::ErrorKind::NotADirectory) error is returned.
 /// The revision is used to create a unique filename for different package revisions.
-pub fn package(config: &Config, package_id: &PackageId, destination: &PathBuf, revisions: usize) -> Result<(), PackagerError> {
+pub fn package(config: &Config, package_id: &PackageId, destination: &PathBuf, revisions: usize) -> Result<()> {
     let install_directory = config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
 
     // Return an error if the destination is not a directory
@@ -65,7 +67,7 @@ pub fn package(config: &Config, package_id: &PackageId, destination: &PathBuf, r
 }
 
 /// Compresses a given directory using a normalized tar and returns the compressed bytes.
-pub fn compress(source_directory: &PathBuf) -> Result<Vec<u8>, PackagerError> {
+pub fn compress(source_directory: &PathBuf) -> Result<Vec<u8>> {
     let buffer = Vec::new();
     let encoder = GzBuilder::new().mtime(0).write(buffer, Compression::default());
 
@@ -82,7 +84,7 @@ pub fn compress(source_directory: &PathBuf) -> Result<Vec<u8>, PackagerError> {
 }
 
 /// Creates a normalized tar by recursively adding files to the tar from a given directory while maintaining the directory structure.
-fn create_normalized_tar(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, file_path: &PathBuf) -> Result<(), PackagerError> {
+fn create_normalized_tar(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, file_path: &PathBuf) -> Result<()> {
     add_directory(builder, tar_path, file_path)?;
 
     // Get directory entries
@@ -123,7 +125,7 @@ fn create_normalized_tar(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &P
 }
 
 /// Adds a normalized directory to a tar file.
-fn add_directory(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, file_path: &PathBuf) -> Result<(), PackagerError> {
+fn add_directory(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, file_path: &PathBuf) -> Result<()> {
     // Create directory header
     let mut header = Header::new_ustar();
     header.set_entry_type(EntryType::Directory);
@@ -136,7 +138,7 @@ fn add_directory(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, 
 }
 
 /// Adds a normalized file to a tar file.
-fn add_file(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, file_path: &PathBuf) -> Result<(), PackagerError> {
+fn add_file(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, file_path: &PathBuf) -> Result<()> {
     let file = File::open(file_path)?;
 
     // Create regular file header
@@ -151,7 +153,7 @@ fn add_file(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, file_
 }
 
 /// Adds a normalized symlink to a tar file.
-fn add_symlink(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, file_path: &PathBuf) -> Result<(), PackagerError> {
+fn add_symlink(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, file_path: &PathBuf) -> Result<()> {
     let target = fs::read_link(file_path)?;
 
     // Create symlink header
@@ -167,7 +169,7 @@ fn add_symlink(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, fi
 
 /// Normalizes a tar header. Most fields are set to zero. The data length and path fields are set based on
 /// the given parameters. The mode field is set based on the entry type of the existing/given header.
-fn normalize_header(header: &mut Header, data_length: u64, tar_path: &PathBuf, file_path: &PathBuf) -> Result<(), PackagerError> {
+fn normalize_header(header: &mut Header, data_length: u64, tar_path: &PathBuf, file_path: &PathBuf) -> Result<()> {
     #[cfg(target_family = "unix")]
     {
         // For symlink do symlink_metadata() instead of metadata()
