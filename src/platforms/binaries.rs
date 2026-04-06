@@ -103,7 +103,7 @@ impl<'a> BinaryPatcher<'a> {
             Some(Binary::PE(binary)) => {
                 debug!("Patching PE binary at '{}'", path.display());
                 debug!("Using symlinking, because PE patching is not yet implemented!");
-                self.symlink_pe(binary, path, dependencies)?;
+                self.symlink_pe(binary, path, package, dependencies)?;
             },
             Some(Binary::COFF(_)) => {
                 return Err(BinaryPatcherError::UnsupportedBinaryType {
@@ -276,7 +276,13 @@ impl<'a> BinaryPatcher<'a> {
     }
 
     /// Symlinks PE binary dependencies into the same directory as the binary.
-    fn symlink_pe(&self, binary: pe::Binary, path: &PathBuf, dependencies: &Vec<&InstalledPackageVersion>) -> Result<()> {
+    fn symlink_pe(
+        &self,
+        binary: pe::Binary,
+        path: &PathBuf,
+        package: &PackageId,
+        dependencies: &Vec<&InstalledPackageVersion>,
+    ) -> Result<()> {
         let Some(binary_directory) = path.parent() else { return Ok(()) };
 
         for import in binary.imports() {
@@ -285,14 +291,18 @@ impl<'a> BinaryPatcher<'a> {
                 continue;
             }
 
+            // Check if dependencies contain the import file
             for dependency in dependencies {
-                let lib_path = dependency.install_path.join("lib").join(import.name());
+                let dependency_path =
+                    self.config.prefix_directory.join("dependencies").join(package.to_string()).join(&dependency.package_id.name);
+
+                let lib_path = dependency_path.join("lib").join(import.name());
                 if lib_path.exists() {
                     symlink::create_symlink(&lib_path, &binary_directory.join(import.name()))?;
                     break;
                 }
 
-                let bin_path = dependency.install_path.join("bin").join(import.name());
+                let bin_path = dependency_path.join("bin").join(import.name());
                 if bin_path.exists() {
                     symlink::create_symlink(&bin_path, &binary_directory.join(import.name()))?;
                     break;
