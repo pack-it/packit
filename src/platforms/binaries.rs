@@ -6,13 +6,14 @@ use std::{
     process::{Command, Stdio},
 };
 
-use lief::{Binary, elf, macho};
+use lief::{Binary, elf, macho, pe};
 use thiserror::Error;
 
 use crate::{
     cli::display::logging::{self, debug, error},
     config::Config,
     installer::types::PackageId,
+    platforms::symlink::{self, SymlinkError},
     storage::installed_package_version::InstalledPackageVersion,
 };
 
@@ -32,6 +33,9 @@ pub enum BinaryPatcherError {
 
     #[error("Cannot convert OsString to string")]
     OsStringConversionError,
+
+    #[error("Cannot symlink binary dependencies")]
+    SymlinkError(#[from] SymlinkError),
 
     #[error("Error while interacting with filesystem")]
     IOError(#[from] std::io::Error),
@@ -96,9 +100,10 @@ impl<'a> BinaryPatcher<'a> {
                 debug!("Patching MachO binary at '{}'", path.display());
                 self.patch_macho(binary, path, package)?;
             },
-            Some(Binary::PE(_binary)) => {
+            Some(Binary::PE(binary)) => {
                 debug!("Patching PE binary at '{}'", path.display());
-                println!("Cannot patch binary because PE patching is not yet implemented!");
+                debug!("Using symlinking, because PE patching is not yet implemented!");
+                self.symlink_pe(binary, path, dependencies)?;
             },
             Some(Binary::COFF(_)) => {
                 return Err(BinaryPatcherError::UnsupportedBinaryType {
@@ -265,6 +270,34 @@ impl<'a> BinaryPatcher<'a> {
 
             let config = elf::builder::Config::default();
             binary.write_with_config(path, config);
+        }
+
+        Ok(())
+    }
+
+    /// Symlinks PE binary dependencies into the same directory as the binary.
+    fn symlink_pe(&self, binary: pe::Binary, path: &PathBuf, dependencies: &Vec<&InstalledPackageVersion>) -> Result<()> {
+        let Some(binary_directory) = path.parent() else { return Ok(()) };
+
+        for import in binary.imports() {
+            // If the import already exists in the directory of the binary, skip symlinking
+            if binary_directory.join(import.name()).exists() {
+                continue;
+            }
+
+            for dependency in dependencies {
+                let lib_path = dependency.install_path.join("lib").join(import.name());
+                if lib_path.exists() {
+                    symlink::create_symlink(&lib_path, &binary_directory.join(import.name()))?;
+                    break;
+                }
+
+                let bin_path = dependency.install_path.join("bin").join(import.name());
+                if bin_path.exists() {
+                    symlink::create_symlink(&bin_path, &binary_directory.join(import.name()))?;
+                    break;
+                }
+            }
         }
 
         Ok(())
