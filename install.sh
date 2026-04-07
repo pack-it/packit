@@ -154,3 +154,8 @@ repositories_rank = ["core"]
 provider = "web"
 path = "https://raw.githubusercontent.com/pack-it/core/main/"
 EOF
+
+# On Linux, add /opt/packit/lib to the linker paths
+if [ $CURRENT_OS = "Linux" ];
+    sudo echo "$PREFIX_DIR" > /etc/ld.so.conf.d/packit.conf
+fi
