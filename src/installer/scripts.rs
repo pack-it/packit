@@ -6,7 +6,7 @@ use std::{
     process::{Command, Stdio},
 };
 
-use tempfile::NamedTempFile;
+use tempfile::{NamedTempFile, TempDir};
 use thiserror::Error;
 
 use crate::{
@@ -32,6 +32,9 @@ pub enum ScriptError {
 
     #[error("Cannot save script to file: {0}")]
     SaveError(std::io::Error),
+
+    #[error("Cannot create temp directory for script to run: {0}")]
+    TempCreationError(std::io::Error),
 
     #[error("Cannot parse PathBuf to string")]
     InvalidPathString,
@@ -97,10 +100,11 @@ pub fn run_post_script(script_data: &ScriptData) -> Result<()> {
     run_script(script_data, &script_data.package_install_path, Environment::new(), true)
 }
 
-/// Runs the given test script, in the package install directory.
+/// Runs the given test script, in a newly created temp directory.
 /// Note that the script should be a `.sh` script on Linux and macOS and a `.bat` on Windows.
 pub fn run_test_script(script_data: &ScriptData) -> Result<()> {
-    run_script(script_data, script_data.package_install_path, Environment::new(), true)
+    let temp_dir = TempDir::new().map_err(ScriptError::TempCreationError)?;
+    run_script(script_data, &temp_dir, Environment::new(), true)
 }
 
 /// Runs the given uninstall script, in the package install directory.
