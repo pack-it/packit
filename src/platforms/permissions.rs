@@ -160,81 +160,125 @@ pub mod platform {
 
 #[cfg(target_os = "windows")]
 mod platform {
-    use std::{fs::Metadata, path::PathBuf};
+    use std::{ffi::OsStr, fs::Metadata, os::windows::ffi::OsStrExt, path::PathBuf, ptr};
 
     use super::Result;
 
-    use windows::Win32::{
-        Foundation::{ERROR_SUCCESS, HANDLE},
-        Security::Authorization::{
-            DACL_SECURITY_INFORMATION, OWNER_SECURITY_INFORMATION, PACL, PSID, SE_FILE_OBJECT, SetNamedSecurityInfoW, TOKEN_QUERY,
-            TokenUser,
+    use windows::{
+        Win32::{
+            Foundation::{ERROR_INSUFFICIENT_BUFFER, ERROR_SUCCESS, GENERIC_ALL, GENERIC_WRITE, HANDLE},
+            Security::{
+                ACE_REVISION, ACL,
+                Authorization::{
+                    ConvertSidToStringSidW, EXPLICIT_ACCESS_W, GRANT_ACCESS, GetNamedSecurityInfoW, SE_FILE_OBJECT, SetEntriesInAclW,
+                    SetNamedSecurityInfoW, TRUSTEE_IS_SID, TRUSTEE_W,
+                },
+                DACL_SECURITY_INFORMATION, GetTokenInformation, InitializeAcl, NO_INHERITANCE, OWNER_SECURITY_INFORMATION,
+                PSECURITY_DESCRIPTOR, PSID, TOKEN_QUERY, TOKEN_USER, TokenUser,
+            },
+            System::Threading::{GetCurrentProcess, OpenProcessToken},
         },
+        core::{PCWSTR, PWSTR},
     };
 
     pub fn is_writable(_path: &PathBuf, _metadata: Metadata) -> Result<bool> {
-        // TODO
+        // TODOs
         Ok(true)
     }
 
     // TODO: Implement multiuser and ownership
     pub fn set_packit_permissions(path: &PathBuf, _is_multiuser: bool, recurse: bool) -> Result<()> {
-        // Get the current owner and DACL
-        let mut p_owner = PSID(ptr::null_mut());
-        let mut p_dacl = PACL(ptr::null_mut()); // TODO: Check if PACL exists as a function
-        let mut p_sd = PSECURITY_DESCRIPTOR(ptr::null_mut());
+        unsafe {
+            // TODO: For groups set this sid to a group sid instead
+            // Get the current user
+            let user_sid = get_current_sid();
 
-        let wide_path = path_to_pcwstr(path);
+            // Get the current owner
+            let mut p_owner = PSID(ptr::null_mut());
+            let acl = ptr::null_mut();
+            let mut p_sd = PSECURITY_DESCRIPTOR(ptr::null_mut());
 
-        let result = unsafe {
-            GetNamedSecurityInfoW(
+            let wide_path = PCWSTR(path_to_pcwstr(path).as_ptr());
+            let result = GetNamedSecurityInfoW(
                 PCWSTR(wide_path.as_ptr()),
                 SE_FILE_OBJECT,
                 OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION,
-                &mut p_owner,
+                Some(&mut p_owner),
                 None,
-                &mut p_dacl,
+                Some(acl),
                 None,
                 &mut p_sd,
-            )
-        };
+            );
 
-        if result != ERROR_SUCCESS.0 {
-            // TODO: Throw error, failed to get security info
+            if result.0 != ERROR_SUCCESS.0 {
+                // TODO: Return some error, failed to get security info
+                panic!("Error while getting security info");
+            }
+
+            // Adjust DACL to set permissions
+            let mut explicit_access = EXPLICIT_ACCESS_W::default();
+
+            explicit_access.grfAccessPermissions = GENERIC_ALL.0;
+            explicit_access.grfAccessMode = GRANT_ACCESS;
+            explicit_access.grfInheritance = NO_INHERITANCE;
+
+            // Set the trustee (for which user the entry is meant)
+            let mut trustee = TRUSTEE_W::default();
+            trustee.TrusteeForm = TRUSTEE_IS_SID;
+            trustee.ptstrName = PWSTR(user_sid.0 as *mut u16);
+            explicit_access.Trustee = trustee;
+
+            let mut new_acl = ptr::null_mut();
+            let error = SetEntriesInAclW(Some(&[explicit_access]), Some(acl as *mut ACL), &mut new_acl);
+            if error.0 != ERROR_SUCCESS.0 {
+                dbg!(&error);
+                panic!("Error while setting ACL entries");
+            }
+
+            let wide_path = PCWSTR(path_to_pcwstr(path).as_ptr());
+            let error = SetNamedSecurityInfoW(
+                wide_path,
+                SE_FILE_OBJECT,
+                DACL_SECURITY_INFORMATION,
+                Some(p_owner),
+                None,
+                Some(new_acl as *mut ACL),
+                None,
+            );
+
+            if error.0 != ERROR_SUCCESS.0 {
+                // TODO: Return some error
+                panic!("Error while setting security info");
+            }
+
+            Ok(())
         }
-
-        // Adjust DACL to set permissions
-        let mut explicit_access = EXPLICIT_ACCESS_W::default();
-
-        explicit_access.grfAccessPermissions = FILE_ALL_ACCESS.0;
-        explicit_access.grfAccessMode = GRANT_ACCESS;
-        explicit_access.grfInheritance = NO_INHERITANCE;
-
-        // Set the trustee (for which user the entry is meant)
-        let mut trustee = TRUSTEE_W::default();
-        trustee.TrusteeForm = TRUSTEE_IS_SID;
-        trustee.ptstrName = user_sid; // TODO: this needs to be cast somehow (can be an sid, but in pcwstr format)
-        explicit_access.Trustee = trustee;
-
-        SetNamedSecurityInfoW(path, SE_FILE_OBJECT, DACL_SECURITY_INFORMATION, p_owner, None, p_dacl, None);
-
-        Ok(())
     }
 
     fn get_current_sid() -> PSID {
-        let mut token: HANDLE = HANDLE::default();
-        OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token)?;
+        unsafe {
+            let mut token: HANDLE = HANDLE::default();
+            OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token).unwrap();
 
-        // Get the size of the token information for the buffer
-        let mut size: u32 = 0; // TODO: Not sure if type is needed
-        GetTokenInformation(token, TokenUser, None, 0, &mut size);
+            // Get the size of the token information for the buffer
+            let mut size: u32 = 0; // TODO: Not sure if type is needed
+            match GetTokenInformation(token, TokenUser, None, 0, &mut size) {
+                Ok(_) => {},
+                Err(_) => {},
+            }
 
-        let mut buffer: Vec<u8> = Vec::with_capacity(size as usize);
-        GetTokenInformation(token, TokenUser, Some(buffer.as_mut_ptr() as *mut _), size, &mut size)?;
+            let mut buffer: Vec<u8> = Vec::with_capacity(size as usize);
+            GetTokenInformation(token, TokenUser, Some(buffer.as_mut_ptr() as *mut _), size, &mut size).unwrap();
 
-        let token_user = unsafe {&*(buffer.as_ptr() as *const TOKEN_USER)};
+            let token_user = &*(buffer.as_ptr() as *const TOKEN_USER);
 
-        token_user.User.Sid
+            // dbg!(&token_user.User.Sid);
+            // let mut sid_str = PWSTR::null();
+            // ConvertSidToStringSidW(token_user.User.Sid.clone(), &mut sid_str).unwrap();
+            // dbg!(sid_str.to_string().unwrap());
+
+            token_user.User.Sid
+        }
     }
 
     // TODO: Probably wrong, use path.to_str() then use w!
