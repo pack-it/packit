@@ -1579,6 +1579,7 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.18",
  "toml",
+ "url",
  "windows-version",
  "xz2",
  "zip 8.1.0",

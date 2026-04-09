@@ -26,6 +26,9 @@ pub struct Source {
 
     #[serde(default)]
     pub mirrors: Vec<String>,
+
+    #[serde(default)]
+    pub skip_unpack: bool,
 }
 
 /// Wrapper to differentiate between Single and Named sources in the metadata files.

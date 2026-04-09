@@ -400,6 +400,7 @@ pub mod tests {
                 url: "-".to_string(),
                 checksum: Checksum { sha256: [0; 32] },
                 mirrors: Vec::new(),
+                skip_unpack: false,
             }),
             license: Licenses::Unknown,
             skip_symlinking: false,

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::path::Path;
+use std::{fs, path::Path};
 use tempfile::TempDir;
 use thiserror::Error;
+use url::Url;
 
 use crate::{
     cli::display::Spinner,
@@ -34,6 +35,9 @@ pub enum BuilderError {
     #[error("Checksum does not match")]
     ChecksumError,
 
+    #[error("The source url has an empty path")]
+    EmptyUrlPath,
+
     #[error("Cannot unpack response")]
     UnpackError(#[from] UnpackError),
 
@@ -51,6 +55,9 @@ pub enum BuilderError {
 
     #[error("Error while interacting with filesystem")]
     IOError(#[from] std::io::Error),
+
+    #[error("Cannot parse url of source")]
+    UrlParseError(#[from] url::ParseError),
 }
 
 pub type Result<T> = core::result::Result<T, BuilderError>;
@@ -168,10 +175,19 @@ impl<'a> Builder<'a> {
         // Finish download spinner
         spinner.finish(finish_message);
 
-        // Unpack the package to the temp directory
-        let unpack_directory = TempDir::new()?;
-        let extention = ArchiveExtension::from_path(&source.url);
-        unpack(package_name, extention, bytes, &unpack_directory, true)?;
+        // Create temp directory to build in
+        let build_directory = TempDir::new()?;
+
+        // Only unpack if the source does not specify the skip_unpack option, write file otherwise
+        if !source.skip_unpack {
+            let extention = ArchiveExtension::from_path(&source.url);
+            unpack(package_name, extention, bytes, &build_directory, true)?;
+        } else {
+            let url = Url::parse(&source.url)?;
+            let file_name = url.path_segments().and_then(|x| x.last()).ok_or(BuilderError::EmptyUrlPath)?;
+            let file_path = build_directory.path().join(file_name);
+            fs::write(file_path, bytes)?;
+        }
 
         // Create build env
         let env = BuildEnv::new(
@@ -197,13 +213,13 @@ impl<'a> Builder<'a> {
             spinner.show(spinner_message.clone());
 
             // Run build script
-            scripts::run_build_script(&script_data, &unpack_directory, env)?;
+            scripts::run_build_script(&script_data, &build_directory, env)?;
 
             // Finish build spinner
             spinner.finish(format!("{spinner_message} successful"));
         } else {
             // Run build script
-            scripts::run_build_script(&script_data, &unpack_directory, env)?;
+            scripts::run_build_script(&script_data, &build_directory, env)?;
         }
 
         // Patch binaries
