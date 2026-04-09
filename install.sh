@@ -8,12 +8,12 @@ CURRENT_OS="$(uname -s)"
 
 # Get the OS name
 if [ $CURRENT_OS = "Darwin" ];
-    CURRENT_OS_NAME = "apple-darwin"
+    CURRENT_OS_NAME="apple-darwin"
 else if [ $CURRENT_OS = "Linux" ];
     if [ echo "$(ldd --version)" | grep -q "musl" ]
-        CURRENT_OS_NAME = "unknown-linux-musl"
+        CURRENT_OS_NAME="unknown-linux-musl"
     else if [ echo "$(ldd --version)" | grep -q "GLIBC" ]
-        CURRENT_OS_NAME = "unknown-linux-gnu"
+        CURRENT_OS_NAME="unknown-linux-gnu"
     else
         echo "Current platform unsupported, stopping install"
         exit 1
@@ -55,12 +55,12 @@ cd $PREFIX_DIR/packages/packit/$VERSION/bin
 # Install Packit to the prefix directory
 curl --proto "=https" -sSf $SOURCE_PREBUILD_REPOSITORY_URL
 if [ $? ]; then
-    tar -xf packit@0.0.1-0-$TARGET.tar.gz
-    rm packit@0.0.1-0-$TARGET.tar.gz
+    tar -xf packit@$VERSION-0-$TARGET.tar.gz
+    rm packit@$VERSION-0-$TARGET.tar.gz
 else
     echo "Retrieving prebuilds failed. Do you wish to build Packit from source? (Y/n)"
     read answer
-    if ! { [ $answer = "y" ] || [ $answer = "" ] || [ $answer = "yes" ]; }; then
+    if [ $answer = "n" ] || [ $answer = "no" ]; then
         echo "Canceling installation of Packit"
         exit(1)
     fi
@@ -72,7 +72,7 @@ else
     if [ !$? ]; then
         echo "Cargo is not installed, do you wish to install it to build Packit? (y/N)"
         read answer
-        if ! { [ $answer = "y" ] || [ $answer = "yes" ]; }; then
+        if [ $answer = "n" ] || [ $answer = "no" ] || [ $answer = "" ]; then
             echo "Canceling installation of Packit"
             exit(1)
         fi
@@ -90,8 +90,8 @@ else
     fi
 
     curl --proto "=https" -sSf $SOURCE_REPOSITORY_URL
-    tar -xf packit@0.0.1-0-$TARGET.tar.gz # TODO: Target is different when installing source instead of prebuild
-    rm packit@0.0.1-0-$TARGET.tar.gz
+    tar -xf packit@$VERSION-0-$TARGET.tar.gz # TODO: Target is different when installing source instead of prebuild
+    rm packit@$VERSION-0-$TARGET.tar.gz
     cargo build
     mkdir ./bin
     mv ./target/release/packit ./bin
@@ -107,18 +107,19 @@ else
         fi
     fi
 fi
+
 ln -s ./packit ./pit
 
 # Go into prefix/bin
 mkdir -p $PREFIX_DIR/bin
-cd -p $PREFIX_DIR/bin
+cd $PREFIX_DIR/bin
 
 # Create symlinks for Packit in /bin
 ln -s $PREFIX_DIR/packages/packit/$VERSION/bin/packit $PREFIX_DIR/bin/packit
 ln -s $PREFIX_DIR/packages/packit/$VERSION/bin/pit $PREFIX_DIR/bin/pit
 
 # Create symlinks for Packit in /active
-ln -s $PREFIX_DIR/packages/packit/0.0.1 $PREFIX_DIR/active/packit
+ln -s $PREFIX_DIR/packages/packit/$VERSION $PREFIX_DIR/active/packit
 
 # Go into the prefix directory and create the Installed.toml with Packit
 cd $PREFIX_DIR
