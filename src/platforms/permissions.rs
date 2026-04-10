@@ -166,19 +166,20 @@ mod platform {
 
     use windows::{
         Win32::{
-            Foundation::{ERROR_INSUFFICIENT_BUFFER, ERROR_SUCCESS, GENERIC_ALL, GENERIC_WRITE, HANDLE},
+            Foundation::{ERROR_SUCCESS, GENERIC_ALL, HANDLE},
             Security::{
-                ACE_REVISION, ACL,
+                ACL,
                 Authorization::{
                     ConvertSidToStringSidW, EXPLICIT_ACCESS_W, GRANT_ACCESS, GetNamedSecurityInfoW, SE_FILE_OBJECT, SetEntriesInAclW,
                     SetNamedSecurityInfoW, TRUSTEE_IS_SID, TRUSTEE_W,
                 },
-                DACL_SECURITY_INFORMATION, GetTokenInformation, InitializeAcl, NO_INHERITANCE, OWNER_SECURITY_INFORMATION,
-                PSECURITY_DESCRIPTOR, PSID, TOKEN_QUERY, TOKEN_USER, TokenUser,
+                DACL_SECURITY_INFORMATION, GetTokenInformation, LookupAccountNameW, MakeAbsoluteSD, NO_INHERITANCE,
+                OWNER_SECURITY_INFORMATION, PSECURITY_DESCRIPTOR, PSID, SID_NAME_USE, SetSecurityDescriptorOwner, TOKEN_QUERY, TOKEN_USER,
+                TokenUser,
             },
             System::Threading::{GetCurrentProcess, OpenProcessToken},
         },
-        core::{PCWSTR, PWSTR},
+        core::{PCWSTR, PWSTR, w},
     };
 
     pub fn is_writable(_path: &PathBuf, _metadata: Metadata) -> Result<bool> {
@@ -186,33 +187,39 @@ mod platform {
         Ok(true)
     }
 
-    // TODO: Implement multiuser and ownership
-    pub fn set_packit_permissions(path: &PathBuf, _is_multiuser: bool, recurse: bool) -> Result<()> {
+    pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool, recurse: bool) -> Result<()> {
         unsafe {
-            // TODO: For groups set this sid to a group sid instead
-            // Get the current user
-            let user_sid = get_current_sid();
+            // Get the current sid
+            let sid = match is_multiuser {
+                true => get_group_sid(),
+                false => get_user_sid(),
+            };
 
             // Get the current owner
-            let mut p_owner = PSID(ptr::null_mut());
+            let mut current_owner_sid = PSID(ptr::null_mut());
             let acl = ptr::null_mut();
-            let mut p_sd = PSECURITY_DESCRIPTOR(ptr::null_mut());
+            let mut security_descriptor = PSECURITY_DESCRIPTOR(ptr::null_mut());
 
             let wide_path = PCWSTR(path_to_pcwstr(path).as_ptr());
             let result = GetNamedSecurityInfoW(
                 PCWSTR(wide_path.as_ptr()),
                 SE_FILE_OBJECT,
                 OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION,
-                Some(&mut p_owner),
+                Some(&mut current_owner_sid),
                 None,
                 Some(acl),
                 None,
-                &mut p_sd,
+                &mut security_descriptor,
             );
 
             if result.0 != ERROR_SUCCESS.0 {
                 // TODO: Return some error, failed to get security info
                 panic!("Error while getting security info");
+            }
+
+            // This assumes that the current user already has ownership
+            if is_multiuser {
+                set_group_ownership(security_descriptor, sid);
             }
 
             // Adjust DACL to set permissions
@@ -225,13 +232,12 @@ mod platform {
             // Set the trustee (for which user the entry is meant)
             let mut trustee = TRUSTEE_W::default();
             trustee.TrusteeForm = TRUSTEE_IS_SID;
-            trustee.ptstrName = PWSTR(user_sid.0 as *mut u16);
+            trustee.ptstrName = PWSTR(sid.0 as *mut u16);
             explicit_access.Trustee = trustee;
 
             let mut new_acl = ptr::null_mut();
             let error = SetEntriesInAclW(Some(&[explicit_access]), Some(acl as *mut ACL), &mut new_acl);
             if error.0 != ERROR_SUCCESS.0 {
-                dbg!(&error);
                 panic!("Error while setting ACL entries");
             }
 
@@ -240,7 +246,7 @@ mod platform {
                 wide_path,
                 SE_FILE_OBJECT,
                 DACL_SECURITY_INFORMATION,
-                Some(p_owner),
+                Some(sid), // TODO: Check if sid it correct for owner (should be)
                 None,
                 Some(new_acl as *mut ACL),
                 None,
@@ -255,33 +261,111 @@ mod platform {
         }
     }
 
-    fn get_current_sid() -> PSID {
+    fn set_group_ownership(security_descriptor: PSECURITY_DESCRIPTOR, sid: PSID) {
+        unsafe {
+            let mut absolute_size = 0;
+            let mut dacl_size = 0;
+            let mut sacl_size = 0;
+            let mut owner_size = 0;
+            let mut group_size = 0;
+
+            let _ = MakeAbsoluteSD(
+                security_descriptor,
+                None,
+                &mut absolute_size,
+                None,
+                &mut dacl_size,
+                None,
+                &mut sacl_size,
+                None,
+                &mut owner_size,
+                None,
+                &mut group_size,
+            );
+
+            let mut absolute_buffer = vec![0u8; absolute_size as usize];
+            let absolute_security_descriptor = PSECURITY_DESCRIPTOR(absolute_buffer.as_mut_ptr() as *mut _);
+            let mut dacl_buffer = vec![0u8; dacl_size as usize];
+            let mut sacl_buffer = vec![0u8; sacl_size as usize];
+            let mut owner_buffer = vec![0u8; owner_size as usize];
+            let owner = PSID(owner_buffer.as_mut_ptr() as *mut _);
+            let mut group_buffer = vec![0u8; group_size as usize];
+            let group = PSID(group_buffer.as_mut_ptr() as *mut _);
+            MakeAbsoluteSD(
+                security_descriptor,
+                Some(absolute_security_descriptor),
+                &mut absolute_size,
+                Some(dacl_buffer.as_mut_ptr() as *mut _),
+                &mut dacl_size,
+                Some(sacl_buffer.as_mut_ptr() as *mut _),
+                &mut sacl_size,
+                Some(owner),
+                &mut owner_size,
+                Some(group),
+                &mut group_size,
+            )
+            .unwrap();
+
+            SetSecurityDescriptorOwner(absolute_security_descriptor, Some(sid), false).unwrap()
+        };
+    }
+
+    fn get_user_sid() -> PSID {
         unsafe {
             let mut token: HANDLE = HANDLE::default();
             OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token).unwrap();
 
             // Get the size of the token information for the buffer
-            let mut size: u32 = 0; // TODO: Not sure if type is needed
-            match GetTokenInformation(token, TokenUser, None, 0, &mut size) {
-                Ok(_) => {},
-                Err(_) => {},
-            }
+            // TODO: Handle non buffer errors
+            let mut size: u32 = 0;
+            let _ = GetTokenInformation(token, TokenUser, None, 0, &mut size);
 
             let mut buffer: Vec<u8> = Vec::with_capacity(size as usize);
             GetTokenInformation(token, TokenUser, Some(buffer.as_mut_ptr() as *mut _), size, &mut size).unwrap();
 
             let token_user = &*(buffer.as_ptr() as *const TOKEN_USER);
 
-            // dbg!(&token_user.User.Sid);
-            // let mut sid_str = PWSTR::null();
-            // ConvertSidToStringSidW(token_user.User.Sid.clone(), &mut sid_str).unwrap();
-            // dbg!(sid_str.to_string().unwrap());
-
             token_user.User.Sid
         }
     }
 
-    // TODO: Probably wrong, use path.to_str() then use w!
+    fn get_group_sid() -> PSID {
+        unsafe {
+            let mut sid_size: u32 = 0;
+            let mut domain_size: u32 = 0;
+            let mut _sid_type = SID_NAME_USE::default();
+
+            // TODO: Handle non buffer errors
+            let _ = LookupAccountNameW(
+                PCWSTR::null(),
+                w!("packit"),
+                None,
+                &mut sid_size,
+                None,
+                &mut domain_size,
+                &mut _sid_type,
+            );
+
+            //let sid = PSID::default();
+            let mut sid = vec![0u8; sid_size as usize];
+            let psid = PSID(sid.as_mut_ptr() as *mut _);
+            let mut domain = vec![0u16; domain_size as usize];
+            let domain_str = PWSTR(domain.as_mut_ptr() as *mut _);
+            LookupAccountNameW(
+                PCWSTR::null(),
+                w!("packit"),
+                Some(psid),
+                &mut sid_size,
+                Some(domain_str),
+                &mut domain_size,
+                &mut _sid_type,
+            )
+            .unwrap();
+
+            psid
+        }
+    }
+
     fn path_to_pcwstr(path: &PathBuf) -> Vec<u16> {
         OsStr::new(path)
             .encode_wide()
