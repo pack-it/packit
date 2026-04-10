@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::{fs, path::PathBuf};
 use thiserror::Error;
+use windows::core::Error;
 
 #[derive(Error, Debug)]
 pub enum PermissionError {
@@ -12,6 +13,15 @@ pub enum PermissionError {
 
     #[error("String contains a nul byte")]
     NulError(#[from] std::ffi::NulError),
+
+    #[error("Error while interacting with windows API")]
+    WindowsAPIError(#[from] Error),
+
+    #[error("Security info error with code {code}. {message}")]
+    SecurityInfoError {
+        message: String,
+        code: u32,
+    },
 }
 
 type Result<T> = core::result::Result<T, PermissionError>;
@@ -162,16 +172,18 @@ pub mod platform {
 mod platform {
     use std::{ffi::OsStr, fs::Metadata, os::windows::ffi::OsStrExt, path::PathBuf, ptr};
 
+    use crate::{cli::display::logging::warning, platforms::permissions::PermissionError};
+
     use super::Result;
 
     use windows::{
         Win32::{
-            Foundation::{ERROR_SUCCESS, GENERIC_ALL, HANDLE},
+            Foundation::{ERROR_INSUFFICIENT_BUFFER, ERROR_NONE_MAPPED, ERROR_SUCCESS, GENERIC_ALL, HANDLE},
             Security::{
                 ACL,
                 Authorization::{
-                    ConvertSidToStringSidW, EXPLICIT_ACCESS_W, GRANT_ACCESS, GetNamedSecurityInfoW, SE_FILE_OBJECT, SetEntriesInAclW,
-                    SetNamedSecurityInfoW, TRUSTEE_IS_SID, TRUSTEE_W,
+                    EXPLICIT_ACCESS_W, GRANT_ACCESS, GetNamedSecurityInfoW, SE_FILE_OBJECT, SetEntriesInAclW, SetNamedSecurityInfoW,
+                    TRUSTEE_IS_SID, TRUSTEE_W,
                 },
                 DACL_SECURITY_INFORMATION, GetTokenInformation, LookupAccountNameW, MakeAbsoluteSD, NO_INHERITANCE,
                 OWNER_SECURITY_INFORMATION, PSECURITY_DESCRIPTOR, PSID, SID_NAME_USE, SetSecurityDescriptorOwner, TOKEN_QUERY, TOKEN_USER,
@@ -191,15 +203,14 @@ mod platform {
         unsafe {
             // Get the current sid
             let sid = match is_multiuser {
-                true => get_group_sid(),
-                false => get_user_sid(),
+                true => get_group_sid()?,
+                false => get_user_sid()?,
             };
 
-            // Get the current owner
+            // Get the current owner, the acl of the path and the security descriptor
             let mut current_owner_sid = PSID(ptr::null_mut());
             let acl = ptr::null_mut();
             let mut security_descriptor = PSECURITY_DESCRIPTOR(ptr::null_mut());
-
             let wide_path = PCWSTR(path_to_pcwstr(path).as_ptr());
             let result = GetNamedSecurityInfoW(
                 PCWSTR(wide_path.as_ptr()),
@@ -213,18 +224,19 @@ mod platform {
             );
 
             if result.0 != ERROR_SUCCESS.0 {
-                // TODO: Return some error, failed to get security info
-                panic!("Error while getting security info");
+                return Err(PermissionError::SecurityInfoError {
+                    message: "Getting security info failed".to_string(),
+                    code: result.0,
+                });
             }
 
             // This assumes that the current user already has ownership
             if is_multiuser {
-                set_group_ownership(security_descriptor, sid);
+                set_group_ownership(security_descriptor, sid)?;
             }
 
             // Adjust DACL to set permissions
             let mut explicit_access = EXPLICIT_ACCESS_W::default();
-
             explicit_access.grfAccessPermissions = GENERIC_ALL.0;
             explicit_access.grfAccessMode = GRANT_ACCESS;
             explicit_access.grfInheritance = NO_INHERITANCE;
@@ -235,14 +247,20 @@ mod platform {
             trustee.ptstrName = PWSTR(sid.0 as *mut u16);
             explicit_access.Trustee = trustee;
 
+            // Set the ACL entries by passing a list of new entries and the old acl.
+            // This will be combined into the new acl.
             let mut new_acl = ptr::null_mut();
-            let error = SetEntriesInAclW(Some(&[explicit_access]), Some(acl as *mut ACL), &mut new_acl);
-            if error.0 != ERROR_SUCCESS.0 {
-                panic!("Error while setting ACL entries");
+            let result = SetEntriesInAclW(Some(&[explicit_access]), Some(acl as *mut ACL), &mut new_acl);
+            if result.0 != ERROR_SUCCESS.0 {
+                return Err(PermissionError::SecurityInfoError {
+                    message: "Settings ACL entries failed".to_string(),
+                    code: result.0,
+                });
             }
 
+            // Set the new ACL
             let wide_path = PCWSTR(path_to_pcwstr(path).as_ptr());
-            let error = SetNamedSecurityInfoW(
+            let result = SetNamedSecurityInfoW(
                 wide_path,
                 SE_FILE_OBJECT,
                 DACL_SECURITY_INFORMATION,
@@ -252,16 +270,18 @@ mod platform {
                 None,
             );
 
-            if error.0 != ERROR_SUCCESS.0 {
-                // TODO: Return some error
-                panic!("Error while setting security info");
+            if result.0 != ERROR_SUCCESS.0 {
+                return Err(PermissionError::SecurityInfoError {
+                    message: "Setting security info failed".to_string(),
+                    code: result.0,
+                });
             }
 
             Ok(())
         }
     }
 
-    fn set_group_ownership(security_descriptor: PSECURITY_DESCRIPTOR, sid: PSID) {
+    fn set_group_ownership(security_descriptor: PSECURITY_DESCRIPTOR, sid: PSID) -> Result<()> {
         unsafe {
             let mut absolute_size = 0;
             let mut dacl_size = 0;
@@ -269,7 +289,8 @@ mod platform {
             let mut owner_size = 0;
             let mut group_size = 0;
 
-            let _ = MakeAbsoluteSD(
+            // Get the buffer sizes
+            let result = MakeAbsoluteSD(
                 security_descriptor,
                 None,
                 &mut absolute_size,
@@ -283,6 +304,13 @@ mod platform {
                 &mut group_size,
             );
 
+            match result {
+                Ok(_) => warning!("Unexpected succes on first call"),
+                Err(e) if e.code() == ERROR_INSUFFICIENT_BUFFER.to_hresult() => {},
+                Err(e) => return Err(PermissionError::WindowsAPIError(e)),
+            }
+
+            // Fill all the buffers and get the absolute security descriptor
             let mut absolute_buffer = vec![0u8; absolute_size as usize];
             let absolute_security_descriptor = PSECURITY_DESCRIPTOR(absolute_buffer.as_mut_ptr() as *mut _);
             let mut dacl_buffer = vec![0u8; dacl_size as usize];
@@ -303,66 +331,89 @@ mod platform {
                 &mut owner_size,
                 Some(group),
                 &mut group_size,
-            )
-            .unwrap();
+            )?;
 
-            SetSecurityDescriptorOwner(absolute_security_descriptor, Some(sid), false).unwrap()
+            // Set the new security descriptor
+            SetSecurityDescriptorOwner(absolute_security_descriptor, Some(sid), false)?;
         };
+
+        Ok(())
     }
 
-    fn get_user_sid() -> PSID {
+    fn get_user_sid() -> Result<PSID> {
         unsafe {
+            // Create a handle for the current process
             let mut token: HANDLE = HANDLE::default();
-            OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token).unwrap();
+            OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token)?;
 
             // Get the size of the token information for the buffer
-            // TODO: Handle non buffer errors
-            let mut size: u32 = 0;
-            let _ = GetTokenInformation(token, TokenUser, None, 0, &mut size);
+            let mut buffer_size: u32 = 0;
+            match GetTokenInformation(token, TokenUser, None, 0, &mut buffer_size) {
+                Ok(_) => warning!("Unexpected succes on first call"),
+                Err(e) if e.code() == ERROR_INSUFFICIENT_BUFFER.to_hresult() => {},
+                Err(e) => return Err(PermissionError::WindowsAPIError(e)),
+            }
 
-            let mut buffer: Vec<u8> = Vec::with_capacity(size as usize);
-            GetTokenInformation(token, TokenUser, Some(buffer.as_mut_ptr() as *mut _), size, &mut size).unwrap();
+            // Fill the sid buffer
+            let mut sid_buffer: Vec<u8> = Vec::with_capacity(buffer_size as usize);
+            GetTokenInformation(
+                token,
+                TokenUser,
+                Some(sid_buffer.as_mut_ptr() as *mut _),
+                buffer_size,
+                &mut buffer_size,
+            )?;
 
-            let token_user = &*(buffer.as_ptr() as *const TOKEN_USER);
-
-            token_user.User.Sid
+            let token_user = &*(sid_buffer.as_ptr() as *const TOKEN_USER);
+            Ok(token_user.User.Sid)
         }
     }
 
-    fn get_group_sid() -> PSID {
+    fn get_group_sid() -> Result<PSID> {
         unsafe {
             let mut sid_size: u32 = 0;
             let mut domain_size: u32 = 0;
-            let mut _sid_type = SID_NAME_USE::default();
+            let mut sid_type = SID_NAME_USE::default();
 
-            // TODO: Handle non buffer errors
-            let _ = LookupAccountNameW(
+            // Do the first call to get the sid and domain buffer sizes
+            let result = LookupAccountNameW(
                 PCWSTR::null(),
                 w!("packit"),
                 None,
                 &mut sid_size,
                 None,
                 &mut domain_size,
-                &mut _sid_type,
+                &mut sid_type,
             );
 
-            //let sid = PSID::default();
-            let mut sid = vec![0u8; sid_size as usize];
-            let psid = PSID(sid.as_mut_ptr() as *mut _);
-            let mut domain = vec![0u16; domain_size as usize];
-            let domain_str = PWSTR(domain.as_mut_ptr() as *mut _);
-            LookupAccountNameW(
+            // Ignore buffer size errors, only return other errors
+            match result {
+                Ok(_) => warning!("Unexpected succes on first call"),
+                Err(e) if e.code() == ERROR_INSUFFICIENT_BUFFER.to_hresult() => {},
+                Err(e) => return Err(PermissionError::WindowsAPIError(e)),
+            }
+
+            // Fill the sid and domain buffer
+            let mut sid_buffer = vec![0u8; sid_size as usize];
+            let sid = PSID(sid_buffer.as_mut_ptr() as *mut _);
+            let mut domain_buffer = vec![0u16; domain_size as usize];
+            let domain = PWSTR(domain_buffer.as_mut_ptr() as *mut _);
+            let result = LookupAccountNameW(
                 PCWSTR::null(),
                 w!("packit"),
-                Some(psid),
+                Some(sid),
                 &mut sid_size,
-                Some(domain_str),
+                Some(domain),
                 &mut domain_size,
-                &mut _sid_type,
-            )
-            .unwrap();
+                &mut sid_type,
+            );
 
-            psid
+            // Explicitly return a PermissionError::GroupDoesNotExist error when the group doesn't exist
+            match result {
+                Ok(_) => Ok(sid),
+                Err(e) if e.code() == ERROR_NONE_MAPPED.to_hresult() => return Err(PermissionError::GroupDoesNotExist),
+                Err(e) => return Err(PermissionError::WindowsAPIError(e)),
+            }
         }
     }
 
