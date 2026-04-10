@@ -72,16 +72,13 @@ if %errorlevel%==0 (
     )
 )
 
-mklink /D .\pit .\packitß
+mklink /D .\pit .\packit
 
 REM Go into prefix\bin
 mkdir -p %PREFIX_DIR%\bin
 cd %PREFIX_DIR%\bin
 
 REM Create symlinks for Packit in bin
-ln -s %PREFIX_DIR%/packages/packit/%VERSION%/bin/packit %PREFIX_DIR%/bin/packit
-ln -s %PREFIX_DIR%/packages/packit/%VERSION%/bin/pit %PREFIX_DIR%/bin/pit
-
 mklink /D %PREFIX_DIR%\bin\packit %PREFIX_DIR%\packages\packit\%VERSION%\bin\packit
 mklink /D %PREFIX_DIR%\bin\pit %PREFIX_DIR%\packages\packit\%VERSION%\bin\pit
 
