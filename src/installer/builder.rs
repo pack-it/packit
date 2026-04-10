@@ -206,6 +206,9 @@ impl<'a> Builder<'a> {
             .ok_or(ScriptError::ScriptNotFound("build".into()))?;
         let script_data = ScriptData::new(&script_path, &destination_dir, &version, self.config, &script_args, self.verbose);
 
+        let package_id = PackageId::new(package_name.clone(), version.clone());
+        println!("Executing build script of {package_id}");
+
         // Show build spinner
         if !self.verbose {
             let spinner = Spinner::new();
@@ -223,7 +226,6 @@ impl<'a> Builder<'a> {
         }
 
         // Patch binaries
-        let package_id = PackageId::new(package_name.clone(), version.clone());
         BinaryPatcher::new(self.config).patch_binaries_in(&destination_dir.as_ref().to_path_buf(), &package_id, installed_dependencies)?;
 
         Ok(())

@@ -222,6 +222,7 @@ impl<'a> Installer<'a> {
         let downloaded_script =
             scripts::download_script(self.repository_manager, &script_path, &package_id.name, &install_meta.repository_id)?;
         if let Some(script_file) = downloaded_script {
+            println!("Executing preinstall script of {package_id}");
             let script_data = ScriptData::new(
                 &script_file,
                 &install_directory,
@@ -272,6 +273,7 @@ impl<'a> Installer<'a> {
         let downloaded_script =
             scripts::download_script(self.repository_manager, &script_path, &package_id.name, &install_meta.repository_id)?;
         if let Some(script_file) = downloaded_script {
+            println!("Executing postinstall script of {package_id}");
             let script_data = ScriptData::new(
                 &script_file,
                 &install_directory,
@@ -290,6 +292,7 @@ impl<'a> Installer<'a> {
         let downloaded_script =
             scripts::download_script(self.repository_manager, &script_path, &package_id.name, &install_meta.repository_id)?;
         if let Some(script_file) = downloaded_script {
+            println!("Executing test script of {package_id}");
             let script_data = ScriptData::new(
                 &script_file,
                 &install_directory,
@@ -648,6 +651,7 @@ impl<'a> Installer<'a> {
                 &script_args,
                 self.options.verbose,
             );
+            println!("Executing uninstall script of {package_id}");
             scripts::run_uninstall_script(&script_data)?
         }
 
