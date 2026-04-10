@@ -12,18 +12,18 @@ rust-version = "1.85.0"                                      # Earliest stable c
 [dependencies]
 thiserror = "2.0.18"
 serde = { version = "1.0.228", features = ["derive"] }
-toml = "1.0.3"
-clap = { version = "4.5.60", features = ["derive"] }
+toml = "1.1.2"
+clap = { version = "4.6.0", features = ["derive"] }
 reqwest = { version = "0.13.2", features = ["blocking"] }
-tar = "0.4.44"
+tar = "0.4.45"
 flate2 = "1.1.9"
 indicatif = "0.18.4"
 bytes = "1.11.1"
 colored = "3.1.1"
-tempfile = "3.26.0"
-sha2 = "0.10.9"
+tempfile = "3.27.0"
+sha2 = "0.11.0"
 hex = "0.4.3"
-zip = "8.1.0"
+zip = "8.5.1"
 regex = "1.12.3"
 xz2 = "0.1.7"
 lief = { git = "https://github.com/lief-project/LIEF.git" }
@@ -31,7 +31,7 @@ url = "2.5.8"
 
 # macOS and Linux dependencies
 [target.'cfg(any(target_os = "macos", target_os = "linux"))'.dependencies]
-libc = "0.2.182"
+libc = "0.2.184"
 
 # Windows dependencies
 [target.'cfg(target_os = "windows")'.dependencies]
