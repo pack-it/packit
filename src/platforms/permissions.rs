@@ -185,7 +185,7 @@ mod platform {
                     EXPLICIT_ACCESS_W, GRANT_ACCESS, GetNamedSecurityInfoW, SE_FILE_OBJECT, SetEntriesInAclW, SetNamedSecurityInfoW,
                     TRUSTEE_IS_SID, TRUSTEE_W,
                 },
-                DACL_SECURITY_INFORMATION, GetTokenInformation, LookupAccountNameW, MakeAbsoluteSD, NO_INHERITANCE,
+                DACL_SECURITY_INFORMATION, GetTokenInformation, LookupAccountNameW, MakeAbsoluteSD, NO_INHERITANCE, OBJECT_INHERIT_ACE,
                 OWNER_SECURITY_INFORMATION, PSECURITY_DESCRIPTOR, PSID, SID_NAME_USE, SetSecurityDescriptorOwner, TOKEN_QUERY, TOKEN_USER,
                 TokenUser,
             },
@@ -200,6 +200,7 @@ mod platform {
     }
 
     pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool, recurse: bool) -> Result<()> {
+        dbg!(recurse);
         unsafe {
             // Get the current sid
             let sid = match is_multiuser {
@@ -235,11 +236,16 @@ mod platform {
                 set_group_ownership(security_descriptor, sid)?;
             }
 
+            let inheritance_state = match recurse {
+                true => OBJECT_INHERIT_ACE,
+                false => NO_INHERITANCE,
+            };
+
             // Adjust DACL to set permissions
             let mut explicit_access = EXPLICIT_ACCESS_W::default();
             explicit_access.grfAccessPermissions = GENERIC_ALL.0;
             explicit_access.grfAccessMode = GRANT_ACCESS;
-            explicit_access.grfInheritance = NO_INHERITANCE;
+            explicit_access.grfInheritance = inheritance_state;
 
             // Set the trustee (for which user the entry is meant)
             let mut trustee = TRUSTEE_W::default();
