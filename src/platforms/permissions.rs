@@ -38,9 +38,9 @@ pub fn is_writable(path: &PathBuf) -> Result<bool> {
 }
 
 /// Sets the permissions of packit files
-pub use platform::set_packit_permissions;
+pub use self::platform::set_packit_permissions;
 
-use crate::platforms::permissions::platform::PlatformError;
+pub use self::platform::PlatformError;
 
 /// Permissions implementation for Unix platforms.
 #[cfg(any(target_os = "macos", target_os = "linux"))]
@@ -58,6 +58,9 @@ pub mod platform {
     use crate::cli::display::logging::warning;
 
     use super::{PermissionError, Result};
+
+    #[derive(Error, Debug)]
+    pub enum PlatformError {}
 
     pub const PACKIT_GROUP_NAME: &str = "packit";
 
@@ -174,12 +177,12 @@ mod platform {
     use thiserror::Error;
     use windows::{
         Win32::{
-            Foundation::{ERROR_INSUFFICIENT_BUFFER, ERROR_NONE_MAPPED, ERROR_SUCCESS, GENERIC_ALL, HANDLE},
+            Foundation::{ERROR_INSUFFICIENT_BUFFER, ERROR_NONE_MAPPED, ERROR_SUCCESS, GENERIC_ALL, HANDLE, HLOCAL, LocalFree},
             Security::{
                 ACL,
                 Authorization::{
                     EXPLICIT_ACCESS_W, GRANT_ACCESS, GetNamedSecurityInfoW, SE_FILE_OBJECT, SetEntriesInAclW, SetNamedSecurityInfoW,
-                    TRUSTEE_IS_SID, TRUSTEE_W,
+                    TRUSTEE_IS_GROUP, TRUSTEE_IS_SID, TRUSTEE_IS_USER, TRUSTEE_W,
                 },
                 DACL_SECURITY_INFORMATION, GetTokenInformation, LookupAccountNameW, MakeAbsoluteSD, NO_INHERITANCE, OBJECT_INHERIT_ACE,
                 OWNER_SECURITY_INFORMATION, PSECURITY_DESCRIPTOR, PSID, SID_NAME_USE, SetSecurityDescriptorOwner, TOKEN_QUERY, TOKEN_USER,
@@ -210,14 +213,14 @@ mod platform {
     pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool, recurse: bool) -> Result<()> {
         unsafe {
             // Get the current sid
-            let sid = match is_multiuser {
-                true => get_group_sid()?,
-                false => get_user_sid()?,
+            let (sid, trustee_type) = match is_multiuser {
+                true => (get_group_sid()?, TRUSTEE_IS_GROUP),
+                false => (get_user_sid()?, TRUSTEE_IS_USER),
             };
 
             // Get the current owner, the acl of the path and the security descriptor
             let mut current_owner_sid = PSID(ptr::null_mut());
-            let acl = ptr::null_mut();
+            let mut acl = ptr::null_mut();
             let mut security_descriptor = PSECURITY_DESCRIPTOR(ptr::null_mut());
             let wide_path = PCWSTR(path_to_pcwstr(path).as_ptr());
             let result = GetNamedSecurityInfoW(
@@ -226,7 +229,7 @@ mod platform {
                 OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION,
                 Some(&mut current_owner_sid),
                 None,
-                Some(acl),
+                Some(&mut acl),
                 None,
                 &mut security_descriptor,
             );
@@ -248,16 +251,17 @@ mod platform {
                 false => NO_INHERITANCE,
             };
 
+            // Set the trustee (for which user the entry is meant)
+            let mut trustee = TRUSTEE_W::default();
+            trustee.ptstrName = PWSTR(sid.0 as *mut u16);
+            trustee.TrusteeType = trustee_type;
+            trustee.TrusteeForm = TRUSTEE_IS_SID;
+
             // Adjust DACL to set permissions
             let mut explicit_access = EXPLICIT_ACCESS_W::default();
             explicit_access.grfAccessPermissions = GENERIC_ALL.0;
             explicit_access.grfAccessMode = GRANT_ACCESS;
             explicit_access.grfInheritance = inheritance_state;
-
-            // Set the trustee (for which user the entry is meant)
-            let mut trustee = TRUSTEE_W::default();
-            trustee.TrusteeForm = TRUSTEE_IS_SID;
-            trustee.ptstrName = PWSTR(sid.0 as *mut u16);
             explicit_access.Trustee = trustee;
 
             // Set the ACL entries by passing a list of new entries and the old acl.
@@ -272,7 +276,6 @@ mod platform {
             }
 
             // Set the new ACL
-            let wide_path = PCWSTR(path_to_pcwstr(path).as_ptr());
             let result = SetNamedSecurityInfoW(
                 wide_path,
                 SE_FILE_OBJECT,
@@ -289,6 +292,9 @@ mod platform {
                     code: result.0,
                 })?;
             }
+
+            LocalFree(Some(HLOCAL(security_descriptor.0 as *mut _)));
+            LocalFree(Some(HLOCAL(new_acl as *mut _)));
 
             Ok(())
         }
@@ -345,10 +351,14 @@ mod platform {
                 Some(group),
                 &mut group_size,
             )
-            .map_err(|e| PlatformError::WindowsAPIError(e))?;
+            .map_err(PlatformError::WindowsAPIError)?;
 
             // Set the new security descriptor
-            SetSecurityDescriptorOwner(absolute_security_descriptor, Some(sid), false).map_err(|e| PlatformError::WindowsAPIError(e))?;
+            SetSecurityDescriptorOwner(absolute_security_descriptor, Some(sid), false).map_err(PlatformError::WindowsAPIError)?;
+
+            LocalFree(Some(HLOCAL(absolute_security_descriptor.0 as *mut _)));
+            LocalFree(Some(HLOCAL(owner.0 as *mut _)));
+            LocalFree(Some(HLOCAL(group.0 as *mut _)));
         };
 
         Ok(())
@@ -358,7 +368,7 @@ mod platform {
         unsafe {
             // Create a handle for the current process
             let mut token: HANDLE = HANDLE::default();
-            OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token).map_err(|e| PlatformError::WindowsAPIError(e))?;
+            OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token).map_err(PlatformError::WindowsAPIError)?;
 
             // Get the size of the token information for the buffer
             let mut buffer_size: u32 = 0;
@@ -377,7 +387,9 @@ mod platform {
                 buffer_size,
                 &mut buffer_size,
             )
-            .map_err(|e| PlatformError::WindowsAPIError(e))?;
+            .map_err(PlatformError::WindowsAPIError)?;
+
+            LocalFree(Some(HLOCAL(token.0 as *mut _)));
 
             let token_user = &*(sid_buffer.as_ptr() as *const TOKEN_USER);
             Ok(token_user.User.Sid)
@@ -423,6 +435,9 @@ mod platform {
                 &mut sid_type,
             );
 
+            LocalFree(Some(HLOCAL(sid_type.0 as *mut _)));
+            LocalFree(Some(HLOCAL(domain.0 as *mut _)));
+
             // Explicitly return a PermissionError::GroupDoesNotExist error when the group doesn't exist
             match result {
                 Ok(_) => Ok(sid),
@@ -445,6 +460,9 @@ mod platform {
     use std::{fs::Metadata, path::PathBuf};
 
     use super::Result;
+
+    #[derive(Error, Debug)]
+    pub enum PlatformError {}
 
     pub(super) fn is_writable(_path: &PathBuf, _metadata: Metadata) -> Result<bool> {
         panic!("Cannot check write permissions for target, target is not supported.");
