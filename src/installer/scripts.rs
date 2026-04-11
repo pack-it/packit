@@ -14,7 +14,7 @@ use crate::{
     config::Config,
     installer::{
         build_env::BuildEnv,
-        types::{PackageName, Version},
+        types::{PackageId, PackageName},
     },
     platforms::{Os, TargetArchitecture},
     repositories::{error::RepositoryError, manager::RepositoryManager},
@@ -55,7 +55,7 @@ pub type Result<T> = core::result::Result<T, ScriptError>;
 pub struct ScriptData<'a> {
     path: &'a dyn AsRef<Path>,
     package_install_path: &'a dyn AsRef<Path>,
-    package_version: &'a Version,
+    package_id: &'a PackageId,
     config: &'a Config,
     args: &'a HashMap<&'a str, &'a str>,
     verbose: bool,
@@ -66,7 +66,7 @@ impl<'a> ScriptData<'a> {
     pub fn new(
         path: &'a impl AsRef<Path>,
         package_install_path: &'a impl AsRef<Path>,
-        package_version: &'a Version,
+        package_id: &'a PackageId,
         config: &'a Config,
         args: &'a HashMap<&str, &str>,
         verbose: bool,
@@ -74,7 +74,7 @@ impl<'a> ScriptData<'a> {
         Self {
             path,
             package_install_path,
-            package_version,
+            package_id,
             config,
             args,
             verbose,
@@ -121,6 +121,8 @@ fn run_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, env: Environm
     let package_install_path = to_absolute_path(script_data.package_install_path)?;
     let package_install_path = package_install_path.to_str().ok_or(ScriptError::InvalidPathString)?;
 
+    let package_dependencies_path = script_data.config.prefix_directory.join("dependencies").join(script_data.package_id.to_string());
+
     let mut command = create_command(path);
     command
         .current_dir(run_dir)
@@ -128,7 +130,8 @@ fn run_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, env: Environm
         .env("PACKIT_TARGET", TargetArchitecture::current().to_string())
         .env("PACKIT_OS", Os::current().as_str())
         .env("PACKIT_PACKAGE_PATH", package_install_path)
-        .env("PACKIT_PACKAGE_VERSION", script_data.package_version.to_string())
+        .env("PACKIT_PACKAGE_VERSION", script_data.package_id.version.to_string())
+        .env("PACKIT_PACKAGE_DEPENDENCIES_PATH", &package_dependencies_path)
         .env("PACKIT_VERBOSE", if script_data.verbose { "1" } else { "0" });
 
     // Only display build logging if verbose is enabled

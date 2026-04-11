@@ -204,7 +204,8 @@ impl<'a> Builder<'a> {
         let script_path = install_meta.version_metadata.get_build_script_path(&install_meta.target_bounds)?;
         let script_path = scripts::download_script(self.repository_manager, &script_path, &package_name, &install_meta.repository_id)?
             .ok_or(ScriptError::ScriptNotFound("build".into()))?;
-        let script_data = ScriptData::new(&script_path, &destination_dir, &version, self.config, &script_args, self.verbose);
+        let package_id = PackageId::new(package_name.clone(), version.clone());
+        let script_data = ScriptData::new(&script_path, &destination_dir, &package_id, self.config, &script_args, self.verbose);
 
         let package_id = PackageId::new(package_name.clone(), version.clone());
         println!("Executing build script of {package_id}");

@@ -226,7 +226,7 @@ impl<'a> Installer<'a> {
             let script_data = ScriptData::new(
                 &script_file,
                 &install_directory,
-                &version_meta.version,
+                &package_id,
                 self.config,
                 &script_args,
                 self.options.verbose,
@@ -277,7 +277,7 @@ impl<'a> Installer<'a> {
             let script_data = ScriptData::new(
                 &script_file,
                 &install_directory,
-                &version_meta.version,
+                &package_id,
                 self.config,
                 &script_args,
                 self.options.verbose,
@@ -296,7 +296,7 @@ impl<'a> Installer<'a> {
             let script_data = ScriptData::new(
                 &script_file,
                 &install_directory,
-                &version_meta.version,
+                &package_id,
                 self.config,
                 &script_args,
                 self.options.verbose,
@@ -646,7 +646,7 @@ impl<'a> Installer<'a> {
             let script_data = ScriptData::new(
                 &script_path,
                 &install_directory,
-                &package_id.version,
+                &package_id,
                 self.config,
                 &script_args,
                 self.options.verbose,
