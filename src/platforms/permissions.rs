@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::{fs, path::PathBuf};
 use thiserror::Error;
-use windows::core::Error;
 
 #[derive(Error, Debug)]
 pub enum PermissionError {
@@ -14,14 +13,8 @@ pub enum PermissionError {
     #[error("String contains a nul byte")]
     NulError(#[from] std::ffi::NulError),
 
-    #[error("Error while interacting with windows API")]
-    WindowsAPIError(#[from] Error),
-
-    #[error("Security info error with code {code}. {message}")]
-    SecurityInfoError {
-        message: String,
-        code: u32,
-    },
+    #[error("Error during platform specific operations")]
+    PlatformError(#[from] PlatformError),
 }
 
 type Result<T> = core::result::Result<T, PermissionError>;
@@ -46,6 +39,8 @@ pub fn is_writable(path: &PathBuf) -> Result<bool> {
 
 /// Sets the permissions of packit files
 pub use platform::set_packit_permissions;
+
+use crate::platforms::permissions::platform::PlatformError;
 
 /// Permissions implementation for Unix platforms.
 #[cfg(any(target_os = "macos", target_os = "linux"))]
@@ -176,6 +171,7 @@ mod platform {
 
     use super::Result;
 
+    use thiserror::Error;
     use windows::{
         Win32::{
             Foundation::{ERROR_INSUFFICIENT_BUFFER, ERROR_NONE_MAPPED, ERROR_SUCCESS, GENERIC_ALL, HANDLE},
@@ -194,13 +190,24 @@ mod platform {
         core::{PCWSTR, PWSTR, w},
     };
 
+    #[derive(Error, Debug)]
+    pub enum PlatformError {
+        #[error("Error while interacting with windows API")]
+        WindowsAPIError(#[from] windows::core::Error),
+
+        #[error("Security info error with code {code}. {message}")]
+        SecurityInfoError {
+            message: String,
+            code: u32,
+        },
+    }
+
     pub fn is_writable(_path: &PathBuf, _metadata: Metadata) -> Result<bool> {
         // TODOs
         Ok(true)
     }
 
     pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool, recurse: bool) -> Result<()> {
-        dbg!(recurse);
         unsafe {
             // Get the current sid
             let sid = match is_multiuser {
@@ -225,10 +232,10 @@ mod platform {
             );
 
             if result.0 != ERROR_SUCCESS.0 {
-                return Err(PermissionError::SecurityInfoError {
+                return Err(PlatformError::SecurityInfoError {
                     message: "Getting security info failed".to_string(),
                     code: result.0,
-                });
+                })?;
             }
 
             // This assumes that the current user already has ownership
@@ -258,10 +265,10 @@ mod platform {
             let mut new_acl = ptr::null_mut();
             let result = SetEntriesInAclW(Some(&[explicit_access]), Some(acl as *mut ACL), &mut new_acl);
             if result.0 != ERROR_SUCCESS.0 {
-                return Err(PermissionError::SecurityInfoError {
+                return Err(PlatformError::SecurityInfoError {
                     message: "Settings ACL entries failed".to_string(),
                     code: result.0,
-                });
+                })?;
             }
 
             // Set the new ACL
@@ -270,17 +277,17 @@ mod platform {
                 wide_path,
                 SE_FILE_OBJECT,
                 DACL_SECURITY_INFORMATION,
-                Some(sid), // TODO: Check if sid it correct for owner (should be)
+                Some(sid),
                 None,
                 Some(new_acl as *mut ACL),
                 None,
             );
 
             if result.0 != ERROR_SUCCESS.0 {
-                return Err(PermissionError::SecurityInfoError {
+                return Err(PlatformError::SecurityInfoError {
                     message: "Setting security info failed".to_string(),
                     code: result.0,
-                });
+                })?;
             }
 
             Ok(())
@@ -313,7 +320,7 @@ mod platform {
             match result {
                 Ok(_) => warning!("Unexpected succes on first call"),
                 Err(e) if e.code() == ERROR_INSUFFICIENT_BUFFER.to_hresult() => {},
-                Err(e) => return Err(PermissionError::WindowsAPIError(e)),
+                Err(e) => return Err(PlatformError::WindowsAPIError(e))?,
             }
 
             // Fill all the buffers and get the absolute security descriptor
@@ -337,10 +344,11 @@ mod platform {
                 &mut owner_size,
                 Some(group),
                 &mut group_size,
-            )?;
+            )
+            .map_err(|e| PlatformError::WindowsAPIError(e))?;
 
             // Set the new security descriptor
-            SetSecurityDescriptorOwner(absolute_security_descriptor, Some(sid), false)?;
+            SetSecurityDescriptorOwner(absolute_security_descriptor, Some(sid), false).map_err(|e| PlatformError::WindowsAPIError(e))?;
         };
 
         Ok(())
@@ -350,14 +358,14 @@ mod platform {
         unsafe {
             // Create a handle for the current process
             let mut token: HANDLE = HANDLE::default();
-            OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token)?;
+            OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token).map_err(|e| PlatformError::WindowsAPIError(e))?;
 
             // Get the size of the token information for the buffer
             let mut buffer_size: u32 = 0;
             match GetTokenInformation(token, TokenUser, None, 0, &mut buffer_size) {
                 Ok(_) => warning!("Unexpected succes on first call"),
                 Err(e) if e.code() == ERROR_INSUFFICIENT_BUFFER.to_hresult() => {},
-                Err(e) => return Err(PermissionError::WindowsAPIError(e)),
+                Err(e) => return Err(PlatformError::WindowsAPIError(e))?,
             }
 
             // Fill the sid buffer
@@ -368,7 +376,8 @@ mod platform {
                 Some(sid_buffer.as_mut_ptr() as *mut _),
                 buffer_size,
                 &mut buffer_size,
-            )?;
+            )
+            .map_err(|e| PlatformError::WindowsAPIError(e))?;
 
             let token_user = &*(sid_buffer.as_ptr() as *const TOKEN_USER);
             Ok(token_user.User.Sid)
@@ -396,7 +405,7 @@ mod platform {
             match result {
                 Ok(_) => warning!("Unexpected succes on first call"),
                 Err(e) if e.code() == ERROR_INSUFFICIENT_BUFFER.to_hresult() => {},
-                Err(e) => return Err(PermissionError::WindowsAPIError(e)),
+                Err(e) => return Err(PlatformError::WindowsAPIError(e))?,
             }
 
             // Fill the sid and domain buffer
@@ -418,7 +427,7 @@ mod platform {
             match result {
                 Ok(_) => Ok(sid),
                 Err(e) if e.code() == ERROR_NONE_MAPPED.to_hresult() => return Err(PermissionError::GroupDoesNotExist),
-                Err(e) => return Err(PermissionError::WindowsAPIError(e)),
+                Err(e) => return Err(PlatformError::WindowsAPIError(e))?,
             }
         }
     }
