@@ -183,13 +183,14 @@ mod platform {
             Security::{
                 ACL, AccessCheck,
                 Authorization::{
-                    EXPLICIT_ACCESS_W, GRANT_ACCESS, GetNamedSecurityInfoW, SE_FILE_OBJECT, SetEntriesInAclW, SetNamedSecurityInfoW,
-                    TRUSTEE_IS_GROUP, TRUSTEE_IS_SID, TRUSTEE_IS_USER, TRUSTEE_W,
+                    EXPLICIT_ACCESS_W, GRANT_ACCESS, GetNamedSecurityInfoW, NO_MULTIPLE_TRUSTEE, SE_FILE_OBJECT, SetEntriesInAclW,
+                    SetNamedSecurityInfoW, TRUSTEE_IS_GROUP, TRUSTEE_IS_SID, TRUSTEE_IS_USER, TRUSTEE_W,
                 },
-                DACL_SECURITY_INFORMATION, DuplicateTokenEx, GENERIC_MAPPING, GROUP_SECURITY_INFORMATION, GetTokenInformation,
-                LookupAccountNameW, MakeAbsoluteSD, MapGenericMask, NO_INHERITANCE, OBJECT_INHERIT_ACE, OWNER_SECURITY_INFORMATION,
-                PRIVILEGE_SET, PSECURITY_DESCRIPTOR, PSID, SID_NAME_USE, SecurityImpersonation, SetSecurityDescriptorOwner,
-                TOKEN_ACCESS_MASK, TOKEN_DUPLICATE, TOKEN_IMPERSONATE, TOKEN_QUERY, TOKEN_USER, TokenImpersonation, TokenUser,
+                CONTAINER_INHERIT_ACE, DACL_SECURITY_INFORMATION, DuplicateTokenEx, GENERIC_MAPPING, GROUP_SECURITY_INFORMATION,
+                GetSecurityDescriptorDacl, GetTokenInformation, IsValidSid, LookupAccountNameW, MakeAbsoluteSD, MapGenericMask,
+                NO_INHERITANCE, OBJECT_INHERIT_ACE, OWNER_SECURITY_INFORMATION, PRIVILEGE_SET, PSECURITY_DESCRIPTOR, PSID, SID_NAME_USE,
+                SecurityImpersonation, SetSecurityDescriptorOwner, TOKEN_ACCESS_MASK, TOKEN_DUPLICATE, TOKEN_IMPERSONATE, TOKEN_QUERY,
+                TOKEN_USER, TokenImpersonation, TokenUser,
             },
             Storage::FileSystem::{FILE_ALL_ACCESS, FILE_GENERIC_EXECUTE, FILE_GENERIC_READ, FILE_GENERIC_WRITE},
             System::{
@@ -213,7 +214,8 @@ mod platform {
     }
 
     pub fn is_writable(path: &PathBuf, _metadata: Metadata) -> Result<bool> {
-        let wide_path = PCWSTR(path_to_pcwstr(path).as_ptr());
+        let wide_path_buffer = path_to_pcwstr(path);
+        let wide_path = PCWSTR(wide_path_buffer.as_ptr());
         let (_, _, security_descriptor) = get_security_info(wide_path)?;
 
         unsafe {
@@ -285,12 +287,13 @@ mod platform {
     pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool, recurse: bool) -> Result<()> {
         unsafe {
             // Get the current sid
-            let (sid, trustee_type) = match is_multiuser {
+            let ((sid, _), trustee_type) = match is_multiuser {
                 true => (get_group_sid()?, TRUSTEE_IS_GROUP),
                 false => (get_user_sid()?, TRUSTEE_IS_USER),
             };
 
-            let wide_path = PCWSTR(path_to_pcwstr(path).as_ptr());
+            let wide_path_buffer = path_to_pcwstr(path);
+            let wide_path = PCWSTR(wide_path_buffer.as_ptr());
             let (_, acl, security_descriptor) = get_security_info(wide_path)?;
 
             // This assumes that the current user already has ownership
@@ -299,15 +302,17 @@ mod platform {
             }
 
             let inheritance_state = match recurse {
-                true => OBJECT_INHERIT_ACE,
+                true => OBJECT_INHERIT_ACE | CONTAINER_INHERIT_ACE,
                 false => NO_INHERITANCE,
             };
 
             // Set the trustee (for which user the entry is meant)
             let mut trustee = TRUSTEE_W::default();
-            trustee.ptstrName = PWSTR(sid.0 as *mut u16);
+            trustee.ptstrName = PWSTR(sid.0 as *mut _);
             trustee.TrusteeType = trustee_type;
             trustee.TrusteeForm = TRUSTEE_IS_SID;
+            trustee.pMultipleTrustee = ptr::null_mut();
+            trustee.MultipleTrusteeOperation = NO_MULTIPLE_TRUSTEE;
 
             // Adjust DACL to set permissions
             let mut explicit_access = EXPLICIT_ACCESS_W::default();
@@ -315,6 +320,12 @@ mod platform {
             explicit_access.grfAccessMode = GRANT_ACCESS;
             explicit_access.grfInheritance = inheritance_state;
             explicit_access.Trustee = trustee;
+
+            // let mut dacl_present = BOOL(0);
+            // let mut dacl_defaulted = BOOL(0);
+            // let mut dacl_ptr: *mut ACL = ptr::null_mut();
+
+            //GetSecurityDescriptorDacl(security_descriptor, &mut dacl_present, &mut dacl_ptr, &mut dacl_defaulted).unwrap();
 
             // Set the ACL entries by passing a list of new entries and the old acl.
             // This will be combined into the new acl.
@@ -359,7 +370,7 @@ mod platform {
             let mut acl = ptr::null_mut();
             let mut security_descriptor = PSECURITY_DESCRIPTOR(ptr::null_mut());
             let result = GetNamedSecurityInfoW(
-                PCWSTR(wide_path.as_ptr()),
+                wide_path,
                 SE_FILE_OBJECT,
                 OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION | GROUP_SECURITY_INFORMATION,
                 Some(&mut current_owner_sid),
@@ -464,7 +475,7 @@ mod platform {
         }
     }
 
-    fn get_user_sid() -> Result<PSID> {
+    fn get_user_sid() -> Result<(PSID, Vec<u8>)> {
         unsafe {
             // Create a handle for the current process
             let mut token = HANDLE::default();
@@ -479,7 +490,7 @@ mod platform {
             }
 
             // Fill the sid buffer
-            let mut sid_buffer: Vec<u8> = Vec::with_capacity(buffer_size as usize);
+            let mut sid_buffer = vec![0u8; buffer_size as usize];
             GetTokenInformation(
                 token,
                 TokenUser,
@@ -492,11 +503,11 @@ mod platform {
             //LocalFree(Some(HLOCAL(token.0 as *mut _)));
 
             let token_user = &*(sid_buffer.as_ptr() as *const TOKEN_USER);
-            Ok(token_user.User.Sid)
+            Ok((token_user.User.Sid, sid_buffer))
         }
     }
 
-    fn get_group_sid() -> Result<PSID> {
+    fn get_group_sid() -> Result<(PSID, Vec<u8>)> {
         unsafe {
             let mut sid_size: u32 = 0;
             let mut domain_size: u32 = 0;
@@ -540,7 +551,7 @@ mod platform {
 
             // Explicitly return a PermissionError::GroupDoesNotExist error when the group doesn't exist
             match result {
-                Ok(_) => Ok(sid),
+                Ok(_) => Ok((sid, sid_buffer)),
                 Err(e) if e.code() == ERROR_NONE_MAPPED.to_hresult() => return Err(PermissionError::GroupDoesNotExist),
                 Err(e) => return Err(PlatformError::WindowsAPIError(e))?,
             }
