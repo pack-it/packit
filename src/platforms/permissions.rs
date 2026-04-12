@@ -177,20 +177,27 @@ mod platform {
     use thiserror::Error;
     use windows::{
         Win32::{
-            Foundation::{ERROR_INSUFFICIENT_BUFFER, ERROR_NONE_MAPPED, ERROR_SUCCESS, GENERIC_ALL, HANDLE, HLOCAL, LocalFree},
+            Foundation::{
+                ERROR_INSUFFICIENT_BUFFER, ERROR_NONE_MAPPED, ERROR_SUCCESS, GENERIC_ALL, GENERIC_WRITE, HANDLE, HLOCAL, LocalFree,
+            },
             Security::{
-                ACL,
+                ACL, AccessCheck,
                 Authorization::{
                     EXPLICIT_ACCESS_W, GRANT_ACCESS, GetNamedSecurityInfoW, SE_FILE_OBJECT, SetEntriesInAclW, SetNamedSecurityInfoW,
                     TRUSTEE_IS_GROUP, TRUSTEE_IS_SID, TRUSTEE_IS_USER, TRUSTEE_W,
                 },
-                DACL_SECURITY_INFORMATION, GetTokenInformation, LookupAccountNameW, MakeAbsoluteSD, NO_INHERITANCE, OBJECT_INHERIT_ACE,
-                OWNER_SECURITY_INFORMATION, PSECURITY_DESCRIPTOR, PSID, SID_NAME_USE, SetSecurityDescriptorOwner, TOKEN_QUERY, TOKEN_USER,
-                TokenUser,
+                DACL_SECURITY_INFORMATION, DuplicateTokenEx, GENERIC_MAPPING, GROUP_SECURITY_INFORMATION, GetTokenInformation,
+                LookupAccountNameW, MakeAbsoluteSD, MapGenericMask, NO_INHERITANCE, OBJECT_INHERIT_ACE, OWNER_SECURITY_INFORMATION,
+                PRIVILEGE_SET, PSECURITY_DESCRIPTOR, PSID, SID_NAME_USE, SecurityImpersonation, SetSecurityDescriptorOwner,
+                TOKEN_ACCESS_MASK, TOKEN_DUPLICATE, TOKEN_IMPERSONATE, TOKEN_QUERY, TOKEN_USER, TokenImpersonation, TokenUser,
             },
-            System::Threading::{GetCurrentProcess, OpenProcessToken},
+            Storage::FileSystem::{FILE_ALL_ACCESS, FILE_GENERIC_EXECUTE, FILE_GENERIC_READ, FILE_GENERIC_WRITE},
+            System::{
+                SystemServices::MAXIMUM_ALLOWED,
+                Threading::{GetCurrentProcess, OpenProcessToken},
+            },
         },
-        core::{PCWSTR, PWSTR, w},
+        core::{BOOL, PCWSTR, PWSTR, w},
     };
 
     #[derive(Error, Debug)]
@@ -205,9 +212,74 @@ mod platform {
         },
     }
 
-    pub fn is_writable(_path: &PathBuf, _metadata: Metadata) -> Result<bool> {
-        // TODOs
-        Ok(true)
+    pub fn is_writable(path: &PathBuf, _metadata: Metadata) -> Result<bool> {
+        let wide_path = PCWSTR(path_to_pcwstr(path).as_ptr());
+        let (_, _, security_descriptor) = get_security_info(wide_path)?;
+
+        unsafe {
+            let mut token = HANDLE::default();
+            OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY | TOKEN_DUPLICATE | TOKEN_IMPERSONATE, &mut token)
+                .map_err(PlatformError::WindowsAPIError)?;
+
+            let mut impersonation_token = HANDLE::default();
+            DuplicateTokenEx(
+                token,
+                TOKEN_ACCESS_MASK(MAXIMUM_ALLOWED),
+                None,
+                SecurityImpersonation,
+                TokenImpersonation,
+                &mut impersonation_token,
+            )
+            .map_err(PlatformError::WindowsAPIError)?;
+
+            let mut desired_access = GENERIC_WRITE;
+            const MAPPING: GENERIC_MAPPING = GENERIC_MAPPING {
+                GenericRead: FILE_GENERIC_READ.0,
+                GenericWrite: FILE_GENERIC_WRITE.0,
+                GenericExecute: FILE_GENERIC_EXECUTE.0,
+                GenericAll: FILE_ALL_ACCESS.0,
+            };
+
+            MapGenericMask(&mut desired_access.0, &MAPPING);
+
+            let mut granted_access: u32 = 0;
+            let mut access_status = BOOL(0);
+            let mut privilege_length: u32 = 0;
+            let result = AccessCheck(
+                security_descriptor,
+                impersonation_token,
+                desired_access.0,
+                &MAPPING,
+                None,
+                &mut privilege_length,
+                &mut granted_access,
+                &mut access_status,
+            );
+
+            match result {
+                Ok(_) => warning!("Unexpected succes on first call"),
+                Err(e) if e.code() == ERROR_INSUFFICIENT_BUFFER.to_hresult() => {},
+                Err(e) => return Err(PlatformError::WindowsAPIError(e))?,
+            }
+
+            let mut privilege_buffer = vec![0u8; privilege_length as usize];
+            let privilege = privilege_buffer.as_mut_ptr() as *mut PRIVILEGE_SET;
+            let mut granted_access: u32 = 0;
+            let mut access_status = BOOL(0);
+            AccessCheck(
+                security_descriptor,
+                impersonation_token,
+                desired_access.0,
+                &MAPPING,
+                Some(privilege),
+                &mut privilege_length,
+                &mut granted_access,
+                &mut access_status,
+            )
+            .map_err(PlatformError::WindowsAPIError)?;
+
+            Ok(access_status.as_bool())
+        }
     }
 
     pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool, recurse: bool) -> Result<()> {
@@ -218,28 +290,8 @@ mod platform {
                 false => (get_user_sid()?, TRUSTEE_IS_USER),
             };
 
-            // Get the current owner, the acl of the path and the security descriptor
-            let mut current_owner_sid = PSID(ptr::null_mut());
-            let mut acl = ptr::null_mut();
-            let mut security_descriptor = PSECURITY_DESCRIPTOR(ptr::null_mut());
             let wide_path = PCWSTR(path_to_pcwstr(path).as_ptr());
-            let result = GetNamedSecurityInfoW(
-                PCWSTR(wide_path.as_ptr()),
-                SE_FILE_OBJECT,
-                OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION,
-                Some(&mut current_owner_sid),
-                None,
-                Some(&mut acl),
-                None,
-                &mut security_descriptor,
-            );
-
-            if result.0 != ERROR_SUCCESS.0 {
-                return Err(PlatformError::SecurityInfoError {
-                    message: "Getting security info failed".to_string(),
-                    code: result.0,
-                })?;
-            }
+            let (_, acl, security_descriptor) = get_security_info(wide_path)?;
 
             // This assumes that the current user already has ownership
             if is_multiuser {
@@ -300,17 +352,67 @@ mod platform {
         }
     }
 
+    fn get_security_info(wide_path: PCWSTR) -> Result<(PSID, *mut ACL, PSECURITY_DESCRIPTOR)> {
+        unsafe {
+            // Get the current owner, the acl of the path and the security descriptor
+            let mut current_owner_sid = PSID(ptr::null_mut());
+            let mut acl = ptr::null_mut();
+            let mut security_descriptor = PSECURITY_DESCRIPTOR(ptr::null_mut());
+            let result = GetNamedSecurityInfoW(
+                PCWSTR(wide_path.as_ptr()),
+                SE_FILE_OBJECT,
+                OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION | GROUP_SECURITY_INFORMATION,
+                Some(&mut current_owner_sid),
+                None,
+                Some(&mut acl),
+                None,
+                &mut security_descriptor,
+            );
+
+            if result.0 != ERROR_SUCCESS.0 {
+                return Err(PlatformError::SecurityInfoError {
+                    message: "Getting security info failed".to_string(),
+                    code: result.0,
+                })?;
+            }
+
+            Ok((current_owner_sid, acl, security_descriptor))
+        }
+    }
+
+    // TODO: Make recursive
     fn set_group_ownership(security_descriptor: PSECURITY_DESCRIPTOR, sid: PSID) -> Result<()> {
         unsafe {
-            let mut absolute_size = 0;
-            let mut dacl_size = 0;
-            let mut sacl_size = 0;
-            let mut owner_size = 0;
-            let mut group_size = 0;
+            // TODO: Relative security descriptor is not valid after this call (probably)
+            let descriptor = get_absolute_security_descriptor(security_descriptor)?;
 
+            // Set the new security descriptor
+            SetSecurityDescriptorOwner(descriptor.security_descriptor, Some(sid), false).map_err(PlatformError::WindowsAPIError)?;
+        };
+
+        Ok(())
+    }
+
+    struct DescriptorBuffers {
+        security_descriptor: PSECURITY_DESCRIPTOR,
+        absolute_buffer: Vec<u8>,
+        dacl_buffer: Vec<u8>,
+        sacl_buffer: Vec<u8>,
+        owner_buffer: Vec<u8>,
+        group_buffer: Vec<u8>,
+    }
+
+    fn get_absolute_security_descriptor(relative_descriptor: PSECURITY_DESCRIPTOR) -> Result<DescriptorBuffers> {
+        let mut absolute_size = 0;
+        let mut dacl_size = 0;
+        let mut sacl_size = 0;
+        let mut owner_size = 0;
+        let mut group_size = 0;
+
+        unsafe {
             // Get the buffer sizes
             let result = MakeAbsoluteSD(
-                security_descriptor,
+                relative_descriptor,
                 None,
                 &mut absolute_size,
                 None,
@@ -331,43 +433,41 @@ mod platform {
 
             // Fill all the buffers and get the absolute security descriptor
             let mut absolute_buffer = vec![0u8; absolute_size as usize];
-            let absolute_security_descriptor = PSECURITY_DESCRIPTOR(absolute_buffer.as_mut_ptr() as *mut _);
+            let security_descriptor = PSECURITY_DESCRIPTOR(absolute_buffer.as_mut_ptr() as *mut _);
             let mut dacl_buffer = vec![0u8; dacl_size as usize];
             let mut sacl_buffer = vec![0u8; sacl_size as usize];
             let mut owner_buffer = vec![0u8; owner_size as usize];
-            let owner = PSID(owner_buffer.as_mut_ptr() as *mut _);
             let mut group_buffer = vec![0u8; group_size as usize];
-            let group = PSID(group_buffer.as_mut_ptr() as *mut _);
             MakeAbsoluteSD(
-                security_descriptor,
-                Some(absolute_security_descriptor),
+                relative_descriptor,
+                Some(security_descriptor),
                 &mut absolute_size,
                 Some(dacl_buffer.as_mut_ptr() as *mut _),
                 &mut dacl_size,
                 Some(sacl_buffer.as_mut_ptr() as *mut _),
                 &mut sacl_size,
-                Some(owner),
+                Some(PSID(owner_buffer.as_mut_ptr() as *mut _)),
                 &mut owner_size,
-                Some(group),
+                Some(PSID(group_buffer.as_mut_ptr() as *mut _)),
                 &mut group_size,
             )
             .map_err(PlatformError::WindowsAPIError)?;
 
-            // Set the new security descriptor
-            SetSecurityDescriptorOwner(absolute_security_descriptor, Some(sid), false).map_err(PlatformError::WindowsAPIError)?;
-
-            LocalFree(Some(HLOCAL(absolute_security_descriptor.0 as *mut _)));
-            LocalFree(Some(HLOCAL(owner.0 as *mut _)));
-            LocalFree(Some(HLOCAL(group.0 as *mut _)));
-        };
-
-        Ok(())
+            Ok(DescriptorBuffers {
+                security_descriptor,
+                absolute_buffer,
+                dacl_buffer,
+                sacl_buffer,
+                owner_buffer,
+                group_buffer,
+            })
+        }
     }
 
     fn get_user_sid() -> Result<PSID> {
         unsafe {
             // Create a handle for the current process
-            let mut token: HANDLE = HANDLE::default();
+            let mut token = HANDLE::default();
             OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token).map_err(PlatformError::WindowsAPIError)?;
 
             // Get the size of the token information for the buffer
@@ -389,7 +489,7 @@ mod platform {
             )
             .map_err(PlatformError::WindowsAPIError)?;
 
-            LocalFree(Some(HLOCAL(token.0 as *mut _)));
+            //LocalFree(Some(HLOCAL(token.0 as *mut _)));
 
             let token_user = &*(sid_buffer.as_ptr() as *const TOKEN_USER);
             Ok(token_user.User.Sid)
@@ -435,8 +535,8 @@ mod platform {
                 &mut sid_type,
             );
 
-            LocalFree(Some(HLOCAL(sid_type.0 as *mut _)));
-            LocalFree(Some(HLOCAL(domain.0 as *mut _)));
+            // LocalFree(Some(HLOCAL(sid_type.0 as *mut _)));
+            // LocalFree(Some(HLOCAL(domain.0 as *mut _)));
 
             // Explicitly return a PermissionError::GroupDoesNotExist error when the group doesn't exist
             match result {
