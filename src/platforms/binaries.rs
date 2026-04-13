@@ -205,6 +205,20 @@ impl<'a> BinaryPatcher<'a> {
                 _ => continue,
             };
 
+            // Check if the library references the package itself
+            let package_lib_path =
+                self.config.prefix_directory.join("packages").join(&package.name).join(package.version.to_string()).join("lib");
+            let lib_path = package_lib_path.join(library.name());
+            if lib_path.exists() {
+                debug!("Found self referencing dependency, adding to rpath");
+
+                if !rpaths.contains(&package_lib_path) {
+                    rpaths.push(package_lib_path);
+                }
+
+                continue;
+            }
+
             for dependency in dependencies {
                 let lib_path = dependency.install_path.join("lib").join(library.name());
                 if lib_path.exists() {
@@ -217,7 +231,10 @@ impl<'a> BinaryPatcher<'a> {
                         .join(package.to_string())
                         .join(&dependency.package_id.name)
                         .join("lib");
-                    rpaths.push(dependency_path);
+
+                    if !rpaths.contains(&dependency_path) {
+                        rpaths.push(dependency_path);
+                    }
                 }
             }
         }
