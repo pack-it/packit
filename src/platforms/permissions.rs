@@ -184,14 +184,14 @@ mod platform {
     use windows::{
         Win32::{
             Foundation::{
-                ERROR_INSUFFICIENT_BUFFER, ERROR_NONE_MAPPED, ERROR_SUCCESS, GENERIC_ALL, GENERIC_WRITE, HANDLE, HLOCAL, LUID, LocalFree,
+                CloseHandle, ERROR_INSUFFICIENT_BUFFER, ERROR_NONE_MAPPED, ERROR_SUCCESS, GENERIC_ALL, GENERIC_WRITE, HANDLE, HLOCAL, LUID,
+                LocalFree,
             },
             Security::{
                 ACL, AccessCheck, AdjustTokenPrivileges,
                 Authorization::{
-                    ConvertSidToStringSidW, ConvertStringSidToSidW, EXPLICIT_ACCESS_W, GRANT_ACCESS, GetNamedSecurityInfoW,
-                    NO_MULTIPLE_TRUSTEE, SE_FILE_OBJECT, SetEntriesInAclW, SetNamedSecurityInfoW, TRUSTEE_IS_GROUP, TRUSTEE_IS_SID,
-                    TRUSTEE_IS_USER, TRUSTEE_W,
+                    EXPLICIT_ACCESS_W, GRANT_ACCESS, GetNamedSecurityInfoW, NO_MULTIPLE_TRUSTEE, SE_FILE_OBJECT, SetEntriesInAclW,
+                    SetNamedSecurityInfoW, TRUSTEE_IS_GROUP, TRUSTEE_IS_SID, TRUSTEE_IS_USER, TRUSTEE_W,
                 },
                 CONTAINER_INHERIT_ACE, DACL_SECURITY_INFORMATION, DuplicateTokenEx, GENERIC_MAPPING, GROUP_SECURITY_INFORMATION,
                 GetTokenInformation, LUID_AND_ATTRIBUTES, LookupAccountNameW, LookupPrivilegeValueW, MapGenericMask, NO_INHERITANCE,
@@ -201,6 +201,7 @@ mod platform {
             },
             Storage::FileSystem::{FILE_ALL_ACCESS, FILE_GENERIC_EXECUTE, FILE_GENERIC_READ, FILE_GENERIC_WRITE},
             System::{
+                Memory::{LMEM_FIXED, LocalAlloc},
                 SystemServices::MAXIMUM_ALLOWED,
                 Threading::{GetCurrentProcess, OpenProcessToken},
             },
@@ -210,16 +211,18 @@ mod platform {
 
     #[derive(Error, Debug)]
     pub enum PlatformError {
-        #[error("Error while interacting with windows API")]
-        WindowsAPIError(#[from] windows::core::Error),
-
         #[error("Security info error with code {code}. {message}")]
         SecurityInfoError {
             message: String,
             code: u32,
         },
+
+        #[error("Error while interacting with windows API")]
+        WindowsAPIError(#[from] windows::core::Error),
     }
 
+    /// Checks if the given directory is writable by the current user. Returns true if it is, false if not.
+    /// Could return a `PlatformError::SecurityInfoError` or a `PlatformError::WindowsAPIError` error.
     pub fn is_writable(path: &PathBuf, _metadata: Metadata) -> Result<bool> {
         let wide_path_buffer = path_to_pcwstr(path);
         let wide_path = PCWSTR(wide_path_buffer.as_ptr());
@@ -287,13 +290,20 @@ mod platform {
             )
             .map_err(PlatformError::WindowsAPIError)?;
 
+            // Free the token handles
+            CloseHandle(token).map_err(PlatformError::WindowsAPIError)?;
+            CloseHandle(impersonation_token).map_err(PlatformError::WindowsAPIError)?;
+
             Ok(access_status.as_bool())
         }
     }
 
+    /// Sets the permissions for the current user and for the packit group if multiuser is enabled.
+    /// If multiuser mode is enabled it will also set the ownership for the entire packit group.
+    /// Could return a `PlatformError::SecurityInfoError`, a `PlatformError::WindowsAPIError` or a `PermissionError::GroupDoesNotExist` error.
     pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool, recurse: bool) -> Result<()> {
         // Get the current sid
-        let (sid, _, _) = match is_multiuser {
+        let (sid, _) = match is_multiuser {
             true => get_group_sid()?,
             false => get_user_sid()?,
         };
@@ -357,20 +367,30 @@ mod platform {
                 })?;
             }
 
-            LocalFree(Some(HLOCAL(security_descriptor.0 as *mut _)));
+            // Free the security descriptor and acl
+            LocalFree(Some(HLOCAL(security_descriptor.0)));
             LocalFree(Some(HLOCAL(new_acl as *mut _)));
+
+            // Free the sid if the sid is from the multiuser
+            // Assumes that the multiuser sid will be created with local allocation
+            if is_multiuser {
+                LocalFree(Some(HLOCAL(sid.0)));
+            }
 
             Ok(())
         }
     }
 
+    /// Enables a given privilege.
+    /// Could return a `PlatformError::WindowsAPIError` error.
     fn enable_privilege(name: &str) -> Result<()> {
         unsafe {
+            // Get a handle for the current process
             let mut token = HANDLE::default();
-
             OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &mut token)
                 .map_err(PlatformError::WindowsAPIError)?;
 
+            // Get the unique id for the given privilege name
             let mut luid = LUID::default();
             LookupPrivilegeValueW(None, &HSTRING::from(name), &mut luid).map_err(PlatformError::WindowsAPIError)?;
 
@@ -383,20 +403,26 @@ mod platform {
             };
 
             AdjustTokenPrivileges(token, false, Some(&token_privileges), 0, None, None).map_err(PlatformError::WindowsAPIError)?;
+
+            // Free the token handle
+            CloseHandle(token).map_err(PlatformError::WindowsAPIError)?;
         }
 
         Ok(())
     }
 
+    /// Recursively set the ownership for a given path (if recurse is true).
+    /// Could return a `PlatformError::SecurityInfoError` or a `PlatformError::WindowsAPIError` error.
     fn set_group_ownership(path: &PathBuf, sid: PSID, recurse: bool) -> Result<()> {
         let wide_path_buffer = path_to_pcwstr(path);
         let wide_path = PCWSTR(wide_path_buffer.as_ptr());
 
         unsafe {
+            // Enable the correct privileges before changing the ownership of the path
             enable_privilege("SeRestorePrivilege")?;
             enable_privilege("SeTakeOwnershipPrivilege")?;
 
-            // Set the new ACL
+            // Set the ownership for the given `PSID`
             let result = SetNamedSecurityInfoW(wide_path, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION, Some(sid), None, None, None);
             if result.0 != ERROR_SUCCESS.0 {
                 return Err(PlatformError::SecurityInfoError {
@@ -410,6 +436,7 @@ mod platform {
             return Ok(());
         }
 
+        // Recurse the directory
         for entry in fs::read_dir(&path)? {
             let entry = entry?;
 
@@ -419,6 +446,8 @@ mod platform {
         Ok(())
     }
 
+    /// Gets the security info for a certain path.
+    /// Could return a `PlatformError::SecurityInfoError` or a `PlatformError::WindowsAPIError` error.
     fn get_security_info(wide_path: PCWSTR) -> Result<(PSID, PSID, *mut ACL, *mut ACL, PSECURITY_DESCRIPTOR)> {
         unsafe {
             // Get the current owner, the acl of the path and the security descriptor
@@ -449,39 +478,39 @@ mod platform {
         }
     }
 
-    fn get_user_sid() -> Result<(PSID, Vec<u16>, Vec<u16>)> {
+    /// Gets the user `PSID` from the current user.
+    /// Could return a `PlatformError::WindowsAPIError` error.
+    fn get_user_sid() -> Result<(PSID, Vec<u16>)> {
         unsafe {
             // Create a handle for the current process
             let mut token = HANDLE::default();
             OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token).map_err(PlatformError::WindowsAPIError)?;
 
             // Get the size of the token information for the buffer
-            let mut buffer_size: u32 = 0;
-            match GetTokenInformation(token, TokenUser, None, 0, &mut buffer_size) {
+            let mut sid_size: u32 = 0;
+            match GetTokenInformation(token, TokenUser, None, 0, &mut sid_size) {
                 Ok(_) => warning!("Unexpected succes on first call"),
                 Err(e) if e.code() == ERROR_INSUFFICIENT_BUFFER.to_hresult() => {},
                 Err(e) => return Err(PlatformError::WindowsAPIError(e))?,
             }
 
             // Fill the sid buffer
-            let mut sid_buffer = vec![0u16; buffer_size as usize];
-            GetTokenInformation(
-                token,
-                TokenUser,
-                Some(sid_buffer.as_mut_ptr() as *mut _),
-                buffer_size,
-                &mut buffer_size,
-            )
-            .map_err(PlatformError::WindowsAPIError)?;
-
-            //LocalFree(Some(HLOCAL(token.0 as *mut _)));
+            let mut sid_buffer = vec![0u16; sid_size as usize];
+            GetTokenInformation(token, TokenUser, Some(sid_buffer.as_mut_ptr() as *mut _), sid_size, &mut sid_size)
+                .map_err(PlatformError::WindowsAPIError)?;
 
             let token_user = &*(sid_buffer.as_ptr() as *const TOKEN_USER);
-            Ok((token_user.User.Sid, sid_buffer, vec![]))
+
+            // Free the token handle
+            CloseHandle(token).map_err(PlatformError::WindowsAPIError)?;
+
+            Ok((token_user.User.Sid, sid_buffer))
         }
     }
 
-    fn get_group_sid() -> Result<(PSID, Vec<u16>, Vec<u16>)> {
+    /// Gets the group `PSID` for the packit group.
+    /// Could return a `PlatformError::WindowsAPIError` or a `PermissionError::GroupDoesNotExist` error.
+    fn get_group_sid() -> Result<(PSID, Vec<u16>)> {
         unsafe {
             let mut sid_size: u32 = 0;
             let mut domain_size: u32 = 0;
@@ -498,8 +527,7 @@ mod platform {
             }
 
             // Fill the sid and domain buffer
-            let mut sid_buffer = vec![0u16; sid_size as usize];
-            let sid = PSID(sid_buffer.as_mut_ptr() as *mut _);
+            let sid = PSID(LocalAlloc(LMEM_FIXED, sid_size as usize).map_err(PlatformError::WindowsAPIError)?.0);
             let mut domain_buffer = vec![0u16; domain_size as usize];
             let domain = PWSTR(domain_buffer.as_mut_ptr() as *mut _);
             let result = LookupAccountNameW(
@@ -512,26 +540,20 @@ mod platform {
                 &mut sid_type,
             );
 
-            // Not sure why this works, but this fixes the occational error with code 87 issue for the group sid
-            let mut sid_string = PWSTR::null();
-            ConvertSidToStringSidW(sid, &mut sid_string).unwrap();
-
-            let mut sid_copy = PSID(ptr::null_mut());
-            ConvertStringSidToSidW(sid_string, &mut sid_copy).unwrap();
-
             // Explicitly return a `PermissionError::GroupDoesNotExist` error when the group doesn't exist
             match result {
-                Ok(_) => Ok((sid_copy, sid_buffer, domain_buffer)),
+                Ok(_) => Ok((sid, domain_buffer)),
                 Err(e) if e.code() == ERROR_NONE_MAPPED.to_hresult() => return Err(PermissionError::GroupDoesNotExist),
                 Err(e) => return Err(PlatformError::WindowsAPIError(e))?,
             }
         }
     }
 
+    /// Converts a given path to a wide string buffer (with null termination)
     fn path_to_pcwstr(path: &PathBuf) -> Vec<u16> {
         OsStr::new(path)
             .encode_wide()
-            .chain(Some(0)) // null-termination
+            .chain(Some(0)) // Null termination
             .collect()
     }
 }
