@@ -312,6 +312,10 @@ mod platform {
 
         // This assumes that the current user already has ownership
         if is_multiuser {
+            // Enable the correct privileges before changing the ownership of the path
+            enable_privilege("SeRestorePrivilege")?;
+            enable_privilege("SeTakeOwnershipPrivilege")?;
+
             set_group_ownership(path, sid, recurse)?;
         }
 
@@ -414,25 +418,19 @@ mod platform {
     }
 
     /// Recursively set the ownership for a given path (if recurse is true).
-    /// Could return a `PlatformError::SecurityInfoError` or a `PlatformError::WindowsAPIError` error.
+    /// Could return a `PlatformError::SecurityInfoError`, a `PlatformError::WindowsAPIError` or an `PermissionError::IOError` error.
     fn set_group_ownership(path: &PathBuf, sid: PSID, recurse: bool) -> Result<()> {
         let wide_path_buffer = path_to_pcwstr(path);
         let wide_path = PCWSTR(wide_path_buffer.as_ptr());
 
-        unsafe {
-            // Enable the correct privileges before changing the ownership of the path
-            enable_privilege("SeRestorePrivilege")?;
-            enable_privilege("SeTakeOwnershipPrivilege")?;
-
-            // Set the ownership for the given `PSID`
-            let result = SetNamedSecurityInfoW(wide_path, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION, Some(sid), None, None, None);
-            if result.0 != ERROR_SUCCESS.0 {
-                return Err(PlatformError::SecurityInfoError {
-                    message: "Setting security info for group ownership failed".to_string(),
-                    code: result.0,
-                })?;
-            }
-        };
+        // Set the ownership for the given `PSID`
+        let result = unsafe { SetNamedSecurityInfoW(wide_path, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION, Some(sid), None, None, None) };
+        if result.0 != ERROR_SUCCESS.0 {
+            return Err(PlatformError::SecurityInfoError {
+                message: "Setting security info for group ownership failed".to_string(),
+                code: result.0,
+            })?;
+        }
 
         if !recurse || !path.is_dir() {
             return Ok(());
@@ -453,19 +451,16 @@ mod platform {
     fn get_security_info(wide_path: PCWSTR) -> Result<(*mut ACL, PSECURITY_DESCRIPTOR)> {
         unsafe {
             // Get the current owner, the acl of the path and the security descriptor
-            let mut current_owner_sid = PSID(ptr::null_mut());
-            let mut current_group_sid = PSID(ptr::null_mut());
             let mut acl = ptr::null_mut();
-            let mut sacl = ptr::null_mut();
             let mut security_descriptor = PSECURITY_DESCRIPTOR(ptr::null_mut());
             let result = GetNamedSecurityInfoW(
                 wide_path,
                 SE_FILE_OBJECT,
                 OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION | GROUP_SECURITY_INFORMATION,
-                Some(&mut current_owner_sid),
-                Some(&mut current_group_sid),
+                None,
+                None,
                 Some(&mut acl),
-                Some(&mut sacl),
+                None,
                 &mut security_descriptor,
             );
 
@@ -571,7 +566,7 @@ mod platform {
 
     /// Convert a string to a wide string buffer.
     fn string_to_pcwstr(string: &str) -> Vec<u16> {
-        string.encode_utf16().chain(Some(0)).collect::<Vec<u16>>()
+        string.encode_utf16().chain(Some(0)).collect()
     }
 }
 
