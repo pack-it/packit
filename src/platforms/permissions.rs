@@ -19,6 +19,8 @@ pub enum PermissionError {
 
 type Result<T> = core::result::Result<T, PermissionError>;
 
+pub const PACKIT_GROUP_NAME: &str = "packit";
+
 /// Checks if a path is writable by the current user. Returns true if it is, false otherwise.
 pub fn is_writable(path: &PathBuf) -> Result<bool> {
     if !fs::exists(path)? {
@@ -55,14 +57,14 @@ pub mod platform {
         path::PathBuf,
     };
 
+    use thiserror::Error;
+
     use crate::cli::display::logging::warning;
 
-    use super::{PermissionError, Result};
+    use super::{PACKIT_GROUP_NAME, PermissionError, Result};
 
     #[derive(Error, Debug)]
     pub enum PlatformError {}
-
-    pub const PACKIT_GROUP_NAME: &str = "packit";
 
     /// Checks if a directory is writeable. Returns true if it is, false otherwise.
     pub(super) fn is_writable(_path: &PathBuf, metadata: Metadata) -> Result<bool> {
@@ -176,9 +178,9 @@ mod platform {
         ptr,
     };
 
-    use crate::{cli::display::logging::warning, platforms::permissions::PermissionError};
+    use crate::cli::display::logging::warning;
 
-    use super::Result;
+    use super::{PACKIT_GROUP_NAME, PermissionError, Result};
 
     use thiserror::Error;
     use windows::{
@@ -206,7 +208,7 @@ mod platform {
                 Threading::{GetCurrentProcess, OpenProcessToken},
             },
         },
-        core::{BOOL, HSTRING, PCWSTR, PWSTR, w},
+        core::{BOOL, HSTRING, PCWSTR, PWSTR},
     };
 
     #[derive(Error, Debug)]
@@ -226,7 +228,7 @@ mod platform {
     pub fn is_writable(path: &PathBuf, _metadata: Metadata) -> Result<bool> {
         let wide_path_buffer = path_to_pcwstr(path);
         let wide_path = PCWSTR(wide_path_buffer.as_ptr());
-        let (_, _, _, _, security_descriptor) = get_security_info(wide_path)?;
+        let (_, security_descriptor) = get_security_info(wide_path)?;
 
         unsafe {
             let mut token = HANDLE::default();
@@ -315,7 +317,7 @@ mod platform {
 
         let wide_path_buffer = path_to_pcwstr(path);
         let wide_path = PCWSTR(wide_path_buffer.as_ptr());
-        let (_, _, acl, _, security_descriptor) = get_security_info(wide_path)?;
+        let (acl, security_descriptor) = get_security_info(wide_path)?;
 
         unsafe {
             let inheritance_state = match recurse {
@@ -448,7 +450,7 @@ mod platform {
 
     /// Gets the security info for a certain path.
     /// Could return a `PlatformError::SecurityInfoError` or a `PlatformError::WindowsAPIError` error.
-    fn get_security_info(wide_path: PCWSTR) -> Result<(PSID, PSID, *mut ACL, *mut ACL, PSECURITY_DESCRIPTOR)> {
+    fn get_security_info(wide_path: PCWSTR) -> Result<(*mut ACL, PSECURITY_DESCRIPTOR)> {
         unsafe {
             // Get the current owner, the acl of the path and the security descriptor
             let mut current_owner_sid = PSID(ptr::null_mut());
@@ -474,7 +476,7 @@ mod platform {
                 })?;
             }
 
-            Ok((current_owner_sid, current_group_sid, acl, sacl, security_descriptor))
+            Ok((acl, security_descriptor))
         }
     }
 
@@ -517,7 +519,16 @@ mod platform {
             let mut sid_type = SID_NAME_USE::default();
 
             // Do the first call to get the sid and domain buffer sizes
-            let result = LookupAccountNameW(None, w!("packit"), None, &mut sid_size, None, &mut domain_size, &mut sid_type);
+            let account_name = string_to_pcwstr(PACKIT_GROUP_NAME);
+            let result = LookupAccountNameW(
+                None,
+                PCWSTR(account_name.as_ptr()),
+                None,
+                &mut sid_size,
+                None,
+                &mut domain_size,
+                &mut sid_type,
+            );
 
             // Ignore buffer size errors, only return other errors
             match result {
@@ -530,9 +541,10 @@ mod platform {
             let sid = PSID(LocalAlloc(LMEM_FIXED, sid_size as usize).map_err(PlatformError::WindowsAPIError)?.0);
             let mut domain_buffer = vec![0u16; domain_size as usize];
             let domain = PWSTR(domain_buffer.as_mut_ptr() as *mut _);
+            let account_name = string_to_pcwstr(PACKIT_GROUP_NAME);
             let result = LookupAccountNameW(
                 None,
-                w!("packit"),
+                PCWSTR(account_name.as_ptr()),
                 Some(sid),
                 &mut sid_size,
                 Some(domain),
@@ -556,11 +568,18 @@ mod platform {
             .chain(Some(0)) // Null termination
             .collect()
     }
+
+    /// Convert a string to a wide string buffer.
+    fn string_to_pcwstr(string: &str) -> Vec<u16> {
+        string.encode_utf16().chain(Some(0)).collect::<Vec<u16>>()
+    }
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
 mod platform {
     use std::{fs::Metadata, path::PathBuf};
+
+    use thiserror::Error;
 
     use super::Result;
 
