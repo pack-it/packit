@@ -335,11 +335,12 @@ impl<'a> Verifier<'a> {
             return None; // We don't need the packit group if multiuser mode is not enabled
         }
 
+        // TODO: Also implement for Windows
         #[cfg(any(target_os = "macos", target_os = "linux"))]
         {
             use crate::platforms::permissions;
 
-            if permissions::platform::get_group_id(permissions::platform::PACKIT_GROUP_NAME).is_err() {
+            if permissions::platform::get_group_id(permissions::PACKIT_GROUP_NAME).is_err() {
                 return Some(Issue::MissingPackitGroup);
             }
         }
