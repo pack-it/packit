@@ -137,7 +137,10 @@ impl<'a> Installer<'a> {
         self.install_nodes(&mut dependency_tree)?;
 
         if !self.options.keep_build && self.options.install_type != InstallType::Prebuild {
-            println!("Removing build dependencies");
+            if !dependency_tree.get_children_ids_filtered(|c| !c.is_dependency()).is_empty() {
+                println!("Removing build dependencies");
+            }
+
             self.remove_build_dependencies(&dependency_tree, true)?;
         }
 
