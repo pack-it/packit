@@ -121,7 +121,5 @@ pub fn get_group_id(name: &str) -> Result<u32> {
         return Err(PermissionError::GroupDoesNotExist);
     }
 
-    unsafe {
-        return Ok((*group).gr_gid);
-    }
+    unsafe { Ok((*group).gr_gid) }
 }

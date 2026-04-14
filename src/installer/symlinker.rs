@@ -31,7 +31,7 @@ impl<'a> Symlinker<'a> {
         let prefix_dir = Path::new(&self.config.prefix_directory);
 
         // Symlink directories bin, include, lib and share
-        for dir_name in vec!["bin", "include", "lib", "share"] {
+        for dir_name in ["bin", "include", "lib", "share"] {
             let package_dir_path = package_directory.join(dir_name);
             let prefix_dir_path = prefix_dir.join(dir_name);
 
@@ -61,7 +61,7 @@ impl<'a> Symlinker<'a> {
         let package_directory = self.config.prefix_directory.join("packages").join(&package_id.name);
 
         // Symlink directories bin, include, lib and share
-        for dir_name in vec!["bin", "include", "lib", "share", "active"] {
+        for dir_name in ["bin", "include", "lib", "share", "active"] {
             let prefix_dir_path = self.config.prefix_directory.join(dir_name);
 
             io::remove_symlinks(&prefix_dir_path, &package_directory)?;
@@ -99,7 +99,7 @@ impl<'a> Symlinker<'a> {
     /// Unlinks a package based on a given package name.
     /// Could return an `InstallerError::PackageNotFound`, a `RegisterError` or an IO error.
     pub fn unlink_package(&self, register: &mut PackageRegister, package_name: &PackageName) -> Result<()> {
-        let package = register.get_package(&package_name).ok_or(InstallerError::PackageNotFound {
+        let package = register.get_package(package_name).ok_or(InstallerError::PackageNotFound {
             package_name: package_name.to_string(),
             version: None,
         })?;

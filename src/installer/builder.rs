@@ -135,7 +135,7 @@ impl<'a> Builder<'a> {
 
         // Download the build files
         let mut mirrors = source.mirrors.iter();
-        let mut response = requests::get(&source.url).map_err(|e| BuilderError::RequestError(e));
+        let mut response = requests::get(&source.url).map_err(BuilderError::RequestError);
         if let Ok(status_response) = &response
             && !status_response.status().is_success()
         {
@@ -151,7 +151,7 @@ impl<'a> Builder<'a> {
             finish_message = format!("Downloading '{package_name}' from alternative {} successful", &mirror);
 
             // Get response from alternative mirror
-            response = requests::get(mirror).map_err(|e| BuilderError::RequestError(e));
+            response = requests::get(mirror).map_err(BuilderError::RequestError);
 
             // Check if the response itself is unsuccessful
             if let Ok(status_response) = &response
@@ -184,7 +184,7 @@ impl<'a> Builder<'a> {
             unpack(package_name, extention, bytes, &build_directory, true)?;
         } else {
             let url = Url::parse(&source.url)?;
-            let file_name = url.path_segments().and_then(|x| x.last()).ok_or(BuilderError::EmptyUrlPath)?;
+            let file_name = url.path_segments().and_then(|mut x| x.next_back()).ok_or(BuilderError::EmptyUrlPath)?;
             let file_path = build_directory.path().join(file_name);
             fs::write(file_path, bytes)?;
         }
@@ -202,7 +202,7 @@ impl<'a> Builder<'a> {
 
         // Download and run build script
         let script_path = install_meta.version_metadata.get_build_script_path(&install_meta.target_bounds)?;
-        let script_path = scripts::download_script(self.repository_manager, &script_path, &package_name, &install_meta.repository_id)?
+        let script_path = scripts::download_script(self.repository_manager, &script_path, package_name, &install_meta.repository_id)?
             .ok_or(ScriptError::ScriptNotFound("build".into()))?;
         let package_id = PackageId::new(package_name.clone(), version.clone());
         let script_data = ScriptData::new(&script_path, &destination_dir, &package_id, self.config, &script_args, self.verbose);

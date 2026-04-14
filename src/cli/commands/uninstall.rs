@@ -46,7 +46,7 @@ impl HandleCommand for UninstallArgs {
 
         // Uninstall all specified packages
         for optional_id in &self.packages {
-            match installer.uninstall(&optional_id) {
+            match installer.uninstall(optional_id) {
                 Ok(uninstalled_packages) => {
                     let mut uninstalled_string = String::new();
                     for package in uninstalled_packages {

@@ -89,7 +89,7 @@ impl HandleCommand for SearchArgs {
         println!("License: {}", package_version.license.to_string().red());
 
         // Also print revisions if there are any
-        if package_version.revisions.len() > 0 {
+        if !package_version.revisions.is_empty() {
             println!("Revisions:");
             for revision in package_version.revisions {
                 println!("  - {revision}");

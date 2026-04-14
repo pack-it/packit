@@ -9,7 +9,7 @@ use crate::{
 
 // TODO: We should probably also strip tokens from the env
 #[rustfmt::skip]
-const STRIPPED_VARS: &'static [&'static str] = &[
+const STRIPPED_VARS: &[&str] = &[
     "CC", "CXX", "OBJC", "OBJCXX", "CPP", "MAKE", "LD", "LDSHARED", "AR", "AS", "NM", "STRIP", "RANLIB", 
     "OBJCOPY", "CDPATH", "CPATH", "C_INCLUDE_PATH", "CPLUS_INCLUDE_PATH", "OBJC_INCLUDE_PATH",
     "CFLAGS", "CXXFLAGS", "OBJCFLAGS", "OBJCXXFLAGS", "LDFLAGS", "CPPFLAGS", "ASFLAGS", "MAKEFLAGS",
@@ -60,7 +60,7 @@ impl<'a> Into<Environment> for BuildEnv<'a> {
         if self.build_dependencies.iter().any(|x| *x.package_id.name == "m4") {
             let m4_path = self.prefix_directory.join("bin").join("m4");
             match m4_path.to_str() {
-                Some(path) => drop(env.insert_var("M4", path)),
+                Some(path) => env.insert_var("M4", path),
                 None => warning!("Cannot add M4 var to build env: cannot convert PathBuf to string"),
             };
         }
@@ -130,7 +130,7 @@ impl<'a> BuildEnv<'a> {
         }
 
         // Add standard Windows system bin paths to PATH
-        #[cfg(any(target_os = "windows"))]
+        #[cfg(target_os = "windows")]
         {
             parts.append(
                 &mut vec![

@@ -116,7 +116,7 @@ pub fn run_uninstall_script(script_data: &ScriptData) -> Result<()> {
 /// Runs the script at the given path, in the given directory.
 /// Note that the script should be a `.sh` script on Linux and macOS and a `.bat` on Windows.
 fn run_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, env: Environment, show_output: bool) -> Result<()> {
-    let path = to_absolute_path(&script_data.path)?;
+    let path = to_absolute_path(script_data.path)?;
 
     let package_install_path = to_absolute_path(script_data.package_install_path)?;
     let package_install_path = package_install_path.to_str().ok_or(ScriptError::InvalidPathString)?;
@@ -182,7 +182,7 @@ pub fn download_script(
     package_name: &PackageName,
     repository_id: &str,
 ) -> Result<Option<NamedTempFile>> {
-    let script_text = match repository_manager.read_script(&repository_id, &package_name, &script_path)? {
+    let script_text = match repository_manager.read_script(repository_id, package_name, script_path)? {
         Some(script_text) => script_text,
         None => return Ok(None), // Script not found, so return None
     };
@@ -196,7 +196,7 @@ pub fn write_script_to_tempfile(script_text: &str) -> Result<NamedTempFile> {
     let file = create_tempfile()?;
 
     // Write script to file
-    fs::write(&file, &script_text).map_err(ScriptError::SaveError)?;
+    fs::write(&file, script_text).map_err(ScriptError::SaveError)?;
 
     // Return created tempfile
     Ok(file)
@@ -215,7 +215,7 @@ fn create_tempfile() -> Result<NamedTempFile> {
 }
 
 fn to_absolute_path<P: AsRef<Path>>(path: P) -> Result<PathBuf> {
-    Ok(path::absolute(path).map_err(|e| ScriptError::AbsolutePathError(e))?)
+    path::absolute(path).map_err(ScriptError::AbsolutePathError)
 }
 
 #[cfg(any(target_os = "macos", target_os = "linux"))]
@@ -240,7 +240,7 @@ fn create_command<P: AsRef<Path>>(path: P) -> Command {
 }
 
 #[cfg(any(target_os = "macos", target_os = "linux"))]
-pub const SCRIPT_EXTENSION: &'static str = "sh";
+pub const SCRIPT_EXTENSION: &str = "sh";
 
 #[cfg(target_os = "windows")]
-pub const SCRIPT_EXTENSION: &'static str = "bat";
+pub const SCRIPT_EXTENSION: &str = "bat";

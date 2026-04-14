@@ -83,10 +83,7 @@ impl TargetArchitecture {
 
     /// Checks if the current architecture is unknown. Return true if it is, false otherwise.
     pub fn is_unknown(&self) -> bool {
-        match self {
-            Self::Unknown(_) => true,
-            _ => false,
-        }
+        matches!(self, Self::Unknown(_))
     }
 
     /// Creates a TargetArchitecture from a string. Returns an the TargetArchitecture, or an Unknown type

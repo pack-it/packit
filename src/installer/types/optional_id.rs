@@ -27,7 +27,7 @@ impl FromStr for OptionalPackageId {
     /// Could return a `PackageIdError`.
     fn from_str(string: &str) -> Result<Self, Self::Err> {
         if string.contains("@") {
-            let package_id = PackageId::from_str(&string)?;
+            let package_id = PackageId::from_str(string)?;
 
             return Ok(Self {
                 name: package_id.name,

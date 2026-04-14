@@ -18,10 +18,7 @@ pub enum Os {
 impl Os {
     /// Checks if the current OS is Unix based.
     pub fn is_unix(&self) -> bool {
-        match self {
-            Self::MacOs | Self::Linux => true,
-            _ => false,
-        }
+        matches!(self, Self::MacOs | Self::Linux)
     }
 
     #[cfg(target_os = "macos")]

@@ -43,7 +43,7 @@ pub fn ask_user(question: &str, default: QuestionResponse) -> Result<QuestionRes
     let input = input.trim().to_lowercase();
 
     // Return default on empty input
-    if input == "" {
+    if input.is_empty() {
         return Ok(default);
     }
 
@@ -56,5 +56,5 @@ pub fn ask_user(question: &str, default: QuestionResponse) -> Result<QuestionRes
     }
 
     warning!("Invalid input");
-    return Ok(QuestionResponse::Invalid);
+    Ok(QuestionResponse::Invalid)
 }

@@ -57,7 +57,7 @@ pub fn create_prebuild_provider_from_url(url: &str, provider: Option<String>) ->
     let provider = provider.unwrap_or(DEFAULT_PREBUILD_PROVIDER_ID.into());
 
     match provider.as_str() {
-        FILESYSTEM_PREBUILD_PROVIDER_ID => boxed_prebuild(FileSystemPrebuildProvider::from_url(&url)),
+        FILESYSTEM_PREBUILD_PROVIDER_ID => boxed_prebuild(FileSystemPrebuildProvider::from_url(url)),
         _ => None,
     }
 }

@@ -160,8 +160,7 @@ impl<'a> BinaryPatcher<'a> {
             if changed {
                 debug!("Changed binary {path:?}, writing changes");
 
-                let mut config = macho::builder::Config::default();
-                config.linkedit = true;
+                let config = macho::builder::Config { linkedit: true };
                 binary.write_with_config(path, config);
 
                 // Sign binary

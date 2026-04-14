@@ -38,7 +38,8 @@ impl<'de> Deserialize<'de> for PackageId {
         D: serde::Deserializer<'de>,
     {
         let string: String = de::Deserialize::deserialize(deserializer)?;
-        Ok(Self::from_str(&string).map_err(de::Error::custom)?)
+
+        Self::from_str(&string).map_err(de::Error::custom)
     }
 }
 

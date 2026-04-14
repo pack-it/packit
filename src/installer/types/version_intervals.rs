@@ -19,7 +19,7 @@ impl<'de> Deserialize<'de> for VersionIntervals {
     {
         let string: String = de::Deserialize::deserialize(deserializer)?;
 
-        Ok(Self::from_str(&string).map_err(de::Error::custom)?)
+        Self::from_str(&string).map_err(de::Error::custom)
     }
 }
 
@@ -61,7 +61,7 @@ impl VersionIntervals {
             let valued_previous = match previous {
                 Some(previous) => previous,
                 None => {
-                    previous = Some(&bound);
+                    previous = Some(bound);
                     continue;
                 },
             };
@@ -108,7 +108,7 @@ impl VersionIntervals {
 
         // Check if any of the version bounds covers the version
         for bound in &self.version_bounds {
-            if bound.covers(&version) {
+            if bound.covers(version) {
                 return true;
             }
         }

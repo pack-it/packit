@@ -173,7 +173,7 @@ impl<'a> Verifier<'a> {
             return Ok(false);
         };
 
-        let provider = match provider::create_prebuild_provider_from_url(&prebuilds_url, prebuilds_provider) {
+        let provider = match provider::create_prebuild_provider_from_url(prebuilds_url, prebuilds_provider) {
             Some(provider) => provider,
             None => {
                 error!(msg: "Cannot create prebuild provider for '{package_id}'.");
@@ -316,7 +316,7 @@ impl<'a> Verifier<'a> {
 
         let mut missing = Vec::new();
         for dependency in &package.dependencies {
-            if register.get_package_version(&dependency).is_none() {
+            if register.get_package_version(dependency).is_none() {
                 missing.push((package_id.clone(), dependency.clone()));
                 continue;
             }

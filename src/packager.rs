@@ -144,7 +144,7 @@ fn add_file(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, file_
     // Create regular file header
     let mut header = Header::new_ustar();
     header.set_entry_type(EntryType::Regular);
-    normalize_header(&mut header, file.metadata()?.len() as u64, tar_path, file_path)?;
+    normalize_header(&mut header, file.metadata()?.len(), tar_path, file_path)?;
 
     // Add file to builder
     builder.append_data(&mut header, tar_path, file)?;
