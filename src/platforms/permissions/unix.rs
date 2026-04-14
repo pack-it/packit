@@ -20,7 +20,10 @@ use crate::{
 };
 
 #[derive(Error, Debug)]
-pub enum PlatformError {}
+pub enum PlatformError {
+    #[error("String contains a nul byte")]
+    NulError(#[from] std::ffi::NulError),
+}
 
 /// Checks if a directory is writeable. Returns true if it is, false otherwise.
 pub(super) fn is_writable(_path: &PathBuf, metadata: Metadata) -> Result<bool> {
@@ -111,7 +114,7 @@ pub fn set_ownership(path: &PathBuf, uid: Option<u32>, gid: Option<u32>) -> Resu
 
 /// Gets the group id based on the given name.
 pub fn get_group_id(name: &str) -> Result<u32> {
-    let c_name = CString::new(name)?;
+    let c_name = CString::new(name).map_err(PlatformError::from)?;
     let group = unsafe { libc::getgrnam(c_name.as_ptr()) };
 
     if group.is_null() {

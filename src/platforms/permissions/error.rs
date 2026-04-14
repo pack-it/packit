@@ -11,9 +11,6 @@ pub enum PermissionError {
     #[error("Error while fetching permissions")]
     IOError(#[from] std::io::Error),
 
-    #[error("String contains a nul byte")]
-    NulError(#[from] std::ffi::NulError),
-
     #[error("Error during platform specific operations")]
     PlatformError(#[from] PlatformError),
 }

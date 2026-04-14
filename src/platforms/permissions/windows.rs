@@ -63,7 +63,7 @@ pub fn is_writable(path: &PathBuf, _metadata: Metadata) -> Result<bool> {
     unsafe {
         let mut token = HANDLE::default();
         OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY | TOKEN_DUPLICATE | TOKEN_IMPERSONATE, &mut token)
-            .map_err(PlatformError::WindowsAPIError)?;
+            .map_err(PlatformError::from)?;
 
         let mut impersonation_token = HANDLE::default();
         DuplicateTokenEx(
@@ -74,7 +74,7 @@ pub fn is_writable(path: &PathBuf, _metadata: Metadata) -> Result<bool> {
             TokenImpersonation,
             &mut impersonation_token,
         )
-        .map_err(PlatformError::WindowsAPIError)?;
+        .map_err(PlatformError::from)?;
 
         let mut desired_access = GENERIC_WRITE;
         const MAPPING: GENERIC_MAPPING = GENERIC_MAPPING {
@@ -120,11 +120,11 @@ pub fn is_writable(path: &PathBuf, _metadata: Metadata) -> Result<bool> {
             &mut granted_access,
             &mut access_status,
         )
-        .map_err(PlatformError::WindowsAPIError)?;
+        .map_err(PlatformError::from)?;
 
         // Free the token handles
-        CloseHandle(token).map_err(PlatformError::WindowsAPIError)?;
-        CloseHandle(impersonation_token).map_err(PlatformError::WindowsAPIError)?;
+        CloseHandle(token).map_err(PlatformError::from)?;
+        CloseHandle(impersonation_token).map_err(PlatformError::from)?;
 
         Ok(access_status.as_bool())
     }
@@ -223,11 +223,11 @@ fn enable_privilege(name: &str) -> Result<()> {
     unsafe {
         // Get a handle for the current process
         let mut token = HANDLE::default();
-        OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &mut token).map_err(PlatformError::WindowsAPIError)?;
+        OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &mut token).map_err(PlatformError::from)?;
 
         // Get the unique id for the given privilege name
         let mut luid = LUID::default();
-        LookupPrivilegeValueW(None, &HSTRING::from(name), &mut luid).map_err(PlatformError::WindowsAPIError)?;
+        LookupPrivilegeValueW(None, &HSTRING::from(name), &mut luid).map_err(PlatformError::from)?;
 
         let token_privileges = TOKEN_PRIVILEGES {
             PrivilegeCount: 1,
@@ -237,10 +237,10 @@ fn enable_privilege(name: &str) -> Result<()> {
             }],
         };
 
-        AdjustTokenPrivileges(token, false, Some(&token_privileges), 0, None, None).map_err(PlatformError::WindowsAPIError)?;
+        AdjustTokenPrivileges(token, false, Some(&token_privileges), 0, None, None).map_err(PlatformError::from)?;
 
         // Free the token handle
-        CloseHandle(token).map_err(PlatformError::WindowsAPIError)?;
+        CloseHandle(token).map_err(PlatformError::from)?;
     }
 
     Ok(())
@@ -310,7 +310,7 @@ fn get_user_sid() -> Result<(PSID, Vec<u16>)> {
     unsafe {
         // Create a handle for the current process
         let mut token = HANDLE::default();
-        OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token).map_err(PlatformError::WindowsAPIError)?;
+        OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token).map_err(PlatformError::from)?;
 
         // Get the size of the token information for the buffer
         let mut sid_size: u32 = 0;
@@ -323,12 +323,12 @@ fn get_user_sid() -> Result<(PSID, Vec<u16>)> {
         // Fill the sid buffer
         let mut sid_buffer = vec![0u16; sid_size as usize];
         GetTokenInformation(token, TokenUser, Some(sid_buffer.as_mut_ptr() as *mut _), sid_size, &mut sid_size)
-            .map_err(PlatformError::WindowsAPIError)?;
+            .map_err(PlatformError::from)?;
 
         let token_user = &*(sid_buffer.as_ptr() as *const TOKEN_USER);
 
         // Free the token handle
-        CloseHandle(token).map_err(PlatformError::WindowsAPIError)?;
+        CloseHandle(token).map_err(PlatformError::from)?;
 
         Ok((token_user.User.Sid, sid_buffer))
     }
@@ -362,7 +362,7 @@ fn get_group_sid() -> Result<(PSID, Vec<u16>)> {
         }
 
         // Fill the sid and domain buffer
-        let sid = PSID(LocalAlloc(LMEM_FIXED, sid_size as usize).map_err(PlatformError::WindowsAPIError)?.0);
+        let sid = PSID(LocalAlloc(LMEM_FIXED, sid_size as usize).map_err(PlatformError::from)?.0);
         let mut domain_buffer = vec![0u16; domain_size as usize];
         let domain = PWSTR(domain_buffer.as_mut_ptr() as *mut _);
         let account_name = string_to_pcwstr(PACKIT_GROUP_NAME);
