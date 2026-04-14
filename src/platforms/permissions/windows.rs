@@ -41,11 +41,63 @@ use windows::{
     core::{BOOL, HSTRING, PCWSTR, PWSTR},
 };
 
+pub struct Sid {
+    ptr: PSID,
+}
+
+impl Sid {
+    pub fn with_size(size: u32) -> Result<Self> {
+        let ptr = PSID(LocalAlloc(LMEM_FIXED, sid_size as usize).map_err(PlatformError::from)?.0);
+        Ok(Self { ptr })
+    }
+
+    pub fn as_psid(&self) -> PSID {
+        self.ptr
+    }
+}
+
+impl Drop for Sid {
+    fn drop(&mut self) {
+        if !self.ptr.is_null() {
+            LocalFree(Some(HLOCAL(self.ptr.0)));
+            self.ptr = PSID(ptr::null_mut());
+        }
+    }
+}
+
+pub struct SecurityDescriptor {
+    ptr: PSECURITY_DESCRIPTOR,
+}
+
+impl SecurityDescriptor {
+    pub fn from_psecurity_descriptor(psecurity_descriptor: PSECURITY_DESCRIPTOR) -> Self {
+        Self { ptr: psecurity_descriptor }
+    }
+
+    pub fn as_psecurity_descriptor(&self) -> PSECURITY_DESCRIPTOR {
+        self.ptr
+    }
+}
+
+impl Drop for SecurityDescriptor {
+    fn drop(&mut self) {
+        if !self.ptr.is_null() {
+            LocalFree(Some(HLOCAL(self.ptr.0)));
+            self.ptr = PSECURITY_DESCRIPTOR(ptr::null_mut());
+        }
+    }
+}
+
 #[derive(Error, Debug)]
 pub enum PlatformError {
     #[error("Security info error with code {code}. {message}")]
     SecurityInfoError {
         message: String,
+        code: u32,
+    },
+
+    #[error("SID copy error with code {code}.")]
+    CopySidError {
         code: u32,
     },
 
@@ -90,7 +142,7 @@ pub fn is_writable(path: &PathBuf, _metadata: Metadata) -> Result<bool> {
         let mut access_status = BOOL(0);
         let mut privilege_length: u32 = 0;
         let result = AccessCheck(
-            security_descriptor,
+            security_descriptor.as_psecurity_descriptor(),
             impersonation_token,
             desired_access.0,
             &MAPPING,
@@ -111,7 +163,7 @@ pub fn is_writable(path: &PathBuf, _metadata: Metadata) -> Result<bool> {
         let mut granted_access: u32 = 0;
         let mut access_status = BOOL(0);
         AccessCheck(
-            security_descriptor,
+            security_descriptor.as_psecurity_descriptor(),
             impersonation_token,
             desired_access.0,
             &MAPPING,
@@ -135,7 +187,7 @@ pub fn is_writable(path: &PathBuf, _metadata: Metadata) -> Result<bool> {
 /// Could return a `PlatformError::SecurityInfoError`, a `PlatformError::WindowsAPIError` or a `PermissionError::GroupDoesNotExist` error.
 pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool, recurse: bool) -> Result<()> {
     // Get the current sid
-    let (sid, _) = match is_multiuser {
+    let sid = match is_multiuser {
         true => get_group_sid()?,
         false => get_user_sid()?,
     };
@@ -146,7 +198,7 @@ pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool, recurse: bool)
         enable_privilege("SeRestorePrivilege")?;
         enable_privilege("SeTakeOwnershipPrivilege")?;
 
-        set_group_ownership(path, sid, recurse)?;
+        set_group_ownership(path, sid.as_psid(), recurse)?;
     }
 
     let wide_path_buffer = path_to_pcwstr(path);
@@ -161,7 +213,7 @@ pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool, recurse: bool)
 
         // Set the trustee (for which user the entry is meant)
         let mut trustee = TRUSTEE_W::default();
-        trustee.ptstrName = PWSTR(sid.0 as *mut _);
+        trustee.ptstrName = PWSTR(sid.as_psid().0 as *mut _);
         trustee.TrusteeType = if is_multiuser { TRUSTEE_IS_GROUP } else { TRUSTEE_IS_USER };
         trustee.TrusteeForm = TRUSTEE_IS_SID;
         trustee.pMultipleTrustee = ptr::null_mut();
@@ -190,7 +242,7 @@ pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool, recurse: bool)
             wide_path,
             SE_FILE_OBJECT,
             DACL_SECURITY_INFORMATION,
-            Some(sid),
+            Some(sid.as_psid()),
             None,
             Some(new_acl as *mut ACL),
             None,
@@ -203,15 +255,8 @@ pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool, recurse: bool)
             })?;
         }
 
-        // Free the security descriptor and acl
-        LocalFree(Some(HLOCAL(security_descriptor.0)));
+        // Free the new acl
         LocalFree(Some(HLOCAL(new_acl as *mut _)));
-
-        // Free the sid if the sid is from the multiuser
-        // Assumes that the multiuser sid will be created with local allocation
-        if is_multiuser {
-            LocalFree(Some(HLOCAL(sid.0)));
-        }
 
         Ok(())
     }
@@ -277,7 +322,7 @@ fn set_group_ownership(path: &PathBuf, sid: PSID, recurse: bool) -> Result<()> {
 
 /// Gets the security info for a certain path.
 /// Could return a `PlatformError::SecurityInfoError` or a `PlatformError::WindowsAPIError` error.
-fn get_security_info(wide_path: PCWSTR) -> Result<(*mut ACL, PSECURITY_DESCRIPTOR)> {
+fn get_security_info(wide_path: PCWSTR) -> Result<(*mut ACL, SecurityDescriptor)> {
     unsafe {
         // Get the current owner, the acl of the path and the security descriptor
         let mut acl = ptr::null_mut();
@@ -300,13 +345,13 @@ fn get_security_info(wide_path: PCWSTR) -> Result<(*mut ACL, PSECURITY_DESCRIPTO
             })?;
         }
 
-        Ok((acl, security_descriptor))
+        Ok((acl, SecurityDescriptor::from_psecurity_descriptor(security_descriptor)))
     }
 }
 
 /// Gets the user `PSID` from the current user.
 /// Could return a `PlatformError::WindowsAPIError` error.
-fn get_user_sid() -> Result<(PSID, Vec<u16>)> {
+fn get_user_sid() -> Result<Sid> {
     unsafe {
         // Create a handle for the current process
         let mut token = HANDLE::default();
@@ -330,13 +375,21 @@ fn get_user_sid() -> Result<(PSID, Vec<u16>)> {
         // Free the token handle
         CloseHandle(token).map_err(PlatformError::from)?;
 
-        Ok((token_user.User.Sid, sid_buffer))
+        // Copy SID to a new buffer
+        let sid_size = GetLengthSid(token_user.User.Sid);
+        let sid = Sid::with_size(sid_size)?;
+        let result = CopySid(sid_size, sid.as_psid(), token_user.User.Sid);
+        if result != 0 {
+            return Err(PlatformError::CopySidError { code: result })?;
+        }
+
+        Ok(sid)
     }
 }
 
 /// Gets the group `PSID` for the packit group.
 /// Could return a `PlatformError::WindowsAPIError` or a `PermissionError::GroupDoesNotExist` error.
-fn get_group_sid() -> Result<(PSID, Vec<u16>)> {
+fn get_group_sid() -> Result<Sid> {
     unsafe {
         let mut sid_size: u32 = 0;
         let mut domain_size: u32 = 0;
@@ -362,14 +415,14 @@ fn get_group_sid() -> Result<(PSID, Vec<u16>)> {
         }
 
         // Fill the sid and domain buffer
-        let sid = PSID(LocalAlloc(LMEM_FIXED, sid_size as usize).map_err(PlatformError::from)?.0);
+        let sid = Sid::with_size(sid_size)?;
         let mut domain_buffer = vec![0u16; domain_size as usize];
         let domain = PWSTR(domain_buffer.as_mut_ptr() as *mut _);
         let account_name = string_to_pcwstr(PACKIT_GROUP_NAME);
         let result = LookupAccountNameW(
             None,
             PCWSTR(account_name.as_ptr()),
-            Some(sid),
+            Some(sid.as_psid()),
             &mut sid_size,
             Some(domain),
             &mut domain_size,
@@ -378,7 +431,7 @@ fn get_group_sid() -> Result<(PSID, Vec<u16>)> {
 
         // Explicitly return a `PermissionError::GroupDoesNotExist` error when the group doesn't exist
         match result {
-            Ok(_) => Ok((sid, domain_buffer)),
+            Ok(_) => Ok(sid),
             Err(e) if e.code() == ERROR_NONE_MAPPED.to_hresult() => return Err(PermissionError::GroupDoesNotExist),
             Err(e) => return Err(PlatformError::WindowsAPIError(e))?,
         }
