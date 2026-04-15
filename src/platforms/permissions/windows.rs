@@ -9,7 +9,10 @@ use std::{
 
 use crate::{
     cli::display::logging::warning,
-    platforms::permissions::{PACKIT_GROUP_NAME, PermissionError, Result},
+    platforms::permissions::{
+        PACKIT_GROUP_NAME,
+        error::{PermissionError, Result},
+    },
 };
 
 use thiserror::Error;
@@ -25,11 +28,11 @@ use windows::{
                 EXPLICIT_ACCESS_W, GRANT_ACCESS, GetNamedSecurityInfoW, NO_MULTIPLE_TRUSTEE, SE_FILE_OBJECT, SetEntriesInAclW,
                 SetNamedSecurityInfoW, TRUSTEE_IS_GROUP, TRUSTEE_IS_SID, TRUSTEE_IS_USER, TRUSTEE_W,
             },
-            CONTAINER_INHERIT_ACE, DACL_SECURITY_INFORMATION, DuplicateTokenEx, GENERIC_MAPPING, GROUP_SECURITY_INFORMATION,
-            GetTokenInformation, LUID_AND_ATTRIBUTES, LookupAccountNameW, LookupPrivilegeValueW, MapGenericMask, NO_INHERITANCE,
-            OBJECT_INHERIT_ACE, OWNER_SECURITY_INFORMATION, PRIVILEGE_SET, PSECURITY_DESCRIPTOR, PSID, SE_PRIVILEGE_ENABLED, SID_NAME_USE,
-            SecurityImpersonation, TOKEN_ACCESS_MASK, TOKEN_ADJUST_PRIVILEGES, TOKEN_DUPLICATE, TOKEN_IMPERSONATE, TOKEN_PRIVILEGES,
-            TOKEN_QUERY, TOKEN_USER, TokenImpersonation, TokenUser,
+            CONTAINER_INHERIT_ACE, CopySid, DACL_SECURITY_INFORMATION, DuplicateTokenEx, GENERIC_MAPPING, GROUP_SECURITY_INFORMATION,
+            GetLengthSid, GetTokenInformation, LUID_AND_ATTRIBUTES, LookupAccountNameW, LookupPrivilegeValueW, MapGenericMask,
+            NO_INHERITANCE, OBJECT_INHERIT_ACE, OWNER_SECURITY_INFORMATION, PRIVILEGE_SET, PSECURITY_DESCRIPTOR, PSID,
+            SE_PRIVILEGE_ENABLED, SID_NAME_USE, SecurityImpersonation, TOKEN_ACCESS_MASK, TOKEN_ADJUST_PRIVILEGES, TOKEN_DUPLICATE,
+            TOKEN_IMPERSONATE, TOKEN_PRIVILEGES, TOKEN_QUERY, TOKEN_USER, TokenImpersonation, TokenUser,
         },
         Storage::FileSystem::{FILE_ALL_ACCESS, FILE_GENERIC_EXECUTE, FILE_GENERIC_READ, FILE_GENERIC_WRITE},
         System::{
@@ -41,16 +44,19 @@ use windows::{
     core::{BOOL, HSTRING, PCWSTR, PWSTR},
 };
 
+/// Wrapper struct to handle freeing of PSID buffer
 pub struct Sid {
     ptr: PSID,
 }
 
 impl Sid {
+    /// Creates a new Sid with a buffer of the given size
     pub fn with_size(size: u32) -> Result<Self> {
-        let ptr = PSID(LocalAlloc(LMEM_FIXED, sid_size as usize).map_err(PlatformError::from)?.0);
+        let ptr = unsafe { PSID(LocalAlloc(LMEM_FIXED, size as usize).map_err(PlatformError::from)?.0) };
         Ok(Self { ptr })
     }
 
+    /// Gets the Sid as PSID
     pub fn as_psid(&self) -> PSID {
         self.ptr
     }
@@ -58,22 +64,25 @@ impl Sid {
 
 impl Drop for Sid {
     fn drop(&mut self) {
-        if !self.ptr.is_null() {
-            LocalFree(Some(HLOCAL(self.ptr.0)));
+        if !self.ptr.0.is_null() {
+            unsafe { LocalFree(Some(HLOCAL(self.ptr.0))) };
             self.ptr = PSID(ptr::null_mut());
         }
     }
 }
 
+/// Wrapper struct to handle freeing of PSECURITY_DESCRIPTOR buffer
 pub struct SecurityDescriptor {
     ptr: PSECURITY_DESCRIPTOR,
 }
 
 impl SecurityDescriptor {
+    /// Creates a new SecurityDescriptor from the given PSECURITY_DESCRIPTOR
     pub fn from_psecurity_descriptor(psecurity_descriptor: PSECURITY_DESCRIPTOR) -> Self {
         Self { ptr: psecurity_descriptor }
     }
 
+    /// Gets the SecurityDescriptor as PSECURITY_DESCRIPTOR
     pub fn as_psecurity_descriptor(&self) -> PSECURITY_DESCRIPTOR {
         self.ptr
     }
@@ -81,8 +90,8 @@ impl SecurityDescriptor {
 
 impl Drop for SecurityDescriptor {
     fn drop(&mut self) {
-        if !self.ptr.is_null() {
-            LocalFree(Some(HLOCAL(self.ptr.0)));
+        if !self.ptr.0.is_null() {
+            unsafe { LocalFree(Some(HLOCAL(self.ptr.0))) };
             self.ptr = PSECURITY_DESCRIPTOR(ptr::null_mut());
         }
     }
@@ -93,11 +102,6 @@ pub enum PlatformError {
     #[error("Security info error with code {code}. {message}")]
     SecurityInfoError {
         message: String,
-        code: u32,
-    },
-
-    #[error("SID copy error with code {code}.")]
-    CopySidError {
         code: u32,
     },
 
@@ -192,18 +196,15 @@ pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool, recurse: bool)
         false => get_user_sid()?,
     };
 
-    // This assumes that the current user already has ownership
-    if is_multiuser {
-        // Enable the correct privileges before changing the ownership of the path
-        enable_privilege("SeRestorePrivilege")?;
-        enable_privilege("SeTakeOwnershipPrivilege")?;
+    // Enable the correct privileges before changing the ownership of the path
+    enable_privilege("SeRestorePrivilege")?;
+    enable_privilege("SeTakeOwnershipPrivilege")?;
 
-        set_group_ownership(path, sid.as_psid(), recurse)?;
-    }
+    set_ownership(path, sid.as_psid(), recurse)?;
 
     let wide_path_buffer = path_to_pcwstr(path);
     let wide_path = PCWSTR(wide_path_buffer.as_ptr());
-    let (acl, security_descriptor) = get_security_info(wide_path)?;
+    let (acl, _) = get_security_info(wide_path)?;
 
     unsafe {
         let inheritance_state = match recurse {
@@ -212,24 +213,26 @@ pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool, recurse: bool)
         };
 
         // Set the trustee (for which user the entry is meant)
-        let mut trustee = TRUSTEE_W::default();
-        trustee.ptstrName = PWSTR(sid.as_psid().0 as *mut _);
-        trustee.TrusteeType = if is_multiuser { TRUSTEE_IS_GROUP } else { TRUSTEE_IS_USER };
-        trustee.TrusteeForm = TRUSTEE_IS_SID;
-        trustee.pMultipleTrustee = ptr::null_mut();
-        trustee.MultipleTrusteeOperation = NO_MULTIPLE_TRUSTEE;
+        let trustee = TRUSTEE_W {
+            pMultipleTrustee: ptr::null_mut(),
+            MultipleTrusteeOperation: NO_MULTIPLE_TRUSTEE,
+            TrusteeForm: TRUSTEE_IS_SID,
+            TrusteeType: if is_multiuser { TRUSTEE_IS_GROUP } else { TRUSTEE_IS_USER },
+            ptstrName: PWSTR(sid.as_psid().0 as *mut _),
+        };
 
         // Adjust DACL to set permissions
-        let mut explicit_access = EXPLICIT_ACCESS_W::default();
-        explicit_access.grfAccessPermissions = GENERIC_ALL.0;
-        explicit_access.grfAccessMode = GRANT_ACCESS;
-        explicit_access.grfInheritance = inheritance_state;
-        explicit_access.Trustee = trustee;
+        let explicit_access = EXPLICIT_ACCESS_W {
+            grfAccessPermissions: GENERIC_ALL.0,
+            grfAccessMode: GRANT_ACCESS,
+            grfInheritance: inheritance_state,
+            Trustee: trustee,
+        };
 
         // Set the ACL entries by passing a list of new entries and the old acl.
         // This will be combined into the new acl.
         let mut new_acl = ptr::null_mut();
-        let result = SetEntriesInAclW(Some(&[explicit_access]), Some(acl as *mut ACL), &mut new_acl);
+        let result = SetEntriesInAclW(Some(&[explicit_access]), Some(acl), &mut new_acl);
         if result.0 != ERROR_SUCCESS.0 {
             return Err(PlatformError::SecurityInfoError {
                 message: "Settings ACL entries failed".to_string(),
@@ -244,7 +247,7 @@ pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool, recurse: bool)
             DACL_SECURITY_INFORMATION,
             Some(sid.as_psid()),
             None,
-            Some(new_acl as *mut ACL),
+            Some(new_acl),
             None,
         );
 
@@ -293,7 +296,7 @@ fn enable_privilege(name: &str) -> Result<()> {
 
 /// Recursively set the ownership for a given path (if recurse is true).
 /// Could return a `PlatformError::SecurityInfoError`, a `PlatformError::WindowsAPIError` or an `PermissionError::IOError` error.
-fn set_group_ownership(path: &PathBuf, sid: PSID, recurse: bool) -> Result<()> {
+fn set_ownership(path: &PathBuf, sid: PSID, recurse: bool) -> Result<()> {
     let wide_path_buffer = path_to_pcwstr(path);
     let wide_path = PCWSTR(wide_path_buffer.as_ptr());
 
@@ -314,7 +317,7 @@ fn set_group_ownership(path: &PathBuf, sid: PSID, recurse: bool) -> Result<()> {
     for entry in fs::read_dir(&path)? {
         let entry = entry?;
 
-        set_group_ownership(&entry.path(), sid, recurse)?;
+        set_ownership(&entry.path(), sid, recurse)?;
     }
 
     Ok(())
@@ -378,10 +381,7 @@ fn get_user_sid() -> Result<Sid> {
         // Copy SID to a new buffer
         let sid_size = GetLengthSid(token_user.User.Sid);
         let sid = Sid::with_size(sid_size)?;
-        let result = CopySid(sid_size, sid.as_psid(), token_user.User.Sid);
-        if result != 0 {
-            return Err(PlatformError::CopySidError { code: result })?;
-        }
+        CopySid(sid_size, sid.as_psid(), token_user.User.Sid).map_err(PlatformError::from)?;
 
         Ok(sid)
     }
@@ -432,8 +432,8 @@ fn get_group_sid() -> Result<Sid> {
         // Explicitly return a `PermissionError::GroupDoesNotExist` error when the group doesn't exist
         match result {
             Ok(_) => Ok(sid),
-            Err(e) if e.code() == ERROR_NONE_MAPPED.to_hresult() => return Err(PermissionError::GroupDoesNotExist),
-            Err(e) => return Err(PlatformError::WindowsAPIError(e))?,
+            Err(e) if e.code() == ERROR_NONE_MAPPED.to_hresult() => Err(PermissionError::GroupDoesNotExist),
+            Err(e) => Err(PlatformError::WindowsAPIError(e))?,
         }
     }
 }

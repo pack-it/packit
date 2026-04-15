@@ -169,6 +169,7 @@ fn add_symlink(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, fi
 
 /// Normalizes a tar header. Most fields are set to zero. The data length and path fields are set based on
 /// the given parameters. The mode field is set based on the entry type of the existing/given header.
+#[cfg_attr(target_os = "windows", allow(unused_variables))] // Ignore unused file_path variable on windows
 fn normalize_header(header: &mut Header, data_length: u64, tar_path: &PathBuf, file_path: &PathBuf) -> Result<()> {
     #[cfg(target_family = "unix")]
     {

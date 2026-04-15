@@ -4,9 +4,10 @@ use std::fmt::Display;
 use serde::{Deserialize, Serialize};
 
 /// Wrapper to differentiate between different License types in metadata files.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
 #[serde(untagged)]
 pub enum Licenses {
+    #[default]
     Unknown,
     Single(String),
     Any {
@@ -32,11 +33,5 @@ impl Display for Licenses {
             Licenses::Any { any } => write!(f, "any of: {}", any.join(", ")),
             Licenses::All { all } => write!(f, "all of: {}", all.join(", ")),
         }
-    }
-}
-
-impl Default for Licenses {
-    fn default() -> Self {
-        Self::Unknown
     }
 }
