@@ -98,7 +98,7 @@ impl Config {
         }
 
         // Remove trailing slashes from repository paths
-        for (_, repository) in &mut config.repositories {
+        for repository in config.repositories.values_mut() {
             repository.path = repository.path.trim_end_matches("/").into();
         }
 

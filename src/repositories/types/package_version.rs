@@ -58,7 +58,7 @@ pub struct PackageVersionMeta {
 impl PackageVersionMeta {
     /// Gets the best satisfying target bound for the given target. Wraps around the `TargetBounds::get_best_target` method.
     pub fn get_best_target(&self, target: &Target) -> Result<TargetBounds> {
-        match TargetBounds::get_best_target(&target, self.targets.keys().collect()) {
+        match TargetBounds::get_best_target(target, self.targets.keys().collect()) {
             Some(target) => Ok(target.clone()),
             None => Err(RepositoryError::TargetError),
         }
@@ -149,7 +149,7 @@ impl PackageVersionMeta {
     pub fn has_conflicts(&self) -> bool {
         // Check if a global dependency is also specified as target specific dependency
         for dependency in &self.dependencies {
-            for (_, target) in &self.targets {
+            for target in self.targets.values() {
                 for target_dependency in &target.dependencies {
                     if dependency.get_name() == target_dependency.get_name() {
                         return true;
@@ -160,7 +160,7 @@ impl PackageVersionMeta {
 
         // Check if a global build dependency is also specified as target specific build dependency
         for dependency in &self.build_dependencies {
-            for (_, target) in &self.targets {
+            for target in self.targets.values() {
                 for target_dependency in &target.build_dependencies {
                     if dependency.get_name() == target_dependency.get_name() {
                         return true;
@@ -178,7 +178,7 @@ impl PackageVersionMeta {
 
         // If we have named sources, we check for valid referencing in the targets
         if let Sources::Named(sources) = &self.sources {
-            for (_, target) in &self.targets {
+            for target in self.targets.values() {
                 match &target.source {
                     Some(source) if !sources.contains_key(source) => return true,
                     None => return true,
