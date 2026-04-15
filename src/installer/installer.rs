@@ -92,10 +92,10 @@ impl<'a> Installer<'a> {
 
         // Ask user to build all packages if the prefix directory is not the default prefix
         if self.config.prefix_directory != PathBuf::from(DEFAULT_PREFIX) {
-            let question = format!("You're not using the default prefix, would you like to build all packages from source instead?");
-            if ask_user(&question, QuestionResponse::Yes)?.is_no_or_invalid() {
+            let question = "You're not using the default prefix, would you like to build all packages from source instead?";
+            if ask_user(question, QuestionResponse::Yes)?.is_no_or_invalid() {
                 return Err(InstallerError::InstallationCanceled {
-                    reason: format!("packages cannot be installed without building from source"),
+                    reason: "packages cannot be installed without building from source".into(),
                 });
             }
 
@@ -137,7 +137,10 @@ impl<'a> Installer<'a> {
         self.install_nodes(&mut dependency_tree)?;
 
         if !self.options.keep_build && self.options.install_type != InstallType::Prebuild {
-            println!("Removing build dependencies");
+            if !dependency_tree.get_children_ids_filtered(|c| !c.is_dependency()).is_empty() {
+                println!("Removing build dependencies");
+            }
+
             self.remove_build_dependencies(&dependency_tree, true)?;
         }
 
@@ -226,7 +229,7 @@ impl<'a> Installer<'a> {
             let script_data = ScriptData::new(
                 &script_file,
                 &install_directory,
-                &version_meta.version,
+                &package_id,
                 self.config,
                 &script_args,
                 self.options.verbose,
@@ -249,7 +252,7 @@ impl<'a> Installer<'a> {
                 self.download_prebuild(&install_meta.repository_id, &package_id, revision, &install_directory)?
             },
             false => Builder::new(self.config, self.register, self.repository_manager, self.options.verbose)
-                .build(&install_meta, &install_directory)?,
+                .build(install_meta, &install_directory)?,
         }
 
         // Set correct permissions for the installed package
@@ -277,7 +280,7 @@ impl<'a> Installer<'a> {
             let script_data = ScriptData::new(
                 &script_file,
                 &install_directory,
-                &version_meta.version,
+                &package_id,
                 self.config,
                 &script_args,
                 self.options.verbose,
@@ -296,7 +299,7 @@ impl<'a> Installer<'a> {
             let script_data = ScriptData::new(
                 &script_file,
                 &install_directory,
-                &version_meta.version,
+                &package_id,
                 self.config,
                 &script_args,
                 self.options.verbose,
@@ -350,7 +353,7 @@ impl<'a> Installer<'a> {
 
         // If package is installed succesfully, set it to active
         if should_set_active {
-            Symlinker::new(self.config).set_active(self.register, &package_id, should_symlink)?;
+            Symlinker::new(self.config).set_active(self.register, package_id, should_symlink)?;
         }
 
         Ok(())
@@ -564,11 +567,11 @@ impl<'a> Installer<'a> {
         }
 
         // Path to the determined directory
-        let directory = self.config.prefix_directory.join("packages").join(&package_name);
+        let directory = self.config.prefix_directory.join("packages").join(package_name);
 
         // Remove active path symlink
         debug!("Unlinking the active path");
-        let active_path = self.config.prefix_directory.join("active").join(&package_name);
+        let active_path = self.config.prefix_directory.join("active").join(package_name);
         match active_path.exists() {
             true => symlink::remove_symlink(&active_path)?,
             false => warning!("Active symlink did not exist, was the package even installed succesfully?"),
@@ -615,7 +618,7 @@ impl<'a> Installer<'a> {
     /// Could return an `InstallerError`.
     fn run_uninstall_script(&self, repository: &Repository, package_id: &PackageId, install_directory: &PathBuf) -> Result<()> {
         // Create repository provider for source repository
-        let provider = match provider::create_metadata_provider(&repository) {
+        let provider = match provider::create_metadata_provider(repository) {
             Some(provider) => provider,
             None => {
                 error!(msg: "Unable to create repository provider to retrieve uninstall script");
@@ -646,7 +649,7 @@ impl<'a> Installer<'a> {
             let script_data = ScriptData::new(
                 &script_path,
                 &install_directory,
-                &package_id.version,
+                package_id,
                 self.config,
                 &script_args,
                 self.options.verbose,
@@ -771,12 +774,10 @@ impl<'a> Installer<'a> {
     fn get_specific_package_update(&self, optional_id: &OptionalPackageId) -> Result<&InstalledPackageVersion> {
         // Use the specified version if it exists
         if let Some(package_id) = optional_id.versioned() {
-            return Ok(
-                self.register.get_package_version(&package_id).ok_or(InstallerError::PackageNotFound {
-                    package_name: package_id.name.to_string(),
-                    version: Some(package_id.version.to_string()),
-                })?,
-            );
+            return self.register.get_package_version(&package_id).ok_or(InstallerError::PackageNotFound {
+                package_name: package_id.name.to_string(),
+                version: Some(package_id.version.to_string()),
+            });
         }
 
         // Get installed versions
@@ -787,7 +788,7 @@ impl<'a> Installer<'a> {
             return Err(InstallerError::SpecificityError);
         }
 
-        // Get the installed package version and simultaniously check if any version of the package exists
+        // Get the installed package version and simultaneously check if any version of the package exists
         Ok(installed_versions.get(0).ok_or(InstallerError::PackageNotFound {
             package_name: optional_id.name.to_string(),
             version: Some("any".to_string()),

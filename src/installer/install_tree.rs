@@ -127,7 +127,7 @@ impl InstallNode {
 
         // Use the latest version if the dependency is not yet satisfied
         let (repository_id, package_metadata) = manager.read_package(dependency.get_name())?;
-        let version = package_metadata.get_latest_dependency_version(&dependency, &Target::current())?;
+        let version = package_metadata.get_latest_dependency_version(dependency, &Target::current())?;
         let dependency_id = PackageId::new(dependency.get_name().clone(), version.clone());
         let version_metadata = manager.read_repo_package_version(&repository_id, &dependency_id)?;
         let install_meta = InstallMeta::new(package_metadata, version_metadata, repository_id)?;

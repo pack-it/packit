@@ -29,7 +29,7 @@ impl HandleCommand for FixArgs {
 
         // Retrieve and fix the issues one by one
         while let Some(issue) = verifier.next_issue(&register).unwrap_or_exit(1) {
-            print!("{issue}\n");
+            println!("{issue}");
 
             let question = "Would you like to automatically fix the above issue with `pit fix`?";
             if ask_user(question, QuestionResponse::Yes).unwrap_or_exit(1).is_no() {

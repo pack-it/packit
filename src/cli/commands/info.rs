@@ -84,7 +84,7 @@ impl InfoArgs {
 
     /// Displays the package version info, also checking for the verbose flag for some info.
     fn display_package_version_info(&self, package_id: &PackageId, register: &PackageRegister, package: &InstalledPackage) {
-        let package_version = match register.get_package_version(&package_id) {
+        let package_version = match register.get_package_version(package_id) {
             Some(package) => package,
             None => {
                 error!(msg: "Package '{}' doesn't exist", package_id);

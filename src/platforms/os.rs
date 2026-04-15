@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{str::FromStr, sync::LazyLock};
+use std::sync::LazyLock;
 
-use crate::{
-    cli::display::logging::{debug, error},
-    installer::types::Version,
-};
+use crate::{cli::display::logging::debug, installer::types::Version};
+
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+use std::str::FromStr;
+
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+use crate::cli::display::logging::error;
 
 /// Represents an operating system type.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -18,10 +21,7 @@ pub enum Os {
 impl Os {
     /// Checks if the current OS is Unix based.
     pub fn is_unix(&self) -> bool {
-        match self {
-            Self::MacOs | Self::Linux => true,
-            _ => false,
-        }
+        matches!(self, Self::MacOs | Self::Linux)
     }
 
     #[cfg(target_os = "macos")]

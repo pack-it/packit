@@ -9,7 +9,7 @@ use crate::{
         types::{PackageId, PackageIdError, Version},
         unpack::UnpackError,
     },
-    platforms::{permissions::PermissionError, symlink::SymlinkError},
+    platforms::{permissions::error::PermissionError, symlink::SymlinkError},
     repositories::error::RepositoryError,
     storage::error::RegisterError,
     utils::tree::TreeError,

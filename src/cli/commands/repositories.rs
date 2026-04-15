@@ -23,7 +23,7 @@ impl HandleCommand for RepositoryArgs {
             }
 
             // Read metadata of repository
-            let metadata = match manager.read_repository_metadata(&repository_id) {
+            let metadata = match manager.read_repository_metadata(repository_id) {
                 Ok(metadata) => metadata,
                 Err(e) => {
                     // Display the error and continue

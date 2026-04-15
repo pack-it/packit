@@ -9,10 +9,10 @@ pub const DEFAULT_PREFIX: &str = "/opt/packit";
 #[cfg(target_os = "windows")]
 pub const DEFAULT_PREFIX: &str = "C:\\Program Files\\packit";
 
-#[cfg(any(target_os = "linux"))]
+#[cfg(target_os = "linux")]
 pub const DEFAULT_CONFIG_DIR: &str = "/etc/packit";
 
-#[cfg(any(target_os = "macos"))]
+#[cfg(target_os = "macos")]
 pub const DEFAULT_CONFIG_DIR: &str = "/Library/Application Support/packit";
 
 #[cfg(target_os = "windows")]

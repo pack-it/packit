@@ -64,13 +64,13 @@ impl Display for Dependency {
             }
 
             match range {
-                VersionBounds::Range(low, high) => string_version.push_str(&format!("{}-{}", low.to_string(), high.to_string())),
-                VersionBounds::IncludingRange(low, high) => string_version.push_str(&format!("{}-={}", low.to_string(), high.to_string())),
-                VersionBounds::Lower(version) => string_version.push_str(&format!("<{}", version.to_string())),
-                VersionBounds::LowerEqual(version) => string_version.push_str(&format!("<={}", version.to_string())),
-                VersionBounds::Higher(version) => string_version.push_str(&format!(">{}", version.to_string())),
-                VersionBounds::HigherEqual(version) => string_version.push_str(&format!(">={}", version.to_string())),
-                VersionBounds::Equal(version) => string_version.push_str(&format!("={}", version.to_string())),
+                VersionBounds::Range(low, high) => string_version.push_str(&format!("{low}-{high}")),
+                VersionBounds::IncludingRange(low, high) => string_version.push_str(&format!("{low}-={high}")),
+                VersionBounds::Lower(version) => string_version.push_str(&format!("<{version}")),
+                VersionBounds::LowerEqual(version) => string_version.push_str(&format!("<={version}")),
+                VersionBounds::Higher(version) => string_version.push_str(&format!(">{version}")),
+                VersionBounds::HigherEqual(version) => string_version.push_str(&format!(">={version}")),
+                VersionBounds::Equal(version) => string_version.push_str(&format!("={version}")),
             }
         }
 

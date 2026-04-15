@@ -52,7 +52,7 @@ impl<'a> Repairer<'a> {
 
             // Install the package
             let installer_options = InstallerOptions::default().skip_symlinking(true);
-            let mut installer = Installer::new(&self.config, register, &self.manager, installer_options);
+            let mut installer = Installer::new(self.config, register, self.manager, installer_options);
             installer.install(&missing_package.clone().into())?;
         }
 
@@ -75,7 +75,7 @@ impl<'a> Repairer<'a> {
             register.remove_package_version(&missing_package);
 
             let installer_options = InstallerOptions::default().skip_symlinking(!symlinked).skip_active(!active);
-            let mut installer = Installer::new(&self.config, register, &self.manager, installer_options);
+            let mut installer = Installer::new(self.config, register, self.manager, installer_options);
 
             installer.install(&missing_package.into())?;
         }
@@ -99,7 +99,7 @@ impl<'a> Repairer<'a> {
             let active = package_id.version == version;
 
             // Figure out if symlinked
-            let symlinked = !fs::symlink_metadata(bin_directory.join(&package_id.name)).is_err();
+            let symlinked = fs::symlink_metadata(bin_directory.join(&package_id.name)).is_ok();
 
             // Temporarily remove the package from the storage
             // We have to uninstall and install, because we can't know the repository source otherwise
@@ -113,7 +113,7 @@ impl<'a> Repairer<'a> {
 
             // Re-install the package
             let installer_options = InstallerOptions::default().skip_symlinking(!symlinked).skip_active(!active);
-            let mut installer = Installer::new(&self.config, register, &self.manager, installer_options);
+            let mut installer = Installer::new(self.config, register, self.manager, installer_options);
 
             installer.install(&package_id.into())?;
         }

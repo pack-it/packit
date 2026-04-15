@@ -78,7 +78,7 @@ impl<'a> RepositoryManager<'a> {
             },
         };
 
-        Ok(provider.read_repository_metadata()?)
+        provider.read_repository_metadata()
     }
 
     /// Reads package metadata of the given package, containing information about the package.
@@ -102,7 +102,7 @@ impl<'a> RepositoryManager<'a> {
             };
 
             // Check if package contains the target
-            if !package.get_latest_version(&Target::current()).is_ok() {
+            if package.get_latest_version(&Target::current()).is_err() {
                 continue;
             }
 
@@ -127,7 +127,7 @@ impl<'a> RepositoryManager<'a> {
             },
         };
 
-        Ok(provider.read_package(package)?)
+        provider.read_package(package)
     }
 
     /// Reads package version metadata of the given package, containing dependencies and targets.
@@ -202,7 +202,7 @@ impl<'a> RepositoryManager<'a> {
             },
         };
 
-        Ok(provider.read_script(package, script_path)?)
+        provider.read_script(package, script_path)
     }
 
     /// Retrieves the prebuild url for the given package version.
@@ -217,7 +217,7 @@ impl<'a> RepositoryManager<'a> {
             },
         };
 
-        provider.get_prebuild_url(&package, revision, target)
+        provider.get_prebuild_url(package, revision, target)
     }
 
     /// Retrieves the prebuild checksum for the given package version.
@@ -238,7 +238,7 @@ impl<'a> RepositoryManager<'a> {
             },
         };
 
-        provider.get_prebuild_checksum(&package, revision, target)
+        provider.get_prebuild_checksum(package, revision, target)
     }
 
     /// Reads the prebuild of the given package version as bytes, returns a tuple containing the archive extension and the bytes.

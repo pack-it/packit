@@ -24,7 +24,8 @@ impl<'de> Deserialize<'de> for PackageName {
         D: serde::Deserializer<'de>,
     {
         let string: String = de::Deserialize::deserialize(deserializer)?;
-        Ok(Self::from_str(&string).map_err(de::Error::custom)?)
+
+        Self::from_str(&string).map_err(de::Error::custom)
     }
 }
 
@@ -58,7 +59,7 @@ impl FromStr for PackageName {
             return Err(PackageNameError::InvalidPackageName);
         }
 
-        return Ok(Self(string.to_string()));
+        Ok(Self(string.to_string()))
     }
 }
 

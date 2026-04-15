@@ -1,17 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::{fs, path::Path};
 
-use crate::{
-    cli::display::logging::warning,
-    platforms::symlink::{self, SymlinkError},
-};
+use crate::{cli::display::logging::warning, platforms::symlink};
 
 /// Recursively creates symlinks from a link directory to the original directory.
 /// Note that there is an early return when the original doesn't exist. Non-existant link directories are created.
-pub fn create_folder_symlinks(original_dir: &Path, link_dir: &Path) -> Result<(), SymlinkError> {
+pub fn create_folder_symlinks(original_dir: &Path, link_dir: &Path) -> symlink::Result<()> {
     // Create destination if it does not exist
     if !link_dir.exists() {
-        fs::create_dir_all(&link_dir)?;
+        fs::create_dir_all(link_dir)?;
     }
 
     // Skip symlinking if source does not exist
@@ -45,7 +42,7 @@ pub fn create_folder_symlinks(original_dir: &Path, link_dir: &Path) -> Result<()
 }
 
 /// Searches for symlinks with a certain destination (destinations inside of the destination are also a match) and removes them.
-pub fn remove_symlinks(search_dir: &Path, destination_dir: &Path) -> Result<(), SymlinkError> {
+pub fn remove_symlinks(search_dir: &Path, destination_dir: &Path) -> symlink::Result<()> {
     if !search_dir.exists() {
         return Ok(());
     }

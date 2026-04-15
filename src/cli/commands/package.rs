@@ -4,7 +4,10 @@ use std::{path::PathBuf, process::exit};
 use clap::Args;
 
 use crate::{
-    cli::{commands::HandleCommand, display::logging::error},
+    cli::{
+        commands::HandleCommand,
+        display::{Spinner, logging::error},
+    },
     config::Config,
     installer::types::PackageId,
     packager::{self},
@@ -36,8 +39,13 @@ impl HandleCommand for PackageArgs {
             },
         };
 
+        let spinner = Spinner::new();
+        let spinner_message = format!("Packaging {}", self.package_id);
+        spinner.show(spinner_message.clone());
+
         packager::package(&config, &self.package_id, &self.destination, package_version.revisions.len()).unwrap_or_exit(1);
 
+        spinner.finish(format!("{spinner_message} successful"));
         println!("Successfully packaged {} to {:?}", self.package_id, self.destination);
     }
 }

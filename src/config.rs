@@ -77,13 +77,15 @@ pub enum ConfigError {
     ParseError(#[from] toml::de::Error),
 }
 
+pub type Result<T> = core::result::Result<T, ConfigError>;
+
 impl Config {
     /// Loads a Packit config from a file.
     ///
     /// # Errors
     ///
     /// This function will return an error if the file cannot be opened or if the content is invalid.
-    pub fn from(file_path: &Path) -> Result<Self, ConfigError> {
+    pub fn from(file_path: &Path) -> Result<Self> {
         let file_content = fs::read_to_string(file_path)?;
         let mut config: Self = toml::from_str(&file_content)?;
 
@@ -96,7 +98,7 @@ impl Config {
         }
 
         // Remove trailing slashes from repository paths
-        for (_, repository) in &mut config.repositories {
+        for repository in config.repositories.values_mut() {
             repository.path = repository.path.trim_end_matches("/").into();
         }
 

@@ -96,7 +96,8 @@ impl<'de> Deserialize<'de> for TargetBounds {
         D: serde::Deserializer<'de>,
     {
         let string: String = serde::de::Deserialize::deserialize(deserializer)?;
-        Ok(Self::from_str(&string).map_err(serde::de::Error::custom)?)
+
+        Self::from_str(&string).map_err(serde::de::Error::custom)
     }
 }
 
@@ -132,7 +133,7 @@ impl FromStr for TargetBounds {
         }
 
         Ok(Self {
-            name: name.into(),
+            name,
             addition: addition.map(|x| x.into()),
             version_intervals,
         })

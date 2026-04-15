@@ -56,7 +56,7 @@ impl FromStr for VersionBounds {
             return Ok(VersionBounds::Higher(Version::from_str(version)?));
         }
 
-        return Ok(VersionBounds::Equal(Version::from_str(string)?));
+        Ok(VersionBounds::Equal(Version::from_str(string)?))
     }
 }
 

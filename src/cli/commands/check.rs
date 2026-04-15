@@ -41,12 +41,12 @@ impl HandleCommand for CheckArgs {
         match &self.package {
             Some(id) => {
                 while let Some(issue) = verifier.next_package_issue(id, &register).unwrap_or_exit_msg(error_message, 1) {
-                    print!("{issue}\n")
+                    println!("{issue}")
                 }
             },
             None => {
                 while let Some(issue) = verifier.next_issue(&register).unwrap_or_exit_msg(error_message, 1) {
-                    print!("{issue}\n")
+                    println!("{issue}")
                 }
             },
         }

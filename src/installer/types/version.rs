@@ -2,6 +2,7 @@
 use std::{
     cmp::{Ordering, max},
     fmt::Display,
+    hash::Hash,
     num::ParseIntError,
     str::FromStr,
 };
@@ -29,7 +30,7 @@ pub enum VersionError {
 }
 
 /// Represents a version.
-#[derive(Debug, Eq, Clone, Hash)]
+#[derive(Debug, Eq, Clone)]
 pub struct Version {
     numbers: Vec<u32>,
 }
@@ -41,7 +42,8 @@ impl<'de> Deserialize<'de> for Version {
         D: serde::Deserializer<'de>,
     {
         let string: String = de::Deserialize::deserialize(deserializer)?;
-        Ok(Version::from_str(&string).map_err(de::Error::custom)?)
+
+        Version::from_str(&string).map_err(de::Error::custom)
     }
 }
 
@@ -105,6 +107,18 @@ impl PartialOrd for Version {
     }
 }
 
+/// Hash implementation for version to match PartialEq implementation
+impl Hash for Version {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        let mut hashable_numbers = self.numbers.clone();
+        while hashable_numbers.last() == Some(&0) {
+            hashable_numbers.pop();
+        }
+
+        hashable_numbers.hash(state);
+    }
+}
+
 impl Display for Version {
     /// Formats a `Version` into the following format: <version_number>[.version_number]...
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -119,7 +133,7 @@ impl FromStr for Version {
     /// Parses a string into a `Version`.
     /// Could return a `VersionError` error.
     fn from_str(string: &str) -> Result<Self, Self::Err> {
-        if string.len() == 0 {
+        if string.is_empty() {
             return Err(VersionError::NoneError);
         }
 

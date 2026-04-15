@@ -87,7 +87,7 @@ impl HandleCommand for InstallArgs {
 
         // Install all packages
         for package_id in &self.packages {
-            match installer.install(&package_id) {
+            match installer.install(package_id) {
                 Ok(installed_package) => println!("Successfully installed {installed_package}"),
                 Err(error) => error!(error, "Cannot install package {package_id}"),
             }
