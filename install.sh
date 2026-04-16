@@ -1,18 +1,16 @@
 #!/bin/sh
-
-# Early exit in case of failure
 set -euo pipefail
 
 VERSION="0.0.1"
 CURRENT_OS="$(uname -s)"
 
 # Get the OS name
-if [ $CURRENT_OS = "Darwin" ];
+if [ $CURRENT_OS = "Darwin" ]; then
     CURRENT_OS_NAME="apple-darwin"
-else if [ $CURRENT_OS = "Linux" ];
-    if [ echo "$(ldd --version)" | grep -q "musl" ]
+elif [ $CURRENT_OS = "Linux" ]; then
+    if [ echo "$(ldd --version)" | grep -q "musl" ]; then
         CURRENT_OS_NAME="unknown-linux-musl"
-    else if [ echo "$(ldd --version)" | grep -q "GLIBC" ]
+    elif [ echo "$(ldd --version)" | grep -q "GLIBC" ]; then
         CURRENT_OS_NAME="unknown-linux-gnu"
     else
         echo "Current platform unsupported, stopping install"
@@ -24,9 +22,9 @@ else
 fi
 
 # Get the current architecture
-if [ "$(uname -m)" = "aarch64" ] || [ "$(uname -m)" = "arm64" ];
+if [ "$(uname -m)" = "aarch64" ] || [ "$(uname -m)" = "arm64" ]; then
     CURRENT_ARCH="aarch64"
-else if [ "$(uname -m)" = "x86_64" ];
+elif [ "$(uname -m)" = "x86_64" ]; then
     CURRENT_ARCH="x86_64"
 else
     echo "Current architecture unsupported, stopping install"
@@ -36,33 +34,35 @@ fi
 # Create target
 TARGET="$CURRENT_ARCH-$CURRENT_OS_NAME"
 
-# TODO: Set correct links at release
-SOURCE_REPOSITORY_URL="https://github.com/pack-it/packit/archive/refs/tags/$VERSION.tar.gz"
-SOURCE_PREBUILD_REPOSITORY_URL="https://github.com/pack-it/packit/archive/refs/tags/$VERSION.tar.gz"
+SOURCE_REPOSITORY_URL="https://github.com/pack-it/packit/releases/download/$VERSION/packit@$VERSION.tar.gz"
+SOURCE_PREBUILD_REPOSITORY_URL="https://github.com/pack-it/packit/releases/download/$VERSION/packit@$VERSION-0-$TARGET"
 
 # Determine the prefix and config directory
 PREFIX_DIR="/opt/packit"
 if [ $CURRENT_OS = "Darwin" ]; then
-    CONFIG_DIR="/Library/Application Support"
+    CONFIG_DIR="/Library/Application Support/packit"
 else
-    CONFIG_DIR="/etc"
+    CONFIG_DIR="/etc/packit"
 fi
 
-# Go into the prefix directory 
-mkdir -p $PREFIX_DIR/packages/packit/$VERSION/bin
-cd $PREFIX_DIR/packages/packit/$VERSION/bin
+USERNAME=$(whoami)
+
+# Go into the prefix directory
+sudo mkdir -p "$PREFIX_DIR/packages/packit/$VERSION/bin"
+sudo chmod -R 755 "$PREFIX_DIR"
+sudo chown -R $USERNAME "$PREFIX_DIR"
+cd "$PREFIX_DIR/packages/packit/$VERSION/bin"
 
 # Install Packit to the prefix directory
-curl --proto "=https" -sSf $SOURCE_PREBUILD_REPOSITORY_URL
+curl --proto "=https" -sSfL $SOURCE_PREBUILD_REPOSITORY_URL --output packit
 if [ $? ]; then
-    tar -xf packit@$VERSION-0-$TARGET.tar.gz
-    rm packit@$VERSION-0-$TARGET.tar.gz
+    echo "Downloaded prebuild"
 else
     echo "Retrieving prebuilds failed. Do you wish to build Packit from source? (Y/n)"
     read answer
     if [ $answer = "n" ] || [ $answer = "no" ]; then
         echo "Canceling installation of Packit"
-        exit(1)
+        exit 1
     fi
 
     RUSTUP_INSTALLED=0
@@ -74,28 +74,29 @@ else
         read answer
         if [ $answer = "n" ] || [ $answer = "no" ] || [ $answer = "" ]; then
             echo "Canceling installation of Packit"
-            exit(1)
+            exit 1
         fi
 
-        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+        curl --proto '=https' --tlsv1.2 -sSfL https://sh.rustup.rs | sh
 
         # Make sure that the rustup install was successful
         command -v cargo
         if [ !$? ]; then
             echo "Installing rustup failed, canceling Packit installation"
-            exit(1)
+            exit 1
         fi
 
         RUSTUP_INSTALLED=1
     fi
 
-    curl --proto "=https" -sSf $SOURCE_REPOSITORY_URL
-    tar -xf packit@$VERSION-0-$TARGET.tar.gz # TODO: Target is different when installing source instead of prebuild
-    rm packit@$VERSION-0-$TARGET.tar.gz
-    cargo build
-    mkdir ./bin
-    mv ./target/release/packit ./bin
-    rm -r ./target
+    curl --proto "=https" -sSfL $SOURCE_REPOSITORY_URL --output packit@$VERSION.tar.gz
+    tar -xf packit@$VERSION.tar.gz
+    rm packit@$VERSION.tar.gz
+    cd packit@$VERSION
+    cargo build --release
+    mv ./target/release/packit ..
+    cd ..
+    rm -r ./packit@$VERSION
 
     if [ $RUSTUP_INSTALLED ]; then
         echo "You installed rustup to install Packit. This installation is not registered in Packit. Do you wish to uninstall it? (Y/n)"
@@ -108,6 +109,7 @@ else
     fi
 fi
 
+chmod +x ./packit
 ln -s ./packit ./pit
 
 # Go into prefix/bin
@@ -119,6 +121,7 @@ ln -s $PREFIX_DIR/packages/packit/$VERSION/bin/packit $PREFIX_DIR/bin/packit
 ln -s $PREFIX_DIR/packages/packit/$VERSION/bin/pit $PREFIX_DIR/bin/pit
 
 # Create symlinks for Packit in /active
+mkdir -p $PREFIX_DIR/active/
 ln -s $PREFIX_DIR/packages/packit/$VERSION $PREFIX_DIR/active/packit
 
 # Go into the prefix directory and create the Installed.toml with Packit
@@ -144,8 +147,10 @@ revisions = []
 EOF
 
 # Go into the config directory and create the default config
-mkdir -p $CONFIG_DIR/packit
-cd $CONFIG_DIR/packit
+sudo mkdir -p "$CONFIG_DIR"
+sudo chmod -R 755 "$CONFIG_DIR"
+sudo chown -R $USERNAME "$CONFIG_DIR"
+cd "$CONFIG_DIR"
 cat << EOF > Config.toml
 repositories_rank = ["core"]
 
@@ -156,7 +161,6 @@ provider = "web"
 path = "https://raw.githubusercontent.com/pack-it/core/main/"
 EOF
 
-# On Linux, add /opt/packit/lib to the linker paths
-if [ $CURRENT_OS = "Linux" ];
-    sudo echo "$PREFIX_DIR" > /etc/ld.so.conf.d/packit.conf
-fi
+echo "Successfully installed Packit"
+echo "Add $PREFIX_DIR/bin to your PATH by adding the command below to your shell (.bashrc or .zshrc):"
+echo "export PATH=\"$PREFIX_DIR/bin:\$PATH\""
