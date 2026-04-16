@@ -15,7 +15,9 @@ curl -fsSL https://raw.githubusercontent.com/pack-it/packit/main/install.sh | sh
 ```
 
 ### Windows
-TODO
+```
+curl -fsSL https://raw.githubusercontent.com/pack-it/packit/main/install.bat --output packit-install.bat && call packit-install.bat
+```
 
 ### Building from source
 You can also build Packit from source locally, by simply using Cargo. Please note that Rust needs link.exe on Windows, which is part of the Visual C++ toolchain.
