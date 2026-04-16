@@ -1,4 +1,5 @@
 @echo off
+setlocal enabledelayedexpansion
 
 set "VERSION=0.0.1"
 if %PROCESSOR_ARCHITECTURE%=="ARM64" (
@@ -19,15 +20,25 @@ mkdir "%PREFIX_DIR%\packages\packit\%VERSION%\bin"
 pushd "%PREFIX_DIR%\packages\packit\%VERSION%\bin"
 
 REM Install Packit to the prefix directory 
-curl --proto "=https" -sSfL %SOURCE_PREBUILD_REPOSITORY_URL% --output packit.exe
-if not ERRORLEVEL 1 (
+REM curl --proto "=https" -sSfL %SOURCE_PREBUILD_REPOSITORY_URL% --output packit.exe
+if 1==0 (
     echo Downloaded prebuild
 ) else (
-    set /p "answer=Retrieving prebuilds failed. Do you wish to build Packit from source? (Y/n)"
-    if "%answer%" == "n" set match=1
-    if "%answer%" == "no" set match=1
-    if "%match%" == "1" (
-        echo "Canceling installation of Packit"
+    set "answer="
+    set /p "answer=Retrieving prebuilds failed. Do you wish to build Packit from source? (Y/n) "
+    set "match="
+    if "!answer!"=="n" set "match=1"
+    if "!answer!"=="no" set "match=1"
+    if "!match!"=="1" (
+        echo Canceling installation of Packit
+        popd
+        exit /b 1
+    )
+
+    REM Make sure link.exe installed 
+    where link.exe 2>nul >nul
+    if ERRORLEVEL 1 (
+        echo Canceling installation of Packit, 'link.exe', which is necessary to run cargo, cannot be found
         popd
         exit /b 1
     )
@@ -35,24 +46,29 @@ if not ERRORLEVEL 1 (
     set RUSTUP_INSTALLED=0
 
     REM Make sure cargo exists before building Packit
-    where cargo
+    where cargo 2>nul >nul
     if ERRORLEVEL 1 (
-        set /p "answer=Cargo is not installed, do you wish to install it to build Packit? (y/N)"
-        if "%answer%" == "n" set match=1
-        if "%answer%" == "no" set match=1
-        if "%answer%" == "" set match=1
-        if "%match%" == "1" (
-            echo "Canceling installation of Packit"
+        set "answer="
+        set /p "answer=Cargo is not installed, do you wish to install it to build Packit? (y/N) "
+        set "match="
+        if "!answer!"=="n" set "match=1"
+        if "!answer!"=="no" set "match=1"
+        if "!answer!"=="" set "match=1"
+        if "!match!"=="1" (
+            echo Canceling installation of Packit
             popd
             exit /b 1
         )
 
-        REM TODO: Install rustup
+        REM Install rustup
+        curl --proto "=https" --tlsv1.2 -sSfL https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe --output rustup-init.exe
+        .\rustup-init.exe
+        del .\rustup-init.exe
 
         REM Make sure that the rustup install was successful
-        where cargo
+        where cargo 2>nul >nul
         if ERRORLEVEL 1 (
-            echo "Installing rustup failed, canceling Packit installation"
+            echo Installing rustup failed, canceling Packit installation
             popd
             exit /b 1
         )
@@ -65,17 +81,19 @@ if not ERRORLEVEL 1 (
     del packit@%VERSION%.tar.gz
     cd packit@%VERSION%
     cargo build --release
-    move .\target\release\packit ..
+    move /y .\target\release\packit.exe ..\packit.exe
     cd ..
-    rmdir /s .\packit@%VERSION%
+    rmdir /s /q .\packit@%VERSION%
 
-    if "%RUSTUP_INSTALLED%"==1 (
-        set /p "answer=You installed rustup to install Packit. This installation is not registered in Packit. Do you wish to uninstall it? (Y/n)"
-        if "%answer%" == "y" set match=1
-        if "%answer%" == "yes" set match=1
-        if "%answer%" == "" set match=1
-        if "%match%" == "1" (
-            echo "Uninstalling rustup"
+    if "!RUSTUP_INSTALLED!"==1 (
+        set "answer="
+        set /p "answer=You installed rustup to install Packit. This installation is not registered in Packit. Do you wish to uninstall it? (Y/n) "
+        set "match="
+        if "!answer!"=="y" set "match=1"
+        if "!answer!"=="yes" set "match=1"
+        if "!answer!"=="" set "match=1"
+        if "!match!"=="1" (
+            echo Uninstalling rustup
             rustup self uninstall
         )
     )
@@ -130,6 +148,21 @@ cd "%CONFIG_DIR%"
     echo provider = "web"
     echo path = "https://raw.githubusercontent.com/pack-it/core/main/"
 ) > Config.toml
+
+REM Make sure that packit words
+"%PREFIX_DIR%\bin\pit.exe" --version 2>nul >nul
+if ERRORLEVEL 1 (
+    echo Unsuccessfull install of Packit, the 'pit' command cannot be found
+    popd
+    exit /b 1
+)
+
+"%PREFIX_DIR%\bin\packit.exe" --version 2>nul >nul
+if ERRORLEVEL 1 (
+    echo Unsuccessfull install of Packit, the 'packit' command cannot be found
+    popd
+    exit /b 1
+)
 
 echo Successfully installed Packit
 echo Add %PREFIX_DIR%\bin to your PATH by adding the command below to your shell:
