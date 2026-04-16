@@ -158,6 +158,18 @@ provider = "web"
 path = "https://raw.githubusercontent.com/pack-it/core/main/"
 EOF
 
+# Make sure that pit works
+if ! command -v $PREFIX_DIR/bin/pit -h >/dev/null 2>&1; then
+    echo "Unsuccessfull install of Packit, the 'pit' command cannot be found"
+    exit 1
+fi
+
+# Make sure that packit works
+if ! command -v $PREFIX_DIR/bin/packit -h >/dev/null 2>&1; then
+    echo "Unsuccessfull install of Packit, the 'packit' command cannot be found"
+    exit 1
+fi
+
 echo "Successfully installed Packit"
 echo "Add $PREFIX_DIR/bin to your PATH by adding the command below to your shell (.bashrc or .zshrc):"
 echo "export PATH=\"$PREFIX_DIR/bin:\$PATH\""
