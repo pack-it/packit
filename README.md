@@ -5,7 +5,24 @@ Packit is a universal package manager, designed to streamline the experience of 
 Please note Packit is still in early development, breaking changes are possible in future versions.
 
 ## Install
+Packit can be installed by simply copying one of the commands below in your terminal.
+
+After install you need to make sure you add the Packit prefix directory to your PATH, to ensure the `pit` command is available in your terminal. The command for this is shown after the install script finished installing.
+
+### Unix
+```
+curl -fsSL https://raw.githubusercontent.com/pack-it/packit/main/install.sh | sh
+```
+
+### Windows
 TODO
+
+### Building from source
+You can also build Packit from source locally, by simply using Cargo. Please note that Rust needs link.exe on Windows, which is part of the Visual C++ toolchain.
+
+1. First download the provided source code or clone the Git repository.
+2. Open the terminal inside the source folder and run `cargo build`. Use `cargo build --release` to create a release build.
+3. After building, the `packit` binary (`packit.exe` on Windows) will be located at `target/debug/packit` or at `target/release/packit` for a release build.
 
 
 ## License
