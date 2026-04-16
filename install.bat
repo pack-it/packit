@@ -1,34 +1,34 @@
-REM Prevent commands from being shown
 @echo off
 
-set VERSION="0.0.1"
+set "VERSION=0.0.1"
 if %PROCESSOR_ARCHITECTURE%=="ARM64" (
-    set CURRENT_OS="aarch64-pc-windows-msvc"
+    set "CURRENT_OS=aarch64-pc-windows-msvc"
 ) else (
-    set CURRENT_OS="x86_64-pc-windows-msvc"
+    set "CURRENT_OS=x86_64-pc-windows-msvc"
 )
 
-REM TODO: Set correct links at release
-set SOURCE_REPOSITORY_URL="https://github.com/pack-it/packit/archive/refs/tags/%VERSION%.tar.gz"
-set SOURCE_PREBUILD_REPOSITORY_URL="https://github.com/pack-it/packit/archive/refs/tags/%VERSION%.tar.gz"
+set "SOURCE_REPOSITORY_URL=https://github.com/pack-it/packit/releases/download/%VERSION%/packit@%VERSION%.tar.gz"
+set "SOURCE_PREBUILD_REPOSITORY_URL=https://github.com/pack-it/packit/releases/download/%VERSION%/packit@%VERSION%-0-%CURRENT_OS%.exe"
 
 REM Determine the prefix and config directory
-set PREFIX_DIR="C:\Program Files\packit"
-set CONFIG_DIR="C:\Program Files\packit"
+set "PREFIX_DIR=C:\Program Files\packit"
+set "CONFIG_DIR=C:\Program Files\packit"
 
 REM Go into the prefix directory 
-mkdir -p %PREFIX_DIR%\packages\packit\%VERSION%\bin
-cd %PREFIX_DIR%\packages\packit\%VERSION%\bin
+mkdir "%PREFIX_DIR%\packages\packit\%VERSION%\bin"
+pushd "%PREFIX_DIR%\packages\packit\%VERSION%\bin"
 
 REM Install Packit to the prefix directory 
-curl --proto "=https" -sSf $SOURCE_PREBUILD_REPOSITORY_URL
-if %errorlevel%==0 (
-    tar -xf packit@0.0.1-0-$TARGET.tar.gz
-    rm packit@0.0.1-0-$TARGET.tar.gz
+curl --proto "=https" -sSfL %SOURCE_PREBUILD_REPOSITORY_URL% --output packit.exe
+if not ERRORLEVEL 1 (
+    echo Downloaded prebuild
 ) else (
-    set /p answer=Retrieving prebuilds failed. Do you wish to build Packit from source? (Y/n)
-    if %answer% = "n" || %answer% = "no" (
+    set /p "answer=Retrieving prebuilds failed. Do you wish to build Packit from source? (Y/n)"
+    if "%answer%" == "n" set match=1
+    if "%answer%" == "no" set match=1
+    if "%match%" == "1" (
         echo "Canceling installation of Packit"
+        popd
         exit /b 1
     )
 
@@ -36,10 +36,14 @@ if %errorlevel%==0 (
 
     REM Make sure cargo exists before building Packit
     where cargo
-    if %errorlevel%!=0 (
-        set /p answer=Cargo is not installed, do you wish to install it to build Packit? (y/N)
-        if %answer% = "n" || %answer% = "no" || %answer% = "" (
+    if ERRORLEVEL 1 (
+        set /p "answer=Cargo is not installed, do you wish to install it to build Packit? (y/N)"
+        if "%answer%" == "n" set match=1
+        if "%answer%" == "no" set match=1
+        if "%answer%" == "" set match=1
+        if "%match%" == "1" (
             echo "Canceling installation of Packit"
+            popd
             exit /b 1
         )
 
@@ -47,55 +51,61 @@ if %errorlevel%==0 (
 
         REM Make sure that the rustup install was successful
         where cargo
-        if %errorlevel%!=0 (
+        if ERRORLEVEL 1 (
             echo "Installing rustup failed, canceling Packit installation"
+            popd
             exit /b 1
         )
 
         set RUSTUP_INSTALLED=1
     )
 
-    curl --proto "=https" -sSf %SOURCE_REPOSITORY_URL%
-    tar -xf packit@%VERSION%-0-%TARGET%.tar.gz REM TODO: Target is different when installing source instead of prebuild
-    del packit@%VERSION%-0-%TARGET%.tar.gz
-    cargo build
-    mkdir bin
-    move .\target\release\packit bin
-    rmdir /s .\target
+    curl --proto "=https" -sSfL %SOURCE_REPOSITORY_URL% --output packit@%VERSION%.tar.gz
+    tar -xf packit@%VERSION%.tar.gz
+    del packit@%VERSION%.tar.gz
+    cd packit@%VERSION%
+    cargo build --release
+    move .\target\release\packit ..
+    cd ..
+    rmdir /s .\packit@%VERSION%
 
-    if %RUSTUP_INSTALLED% (
-        set /p answer=You installed rustup to install Packit. This installation is not registered in Packit. Do you wish to uninstall it? (Y/n)
-        if %answer% = "y" || %answer% = "yes" (
+    if "%RUSTUP_INSTALLED%"==1 (
+        set /p "answer=You installed rustup to install Packit. This installation is not registered in Packit. Do you wish to uninstall it? (Y/n)"
+        if "%answer%" == "y" set match=1
+        if "%answer%" == "yes" set match=1
+        if "%answer%" == "" set match=1
+        if "%match%" == "1" (
             echo "Uninstalling rustup"
             rustup self uninstall
         )
     )
 )
 
-mklink /D .\pit .\packit
+mklink .\pit.exe .\packit.exe
 
 REM Go into prefix\bin
-mkdir -p %PREFIX_DIR%\bin
-cd %PREFIX_DIR%\bin
+mkdir "%PREFIX_DIR%\bin"
+cd "%PREFIX_DIR%\bin"
 
 REM Create symlinks for Packit in bin
-mklink /D %PREFIX_DIR%\bin\packit %PREFIX_DIR%\packages\packit\%VERSION%\bin\packit
-mklink /D %PREFIX_DIR%\bin\pit %PREFIX_DIR%\packages\packit\%VERSION%\bin\pit
+mklink "%PREFIX_DIR%\bin\packit.exe" "%PREFIX_DIR%\packages\packit\%VERSION%\bin\packit.exe"
+mklink "%PREFIX_DIR%\bin\pit.exe" "%PREFIX_DIR%\packages\packit\%VERSION%\bin\pit.exe"
 
 REM Create symlinks for Packit in /active
-mkdir /D %PREFIX_DIR%/active/packit %PREFIX_DIR%/packages/packit/%VERSION%
+mkdir "%PREFIX_DIR%\active\"
+mklink /D "%PREFIX_DIR%\active\packit" "%PREFIX_DIR%\packages\packit/%VERSION%"
 
 REM Go into the prefix directory and create the Installed.toml with Packit
-cd %PREFIX_DIR%
+cd "%PREFIX_DIR%"
 (
     echo # DO NOT EDIT THIS FILE
-    echo
+    echo.
     echo [package.packit]
     echo symlinked = true
     echo active_version = "%VERSION%"
     echo description = "The universal package manager, designed to streamline the experience of installing packages on your system."
     echo homepage = "https://github.com/pack-it/packit"
-    echo
+    echo.
     echo [package.packit."%VERSION%"]
     echo package_id = "packit@%VERSION%"
     echo license = "GPLv3"
@@ -103,20 +113,26 @@ cd %PREFIX_DIR%
     echo source_repository_url = "%SOURCE_REPOSITORY_URL%"
     echo source_prebuild_repository_provider = "web"
     echo source_prebuild_repository_url = "%SOURCE_PREBUILD_REPOSITORY_URL%"
-    echo install_path = "%PREFIX_DIR%\packages\packit\%VERSION%"
+    echo install_path = "%PREFIX_DIR:\=\\%\\packages\\packit\\%VERSION%"
     echo revisions = []
 ) > Installed.toml
 
 
 REM Go into the config directory and create the default config
-mkdir -p %CONFIG_DIR%\packit
-cd %CONFIG_DIR%\packit
+mkdir "%CONFIG_DIR%"
+cd "%CONFIG_DIR%"
 (
     echo repositories_rank = ["core"]
-    echo
+    echo.
     echo [repositories]
-    echo
+    echo.
     echo [repositories.core]
     echo provider = "web"
     echo path = "https://raw.githubusercontent.com/pack-it/core/main/"
 ) > Config.toml
+
+echo Successfully installed Packit
+echo Add %PREFIX_DIR%\bin to your PATH by adding the command below to your shell:
+echo setx PATH "%%PATH%%;%PREFIX_DIR%\bin"
+
+popd
