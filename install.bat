@@ -20,8 +20,8 @@ mkdir "%PREFIX_DIR%\packages\packit\%VERSION%\bin"
 pushd "%PREFIX_DIR%\packages\packit\%VERSION%\bin"
 
 REM Install Packit to the prefix directory 
-REM curl --proto "=https" -sSfL %SOURCE_PREBUILD_REPOSITORY_URL% --output packit.exe
-if 1==0 (
+curl --proto "=https" -sSfL %SOURCE_PREBUILD_REPOSITORY_URL% --output packit.exe
+if not ERRORLEVEL 1 (
     echo Downloaded prebuild
 ) else (
     set "answer="
@@ -31,14 +31,6 @@ if 1==0 (
     if "!answer!"=="no" set "match=1"
     if "!match!"=="1" (
         echo Canceling installation of Packit
-        popd
-        exit /b 1
-    )
-
-    REM Make sure link.exe installed 
-    where link.exe 2>nul >nul
-    if ERRORLEVEL 1 (
-        echo Canceling installation of Packit, 'link.exe', which is necessary to run cargo, cannot be found
         popd
         exit /b 1
     )
