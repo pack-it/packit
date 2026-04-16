@@ -2,6 +2,7 @@
 pub mod constants;
 pub mod duplicates;
 pub mod env;
+pub mod fuzzy;
 pub mod io;
 pub mod requests;
 pub mod tree;
