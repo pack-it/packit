@@ -1,5 +1,5 @@
 #!/bin/sh
-set -euo pipefail
+set -eu
 
 VERSION="0.0.1"
 CURRENT_OS="$(uname -s)"
@@ -8,9 +8,9 @@ CURRENT_OS="$(uname -s)"
 if [ $CURRENT_OS = "Darwin" ]; then
     CURRENT_OS_NAME="apple-darwin"
 elif [ $CURRENT_OS = "Linux" ]; then
-    if [ echo "$(ldd --version)" | grep -q "musl" ]; then
+    if echo "$(ldd --version)" | grep -q "musl"; then
         CURRENT_OS_NAME="unknown-linux-musl"
-    elif [ echo "$(ldd --version)" | grep -q "GLIBC" ]; then
+    elif echo "$(ldd --version)" | grep -q "GLIBC"; then
         CURRENT_OS_NAME="unknown-linux-gnu"
     else
         echo "Current platform unsupported, stopping install"
@@ -54,8 +54,7 @@ sudo chown -R $USERNAME "$PREFIX_DIR"
 cd "$PREFIX_DIR/packages/packit/$VERSION/bin"
 
 # Install Packit to the prefix directory
-curl --proto "=https" -sSfL $SOURCE_PREBUILD_REPOSITORY_URL --output packit
-if [ $? ]; then
+if curl --proto "=https" -sSfL $SOURCE_PREBUILD_REPOSITORY_URL --output packit; then
     echo "Downloaded prebuild"
 else
     echo "Retrieving prebuilds failed. Do you wish to build Packit from source? (Y/n)"
@@ -68,8 +67,7 @@ else
     RUSTUP_INSTALLED=0
 
     # Make sure cargo exists before building Packit
-    command -v cargo
-    if [ !$? ]; then
+    if ! command -v cargo >/dev/null 2>&1; then
         echo "Cargo is not installed, do you wish to install it to build Packit? (y/N)"
         read answer
         if [ $answer = "n" ] || [ $answer = "no" ] || [ $answer = "" ]; then
@@ -80,8 +78,7 @@ else
         curl --proto '=https' --tlsv1.2 -sSfL https://sh.rustup.rs | sh
 
         # Make sure that the rustup install was successful
-        command -v cargo
-        if [ !$? ]; then
+        if ! command -v cargo >/dev/null 2>&1; then
             echo "Installing rustup failed, canceling Packit installation"
             exit 1
         fi
@@ -98,11 +95,11 @@ else
     cd ..
     rm -r ./packit@$VERSION
 
-    if [ $RUSTUP_INSTALLED ]; then
+    if [ $RUSTUP_INSTALLED -eq 1 ]; then
         echo "You installed rustup to install Packit. This installation is not registered in Packit. Do you wish to uninstall it? (Y/n)"
         read answer
 
-        if [ $answer = "y" ] || [ $answer = "yes" ]; then
+        if [ $answer = "y" ] || [ $answer = "yes" ] || [ $answer = "" ]; then
             echo "Uninstalling rustup"
             rustup self uninstall
         fi
