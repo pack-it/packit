@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 set "VERSION=0.0.1"
-if %PROCESSOR_ARCHITECTURE%=="ARM64" (
+if "%PROCESSOR_ARCHITECTURE%"=="ARM64" (
     set "CURRENT_OS=aarch64-pc-windows-msvc"
 ) else (
     set "CURRENT_OS=x86_64-pc-windows-msvc"
@@ -52,8 +52,17 @@ if not ERRORLEVEL 1 (
             exit /b 1
         )
 
-        REM Install rustup
-        curl --proto "=https" --tlsv1.2 -sSfL https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe --output rustup-init.exe
+        REM Install the correct rustup version for the current platform
+        if "%PROCESSOR_ARCHITECTURE%"=="ARM64" (
+            curl --proto "=https" --tlsv1.2 -sSfL https://static.rust-lang.org/rustup/dist/aarch64-pc-windows-msvc/rustup-init.exe --output rustup-init.exe
+        ) else (
+            if defined PROCESSOR_ARCHITEW6432 (
+                curl --proto "=https" --tlsv1.2 -sSfL https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe --output rustup-init.exe
+            ) else (
+                curl --proto "=https" --tlsv1.2 -sSfL https://static.rust-lang.org/rustup/dist/i686-pc-windows-msvc/rustup-init.exe --output rustup-init.exe
+            )
+        )
+        
         .\rustup-init.exe
         del .\rustup-init.exe
 
