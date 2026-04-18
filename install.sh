@@ -54,6 +54,7 @@ sudo chown -R $USERNAME "$PREFIX_DIR"
 cd "$PREFIX_DIR/packages/packit/$VERSION/bin"
 
 # Install Packit to the prefix directory
+echo "Downloading Packit prebuild"
 if curl --proto "=https" -sSfL $SOURCE_PREBUILD_REPOSITORY_URL --output packit; then
     echo "Downloaded prebuild"
 else
@@ -171,5 +172,35 @@ if ! command -v $PREFIX_DIR/bin/packit -h >/dev/null 2>&1; then
 fi
 
 echo "Successfully installed Packit"
-echo "Add $PREFIX_DIR/bin to your PATH by adding the command below to your shell (.bashrc or .zshrc):"
+
+SHELL_CONFIG_PATH=""
+
+case "$SHELL" in
+    *zsh)
+        SHELL_CONFIG_PATH="$HOME/.zshrc"
+        ;;
+    *bash)
+        SHELL_CONFIG_PATH="$HOME/.bashrc"
+        ;;
+    *fish)
+        # Fish is not POSIX, so it needs custom handling
+        set -Ux fish_user_paths "$PREFIX_DIR/bin" $fish_user_paths
+        exit 0
+        ;;
+    *)
+        echo Nothing matched
+        ;;
+esac
+
+if [ -e "$SHELL_CONFIG_PATH" ]; then
+    echo "Do you wish to automatically add Packit to your PATH by adding it to $SHELL_CONFIG_PATH? (Y/n)"
+    read answer
+    if [ $answer = "y" ] || [ $answer = "yes" ] || [ $answer = "" ]; then
+        echo "export PATH=\"$PREFIX_DIR/bin:\$PATH\"" >> "$SHELL_CONFIG_PATH"
+        exit 0
+    fi
+fi
+
+# If the shell is not recognized or user did not want to add Packit automatically tell the user how to add Packit to their shell config
+echo "Add $PREFIX_DIR/bin to your PATH by adding the command below to your shell config:"
 echo "export PATH=\"$PREFIX_DIR/bin:\$PATH\""
