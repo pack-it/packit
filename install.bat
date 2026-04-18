@@ -20,6 +20,7 @@ mkdir "%PREFIX_DIR%\packages\packit\%VERSION%\bin"
 pushd "%PREFIX_DIR%\packages\packit\%VERSION%\bin"
 
 REM Install Packit to the prefix directory 
+echo Downloading Packit prebuild
 curl --proto "=https" -sSfL %SOURCE_PREBUILD_REPOSITORY_URL% --output packit.exe
 if not ERRORLEVEL 1 (
     echo Downloaded prebuild
@@ -166,6 +167,26 @@ if ERRORLEVEL 1 (
 )
 
 echo Successfully installed Packit
+
+REM Exit early if Packit is already in the user PATH
+echo ";%PATH%;" | find /I ";%PREFIX_DIR%\bin;" >nul
+if %ERRORLEVEL%==0 (
+    exit /b 0
+)
+
+REM Ask the user if they want to automatically add Packit to their PATH
+set "answer="
+set /p "answer=Do you wish to automatically add Packit to your user PATH? (Y/n) "
+set "match="
+if "!answer!"=="y" set "match=1"
+if "!answer!"=="yes" set "match=1"
+if "!answer!"=="" set "match=1"
+if "!match!"=="1" (
+    setx PATH "%PATH%;%PREFIX_DIR%\bin"
+    popd
+    exit /b 0
+)
+
 echo Add %PREFIX_DIR%\bin to your PATH by adding the command below to your shell:
 echo setx PATH "%%PATH%%;%PREFIX_DIR%\bin"
 
