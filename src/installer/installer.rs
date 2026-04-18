@@ -156,6 +156,11 @@ impl<'a> Installer<'a> {
             self.install_nodes(child)?;
         }
 
+        // Return early if the package has already been installed (maybe by another earlier node)
+        if self.register.get_package_version(node.get_id()).is_some() {
+            return Ok(());
+        }
+
         // Get the value or return early if there is no value (package is already satisfied)
         let node_value = match node.get_value() {
             Some(value) => value,
