@@ -1,6 +1,17 @@
 #!/bin/sh
 set -eu
 
+# Gets user input and uses /dev/tty when stdin is not available
+get_answer() {
+    if [ -t 0 ]; then
+        read answer
+    else
+        read answer < /dev/tty
+    fi
+
+    echo "$answer"
+}
+
 main () {
 VERSION="0.0.1"
 CURRENT_OS="$(uname -s)"
@@ -60,13 +71,7 @@ if curl --proto "=https" -sSfL $SOURCE_PREBUILD_REPOSITORY_URL --output packit; 
     echo "Downloaded prebuild"
 else
     echo "Retrieving prebuilds failed. Do you wish to build Packit from source? (Y/n)"
-    
-    # Use /dev/tty when stdin is not available
-    if [ -t 0 ]; then
-        read answer
-    else
-        read answer < /dev/tty
-    fi
+    answer=$(get_answer)
 
     if [ "$answer" = "n" ] || [ "$answer" = "no" ]; then
         echo "Canceling installation of Packit"
@@ -78,13 +83,7 @@ else
     # Make sure cargo exists before building Packit
     if ! command -v cargo >/dev/null 2>&1; then
         echo "Cargo is not installed, do you wish to install it to build Packit? (y/N)"
-        
-        # Use /dev/tty when stdin is not available
-        if [ -t 0 ]; then
-            read answer
-        else
-            read answer < /dev/tty
-        fi
+        answer=$(get_answer)
 
         if [ "$answer" = "n" ] || [ "$answer" = "no" ] || [ "$answer" = "" ]; then
             echo "Canceling installation of Packit"
@@ -113,13 +112,7 @@ else
 
     if [ $RUSTUP_INSTALLED -eq 1 ]; then
         echo "You installed rustup to install Packit. This installation is not registered in Packit. Do you wish to uninstall it? (Y/n)"
-        
-        # Use /dev/tty when stdin is not available
-        if [ -t 0 ]; then
-            read answer
-        else
-            read answer < /dev/tty
-        fi
+        answer=$(get_answer)
 
         if [ "$answer" = "y" ] || [ "$answer" = "yes" ] || [ "$answer" = "" ]; then
             echo "Uninstalling rustup"
@@ -194,6 +187,11 @@ fi
 
 echo "Successfully installed Packit"
 
+# Exit early if Packit is already in the PATH
+if echo ":$PATH:" | grep -q ":$PREFIX_DIR/bin:"; then
+    exit 0
+fi
+
 SHELL_CONFIG_PATH=""
 
 case "$SHELL" in
@@ -206,13 +204,7 @@ case "$SHELL" in
     *fish)
         # Fish is not POSIX, so it needs custom handling
         echo "Do you wish to automatically add Packit to your PATH? (Y/n)"
-
-        # Use /dev/tty when stdin is not available
-        if [ -t 0 ]; then
-            read answer
-        else
-            read answer < /dev/tty
-        fi
+        answer=$(get_answer)
 
         if [ "$answer" = "y" ] || [ "$answer" = "yes" ] || [ "$answer" = "" ]; then
             fish -c "fish_add_path $PREFIX_DIR/bin"
@@ -225,13 +217,7 @@ esac
 
 if [ -e "$SHELL_CONFIG_PATH" ]; then
     echo "Do you wish to automatically add Packit to your PATH by adding it to $SHELL_CONFIG_PATH? (Y/n)"
-
-    # Use /dev/tty when stdin is not available
-    if [ -t 0 ]; then
-        read answer
-    else
-        read answer < /dev/tty
-    fi
+    answer=$(get_answer)
 
     if [ "$answer" = "y" ] || [ "$answer" = "yes" ] || [ "$answer" = "" ]; then
         echo "export PATH=\"$PREFIX_DIR/bin:\$PATH\"" >> "$SHELL_CONFIG_PATH"

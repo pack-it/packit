@@ -166,6 +166,14 @@ if ERRORLEVEL 1 (
     exit /b 1
 )
 
+echo Successfully installed Packit
+
+REM Exit early if Packit is already in the user PATH
+echo ";%PATH%;" | find /I ";%PREFIX_DIR%\bin;" >nul
+if %ERRORLEVEL%==0 (
+    exit /b 0
+)
+
 REM Ask the user if they want to automatically add Packit to their PATH
 set "answer="
 set /p "answer=Do you wish to automatically add Packit to your user PATH? (Y/n) "
@@ -179,7 +187,6 @@ if "!match!"=="1" (
     exit /b 0
 )
 
-echo Successfully installed Packit
 echo Add %PREFIX_DIR%\bin to your PATH by adding the command below to your shell:
 echo setx PATH "%%PATH%%;%PREFIX_DIR%\bin"
 
