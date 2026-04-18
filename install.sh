@@ -59,8 +59,15 @@ if curl --proto "=https" -sSfL $SOURCE_PREBUILD_REPOSITORY_URL --output packit; 
     echo "Downloaded prebuild"
 else
     echo "Retrieving prebuilds failed. Do you wish to build Packit from source? (Y/n)"
-    read answer
-    if [ $answer = "n" ] || [ $answer = "no" ]; then
+    
+    # Use /dev/tty when stdin is not available
+    if [ -t 0 ]; then
+        read answer
+    else
+        read answer < /dev/tty
+    fi
+
+    if [ "$answer" = "n" ] || [ "$answer" = "no" ]; then
         echo "Canceling installation of Packit"
         exit 1
     fi
@@ -70,8 +77,15 @@ else
     # Make sure cargo exists before building Packit
     if ! command -v cargo >/dev/null 2>&1; then
         echo "Cargo is not installed, do you wish to install it to build Packit? (y/N)"
-        read answer
-        if [ $answer = "n" ] || [ $answer = "no" ] || [ $answer = "" ]; then
+        
+        # Use /dev/tty when stdin is not available
+        if [ -t 0 ]; then
+            read answer
+        else
+            read answer < /dev/tty
+        fi
+
+        if [ "$answer" = "n" ] || [ "$answer" = "no" ] || [ "$answer" = "" ]; then
             echo "Canceling installation of Packit"
             exit 1
         fi
@@ -98,9 +112,15 @@ else
 
     if [ $RUSTUP_INSTALLED -eq 1 ]; then
         echo "You installed rustup to install Packit. This installation is not registered in Packit. Do you wish to uninstall it? (Y/n)"
-        read answer
+        
+        # Use /dev/tty when stdin is not available
+        if [ -t 0 ]; then
+            read answer
+        else
+            read answer < /dev/tty
+        fi
 
-        if [ $answer = "y" ] || [ $answer = "yes" ] || [ $answer = "" ]; then
+        if [ "$answer" = "y" ] || [ "$answer" = "yes" ] || [ "$answer" = "" ]; then
             echo "Uninstalling rustup"
             rustup self uninstall
         fi
@@ -188,14 +208,20 @@ case "$SHELL" in
         exit 0
         ;;
     *)
-        echo Nothing matched
         ;;
 esac
 
 if [ -e "$SHELL_CONFIG_PATH" ]; then
     echo "Do you wish to automatically add Packit to your PATH by adding it to $SHELL_CONFIG_PATH? (Y/n)"
-    read answer
-    if [ $answer = "y" ] || [ $answer = "yes" ] || [ $answer = "" ]; then
+
+    # Use /dev/tty when stdin is not available
+    if [ -t 0 ]; then
+        read answer
+    else
+        read answer < /dev/tty
+    fi
+
+    if [ "$answer" = "y" ] || [ "$answer" = "yes" ] || [ "$answer" = "" ]; then
         echo "export PATH=\"$PREFIX_DIR/bin:\$PATH\"" >> "$SHELL_CONFIG_PATH"
         exit 0
     fi
