@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
 
+main () {
 VERSION="0.0.1"
 CURRENT_OS="$(uname -s)"
 
@@ -204,8 +205,19 @@ case "$SHELL" in
         ;;
     *fish)
         # Fish is not POSIX, so it needs custom handling
-        set -Ux fish_user_paths "$PREFIX_DIR/bin" $fish_user_paths
-        exit 0
+        echo "Do you wish to automatically add Packit to your PATH? (Y/n)"
+
+        # Use /dev/tty when stdin is not available
+        if [ -t 0 ]; then
+            read answer
+        else
+            read answer < /dev/tty
+        fi
+
+        if [ "$answer" = "y" ] || [ "$answer" = "yes" ] || [ "$answer" = "" ]; then
+            fish -c "fish_add_path $PREFIX_DIR/bin"
+            exit 0
+        fi
         ;;
     *)
         ;;
@@ -230,3 +242,6 @@ fi
 # If the shell is not recognized or user did not want to add Packit automatically tell the user how to add Packit to their shell config
 echo "Add $PREFIX_DIR/bin to your PATH by adding the command below to your shell config:"
 echo "export PATH=\"$PREFIX_DIR/bin:\$PATH\""
+}
+
+main "$@"
