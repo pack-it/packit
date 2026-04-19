@@ -309,7 +309,27 @@ impl<'a> Installer<'a> {
                 &script_args,
                 self.options.verbose,
             );
-            scripts::run_test_script(&script_data)?;
+
+            let external_files = version_meta.external_test_files.iter().chain(&target.external_test_files);
+            let mut read_files = Vec::new();
+            let mut skip_test = false;
+            for file in external_files {
+                let file_content =
+                    self.repository_manager.read_file(&install_meta.repository_id, &install_meta.package_metadata.name, file)?;
+
+                match file_content {
+                    Some(content) => read_files.push((file, content)),
+                    None => {
+                        warning!("Skipping test, because the required files could not be downloaded.");
+                        skip_test = true;
+                        break;
+                    },
+                }
+            }
+
+            if !skip_test {
+                scripts::run_test_script(&script_data, &read_files)?;
+            }
         }
 
         Ok(())
@@ -646,7 +666,7 @@ impl<'a> Installer<'a> {
         let script_path = package_version.get_uninstall_script_path(&target_bounds)?;
 
         // Download and run script
-        if let Some(script_text) = provider.read_script(&package_id.name, &script_path)? {
+        if let Some(script_text) = provider.read_file(&package_id.name, &script_path)? {
             let script_path = scripts::write_script_to_tempfile(&script_text)?;
 
             // Run script

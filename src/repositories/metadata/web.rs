@@ -38,10 +38,10 @@ impl MetadataProvider for WebMetadataProvider {
         Ok(toml::de::from_str(&data)?)
     }
 
-    /// Reads a script and returns its content as a string. If the script doesn't exist Ok(None) is returned.
+    /// Reads a file and returns its content as a string. If the file doesn't exist Ok(None) is returned.
     /// Returns a response error if `requests::get` or `Response::text` fails.
-    fn read_script(&self, package: &PackageName, script_path: &str) -> Result<Option<String>> {
-        let response = requests::get(format!("{}/packages/{package}/{script_path}", self.url))?;
+    fn read_file(&self, package: &PackageName, file_path: &str) -> Result<Option<String>> {
+        let response = requests::get(format!("{}/packages/{package}/{file_path}", self.url))?;
 
         if response.status() == StatusCode::NOT_FOUND {
             return Ok(None);

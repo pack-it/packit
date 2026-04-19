@@ -190,9 +190,9 @@ impl<'a> RepositoryManager<'a> {
         Ok(package)
     }
 
-    /// Reads a script of the given package from the given repository.
-    /// Returns the script as a string.
-    pub fn read_script(&self, repository_id: &str, package: &PackageName, script_path: &str) -> Result<Option<String>> {
+    /// Reads a file of the given package from the given repository.
+    /// Returns the file as a string.
+    pub fn read_file(&self, repository_id: &str, package: &PackageName, script_path: &str) -> Result<Option<String>> {
         let provider = match self.metadata_providers.get(repository_id) {
             Some(provider) => provider,
             None => {
@@ -202,7 +202,7 @@ impl<'a> RepositoryManager<'a> {
             },
         };
 
-        provider.read_script(package, script_path)
+        provider.read_file(package, script_path)
     }
 
     /// Retrieves the prebuild url for the given package version.
