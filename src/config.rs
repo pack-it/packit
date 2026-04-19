@@ -160,6 +160,11 @@ impl EditableConfig {
         Ok(())
     }
 
+    /// Gets the actual config.
+    pub fn get_config(&self) -> &Config {
+        &self.config
+    }
+
     /// Sets the repository with the given id.
     pub fn set_repository(&mut self, id: &str, repository: Repository) {
         let mut new_value = toml_edit::Table::new();
@@ -176,11 +181,6 @@ impl EditableConfig {
         self.config.repositories.insert(id.into(), repository);
     }
 
-    /// Gets the repository with the given id, returns None when the repository cannot be found.
-    pub fn get_repository(&self, id: &str) -> Option<&Repository> {
-        self.config.repositories.get(id)
-    }
-
     /// Sets the repositories rank.
     pub fn set_repositories_rank(&mut self, repositories_rank: Vec<String>) {
         let mut new_value = toml_edit::Array::new();
@@ -192,30 +192,15 @@ impl EditableConfig {
         self.config.repositories_rank = repositories_rank;
     }
 
-    /// Gets the repositories rank.
-    pub fn get_repositories_rank(&self) -> &Vec<String> {
-        &self.config.repositories_rank
-    }
-
     /// Sets the prefix directory.
     pub fn set_prefix_directory(&mut self, prefix_directory: PathBuf) {
         self.document["prefix_directory"] = prefix_directory.display().to_string().into();
         self.config.prefix_directory = prefix_directory;
     }
 
-    /// Gets the prefix directory.
-    pub fn get_prefix_directory(&self) -> &PathBuf {
-        &self.config.prefix_directory
-    }
-
     /// Sets the multiuser mode.
     pub fn set_multiuser(&mut self, multiuser: bool) {
         self.document["multiuser"] = multiuser.into();
         self.config.multiuser = multiuser;
-    }
-
-    /// Gets the multiuser mode.
-    pub fn is_multiuser(&self) -> bool {
-        self.config.multiuser
     }
 }

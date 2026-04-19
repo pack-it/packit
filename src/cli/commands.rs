@@ -7,7 +7,6 @@ mod install;
 mod link;
 mod list;
 mod package;
-mod repositories;
 mod search;
 mod switch;
 mod uninstall;
@@ -24,8 +23,8 @@ use crate::cli::display::logging::debug;
 use crate::cli::{
     commands::{
         check::CheckArgs, config::ConfigArgs, fix::FixArgs, info::InfoArgs, install::InstallArgs, link::LinkArgs, list::ListArgs,
-        package::PackageArgs, repositories::RepositoryArgs, search::SearchArgs, switch::SwitchArgs, uninstall::UninstallArgs,
-        unlink::UnlinkArgs, update::UpdateArgs, util::UtilArgs,
+        package::PackageArgs, search::SearchArgs, switch::SwitchArgs, uninstall::UninstallArgs, unlink::UnlinkArgs, update::UpdateArgs,
+        util::UtilArgs,
     },
     display::logging::error,
 };
@@ -49,9 +48,6 @@ enum Commands {
 
     /// List all installed packages
     List(ListArgs),
-
-    /// List all configured repositories
-    Repositories(RepositoryArgs),
 
     /// Search a certain package
     Search(SearchArgs),
@@ -133,7 +129,6 @@ impl Cli {
             Commands::Install(args) => args,
             Commands::Uninstall(args) => args,
             Commands::List(args) => args,
-            Commands::Repositories(args) => args,
             Commands::Search(args) => args,
             Commands::Switch(args) => args,
             Commands::Link(args) => args,
