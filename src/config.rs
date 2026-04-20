@@ -192,6 +192,21 @@ impl EditableConfig {
         self.config.repositories_rank = repositories_rank;
     }
 
+    /// Adds a value to the repositories rank.
+    pub fn add_to_repositories_rank(&mut self, repository_id: &str) {
+        let value = &mut self.document["repositories_rank"];
+        match value.is_none() {
+            true => {
+                let mut new_value = toml_edit::Array::new();
+                new_value.push(repository_id);
+                *value = new_value.into();
+            },
+            false => {
+                value.as_array_mut().expect("Expected repositories_rank to be an array!").push(repository_id);
+            },
+        }
+    }
+
     /// Sets the prefix directory.
     pub fn set_prefix_directory(&mut self, prefix_directory: PathBuf) {
         self.document["prefix_directory"] = prefix_directory.display().to_string().into();
