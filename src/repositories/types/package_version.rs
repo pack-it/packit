@@ -51,7 +51,7 @@ pub struct PackageVersionMeta {
     #[serde(default = "PackageVersionMeta::default_use_version_specific")]
     pub use_version_specific_uninstall: bool,
 
-    #[serde(default = "PackageVersionMeta::default_external_files")]
+    #[serde(default)]
     pub external_test_files: HashSet<String>,
 
     #[serde(default)]
@@ -199,9 +199,5 @@ impl PackageVersionMeta {
 
     fn default_use_version_specific() -> bool {
         false
-    }
-
-    fn default_external_files() -> HashSet<String> {
-        HashSet::new()
     }
 }

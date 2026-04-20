@@ -27,12 +27,6 @@ pub struct PackageTarget {
     pub test_script: Option<Script>,
     pub uninstall_script: Option<Script>,
 
-    #[serde(default = "PackageTarget::default_external_files")]
+    #[serde(default)]
     pub external_test_files: HashSet<String>,
-}
-
-impl PackageTarget {
-    fn default_external_files() -> HashSet<String> {
-        HashSet::new()
-    }
 }

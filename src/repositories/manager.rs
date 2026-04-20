@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{collections::HashMap, path::PathBuf};
+use std::collections::HashMap;
 
 use bytes::Bytes;
 
