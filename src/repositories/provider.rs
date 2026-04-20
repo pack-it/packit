@@ -27,8 +27,8 @@ pub trait MetadataProvider {
     /// Reads the metadata of a certain version of a package, containing dependencies and targets.
     fn read_package_version(&self, package: &PackageName, version: &Version) -> Result<PackageVersionMeta>;
 
-    /// Reads the requested script from the repository.
-    fn read_script(&self, package: &PackageName, script_path: &str) -> Result<Option<String>>;
+    /// Reads the requested file from the repository.
+    fn read_file(&self, package: &PackageName, file_path: &str) -> Result<Option<String>>;
 }
 
 /// Generic prebuild repository provider trait, reading prebuild packages from a repository.

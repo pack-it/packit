@@ -396,6 +396,7 @@ pub mod tests {
             dependencies: Vec::new(),
             build_dependencies: Vec::new(),
             targets: HashMap::new(),
+            external_test_files: HashSet::new(),
             sources: Sources::Single(Source {
                 url: "-".to_string(),
                 checksum: Checksum { sha256: [0; 32] },

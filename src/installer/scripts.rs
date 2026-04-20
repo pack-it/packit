@@ -101,9 +101,16 @@ pub fn run_post_script(script_data: &ScriptData) -> Result<()> {
 }
 
 /// Runs the given test script, in a newly created temp directory.
+/// It also writes the specified external test files to the temp directory.
 /// Note that the script should be a `.sh` script on Linux and macOS and a `.bat` on Windows.
-pub fn run_test_script(script_data: &ScriptData) -> Result<()> {
+pub fn run_test_script(script_data: &ScriptData, external_files: &Vec<(&String, String)>) -> Result<()> {
     let temp_dir = TempDir::new().map_err(ScriptError::TempCreationError)?;
+
+    // Install external files into the temp directory
+    for (file_name, file_content) in external_files {
+        fs::write(temp_dir.path().join(file_name), file_content).map_err(ScriptError::SaveError)?;
+    }
+
     run_script(script_data, &temp_dir, Environment::new(), true)
 }
 
@@ -182,7 +189,7 @@ pub fn download_script(
     package_name: &PackageName,
     repository_id: &str,
 ) -> Result<Option<NamedTempFile>> {
-    let script_text = match repository_manager.read_script(repository_id, package_name, script_path)? {
+    let script_text = match repository_manager.read_file(repository_id, package_name, script_path)? {
         Some(script_text) => script_text,
         None => return Ok(None), // Script not found, so return None
     };

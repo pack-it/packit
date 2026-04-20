@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use serde::Deserialize;
 
@@ -26,4 +26,7 @@ pub struct PackageTarget {
     pub postinstall_script: Option<Script>,
     pub test_script: Option<Script>,
     pub uninstall_script: Option<Script>,
+
+    #[serde(default)]
+    pub external_test_files: HashSet<String>,
 }

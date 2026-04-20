@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use serde::Deserialize;
 
@@ -50,6 +50,9 @@ pub struct PackageVersionMeta {
 
     #[serde(default = "PackageVersionMeta::default_use_version_specific")]
     pub use_version_specific_uninstall: bool,
+
+    #[serde(default)]
+    pub external_test_files: HashSet<String>,
 
     #[serde(default)]
     pub revisions: Vec<String>,
