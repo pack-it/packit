@@ -2,40 +2,24 @@ use std::cmp;
 
 const FUZZY_THRESHOLD: f64 = 0.25;
 
-/// Does a fuzzy search for a string in a list strings. It will search for the string with the lowest distance
-/// and then calculate a relative distance to make sure string length is taken into account.
-/// Returns the most simmilar word or None if the word was above the `FUZZY_THRESHOLD`.
-pub fn fuzzy_search(words: Vec<&str>, string: &str) -> Option<String> {
-    let mut best_distance = None;
-    let mut current_best = None;
+/// Does a fuzzy search for a string in a list strings. Strings which are underneath the `FUZZY_THRESHOLD`
+/// or have a levenshtein distance lower than 1 are a match.
+/// Returns a Vec of tuples which are pairs of words and their distance (distance, word).
+pub fn fuzzy_search(words: Vec<&str>, string: &str) -> Vec<(u64, String)> {
+    let mut fuzzy_matches = Vec::new();
 
     for word in words {
         let distance = calculate_distance(word, string);
 
-        if let Some(current_distance) = best_distance {
-            if distance < current_distance {
-                best_distance = Some(distance);
-                current_best = Some(word.to_string())
-            }
-        } else {
-            best_distance = Some(distance);
-            current_best = Some(word.to_string());
+        // Add word to `fuzzy_matches` if the distance is <= 1 or relative distance < `FUZZY_THRESHOLD`
+        let max_length = cmp::max(word.len(), string.len());
+        let relative_distance = distance as f64 / max_length as f64;
+        if distance <= 1 || relative_distance < FUZZY_THRESHOLD {
+            fuzzy_matches.push((distance, word.to_string()));
         }
     }
 
-    // Make sure that the best word has a relative distance below the `FUZZY_THRESHOLD` or
-    // that it has a distance of 1 or lower.
-    if let Some(best_distance) = best_distance
-        && let Some(current_best) = current_best.as_ref()
-    {
-        let max_length = cmp::max(current_best.len(), string.len());
-        let relative_distance: f64 = best_distance as f64 / max_length as f64;
-        if best_distance > 1 && relative_distance > FUZZY_THRESHOLD {
-            return None;
-        }
-    }
-
-    current_best
+    fuzzy_matches
 }
 
 /// Calculates the distance between two strings with a levenshtein like algorithm which allows
@@ -72,13 +56,6 @@ fn calculate_distance(first_word: &str, second_word: &str) -> u64 {
                 distance_matrix[i][j] = cmp::min(distance_matrix[i][j], distance_matrix[i - 2][j - 2] + cost);
             }
         }
-    }
-
-    for i in &distance_matrix {
-        for j in i {
-            print!("{j} ")
-        }
-        println!();
     }
 
     distance_matrix[first_word.len()][second_word.len()]
