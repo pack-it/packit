@@ -105,3 +105,46 @@ fn calculate_distance(first_word: &str, second_word: &str) -> u64 {
 
     distance_matrix[first_word.len()][second_word.len()]
 }
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use super::*;
+
+    #[test]
+    fn test_distance_calculation() {
+        assert_eq!(calculate_distance("same", "same"), 0);
+        assert_eq!(calculate_distance("saem", "same"), 1);
+        assert_eq!(calculate_distance("sema", "same"), 2);
+        assert_eq!(calculate_distance("sitting", "kitten"), 3);
+        assert_eq!(calculate_distance("same", "blub"), 4);
+    }
+
+    #[test]
+    fn test_fuzzy_search() {
+        assert_eq!(
+            fuzzy_search(vec![PackageName::from_str("hello").unwrap()], "hello"),
+            vec![(0 as u64, PackageName::from_str("hello").unwrap())]
+        );
+
+        assert_eq!(
+            fuzzy_search(
+                vec![
+                    PackageName::from_str("aahello").unwrap(),
+                    PackageName::from_str("aahell").unwrap(),
+                    PackageName::from_str("aahellow").unwrap(),
+                    PackageName::from_str("aahelloxyz").unwrap(),
+                    PackageName::from_str("aahelloxy").unwrap(),
+                ],
+                "aahello"
+            ),
+            vec![
+                (0 as u64, PackageName::from_str("aahello").unwrap()),
+                (1 as u64, PackageName::from_str("aahell").unwrap()),
+                (1 as u64, PackageName::from_str("aahellow").unwrap()),
+                (2 as u64, PackageName::from_str("aahelloxy").unwrap()),
+            ]
+        );
+    }
+}
