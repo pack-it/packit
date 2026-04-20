@@ -18,7 +18,7 @@ pub enum Script {
 }
 
 /// Represents a source, holding a URL and mirror URLs to the source code of a package.
-/// Also has a checksum to check the validity of the recieved source code.
+/// Also has a checksum to check the validity of the received source code.
 #[derive(Deserialize, Debug)]
 pub struct Source {
     pub url: String,
@@ -29,6 +29,7 @@ pub struct Source {
 
     #[serde(default)]
     pub skip_unpack: bool,
+    pub patches: HashMap<u32, Patch>,
 }
 
 /// Wrapper to differentiate between Single and Named sources in the metadata files.
@@ -37,4 +38,19 @@ pub struct Source {
 pub enum Sources {
     Single(Source),
     Named(HashMap<String, Source>),
+}
+
+/// Represents a patch to a source file, holding a URL, mirror URLs and a checksum to check validity.
+#[derive(Deserialize, Debug)]
+pub struct Patch {
+    pub url: String,
+    pub checksum: Checksum,
+    pub mirrors: Vec<String>,
+}
+
+impl Source {
+    /// Gets all patches of the source, sorted by id.
+    pub fn get_sorted_patches(&self) -> &HashMap<u32, Patch> {
+        &self.patches //TODO
+    }
 }

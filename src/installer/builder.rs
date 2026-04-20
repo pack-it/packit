@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+use bytes::Bytes;
 use std::{fs, path::Path};
 use tempfile::TempDir;
 use thiserror::Error;
@@ -128,52 +129,8 @@ impl<'a> Builder<'a> {
         // Get source from the package version
         let source = install_meta.version_metadata.get_source(&install_meta.target_bounds)?;
 
-        // Show download spinner
-        let spinner = Spinner::new();
-        spinner.show(format!("Downloading '{package_name}' from {}", &source.url));
-        let mut finish_message = format!("Downloading '{package_name}' from {} successful", &source.url);
-
         // Download the build files
-        let mut mirrors = source.mirrors.iter();
-        let mut response = requests::get(&source.url).map_err(BuilderError::RequestError);
-        if let Ok(status_response) = &response
-            && !status_response.status().is_success()
-        {
-            response = Err(BuilderError::RequestUnsuccessful(status_response.status()));
-        }
-
-        // Loop through mirrors for alternatives in case of error
-        while response.is_err()
-            && let Some(mirror) = mirrors.next()
-        {
-            // Update spinner for new download url
-            spinner.show(format!("Downloading '{package_name}' from alternative {}", &mirror));
-            finish_message = format!("Downloading '{package_name}' from alternative {} successful", &mirror);
-
-            // Get response from alternative mirror
-            response = requests::get(mirror).map_err(BuilderError::RequestError);
-
-            // Check if the response itself is unsuccessful
-            if let Ok(status_response) = &response
-                && !status_response.status().is_success()
-            {
-                response = Err(BuilderError::RequestUnsuccessful(status_response.status()));
-            }
-        }
-
-        // Get the bytes from the response
-        let bytes = response?.bytes()?;
-
-        // Calculate the checksum
-        let checksum = Checksum::from_bytes(&bytes);
-
-        // Check equality of checksum
-        if source.checksum != checksum {
-            return Err(BuilderError::ChecksumError);
-        }
-
-        // Finish download spinner
-        spinner.finish(finish_message);
+        let bytes = self.download_file(&source.url, &source.mirrors, &source.checksum, package_name)?;
 
         // Create temp directory to build in
         let build_directory = TempDir::new()?;
@@ -187,6 +144,14 @@ impl<'a> Builder<'a> {
             let file_name = url.path_segments().and_then(|mut x| x.next_back()).ok_or(BuilderError::EmptyUrlPath)?;
             let file_path = build_directory.path().join(file_name);
             fs::write(file_path, bytes)?;
+        }
+
+        // Apply patches
+        for (id, patch) in source.get_sorted_patches() {
+            let description = format!("patch {id}' of '{package_name}");
+            let bytes = self.download_file(&patch.url, &patch.mirrors, &patch.checksum, &description)?;
+
+            // TODO: apply patches
         }
 
         // Create build env
@@ -230,5 +195,57 @@ impl<'a> Builder<'a> {
         BinaryPatcher::new(self.config).patch_binaries_in(&destination_dir.as_ref().to_path_buf(), &package_id, installed_dependencies)?;
 
         Ok(())
+    }
+
+    /// Downloads a file from the url, or one of the mirrors. Checks against a checksum and shows a spinner.
+    fn download_file(&self, url: &str, mirrors: &Vec<String>, checksum: &Checksum, download_description: &str) -> Result<Bytes> {
+        // Show download spinner
+        let spinner = Spinner::new();
+        spinner.show(format!("Downloading '{download_description}' from {}", &url));
+        let mut finish_message = format!("Downloading '{download_description}' from {} successful", &url);
+
+        // Try to download from the main url
+        let mut mirrors = mirrors.iter();
+        let mut response = requests::get(url).map_err(BuilderError::RequestError);
+        if let Ok(status_response) = &response
+            && !status_response.status().is_success()
+        {
+            response = Err(BuilderError::RequestUnsuccessful(status_response.status()));
+        }
+
+        // Loop through mirrors for alternatives in case of error
+        while response.is_err()
+            && let Some(mirror) = mirrors.next()
+        {
+            // Update spinner with new download url
+            spinner.show(format!("Downloading '{download_description}' from alternative {}", &mirror));
+            finish_message = format!("Downloading '{download_description}' from alternative {} successful", &mirror);
+
+            // Get response from alternative mirror
+            response = requests::get(mirror).map_err(BuilderError::RequestError);
+
+            // Check if the response itself is unsuccessful
+            if let Ok(status_response) = &response
+                && !status_response.status().is_success()
+            {
+                response = Err(BuilderError::RequestUnsuccessful(status_response.status()));
+            }
+        }
+
+        // Get the bytes from the response
+        let bytes = response?.bytes()?;
+
+        // Calculate the checksum
+        let calculated_checksum = Checksum::from_bytes(&bytes);
+
+        // Check equality of checksum
+        if *checksum != calculated_checksum {
+            return Err(BuilderError::ChecksumError);
+        }
+
+        // Finish download spinner
+        spinner.finish(finish_message);
+
+        Ok(bytes)
     }
 }
