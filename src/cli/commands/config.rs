@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{collections::HashSet, path::PathBuf};
+use std::{collections::HashSet, path::PathBuf, process::exit};
 
 use clap::{ArgAction, Subcommand};
 use colored::Colorize;
 
 use crate::{
-    cli::{commands::HandleCommand, display::logging::warning},
+    cli::{
+        commands::HandleCommand,
+        display::logging::{error, warning},
+    },
     config::{Config, EditableConfig, Repository},
     repositories::{manager::RepositoryManager, metadata::DEFAULT_METADATA_PROVIDER_ID},
     storage::package_register::PackageRegister,
@@ -183,14 +186,14 @@ impl ConfigArgs {
         for repo in new_rank {
             // Check for invalid repository ids
             if !config.get_config().repositories.contains_key(repo) {
-                println!("Repository {repo} does not exist. Please add it to the config first.");
-                return;
+                error!(msg: "Repository {repo} does not exist. Please add it to the config first.");
+                exit(1);
             }
 
             // Check for duplicates
             if !seen.insert(repo) {
-                println!("The given repositories rank contains duplicates. Please remove duplicate repository ids.");
-                return;
+                error!(msg: "The given repositories rank contains duplicates. Please remove duplicate repository ids.");
+                exit(1);
             }
         }
 
