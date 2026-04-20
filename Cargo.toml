@@ -28,6 +28,7 @@ regex = "1.12.3"
 xz2 = "0.1.7"
 lief = { git = "https://github.com/lief-project/LIEF.git", rev = "1915b921dee222912880cfb8b1ddce0a00ca88cd" }
 url = "2.5.8"
+toml_edit = "0.25.11"
 
 # macOS and Linux dependencies
 [target.'cfg(any(target_os = "macos", target_os = "linux"))'.dependencies]

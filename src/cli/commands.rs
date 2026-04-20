@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 mod check;
+mod config;
 mod fix;
 mod info;
 mod install;
 mod link;
 mod list;
 mod package;
-mod repositories;
 mod search;
 mod switch;
 mod uninstall;
@@ -22,9 +22,9 @@ use clap::{Parser, Subcommand, builder::Styles};
 use crate::cli::display::logging::debug;
 use crate::cli::{
     commands::{
-        check::CheckArgs, fix::FixArgs, info::InfoArgs, install::InstallArgs, link::LinkArgs, list::ListArgs, package::PackageArgs,
-        repositories::RepositoryArgs, search::SearchArgs, switch::SwitchArgs, uninstall::UninstallArgs, unlink::UnlinkArgs,
-        update::UpdateArgs, util::UtilArgs,
+        check::CheckArgs, config::ConfigArgs, fix::FixArgs, info::InfoArgs, install::InstallArgs, link::LinkArgs, list::ListArgs,
+        package::PackageArgs, search::SearchArgs, switch::SwitchArgs, uninstall::UninstallArgs, unlink::UnlinkArgs, update::UpdateArgs,
+        util::UtilArgs,
     },
     display::logging::error,
 };
@@ -48,9 +48,6 @@ enum Commands {
 
     /// List all installed packages
     List(ListArgs),
-
-    /// List all configured repositories
-    Repositories(RepositoryArgs),
 
     /// Search a certain package
     Search(SearchArgs),
@@ -82,6 +79,10 @@ enum Commands {
     /// Several utils for advanced users
     #[clap(subcommand)]
     Util(UtilArgs),
+
+    /// Manages the Packit config file
+    #[clap(subcommand)]
+    Config(ConfigArgs),
 }
 
 impl Cli {
@@ -128,7 +129,6 @@ impl Cli {
             Commands::Install(args) => args,
             Commands::Uninstall(args) => args,
             Commands::List(args) => args,
-            Commands::Repositories(args) => args,
             Commands::Search(args) => args,
             Commands::Switch(args) => args,
             Commands::Link(args) => args,
@@ -139,6 +139,7 @@ impl Cli {
             Commands::Info(args) => args,
             Commands::Update(args) => args,
             Commands::Util(args) => args,
+            Commands::Config(args) => args,
         };
 
         args.handle();

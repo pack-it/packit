@@ -3,10 +3,12 @@ use std::{
     collections::HashMap,
     fs,
     path::{Path, PathBuf},
+    str::FromStr,
 };
 
 use serde::Deserialize;
 use thiserror::Error;
+use toml_edit::DocumentMut;
 
 use crate::{
     cli::display::logging::warning,
@@ -14,6 +16,12 @@ use crate::{
     repositories::metadata::DEFAULT_METADATA_PROVIDER_ID,
     utils::constants::CONFIG_FILENAME,
 };
+
+#[derive(Debug)]
+pub struct EditableConfig {
+    config: Config,
+    document: DocumentMut,
+}
 
 /// Represents the main config file of Packit.
 #[derive(Deserialize, Debug)]
@@ -80,7 +88,7 @@ pub enum ConfigError {
 pub type Result<T> = core::result::Result<T, ConfigError>;
 
 impl Config {
-    /// Loads a Packit config from a file.
+    /// Loads the Packit config from a file.
     ///
     /// # Errors
     ///
@@ -116,5 +124,98 @@ impl Config {
 
     fn default_multiuser() -> bool {
         false
+    }
+}
+
+impl EditableConfig {
+    /// Loads the Packit config from a file.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the file cannot be opened or if the content is invalid.
+    pub fn from(file_path: &Path) -> Result<Self> {
+        let config = Config::from(file_path)?;
+        let file_content = fs::read_to_string(file_path)?;
+        let document = DocumentMut::from_str(&file_content).unwrap();
+
+        Ok(Self { config, document })
+    }
+
+    /// Saves the Packit config to the given path.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the file cannot be written.
+    pub fn save_to(&self, path: &Path) -> Result<()> {
+        let data = self.document.to_string();
+
+        // Create parent directories
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        // Write data to file
+        fs::write(path, data)?;
+
+        Ok(())
+    }
+
+    /// Gets the actual config.
+    pub fn get_config(&self) -> &Config {
+        &self.config
+    }
+
+    /// Sets the repository with the given id.
+    pub fn set_repository(&mut self, id: &str, repository: Repository) {
+        let mut new_value = toml_edit::Table::new();
+        new_value["path"] = (&repository.path).into();
+        new_value["provider"] = (&repository.provider).into();
+        if let Some(prebuilds_url) = &repository.prebuilds_url {
+            new_value["prebuilds_url"] = prebuilds_url.into();
+        }
+        if let Some(prebuilds_provider) = &repository.prebuilds_provider {
+            new_value["prebuilds_provider"] = prebuilds_provider.into();
+        }
+        self.document["repositories"][id] = new_value.into();
+
+        self.config.repositories.insert(id.into(), repository);
+    }
+
+    /// Sets the repositories rank.
+    pub fn set_repositories_rank(&mut self, repositories_rank: Vec<String>) {
+        let mut new_value = toml_edit::Array::new();
+        for repo in &repositories_rank {
+            new_value.push(repo);
+        }
+        self.document["repositories_rank"] = new_value.into();
+
+        self.config.repositories_rank = repositories_rank;
+    }
+
+    /// Adds a value to the repositories rank.
+    pub fn add_to_repositories_rank(&mut self, repository_id: &str) {
+        let value = &mut self.document["repositories_rank"];
+        match value.is_none() {
+            true => {
+                let mut new_value = toml_edit::Array::new();
+                new_value.push(repository_id);
+                *value = new_value.into();
+            },
+            false => {
+                value.as_array_mut().expect("Expected repositories_rank to be an array!").push(repository_id);
+            },
+        }
+    }
+
+    /// Sets the prefix directory.
+    pub fn set_prefix_directory(&mut self, prefix_directory: PathBuf) {
+        self.document["prefix_directory"] = prefix_directory.display().to_string().into();
+        self.config.prefix_directory = prefix_directory;
+    }
+
+    /// Sets the multiuser mode.
+    pub fn set_multiuser(&mut self, multiuser: bool) {
+        self.document["multiuser"] = multiuser.into();
+        self.config.multiuser = multiuser;
     }
 }
