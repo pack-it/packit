@@ -12,7 +12,7 @@ use crate::{
         error::Result,
         metadata::{FILESYSTEM_METADATA_PROVIDER_ID, FileSystemMetadataProvider, WEB_METADATA_PROVIDER_ID, WebMetadataProvider},
         prebuilds::{DEFAULT_PREBUILD_PROVIDER_ID, FILESYSTEM_PREBUILD_PROVIDER_ID, FileSystemPrebuildProvider},
-        types::{Checksum, PackageMeta, PackageVersionMeta, RepositoryMeta},
+        types::{Checksum, IndexMeta, PackageMeta, PackageVersionMeta, RepositoryMeta},
     },
 };
 
@@ -20,6 +20,9 @@ use crate::{
 pub trait MetadataProvider {
     /// Reads repository metadata from the repository, containing information about the repository.
     fn read_repository_metadata(&self) -> Result<RepositoryMeta>;
+
+    /// Reads index metadata from the repository, containing all supported packages.
+    fn read_index_metadata(&self) -> Result<IndexMeta>;
 
     /// Reads package metadata from the repository, containing information about the package.
     fn read_package(&self, package: &PackageName) -> Result<PackageMeta>;
