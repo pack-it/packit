@@ -8,7 +8,7 @@ use crate::{
     installer::types::OptionalPackageId,
     platforms::Target,
     repositories::{error::RepositoryError, manager::RepositoryManager},
-    utils::unwrap_or_exit::UnwrapOrExit,
+    utils::{fuzzy::repository_fuzzy_search, unwrap_or_exit::UnwrapOrExit},
 };
 
 /// Searches a package with <PACKAGE-NAME> and shows information based on the package metadata.
@@ -27,7 +27,13 @@ impl HandleCommand for SearchArgs {
         let (repository_id, package) = match manager.read_package(&self.optional_id.name) {
             Ok(package) => package,
             Err(RepositoryError::PackageNotFoundError { .. }) => {
-                println!("Cannot find package {}", self.optional_id.name);
+                println!("Cannot find package '{}'", self.optional_id.name);
+
+                let fuzzy_match = repository_fuzzy_search(&config, &manager, &self.optional_id.name).unwrap_or_exit(1);
+                if let Some(fuzzy_match) = fuzzy_match {
+                    println!("Did you mean: '{fuzzy_match}'");
+                }
+
                 return;
             },
             Err(e) => {

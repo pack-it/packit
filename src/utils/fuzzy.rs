@@ -1,21 +1,66 @@
 use std::cmp;
 
+use crate::{
+    config::Config,
+    installer::types::PackageName,
+    repositories::{error::RepositoryError, manager::RepositoryManager},
+};
+
 const FUZZY_THRESHOLD: f64 = 0.25;
+
+/// Does a fuzzy search against the repository index.toml.
+/// Returns a `RepositoryError` for repository related errors
+/// or optionally a `PackageName` if a fuzzy match can be found.
+pub fn repository_fuzzy_search(
+    config: &Config,
+    manager: &RepositoryManager,
+    package_name: &PackageName,
+) -> Result<Option<PackageName>, RepositoryError> {
+    let mut best_word: Option<PackageName> = None;
+    let mut best_distance: Option<u64> = None;
+    for repository_id in &config.repositories_rank {
+        let repository_index = manager.read_index_metadata(&repository_id)?;
+
+        let fuzzy_matches = fuzzy_search(repository_index.supported_packages, package_name.as_str());
+        for (distance, fuzzy_match) in fuzzy_matches {
+            match manager.read_package(&fuzzy_match) {
+                Ok(_) => {},
+                Err(RepositoryError::PackageNotFoundError { .. }) => continue,
+                Err(e) => return Err(e),
+            }
+
+            if let Some(current_distance) = best_distance {
+                if distance < current_distance {
+                    best_distance = Some(distance);
+                    best_word = Some(fuzzy_match)
+                }
+            } else {
+                best_distance = Some(distance);
+                best_word = Some(fuzzy_match);
+            }
+        }
+    }
+
+    Ok(best_word)
+}
 
 /// Does a fuzzy search for a string in a list strings. Strings which are underneath the `FUZZY_THRESHOLD`
 /// or have a levenshtein distance lower than 1 are a match.
 /// Returns a Vec of tuples which are pairs of words and their distance (distance, word).
-pub fn fuzzy_search(words: Vec<&str>, string: &str) -> Vec<(u64, String)> {
+pub fn fuzzy_search<'a, I>(words: I, string: &str) -> Vec<(u64, PackageName)>
+where
+    I: IntoIterator<Item = PackageName>,
+{
     let mut fuzzy_matches = Vec::new();
 
     for word in words {
-        let distance = calculate_distance(word, string);
+        let distance = calculate_distance(word.as_str(), string);
 
         // Add word to `fuzzy_matches` if the distance is <= 1 or relative distance < `FUZZY_THRESHOLD`
-        let max_length = cmp::max(word.len(), string.len());
+        let max_length = cmp::max(word.as_str().len(), string.len());
         let relative_distance = distance as f64 / max_length as f64;
         if distance <= 1 || relative_distance < FUZZY_THRESHOLD {
-            fuzzy_matches.push((distance, word.to_string()));
+            fuzzy_matches.push((distance, word));
         }
     }
 
