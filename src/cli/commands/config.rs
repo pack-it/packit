@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 // SPDX-License-Identifier: GPL-3.0-only
-use clap::Subcommand;
+use clap::{ArgAction, Subcommand};
 use colored::Colorize;
 
 use crate::{
@@ -22,6 +22,13 @@ pub enum ConfigArgs {
     SetPrefix {
         /// The new prefix to use
         new_prefix: PathBuf,
+    },
+
+    /// Changes the multiuser setting to the given new state
+    SetMultiuser {
+        /// The new multiuser setting
+        #[arg(action = ArgAction::Set)]
+        multiuser: bool,
     },
 
     /// Manages the repositories in the config
@@ -56,6 +63,7 @@ impl HandleCommand for ConfigArgs {
         match self {
             ConfigArgs::Show => self.handle_show(config),
             ConfigArgs::SetPrefix { new_prefix } => self.handle_set_prefix(config, new_prefix),
+            ConfigArgs::SetMultiuser { multiuser } => self.handle_set_multiuser(config, *multiuser),
             ConfigArgs::Repositories(RepositoriesArgs::List) => self.handle_list_repositories(config),
             ConfigArgs::Repositories(RepositoriesArgs::Add { id, url, provider }) => self.handle_add_repository(config, id, url, provider),
         }
@@ -99,6 +107,36 @@ impl ConfigArgs {
         config.save_to(&Config::get_default_path()).unwrap_or_exit_msg("Cannot save config file", 1);
 
         println!("Succesfully changed the prefix directory to {}!", new_prefix.display());
+    }
+
+    /// Handles the config set-multiuser command
+    fn handle_set_multiuser(&self, mut config: EditableConfig, multiuser: bool) {
+        if config.get_config().multiuser == multiuser {
+            println!("The multiuser setting is already set to this state!");
+            return;
+        }
+
+        let register_dir = PackageRegister::get_default_path(&config.get_config());
+        let register = PackageRegister::from(&register_dir).unwrap_or_exit_msg("Cannot read package register", 1);
+
+        // Check if there are installed packages
+        if register.iterate_all().count() > 0 {
+            println!(
+                "There are currently installed packages, changing the multiuser setting when packages are installed is currently not supported!"
+            );
+            return;
+        }
+
+        config.set_multiuser(multiuser);
+
+        config.save_to(&Config::get_default_path()).unwrap_or_exit_msg("Cannot save config file", 1);
+
+        print!("Succesfully changed the multiuser setting to ");
+        if multiuser {
+            println!("on!");
+        } else {
+            println!("off!");
+        }
     }
 
     /// Handles the config repositories list command
