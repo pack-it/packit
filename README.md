@@ -50,9 +50,6 @@ Uninstalls the specified packages, if a version is given that version will be un
 #### `pit list`
 Lists all the installed packages.
 
-#### `pit repositories`
-Lists all configured repositories.
-
 #### `pit search <PACKAGE-NAME>[@<VERSION>]`
 Searches a package with `<PACKAGE-NAME>` and shows information based on the package metadata. If the version is given that specific version is searched for.
 
@@ -83,8 +80,24 @@ Packages the specified package into a prebuild and stores it in the destination 
 #### `pit util checksum <URL>`
 Calculates the checksum of the file at the given url.
 
+#### `pit config show`
+Shows the current configuration.
+
+#### `pit config set-prefix <NEW-PREFIX>`
+Sets the prefix to the given directory. Currently not supported when there are already installed packages.
+
+#### `pit config set-multiuser <MULTIUSER>`
+Sets the multiuser setting to true or false. Currently not supported when there are already installed packages.
+
+#### `pit config repositories list`
+Lists all configured repositories.
+
+#### `pit config repositories add <ID> <URL> [PROVIDER]`
+Adds a new repository to the config. Also adds the new repository to the repositories rank.
+
 
 ## Config
+All available fields in the config are listed below. The [`pit config`](#pit-config-show) command can also be used to change the config.
 
 | Field               | Explanation                                                                                                                  |
 |---------------------|------------------------------------------------------------------------------------------------------------------------------|

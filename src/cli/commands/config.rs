@@ -1,6 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use std::path::PathBuf;
 
-// SPDX-License-Identifier: GPL-3.0-only
 use clap::{ArgAction, Subcommand};
 use colored::Colorize;
 
