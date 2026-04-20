@@ -92,6 +92,9 @@ Sets the multiuser setting to true or false. Currently not supported when there 
 #### `pit config repositories list`
 Lists all configured repositories.
 
+#### `pit config repositories set-rank <REPOSITORY-ID>`
+Sets the repositories rank in the config. Multiple `<REPOSITORY-ID>` can be given for multiple repositories in the rank.
+
 #### `pit config repositories add <ID> <URL> [PROVIDER]`
 Adds a new repository to the config. Also adds the new repository to the repositories rank.
 

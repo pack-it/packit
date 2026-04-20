@@ -42,6 +42,13 @@ pub enum RepositoriesArgs {
     /// Lists all configured repositories
     List,
 
+    /// Sets the repositories rank
+    SetRank {
+        /// The new rank to set
+        #[arg(required = true)]
+        new_rank: Vec<String>,
+    },
+
     /// Adds a new repository to the config
     Add {
         /// The id of the new repository
@@ -65,6 +72,7 @@ impl HandleCommand for ConfigArgs {
             ConfigArgs::SetPrefix { new_prefix } => self.handle_set_prefix(config, new_prefix),
             ConfigArgs::SetMultiuser { multiuser } => self.handle_set_multiuser(config, *multiuser),
             ConfigArgs::Repositories(RepositoriesArgs::List) => self.handle_list_repositories(config),
+            ConfigArgs::Repositories(RepositoriesArgs::SetRank { new_rank }) => self.handle_set_repositories_rank(config, new_rank),
             ConfigArgs::Repositories(RepositoriesArgs::Add { id, url, provider }) => self.handle_add_repository(config, id, url, provider),
         }
     }
@@ -166,6 +174,22 @@ impl ConfigArgs {
             println!("Maintainers: {}", metadata.maintainers.join(", "));
             println!("Repository provider: {}, path: {}", repository.provider, repository.path);
         }
+    }
+
+    /// Handles the config repositories set-rank command
+    fn handle_set_repositories_rank(&self, mut config: EditableConfig, new_rank: &Vec<String>) {
+        for repo in new_rank {
+            if !config.get_config().repositories.contains_key(repo) {
+                println!("Repository {repo} does not exist. Please add it to the config first.");
+                return;
+            }
+        }
+
+        config.set_repositories_rank(new_rank.clone());
+
+        config.save_to(&Config::get_default_path()).unwrap_or_exit_msg("Cannot save config file", 1);
+
+        println!("Succesfully set the repository rank to '{}'!", new_rank.join(", "));
     }
 
     /// Handles the config repositories add command
