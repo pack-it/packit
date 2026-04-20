@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::path::PathBuf;
+use std::{collections::HashSet, path::PathBuf};
 
 use clap::{ArgAction, Subcommand};
 use colored::Colorize;
@@ -63,7 +63,7 @@ pub enum RepositoriesArgs {
 }
 
 impl HandleCommand for ConfigArgs {
-    /// Handles the config command
+    /// Handles the config command.
     fn handle(&self) {
         let config = EditableConfig::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
 
@@ -94,7 +94,7 @@ impl ConfigArgs {
         println!("Repositories rank: {}", config.repositories_rank.join(", "));
     }
 
-    /// Handles the config set-prefix command
+    /// Handles the config set-prefix command.
     fn handle_set_prefix(&self, mut config: EditableConfig, new_prefix: &PathBuf) {
         if config.get_config().prefix_directory == *new_prefix {
             println!("The prefix directory is already set to this path!");
@@ -117,7 +117,7 @@ impl ConfigArgs {
         println!("Succesfully changed the prefix directory to {}!", new_prefix.display());
     }
 
-    /// Handles the config set-multiuser command
+    /// Handles the config set-multiuser command.
     fn handle_set_multiuser(&self, mut config: EditableConfig, multiuser: bool) {
         if config.get_config().multiuser == multiuser {
             println!("The multiuser setting is already set to this state!");
@@ -147,11 +147,12 @@ impl ConfigArgs {
         }
     }
 
-    /// Handles the config repositories list command
+    /// Handles the config repositories list command.
     fn handle_list_repositories(&self, config: EditableConfig) {
         let config = config.get_config();
         let manager = RepositoryManager::new(config);
         for (index, (repository_id, repository)) in config.repositories.iter().enumerate() {
+            // Print a newline between the different repositories
             if index != 0 {
                 println!();
             }
@@ -176,11 +177,19 @@ impl ConfigArgs {
         }
     }
 
-    /// Handles the config repositories set-rank command
+    /// Handles the config repositories set-rank command.
     fn handle_set_repositories_rank(&self, mut config: EditableConfig, new_rank: &Vec<String>) {
+        let mut seen = HashSet::new();
         for repo in new_rank {
+            // Check for invalid repository ids
             if !config.get_config().repositories.contains_key(repo) {
                 println!("Repository {repo} does not exist. Please add it to the config first.");
+                return;
+            }
+
+            // Check for duplicates
+            if !seen.insert(repo) {
+                println!("The given repositories rank contains duplicates. Please remove duplicate repository ids.");
                 return;
             }
         }
@@ -192,7 +201,7 @@ impl ConfigArgs {
         println!("Succesfully set the repository rank to '{}'!", new_rank.join(", "));
     }
 
-    /// Handles the config repositories add command
+    /// Handles the config repositories add command.
     fn handle_add_repository(&self, mut config: EditableConfig, id: &str, url: &str, provider: &Option<String>) {
         let provider = match provider {
             Some(provider) => provider,
