@@ -407,6 +407,7 @@ pub mod tests {
                 checksum: Checksum { sha256: [0; 32] },
                 mirrors: Vec::new(),
                 skip_unpack: false,
+                apply_patches_in: None,
                 patches: HashMap::new(),
             }),
             license: Licenses::Unknown,

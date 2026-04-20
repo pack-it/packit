@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use bytes::Bytes;
-use std::{fs, path::Path};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 use tempfile::TempDir;
 use thiserror::Error;
 use url::Url;
@@ -146,10 +149,22 @@ impl<'a> Builder<'a> {
             fs::write(file_path, bytes)?;
         }
 
+        // Construct default apply directory for patches
+        let mut apply_directory = build_directory.path().to_path_buf();
+        if let Some(apply_in) = &source.apply_patches_in {
+            apply_directory = apply_directory.join(PathBuf::from(apply_in));
+        }
+
         // Apply patches
         for (id, patch) in source.get_sorted_patches() {
             let description = format!("patch {id}' of '{package_name}");
             let bytes = self.download_file(&patch.url, &patch.mirrors, &patch.checksum, &description)?;
+
+            // Construct apply directory for this patch
+            let mut apply_directory = &apply_directory;
+            if let Some(apply_in) = &patch.apply_in {
+                apply_directory = &apply_directory.join(PathBuf::from(apply_in));
+            }
 
             // TODO: apply patches
         }

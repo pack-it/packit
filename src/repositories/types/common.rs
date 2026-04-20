@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::collections::HashMap;
 
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer, de};
 
 use crate::repositories::types::Checksum;
 
@@ -29,6 +29,9 @@ pub struct Source {
 
     #[serde(default)]
     pub skip_unpack: bool,
+    pub apply_patches_in: Option<String>,
+
+    #[serde(deserialize_with = "Source::deserialize_patches")]
     pub patches: HashMap<u32, Patch>,
 }
 
@@ -46,11 +49,27 @@ pub struct Patch {
     pub url: String,
     pub checksum: Checksum,
     pub mirrors: Vec<String>,
+    pub apply_in: Option<String>,
 }
 
 impl Source {
     /// Gets all patches of the source, sorted by id.
     pub fn get_sorted_patches(&self) -> &HashMap<u32, Patch> {
         &self.patches //TODO
+    }
+
+    /// Custom deserializer to deserialize integer keys correctly
+    fn deserialize_patches<'de, D>(deserializer: D) -> Result<HashMap<u32, Patch>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let map = HashMap::<String, Patch>::deserialize(deserializer)?;
+
+        map.into_iter()
+            .map(|(key, value)| match key.parse() {
+                Ok(key) => Ok((key, value)),
+                Err(_) => Err(de::Error::invalid_value(de::Unexpected::Str(&key), &"a non-negative integer")),
+            })
+            .collect()
     }
 }
