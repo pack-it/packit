@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 // SPDX-License-Identifier: GPL-3.0-only
 use clap::Subcommand;
 use colored::Colorize;
@@ -6,6 +8,7 @@ use crate::{
     cli::{commands::HandleCommand, display::logging::warning},
     config::{Config, EditableConfig, Repository},
     repositories::{manager::RepositoryManager, metadata::DEFAULT_METADATA_PROVIDER_ID},
+    storage::package_register::PackageRegister,
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
@@ -14,6 +17,12 @@ use crate::{
 pub enum ConfigArgs {
     /// Shows the current configuration
     Show,
+
+    /// Changes the prefix directory to the given path
+    SetPrefix {
+        /// The new prefix to use
+        new_prefix: PathBuf,
+    },
 
     /// Manages the repositories in the config
     #[clap(subcommand)]
@@ -46,6 +55,7 @@ impl HandleCommand for ConfigArgs {
 
         match self {
             ConfigArgs::Show => self.handle_show(config),
+            ConfigArgs::SetPrefix { new_prefix } => self.handle_set_prefix(config, new_prefix),
             ConfigArgs::Repositories(RepositoriesArgs::List) => self.handle_list_repositories(config),
             ConfigArgs::Repositories(RepositoriesArgs::Add { id, url, provider }) => self.handle_add_repository(config, id, url, provider),
         }
@@ -66,6 +76,29 @@ impl ConfigArgs {
         }
 
         println!("Repositories rank: {}", config.repositories_rank.join(", "));
+    }
+
+    /// Handles the config set-prefix command
+    fn handle_set_prefix(&self, mut config: EditableConfig, new_prefix: &PathBuf) {
+        if config.get_config().prefix_directory == *new_prefix {
+            println!("The prefix directory is already set to this path!");
+            return;
+        }
+
+        let register_dir = PackageRegister::get_default_path(&config.get_config());
+        let register = PackageRegister::from(&register_dir).unwrap_or_exit_msg("Cannot read package register", 1);
+
+        // Check if there are installed packages
+        if register.iterate_all().count() > 0 {
+            println!("There are currently installed packages, changing the prefix when packages are installed is currently not supported!");
+            return;
+        }
+
+        config.set_prefix_directory(new_prefix.clone());
+
+        config.save_to(&Config::get_default_path()).unwrap_or_exit_msg("Cannot save config file", 1);
+
+        println!("Succesfully changed the prefix directory to {}!", new_prefix.display());
     }
 
     /// Handles the config repositories list command
