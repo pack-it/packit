@@ -1,15 +1,20 @@
+use std::process::exit;
+
 // SPDX-License-Identifier: GPL-3.0-only
 use clap::Args;
 
 use crate::{
-    cli::{commands::HandleCommand, display::logging::warning},
+    cli::{
+        commands::HandleCommand,
+        display::logging::{error, warning},
+    },
     config::Config,
     installer::{
         Symlinker,
         types::{PackageName, Version},
     },
     storage::package_register::PackageRegister,
-    utils::unwrap_or_exit::UnwrapOrExit,
+    utils::{fuzzy::min_fuzzy_search, unwrap_or_exit::UnwrapOrExit},
 };
 
 /// Switches the active version of the specified package to the specified version.
@@ -33,9 +38,19 @@ impl HandleCommand for SwitchArgs {
         let mut register = PackageRegister::from(&register_path).unwrap_or_exit(1);
 
         // Get installed package
-        let package = register
-            .get_package(&self.package_name)
-            .unwrap_or_exit_msg(&format!("Package {} is not installed!", self.package_name), 1);
+        let package = match register.get_package(&self.package_name) {
+            Some(package) => package,
+            None => {
+                error!(msg: "Package {} is not installed!", self.package_name);
+
+                let fuzzy_match = min_fuzzy_search(register.iterate_package_names(), &self.package_name);
+                if let Some(fuzzy_match) = fuzzy_match {
+                    println!("Did you mean: '{fuzzy_match}'?");
+                }
+
+                exit(1);
+            },
+        };
 
         // Check if the package version is already active
         if package.active_version == self.package_version {
@@ -44,10 +59,25 @@ impl HandleCommand for SwitchArgs {
         }
 
         // Get installed package version
-        let package_version = package.get_package_version(&self.package_version).unwrap_or_exit_msg(
-            &format!("Package {}@{} is not installed!", self.package_name, self.package_version),
-            1,
-        );
+        let package_version = match package.get_package_version(&self.package_version) {
+            Some(package_version) => package_version,
+            None => {
+                error!(msg: "Package '{}' cannot be found.", self.package_version);
+
+                // Show possible versions if a package with the given name exists
+                if let Some(package_name) = register.get_package(&self.package_name) {
+                    let versions = package_name.versions.keys();
+                    print!("Did you mean version(s): ");
+                    for version in versions {
+                        print!("'{version}' ");
+                    }
+                    println!();
+                    return;
+                }
+
+                exit(1);
+            },
+        };
 
         // Show warning if skip symlinking is specified, but package was symlinked before
         if self.skip_symlinking && package.symlinked {

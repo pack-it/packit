@@ -1,12 +1,14 @@
+use std::process::exit;
+
 // SPDX-License-Identifier: GPL-3.0-only
 use clap::Args;
 
 use crate::{
-    cli::commands::HandleCommand,
+    cli::{commands::HandleCommand, display::logging::error},
     config::Config,
     installer::{Symlinker, types::PackageName},
     storage::package_register::PackageRegister,
-    utils::unwrap_or_exit::UnwrapOrExit,
+    utils::{fuzzy::min_fuzzy_search, unwrap_or_exit::UnwrapOrExit},
 };
 
 /// Unlinks the specified package, causing the package to be unavailable from the PATH environment variable.
@@ -23,9 +25,19 @@ impl HandleCommand for UnlinkArgs {
         let mut register = PackageRegister::from(&register_path).unwrap_or_exit(1);
 
         // Get installed package
-        let package = register
-            .get_package(&self.package_name)
-            .unwrap_or_exit_msg(&format!("Package {} is not installed!", self.package_name), 1);
+        let package = match register.get_package(&self.package_name) {
+            Some(package) => package,
+            None => {
+                error!(msg: "Package {} is not installed!", self.package_name);
+
+                let fuzzy_match = min_fuzzy_search(register.iterate_package_names(), &self.package_name);
+                if let Some(fuzzy_match) = fuzzy_match {
+                    println!("Did you mean: '{fuzzy_match}'?");
+                }
+
+                exit(1);
+            },
+        };
 
         // Check if the package is already symlinked
         if !package.symlinked {
