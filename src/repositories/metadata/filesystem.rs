@@ -41,6 +41,7 @@ impl MetadataProvider for FileSystemMetadataProvider {
     /// Reads a file and returns its content as a string. If the file doesn't exist Ok(None) is returned.
     /// Returns an IO error if `fs::read_to_string` fails.
     fn read_file(&self, package: &PackageName, file_path: &str) -> Result<Option<String>> {
+        let file_path = PathBuf::from(file_path);
         let path = self.path.join("packages").join(package.to_string()).join(file_path);
 
         if !fs::exists(&path)? {

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::collections::HashMap;
+use std::{collections::HashMap, path::PathBuf};
 
 use bytes::Bytes;
 
@@ -192,7 +192,7 @@ impl<'a> RepositoryManager<'a> {
 
     /// Reads a file of the given package from the given repository.
     /// Returns the file as a string.
-    pub fn read_file(&self, repository_id: &str, package: &PackageName, script_path: &str) -> Result<Option<String>> {
+    pub fn read_file(&self, repository_id: &str, package: &PackageName, file_path: &str) -> Result<Option<String>> {
         let provider = match self.metadata_providers.get(repository_id) {
             Some(provider) => provider,
             None => {
@@ -202,7 +202,7 @@ impl<'a> RepositoryManager<'a> {
             },
         };
 
-        provider.read_file(package, script_path)
+        provider.read_file(package, file_path)
     }
 
     /// Retrieves the prebuild url for the given package version.
