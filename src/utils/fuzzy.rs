@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use std::cmp;
 
 use crate::{
@@ -44,23 +45,49 @@ pub fn repository_fuzzy_search(
     Ok(best_word)
 }
 
+/// Wraps around the `fuzzy_search` method and gets the fuzzy match with
+/// the lowest distance to the given string.
+/// Returns None if there are no fuzzy matches and a `PackageName` if there is at least one fuzzy match.
+pub fn min_fuzzy_search<'a, I>(words: I, string: &str) -> Option<PackageName>
+where
+    I: IntoIterator,
+    I::Item: AsRef<PackageName>,
+{
+    let mut best_word: Option<PackageName> = None;
+    let mut best_distance: Option<u64> = None;
+    for (distance, fuzzy_match) in fuzzy_search(words, string) {
+        if let Some(current_distance) = best_distance {
+            if distance < current_distance {
+                best_distance = Some(distance);
+                best_word = Some(fuzzy_match)
+            }
+        } else {
+            best_distance = Some(distance);
+            best_word = Some(fuzzy_match);
+        }
+    }
+
+    best_word
+}
+
 /// Does a fuzzy search for a string in a list strings. Strings which are underneath the `FUZZY_THRESHOLD`
 /// or have a levenshtein distance lower than 1 are a match.
 /// Returns a Vec of tuples which are pairs of words and their distance (distance, word).
 pub fn fuzzy_search<'a, I>(words: I, string: &str) -> Vec<(u64, PackageName)>
 where
-    I: IntoIterator<Item = PackageName>,
+    I: IntoIterator,
+    I::Item: AsRef<PackageName>,
 {
     let mut fuzzy_matches = Vec::new();
 
     for word in words {
-        let distance = calculate_distance(word.as_str(), string);
+        let distance = calculate_distance(word.as_ref().as_str(), string);
 
         // Add word to `fuzzy_matches` if the distance is <= 1 or relative distance < `FUZZY_THRESHOLD`
-        let max_length = cmp::max(word.as_str().len(), string.len());
+        let max_length = cmp::max(word.as_ref().as_str().len(), string.len());
         let relative_distance = distance as f64 / max_length as f64;
         if distance <= 1 || relative_distance < FUZZY_THRESHOLD {
-            fuzzy_matches.push((distance, word));
+            fuzzy_matches.push((distance, word.as_ref().clone()));
         }
     }
 
@@ -124,18 +151,18 @@ mod tests {
     #[test]
     fn test_fuzzy_search() {
         assert_eq!(
-            fuzzy_search(vec![PackageName::from_str("hello").unwrap()], "hello"),
+            fuzzy_search(vec![&PackageName::from_str("hello").unwrap()], "hello"),
             vec![(0 as u64, PackageName::from_str("hello").unwrap())]
         );
 
         assert_eq!(
             fuzzy_search(
                 vec![
-                    PackageName::from_str("aahello").unwrap(),
-                    PackageName::from_str("aahell").unwrap(),
-                    PackageName::from_str("aahellow").unwrap(),
-                    PackageName::from_str("aahelloxyz").unwrap(),
-                    PackageName::from_str("aahelloxy").unwrap(),
+                    &PackageName::from_str("aahello").unwrap(),
+                    &PackageName::from_str("aahell").unwrap(),
+                    &PackageName::from_str("aahellow").unwrap(),
+                    &PackageName::from_str("aahelloxyz").unwrap(),
+                    &PackageName::from_str("aahelloxy").unwrap(),
                 ],
                 "aahello"
             ),

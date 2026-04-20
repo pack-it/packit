@@ -31,7 +31,7 @@ impl HandleCommand for SearchArgs {
 
                 let fuzzy_match = repository_fuzzy_search(&config, &manager, &self.optional_id.name).unwrap_or_exit(1);
                 if let Some(fuzzy_match) = fuzzy_match {
-                    println!("Did you mean: '{fuzzy_match}'");
+                    println!("Did you mean: '{fuzzy_match}'?");
                 }
 
                 return;
