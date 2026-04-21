@@ -87,3 +87,61 @@ impl From<u32> for VersionNumber {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn from_str() {
+        let correct_version = VersionNumber {
+            original: String::from("3"),
+            number: 3,
+        };
+
+        match VersionNumber::from_str("3") {
+            Ok(version) => assert_eq!(version, correct_version),
+            Err(e) => panic!("Expected Ok(VersionNumber(..)), got Err({e:?})"),
+        }
+    }
+
+    #[test]
+    fn from_str_leading_zeros() {
+        let correct_version = VersionNumber {
+            original: String::from("03"),
+            number: 3,
+        };
+
+        match VersionNumber::from_str("03") {
+            Ok(version) => assert_eq!(version, correct_version),
+            Err(e) => panic!("Expected Ok(VersionNumber(original: 03, number: 3)), got Err({e:?})"),
+        }
+    }
+
+    #[test]
+    fn compare() {
+        let version_a = VersionNumber::from_str("03").unwrap();
+        let version_b = VersionNumber::from_str("03").unwrap();
+        let version_c = VersionNumber::from_str("0000003").unwrap();
+        let version_d = VersionNumber::from_str("02").unwrap();
+        let version_e = VersionNumber::from_str("04").unwrap();
+
+        assert!(version_a == version_b);
+        assert!(version_a == version_c);
+        assert!(version_a <= version_c);
+        assert!(version_a > version_d);
+        assert!(version_a < version_e);
+        assert!(version_d < version_c);
+        assert!(version_e > version_c);
+    }
+
+    #[test]
+    fn format() {
+        let version = VersionNumber {
+            original: String::from("03"),
+            number: 3,
+        };
+
+        assert_eq!(version.to_string(), "03");
+    }
+}
