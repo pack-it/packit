@@ -12,7 +12,7 @@ use crate::{
     installer::types::PackageId,
     packager::{self},
     storage::package_register::PackageRegister,
-    utils::{fuzzy::min_fuzzy_search, unwrap_or_exit::UnwrapOrExit},
+    utils::{fuzzy, unwrap_or_exit::UnwrapOrExit},
 };
 
 /// Packages the specified package into a prebuild and store it in the destination directory, together with a checksum of the prebuild.
@@ -47,7 +47,7 @@ impl HandleCommand for PackageArgs {
                     return;
                 }
 
-                let fuzzy_match = min_fuzzy_search(register.iterate_package_names(), &self.package_id.name);
+                let fuzzy_match = fuzzy::min_search(register.iterate_package_names(), &self.package_id.name);
                 if let Some(fuzzy_match) = fuzzy_match {
                     println!("Did you mean: '{fuzzy_match}'?");
                 }

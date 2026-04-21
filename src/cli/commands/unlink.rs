@@ -8,7 +8,7 @@ use crate::{
     config::Config,
     installer::{Symlinker, types::PackageName},
     storage::package_register::PackageRegister,
-    utils::{fuzzy::min_fuzzy_search, unwrap_or_exit::UnwrapOrExit},
+    utils::{fuzzy, unwrap_or_exit::UnwrapOrExit},
 };
 
 /// Unlinks the specified package, causing the package to be unavailable from the PATH environment variable.
@@ -30,7 +30,7 @@ impl HandleCommand for UnlinkArgs {
             None => {
                 error!(msg: "Package {} is not installed!", self.package_name);
 
-                let fuzzy_match = min_fuzzy_search(register.iterate_package_names(), &self.package_name);
+                let fuzzy_match = fuzzy::min_search(register.iterate_package_names(), &self.package_name);
                 if let Some(fuzzy_match) = fuzzy_match {
                     println!("Did you mean: '{fuzzy_match}'?");
                 }

@@ -14,7 +14,7 @@ use crate::{
         types::{PackageName, Version},
     },
     storage::package_register::PackageRegister,
-    utils::{fuzzy::min_fuzzy_search, unwrap_or_exit::UnwrapOrExit},
+    utils::{fuzzy, unwrap_or_exit::UnwrapOrExit},
 };
 
 /// Switches the active version of the specified package to the specified version.
@@ -43,7 +43,7 @@ impl HandleCommand for SwitchArgs {
             None => {
                 error!(msg: "Package {} is not installed!", self.package_name);
 
-                let fuzzy_match = min_fuzzy_search(register.iterate_package_names(), &self.package_name);
+                let fuzzy_match = fuzzy::min_search(register.iterate_package_names(), &self.package_name);
                 if let Some(fuzzy_match) = fuzzy_match {
                     println!("Did you mean: '{fuzzy_match}'?");
                 }
@@ -62,7 +62,7 @@ impl HandleCommand for SwitchArgs {
         let package_version = match package.get_package_version(&self.package_version) {
             Some(package_version) => package_version,
             None => {
-                error!(msg: "Package '{}' cannot be found.", self.package_version);
+                error!(msg: "Package '{}@{}' cannot be found.", self.package_name, self.package_version);
 
                 // Show possible versions if a package with the given name exists
                 if let Some(package_name) = register.get_package(&self.package_name) {

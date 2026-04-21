@@ -8,7 +8,7 @@ use crate::{
     config::Config,
     installer::types::PackageId,
     storage::package_register::PackageRegister,
-    utils::{fuzzy::min_fuzzy_search, unwrap_or_exit::UnwrapOrExit},
+    utils::{fuzzy, unwrap_or_exit::UnwrapOrExit},
     verifier::Verifier,
 };
 
@@ -44,7 +44,7 @@ impl HandleCommand for CheckArgs {
                     return;
                 }
 
-                let fuzzy_match = min_fuzzy_search(register.iterate_package_names(), &package_id.name);
+                let fuzzy_match = fuzzy::min_search(register.iterate_package_names(), &package_id.name);
                 if let Some(fuzzy_match) = fuzzy_match {
                     println!("Did you mean: '{fuzzy_match}'?");
                 }

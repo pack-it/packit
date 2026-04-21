@@ -13,7 +13,7 @@ use crate::{
     platforms::Target,
     repositories::manager::RepositoryManager,
     storage::package_register::PackageRegister,
-    utils::{fuzzy::min_fuzzy_search, unwrap_or_exit::UnwrapOrExit},
+    utils::{fuzzy, unwrap_or_exit::UnwrapOrExit},
 };
 
 /// Updates the specified package to the new version, or the latest version if no new version is specified.
@@ -54,7 +54,7 @@ impl HandleCommand for UpdateArgs {
         if register.get_package(&self.optional_id.name).is_none() {
             error!(msg: "Package '{}' cannot be found.", self.optional_id.name);
 
-            let fuzzy_match = min_fuzzy_search(register.iterate_package_names(), &self.optional_id.name);
+            let fuzzy_match = fuzzy::min_search(register.iterate_package_names(), &self.optional_id.name);
             if let Some(fuzzy_match) = fuzzy_match {
                 println!("Did you mean: '{fuzzy_match}'?");
             }
