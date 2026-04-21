@@ -6,6 +6,7 @@ mod package_name;
 mod version;
 mod version_bounds;
 mod version_intervals;
+mod version_number;
 
 pub use dependency::Dependency;
 
