@@ -15,14 +15,17 @@ use crate::installer::types::version_number::VersionNumber;
 /// Errors that occur when parsing version related structs.
 #[derive(Error, Debug)]
 pub enum VersionError {
-    #[error("Version is none or part of version is none.")]
+    #[error("Version is none")]
     NoneError,
 
-    #[error("Version number contains a character which is not a digit or a dot.")]
+    #[error("Version number contains a character which is not a digit or a dot")]
     IllegalCharacterError,
 
-    #[error("Invalid version interval, an interval must be ordered and not overlapping.")]
+    #[error("Invalid version interval, an interval must be ordered and not overlapping")]
     InvalidInterval,
+
+    #[error("Multiple leading, trailing or consecutive dots are not allowed in version number")]
+    DotsError,
 
     #[error("Couldn't parse version number")]
     ParseError(#[from] ParseIntError),
@@ -139,7 +142,13 @@ impl FromStr for Version {
 
         let mut version_parts = Vec::new();
         for num in string.split('.') {
-            version_parts.push(VersionNumber::from_str(num)?);
+            let version_number = match VersionNumber::from_str(num) {
+                Ok(version_number) => version_number,
+                Err(VersionError::NoneError) => return Err(VersionError::DotsError),
+                Err(e) => return Err(e),
+            };
+
+            version_parts.push(version_number);
         }
 
         Ok(Version { numbers: version_parts })
