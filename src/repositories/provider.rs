@@ -11,7 +11,10 @@ use crate::{
     repositories::{
         error::Result,
         metadata::{FILESYSTEM_METADATA_PROVIDER_ID, FileSystemMetadataProvider, WEB_METADATA_PROVIDER_ID, WebMetadataProvider},
-        prebuilds::{DEFAULT_PREBUILD_PROVIDER_ID, FILESYSTEM_PREBUILD_PROVIDER_ID, FileSystemPrebuildProvider},
+        prebuilds::{
+            DEFAULT_PREBUILD_PROVIDER_ID, FILESYSTEM_PREBUILD_PROVIDER_ID, FileSystemPrebuildProvider, WEB_PREBUILD_PROVIDER_ID,
+            WebPrebuildProvider,
+        },
         types::{Checksum, IndexMeta, PackageMeta, PackageVersionMeta, RepositoryMeta},
     },
 };
@@ -61,6 +64,7 @@ pub fn create_prebuild_provider_from_url(url: &str, provider: Option<String>) ->
 
     match provider.as_str() {
         FILESYSTEM_PREBUILD_PROVIDER_ID => boxed_prebuild(FileSystemPrebuildProvider::from_url(url)),
+        WEB_PREBUILD_PROVIDER_ID => boxed_prebuild(WebPrebuildProvider::from_url(url)),
         _ => None,
     }
 }

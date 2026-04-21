@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use thiserror::Error;
+use url::ParseError;
 
 use crate::installer::types::PackageId;
 
@@ -49,6 +50,9 @@ pub enum RepositoryError {
 
     #[error("Cannot parse checksum from hex")]
     ChecksumParseError(#[from] hex::FromHexError),
+
+    #[error("Cannot parse url")]
+    UrlParseError(#[from] ParseError),
 }
 
 pub(super) type Result<T> = std::result::Result<T, RepositoryError>;
