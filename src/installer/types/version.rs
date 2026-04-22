@@ -188,10 +188,10 @@ mod tests {
     }
 
     #[test]
-    fn from_str_none_errors() {
-        assert!(matches!(Version::from_str("3.4..1"), Err(VersionError::NoneError)));
-        assert!(matches!(Version::from_str("3.4.1."), Err(VersionError::NoneError)));
-        assert!(matches!(Version::from_str(".3.4.1"), Err(VersionError::NoneError)));
+    fn from_str_dot_errors() {
+        assert!(matches!(Version::from_str("3.4..1"), Err(VersionError::DotsError)));
+        assert!(matches!(Version::from_str("3.4.1."), Err(VersionError::DotsError)));
+        assert!(matches!(Version::from_str(".3.4.1"), Err(VersionError::DotsError)));
     }
 
     #[test]
