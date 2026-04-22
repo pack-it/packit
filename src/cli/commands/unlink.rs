@@ -1,6 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use std::process::exit;
 
-// SPDX-License-Identifier: GPL-3.0-only
 use clap::Args;
 
 use crate::{

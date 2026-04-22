@@ -10,7 +10,7 @@ use crate::{
     platforms::Target,
     repositories::manager::RepositoryManager,
     storage::package_register::PackageRegister,
-    utils::{duplicates, fuzzy::repository_fuzzy_search, unwrap_or_exit::UnwrapOrExit},
+    utils::{duplicates, fuzzy, unwrap_or_exit::UnwrapOrExit},
 };
 
 /// Installs the specified packages, if a version is given that version will be installed,
@@ -94,7 +94,7 @@ impl HandleCommand for InstallArgs {
 
             error!(msg: "Package '{}' cannot be found.", optional_id.name);
 
-            let fuzzy_match = repository_fuzzy_search(&config, &manager, &optional_id.name).unwrap_or_exit(1);
+            let fuzzy_match = fuzzy::repository_search(&config, &manager, &optional_id.name).unwrap_or_exit(1);
             if let Some(fuzzy_match) = fuzzy_match {
                 println!("Did you mean: '{fuzzy_match}'?");
             }

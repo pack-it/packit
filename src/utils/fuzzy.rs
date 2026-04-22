@@ -12,7 +12,7 @@ const FUZZY_THRESHOLD: f64 = 0.25;
 /// Does a fuzzy search against the repository index.toml.
 /// Returns a `RepositoryError` for repository related errors
 /// or optionally a `PackageName` if a fuzzy match can be found.
-pub fn repository_fuzzy_search(
+pub fn repository_search(
     config: &Config,
     manager: &RepositoryManager,
     package_name: &PackageName,
