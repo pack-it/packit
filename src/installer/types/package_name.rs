@@ -78,10 +78,3 @@ impl AsRef<Path> for PackageName {
         Path::new(&self.0)
     }
 }
-
-/// Implements `AsRef<PackageName>` for `PackageName`.
-impl AsRef<PackageName> for PackageName {
-    fn as_ref(&self) -> &PackageName {
-        &self
-    }
-}

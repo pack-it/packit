@@ -17,12 +17,12 @@ pub fn repository_fuzzy_search(
     manager: &RepositoryManager,
     package_name: &PackageName,
 ) -> Result<Option<PackageName>, RepositoryError> {
-    let mut best_word: Option<PackageName> = None;
-    let mut best_distance: Option<u64> = None;
+    let mut best_word = None;
+    let mut best_distance = None;
     for repository_id in &config.repositories_rank {
         let repository_index = manager.read_index_metadata(&repository_id)?;
 
-        let fuzzy_matches = fuzzy_search(repository_index.supported_packages, package_name.as_str());
+        let fuzzy_matches = fuzzy_search(repository_index.supported_packages.iter(), package_name.as_str());
         for (distance, fuzzy_match) in fuzzy_matches {
             match manager.read_package(&fuzzy_match) {
                 Ok(_) => {},
@@ -50,11 +50,10 @@ pub fn repository_fuzzy_search(
 /// Returns None if there are no fuzzy matches and a `PackageName` if there is at least one fuzzy match.
 pub fn min_search<'a, I>(words: I, string: &str) -> Option<PackageName>
 where
-    I: IntoIterator,
-    I::Item: AsRef<PackageName>,
+    I: IntoIterator<Item = &'a PackageName>,
 {
-    let mut best_word: Option<PackageName> = None;
-    let mut best_distance: Option<u64> = None;
+    let mut best_word = None;
+    let mut best_distance = None;
     for (distance, fuzzy_match) in fuzzy_search(words, string) {
         if let Some(current_distance) = best_distance {
             if distance < current_distance {
@@ -75,19 +74,18 @@ where
 /// Returns a Vec of tuples which are pairs of words and their distance (distance, word).
 pub fn fuzzy_search<'a, I>(words: I, string: &str) -> Vec<(u64, PackageName)>
 where
-    I: IntoIterator,
-    I::Item: AsRef<PackageName>,
+    I: IntoIterator<Item = &'a PackageName>,
 {
     let mut fuzzy_matches = Vec::new();
 
     for word in words {
-        let distance = calculate_distance(word.as_ref().as_str(), string);
+        let distance = calculate_distance(word.as_str(), string);
 
         // Add word to `fuzzy_matches` if the distance is <= 1 or relative distance < `FUZZY_THRESHOLD`
-        let max_length = cmp::max(word.as_ref().as_str().len(), string.len());
+        let max_length = cmp::max(word.as_str().len(), string.len());
         let relative_distance = distance as f64 / max_length as f64;
         if distance <= 1 || relative_distance < FUZZY_THRESHOLD {
-            fuzzy_matches.push((distance, word.as_ref().clone()));
+            fuzzy_matches.push((distance, word.clone()));
         }
     }
 
