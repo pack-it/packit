@@ -10,20 +10,22 @@ use std::{
 use serde::{Deserialize, Serialize, de};
 use thiserror::Error;
 
+use crate::installer::types::version_number::VersionNumber;
+
 /// Errors that occur when parsing version related structs.
 #[derive(Error, Debug)]
 pub enum VersionError {
-    #[error("Version number is none while version is requested.")]
+    #[error("Version is none")]
     NoneError,
 
-    #[error("Version number contains a character which is not a digit or a dot.")]
+    #[error("Version number contains a character which is not a digit or a dot")]
     IllegalCharacterError,
 
-    #[error("Multiple leading, trailing or consecutive dots are not allowed in version number.")]
-    DotsError,
-
-    #[error("Invalid version interval, an interval must be ordered and not overlapping.")]
+    #[error("Invalid version interval, an interval must be ordered and not overlapping")]
     InvalidInterval,
+
+    #[error("Multiple leading, trailing or consecutive dots are not allowed in version number")]
+    DotsError,
 
     #[error("Couldn't parse version number")]
     ParseError(#[from] ParseIntError),
@@ -32,7 +34,7 @@ pub enum VersionError {
 /// Represents a version.
 #[derive(Debug, Eq, Clone)]
 pub struct Version {
-    numbers: Vec<u32>,
+    numbers: Vec<VersionNumber>,
 }
 
 impl<'de> Deserialize<'de> for Version {
@@ -58,18 +60,18 @@ impl Serialize for Version {
 }
 
 impl Ord for Version {
-    /// Compares this version to another version and returns an Ordering type.
+    /// Compares this version to another version and returns an `Ordering`.
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         let iterations = max(self.numbers.len(), other.numbers.len());
         for i in 0..iterations {
             let num = match self.numbers.get(i) {
-                Some(num) => *num,
-                None => 0,
+                Some(num) => num,
+                None => &VersionNumber::from(0),
             };
 
             let other_num = match other.numbers.get(i) {
-                Some(num) => *num,
-                None => 0,
+                Some(num) => num,
+                None => &VersionNumber::from(0),
             };
 
             if num == other_num {
@@ -90,7 +92,7 @@ impl Ord for Version {
 }
 
 impl PartialEq for Version {
-    /// Checks equality of this version and another version.
+    /// Checks equality of this `Version` and another `Version`.
     fn eq(&self, other: &Self) -> bool {
         match self.cmp(other) {
             Ordering::Less => false,
@@ -101,17 +103,18 @@ impl PartialEq for Version {
 }
 
 impl PartialOrd for Version {
-    /// Gets an ordering between this version and another version. An ordering can always be found, None is never returned.
+    /// Gets an ordering between this `Version` and another `Version`.
+    /// An ordering can always be found, None is never returned.
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
-/// Hash implementation for version to match PartialEq implementation
+/// `Hash` implementation for version to match `PartialEq` implementation.
 impl Hash for Version {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         let mut hashable_numbers = self.numbers.clone();
-        while hashable_numbers.last() == Some(&0) {
+        while hashable_numbers.last() == Some(&VersionNumber::from(0)) {
             hashable_numbers.pop();
         }
 
@@ -139,16 +142,13 @@ impl FromStr for Version {
 
         let mut version_parts = Vec::new();
         for num in string.split('.') {
-            if num.is_empty() {
-                return Err(VersionError::DotsError);
-            }
+            let version_number = match VersionNumber::from_str(num) {
+                Ok(version_number) => version_number,
+                Err(VersionError::NoneError) => return Err(VersionError::DotsError),
+                Err(e) => return Err(e),
+            };
 
-            if !num.chars().all(|c| c.is_digit(10)) {
-                return Err(VersionError::IllegalCharacterError);
-            }
-
-            let parsed_num = num.parse::<u32>()?;
-            version_parts.push(parsed_num);
+            version_parts.push(version_number);
         }
 
         Ok(Version { numbers: version_parts })
@@ -158,14 +158,18 @@ impl FromStr for Version {
 /// Implements the from trait for `&[u32]`.
 impl From<&[u32]> for Version {
     fn from(value: &[u32]) -> Self {
-        Self { numbers: Vec::from(value) }
+        Self {
+            numbers: value.iter().map(|v| VersionNumber::from(v.clone())).collect(),
+        }
     }
 }
 
 /// Implements the from trait for `&[u32; N]`.
 impl<const N: usize> From<&[u32; N]> for Version {
     fn from(value: &[u32; N]) -> Self {
-        Self { numbers: Vec::from(value) }
+        Self {
+            numbers: value.iter().map(|v| VersionNumber::from(v.clone())).collect(),
+        }
     }
 }
 
@@ -174,8 +178,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn valid_from_str() {
-        let correct_version = Version { numbers: vec![3, 4, 1] };
+    fn from_str() {
+        let correct_version = Version::from(&[3, 4, 1]);
 
         match Version::from_str("3.4.1") {
             Ok(version) => assert_eq!(version, correct_version),
@@ -184,10 +188,10 @@ mod tests {
     }
 
     #[test]
-    fn from_str_dot_errors() {
-        assert!(matches!(Version::from_str("3.4..1"), Err(VersionError::DotsError)));
-        assert!(matches!(Version::from_str("3.4.1."), Err(VersionError::DotsError)));
-        assert!(matches!(Version::from_str(".3.4.1"), Err(VersionError::DotsError)));
+    fn from_str_none_errors() {
+        assert!(matches!(Version::from_str("3.4..1"), Err(VersionError::NoneError)));
+        assert!(matches!(Version::from_str("3.4.1."), Err(VersionError::NoneError)));
+        assert!(matches!(Version::from_str(".3.4.1"), Err(VersionError::NoneError)));
     }
 
     #[test]
@@ -202,70 +206,40 @@ mod tests {
     }
 
     #[test]
-    fn compare_equal() {
-        let version_a = Version { numbers: vec![3, 4, 1] };
-        let version_b = Version { numbers: vec![3, 4, 2] };
+    fn compare() {
+        let version_a = Version::from(&[3, 4, 0]);
+        let version_b = Version::from(&[3, 4, 0]);
+        let version_c = Version::from(&[3, 4, 1]);
+        let version_d = Version::from(&[3, 3, 5]);
 
-        assert_eq!(version_a == version_a, true);
-        assert_eq!(version_a == version_b, false);
-    }
-
-    #[test]
-    fn compare_less_than() {
-        let version_a = Version { numbers: vec![3, 4, 0] };
-        let version_b = Version { numbers: vec![3, 4, 1] };
-
-        assert_eq!(version_a < version_b, true);
-        assert_eq!(version_a < version_a, false);
-    }
-
-    #[test]
-    fn compare_less_than_equals() {
-        let version_a = Version { numbers: vec![3, 4, 2] };
-        let version_b = Version { numbers: vec![3, 4, 1] };
-
-        assert_eq!(version_a <= version_a, true);
-        assert_eq!(version_a <= version_b, false);
-    }
-
-    #[test]
-    fn compare_greater_than() {
-        let version_a = Version { numbers: vec![3, 4, 2] };
-        let version_b = Version { numbers: vec![3, 4, 1] };
-
-        assert_eq!(version_a > version_b, true);
-        assert_eq!(version_a > version_a, false);
-    }
-
-    #[test]
-    fn compare_greater_than_equal() {
-        let version_a = Version { numbers: vec![3, 4, 0] };
-        let version_b = Version { numbers: vec![3, 4, 1] };
-
-        assert_eq!(version_a >= version_a, true);
-        assert_eq!(version_a >= version_b, false);
-    }
-
-    #[test]
-    fn compare_not_greater_than_equals() {
-        let version_a = Version { numbers: vec![3, 4, 0] };
-        let version_b = Version { numbers: vec![3, 4, 1] };
-
-        assert_eq!(version_a >= version_b, false);
+        assert!(version_a == version_b);
+        assert!(version_a <= version_b);
+        assert!(version_a >= version_b);
+        assert!(version_a <= version_c);
+        assert!(version_a >= version_d);
+        assert!(version_a < version_c);
+        assert!(version_a > version_d);
+        assert!(version_a != version_c);
     }
 
     #[test]
     fn compare_different_length() {
-        let version_a = Version { numbers: vec![5] };
-        let version_b = Version { numbers: vec![3, 4, 1] };
+        let version_a = Version::from(&[3, 4, 0, 0]);
+        let version_b = Version::from(&[3, 4, 0]);
+        let version_c = Version::from(&[4]);
+        let version_d = Version::from(&[3]);
+        let version_e = Version::from(&[0, 3, 3, 5]);
+        let version_f = Version::from(&[3, 3, 5]);
 
-        assert_eq!(version_a < version_b, false);
-        assert_eq!(version_a > version_b, true);
+        assert!(version_a == version_b);
+        assert!(version_c > version_b);
+        assert!(version_d > version_e);
+        assert!(version_f > version_e);
     }
 
     #[test]
-    fn valid_format() {
-        let version = Version { numbers: vec![3, 4, 1] };
+    fn format() {
+        let version = Version::from(&[3, 4, 1]);
 
         assert_eq!(version.to_string(), "3.4.1");
     }
