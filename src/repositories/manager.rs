@@ -33,12 +33,11 @@ impl<'a> RepositoryManager<'a> {
 
         for (id, repository) in &config.repositories {
             let provider = provider::create_metadata_provider(repository);
-            if provider.is_none() {
+            let Some(provider) = provider else {
                 warning!("Cannot create repository provider for repository {id}.");
                 continue;
-            }
+            };
 
-            let provider = provider.expect("Expected some provider at this point");
             let repository_meta = match provider.read_repository_metadata() {
                 Ok(repository_meta) => Some(repository_meta),
                 Err(e) => {
@@ -51,12 +50,12 @@ impl<'a> RepositoryManager<'a> {
 
             if let Some(repository_meta) = repository_meta {
                 let prebuild_provider = provider::create_prebuild_provider(repository, repository_meta);
-                if prebuild_provider.is_none() {
+                let Some(prebuild_provider) = prebuild_provider else {
                     warning!("Cannot create prebuild provider for repository {id}.");
                     continue;
-                }
+                };
 
-                prebuild_providers.insert(id.clone(), prebuild_provider.expect("Expected prebuild provider at this point"));
+                prebuild_providers.insert(id.clone(), prebuild_provider);
             }
         }
 
@@ -68,31 +67,15 @@ impl<'a> RepositoryManager<'a> {
     }
 
     /// Reads repository metadata of the given repository, containing information about the repository.
+    /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     pub fn read_repository_metadata(&self, repository_id: &str) -> Result<RepositoryMeta> {
-        let provider = match self.metadata_providers.get(repository_id) {
-            Some(provider) => provider,
-            None => {
-                return Err(RepositoryError::RepositoryNotFoundError {
-                    repository_id: repository_id.into(),
-                });
-            },
-        };
-
-        provider.read_repository_metadata()
+        self.get_metadata_provider(repository_id)?.read_repository_metadata()
     }
 
     /// Reads index metadata of the given repository, containing all supported packages.
+    /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     pub fn read_index_metadata(&self, repository_id: &str) -> Result<IndexMeta> {
-        let provider = match self.metadata_providers.get(repository_id) {
-            Some(provider) => provider,
-            None => {
-                return Err(RepositoryError::RepositoryNotFoundError {
-                    repository_id: repository_id.into(),
-                });
-            },
-        };
-
-        provider.read_index_metadata()
+        self.get_metadata_provider(repository_id)?.read_index_metadata()
     }
 
     /// Reads package metadata of the given package, containing information about the package.
@@ -131,17 +114,9 @@ impl<'a> RepositoryManager<'a> {
 
     /// Reads package metadata of the given package from the given repository, containing information about the package.
     /// Does not check if the data contains the current target.
+    /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     pub fn read_repo_package(&self, repository_id: &str, package: &PackageName) -> Result<PackageMeta> {
-        let provider = match self.metadata_providers.get(repository_id) {
-            Some(provider) => provider,
-            None => {
-                return Err(RepositoryError::RepositoryNotFoundError {
-                    repository_id: repository_id.into(),
-                });
-            },
-        };
-
-        provider.read_package(package)
+        self.get_metadata_provider(repository_id)?.read_package(package)
     }
 
     /// Reads package version metadata of the given package, containing dependencies and targets.
@@ -185,15 +160,9 @@ impl<'a> RepositoryManager<'a> {
 
     /// Reads package version metadata of the given package from the given repository, containing dependencies and targets.
     /// Does not check if the data contains the current target.
+    /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     pub fn read_repo_package_version(&self, repository_id: &str, package_id: &PackageId) -> Result<PackageVersionMeta> {
-        let provider = match self.metadata_providers.get(repository_id) {
-            Some(provider) => provider,
-            None => {
-                return Err(RepositoryError::RepositoryNotFoundError {
-                    repository_id: repository_id.into(),
-                });
-            },
-        };
+        let provider = self.get_metadata_provider(repository_id)?;
 
         // Validate the package before returning
         let package = provider.read_package_version(&package_id.name, &package_id.version)?;
@@ -206,36 +175,21 @@ impl<'a> RepositoryManager<'a> {
 
     /// Reads a file of the given package from the given repository.
     /// Returns the file as a string.
+    /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     pub fn read_file(&self, repository_id: &str, package: &PackageName, file_path: &str) -> Result<Option<String>> {
-        let provider = match self.metadata_providers.get(repository_id) {
-            Some(provider) => provider,
-            None => {
-                return Err(RepositoryError::RepositoryNotFoundError {
-                    repository_id: repository_id.into(),
-                });
-            },
-        };
-
-        provider.read_file(package, file_path)
+        self.get_metadata_provider(repository_id)?.read_file(package, file_path)
     }
 
     /// Retrieves the prebuild url for the given package version.
     /// Returns the url, or None if a prebuild is not available for the package.
+    /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     pub fn get_prebuild_url(&self, repository_id: &str, package: &PackageId, revision: u64, target: &Target) -> Result<Option<String>> {
-        let provider = match self.prebuild_providers.get(repository_id) {
-            Some(provider) => provider,
-            None => {
-                return Err(RepositoryError::RepositoryNotFoundError {
-                    repository_id: repository_id.into(),
-                });
-            },
-        };
-
-        provider.get_prebuild_url(package, revision, target)
+        self.get_prebuid_provider(repository_id)?.get_prebuild_url(package, revision, target)
     }
 
     /// Retrieves the prebuild checksum for the given package version.
     /// Returns the checksum, or None if a prebuild is not available for the package.
+    /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     pub fn get_prebuild_checksum(
         &self,
         repository_id: &str,
@@ -243,19 +197,11 @@ impl<'a> RepositoryManager<'a> {
         revision: u64,
         target: &Target,
     ) -> Result<Option<Checksum>> {
-        let provider = match self.prebuild_providers.get(repository_id) {
-            Some(provider) => provider,
-            None => {
-                return Err(RepositoryError::RepositoryNotFoundError {
-                    repository_id: repository_id.into(),
-                });
-            },
-        };
-
-        provider.get_prebuild_checksum(package, revision, target)
+        self.get_prebuid_provider(repository_id)?.get_prebuild_checksum(package, revision, target)
     }
 
     /// Reads the prebuild of the given package version as bytes, returns a tuple containing the archive extension and the bytes.
+    /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     pub fn read_prebuild(
         &self,
         repository_id: &str,
@@ -263,15 +209,28 @@ impl<'a> RepositoryManager<'a> {
         revision: u64,
         target: &Target,
     ) -> Result<(ArchiveExtension, Bytes)> {
-        let provider = match self.prebuild_providers.get(repository_id) {
-            Some(provider) => provider,
-            None => {
-                return Err(RepositoryError::RepositoryNotFoundError {
-                    repository_id: repository_id.into(),
-                });
-            },
-        };
+        self.get_prebuid_provider(repository_id)?.read_prebuild(package, revision, target)
+    }
 
-        provider.read_prebuild(package, revision, target)
+    /// A helper method to het the metadata provider.
+    /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
+    fn get_metadata_provider(&self, repository_id: &str) -> Result<&Box<dyn MetadataProvider>> {
+        match self.metadata_providers.get(repository_id) {
+            Some(provider) => Ok(provider),
+            None => Err(RepositoryError::RepositoryNotFoundError {
+                repository_id: repository_id.into(),
+            }),
+        }
+    }
+
+    /// A helper method to het the prebuild provider.
+    /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
+    fn get_prebuid_provider(&self, repository_id: &str) -> Result<&Box<dyn PrebuildProvider>> {
+        match self.prebuild_providers.get(repository_id) {
+            Some(provider) => Ok(provider),
+            None => Err(RepositoryError::RepositoryNotFoundError {
+                repository_id: repository_id.into(),
+            }),
+        }
     }
 }
