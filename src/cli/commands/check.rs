@@ -8,7 +8,7 @@ use crate::{
     config::Config,
     installer::types::PackageId,
     storage::package_register::PackageRegister,
-    utils::unwrap_or_exit::UnwrapOrExit,
+    utils::{fuzzy, unwrap_or_exit::UnwrapOrExit},
     verifier::Verifier,
 };
 
@@ -31,7 +31,24 @@ impl HandleCommand for CheckArgs {
             // Check if the package exists in the register or in storage before doing any checks
             let installed_directory = config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
             if register.get_package_version(package_id).is_none() && !fs::exists(installed_directory).unwrap_or_exit(1) {
-                error!(msg: "Cannot perform checks, package {package_id} doesn't exist in register or storage.");
+                error!(msg: "Cannot perform checks, package '{package_id}' doesn't exist in register or storage.");
+
+                // Show possible versions if a package with the given name exists
+                if let Some(package_name) = register.get_package(&package_id.name) {
+                    let versions = package_name.versions.keys();
+                    print!("Did you mean version(s): ");
+                    for version in versions {
+                        print!("'{version}' ");
+                    }
+                    println!();
+                    return;
+                }
+
+                let fuzzy_match = fuzzy::min_search(register.iterate_package_names(), &package_id.name);
+                if let Some(fuzzy_match) = fuzzy_match {
+                    println!("Did you mean: '{fuzzy_match}'?");
+                }
+
                 exit(1);
             }
         }

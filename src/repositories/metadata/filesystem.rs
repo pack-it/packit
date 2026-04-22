@@ -7,7 +7,7 @@ use crate::{
     repositories::{
         error::Result,
         provider::MetadataProvider,
-        types::{PackageMeta, PackageVersionMeta, RepositoryMeta},
+        types::{IndexMeta, PackageMeta, PackageVersionMeta, RepositoryMeta},
     },
 };
 
@@ -21,6 +21,12 @@ pub struct FileSystemMetadataProvider {
 impl MetadataProvider for FileSystemMetadataProvider {
     fn read_repository_metadata(&self) -> Result<RepositoryMeta> {
         let data = fs::read_to_string(self.path.join("repository.toml"))?;
+
+        Ok(toml::de::from_str(&data)?)
+    }
+
+    fn read_index_metadata(&self) -> Result<IndexMeta> {
+        let data = fs::read_to_string(self.path.join("index.toml"))?;
 
         Ok(toml::de::from_str(&data)?)
     }

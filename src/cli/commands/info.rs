@@ -8,7 +8,7 @@ use crate::{
     config::Config,
     installer::types::{OptionalPackageId, PackageId},
     storage::{installed_package::InstalledPackage, package_register::PackageRegister},
-    utils::{tree::EmptyNode, unwrap_or_exit::UnwrapOrExit},
+    utils::{fuzzy, tree::EmptyNode, unwrap_or_exit::UnwrapOrExit},
 };
 
 /// Shows info about the specified installed package.
@@ -37,6 +37,12 @@ impl HandleCommand for InfoArgs {
             Some(package) => package,
             None => {
                 error!(msg: "Package '{}' is not installed", self.package);
+
+                let fuzzy_match = fuzzy::min_search(register.iterate_package_names(), &self.package.name);
+                if let Some(fuzzy_match) = fuzzy_match {
+                    println!("Did you mean: '{fuzzy_match}'?");
+                }
+
                 exit(1)
             },
         };

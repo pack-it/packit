@@ -273,6 +273,11 @@ impl PackageRegister {
     pub fn iterate_all(&self) -> impl Iterator<Item = &InstalledPackageVersion> {
         self.packages.values().flat_map(|p| p.versions.values())
     }
+
+    /// Returns an iterator, which iterates over all package names
+    pub fn iterate_package_names(&self) -> impl Iterator<Item = &PackageName> {
+        self.packages.keys()
+    }
 }
 
 #[cfg(test)]

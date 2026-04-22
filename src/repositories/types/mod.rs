@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 mod checksum;
 mod common;
+mod index;
 mod license;
 mod package;
 mod package_target;
@@ -20,6 +21,8 @@ pub use self::common::Script;
 
 pub use self::common::Source;
 pub use self::common::Sources;
+
+pub use self::index::IndexMeta;
 
 pub use self::license::Licenses;
 

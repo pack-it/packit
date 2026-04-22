@@ -14,7 +14,7 @@ use crate::{
     repositories::{
         error::{RepositoryError, Result},
         provider::{self, MetadataProvider, PrebuildProvider},
-        types::{Checksum, PackageMeta, PackageVersionMeta, RepositoryMeta},
+        types::{Checksum, IndexMeta, PackageMeta, PackageVersionMeta, RepositoryMeta},
     },
 };
 
@@ -79,6 +79,20 @@ impl<'a> RepositoryManager<'a> {
         };
 
         provider.read_repository_metadata()
+    }
+
+    /// Reads index metadata of the given repository, containing all supported packages.
+    pub fn read_index_metadata(&self, repository_id: &str) -> Result<IndexMeta> {
+        let provider = match self.metadata_providers.get(repository_id) {
+            Some(provider) => provider,
+            None => {
+                return Err(RepositoryError::RepositoryNotFoundError {
+                    repository_id: repository_id.into(),
+                });
+            },
+        };
+
+        provider.read_index_metadata()
     }
 
     /// Reads package metadata of the given package, containing information about the package.

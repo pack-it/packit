@@ -7,7 +7,7 @@ use crate::{
     repositories::{
         error::Result,
         provider::MetadataProvider,
-        types::{PackageMeta, PackageVersionMeta, RepositoryMeta},
+        types::{IndexMeta, PackageMeta, PackageVersionMeta, RepositoryMeta},
     },
     utils::requests,
 };
@@ -22,6 +22,12 @@ pub struct WebMetadataProvider {
 impl MetadataProvider for WebMetadataProvider {
     fn read_repository_metadata(&self) -> Result<RepositoryMeta> {
         let data = requests::get(format!("{}/repository.toml", self.url))?.text()?;
+
+        Ok(toml::de::from_str(&data)?)
+    }
+
+    fn read_index_metadata(&self) -> Result<IndexMeta> {
+        let data = requests::get(format!("{}/index.toml", self.url))?.text()?;
 
         Ok(toml::de::from_str(&data)?)
     }

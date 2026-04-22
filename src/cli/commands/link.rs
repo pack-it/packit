@@ -1,14 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-only
+use std::process::exit;
+
 use clap::Args;
 
 use crate::{
-    cli::{commands::HandleCommand, display::logging::warning},
+    cli::{
+        commands::HandleCommand,
+        display::logging::{error, warning},
+    },
     config::{Config, Repository},
     installer::{Symlinker, types::PackageName},
     platforms::Target,
     repositories::{provider, types::PackageVersionMeta},
     storage::package_register::PackageRegister,
-    utils::unwrap_or_exit::UnwrapOrExit,
+    utils::{fuzzy, unwrap_or_exit::UnwrapOrExit},
 };
 
 /// Links the specified package into the /bin, /lib, /share, etc. directories.
@@ -29,9 +34,19 @@ impl HandleCommand for LinkArgs {
         let mut register = PackageRegister::from(&register_path).unwrap_or_exit(1);
 
         // Get installed package
-        let package = register
-            .get_package(&self.package_name)
-            .unwrap_or_exit_msg(&format!("Package {} is not installed!", self.package_name), 1);
+        let package = match register.get_package(&self.package_name) {
+            Some(package) => package,
+            None => {
+                error!(msg: "Package {} is not installed!", self.package_name);
+
+                let fuzzy_match = fuzzy::min_search(register.iterate_package_names(), &self.package_name);
+                if let Some(fuzzy_match) = fuzzy_match {
+                    println!("Did you mean: '{fuzzy_match}'?");
+                }
+
+                exit(1);
+            },
+        };
 
         // Check if the package is already symlinked
         if package.symlinked {
