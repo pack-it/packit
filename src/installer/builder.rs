@@ -21,7 +21,10 @@ use crate::{
     platforms::binaries::{BinaryPatcher, BinaryPatcherError},
     repositories::{error::RepositoryError, manager::RepositoryManager, types::Checksum},
     storage::package_register::PackageRegister,
-    utils::requests,
+    utils::{
+        patches::{self, PatchError},
+        requests,
+    },
 };
 
 /// The errors that occur during building.
@@ -52,7 +55,10 @@ pub enum BuilderError {
     RepositoryError(#[from] RepositoryError),
 
     #[error("Cannot patch binaries")]
-    PatchError(#[from] BinaryPatcherError),
+    PatchBinaryError(#[from] BinaryPatcherError),
+
+    #[error("Cannot apply patch file")]
+    ApplyPatchError(#[from] PatchError),
 
     #[error("Cannot request files for building")]
     RequestError(#[from] reqwest::Error),
@@ -158,15 +164,16 @@ impl<'a> Builder<'a> {
         // Apply patches
         for (id, patch) in source.get_sorted_patches() {
             let description = format!("patch {id}' of '{package_name}");
-            let bytes = self.download_file(&patch.url, &patch.mirrors, &patch.checksum, &description)?;
+            let patch_bytes = self.download_file(&patch.url, &patch.mirrors, &patch.checksum, &description)?;
 
             // Construct apply directory for this patch
-            let mut apply_directory = &apply_directory;
-            if let Some(apply_in) = &patch.apply_in {
-                apply_directory = &apply_directory.join(PathBuf::from(apply_in));
-            }
+            let apply_directory = match &patch.apply_in {
+                Some(apply_in) => apply_directory.join(PathBuf::from(apply_in)),
+                None => apply_directory.clone(),
+            };
 
-            // TODO: apply patches
+            // Apply patch
+            patches::apply_patch(&patch_bytes, &apply_directory)?;
         }
 
         // Create build env
