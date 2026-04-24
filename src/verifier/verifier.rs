@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{fs, str::FromStr};
+use std::{fs, path::PathBuf, str::FromStr};
 
 use crate::{
     cli::display::logging::{error, warning},
@@ -22,11 +22,13 @@ enum Check {
     DependencyTree,
     Alterations,
     PackitGroup,
+    EmptyPackageDirectory,
 }
 
 /// Defines the correct order to do verifier checks.
 const VERIFY_ORDER: &[Check] = &[
     Check::PackitGroup,
+    Check::EmptyPackageDirectory,
     Check::StorageConsistency,
     Check::RegisterConsistency,
     Check::Alterations,
@@ -64,6 +66,7 @@ impl<'a> Verifier<'a> {
 
             let issue = match check {
                 Check::StorageConsistency => self.check_storage_consistency(register)?,
+                Check::EmptyPackageDirectory => self.check_empty_packages(register)?,
                 Check::RegisterConsistency => self.check_register_consistency(register)?,
                 Check::DependencyTree => self.check_dependency_tree(register),
                 Check::Alterations => {
@@ -96,6 +99,8 @@ impl<'a> Verifier<'a> {
             let issue = match check {
                 Check::StorageConsistency if self.package_storage_is_consistent(package_id)? => continue,
                 Check::StorageConsistency => Issue::InconsistentStorage(vec![package_id.clone()]),
+                Check::EmptyPackageDirectory if !self.check_empty_package(package_id)? => continue,
+                Check::EmptyPackageDirectory => Issue::EmptyPackageDirectory(vec![package_id.clone()]),
                 Check::RegisterConsistency if self.register_package_is_consistent(package_id, register) => continue,
                 Check::RegisterConsistency => Issue::InconsistentRegister(vec![package_id.clone()]),
                 Check::DependencyTree => {
@@ -234,6 +239,50 @@ impl<'a> Verifier<'a> {
         }
 
         Ok(false)
+    }
+
+    /// Checks for packages with an empty package directory.
+    /// Returns None if all packages have a non-empty package directory, an `Issue::EmptyPackageDirectory` otherwise.
+    fn check_empty_packages(&self, register: &PackageRegister) -> Result<Option<Issue>> {
+        let mut empty_packages = Vec::new();
+        for package in register.iterate_all() {
+            if self.check_empty_package(&package.package_id)? {
+                empty_packages.push(package.package_id.clone());
+            }
+        }
+
+        if empty_packages.is_empty() {
+            return Ok(None);
+        }
+
+        Ok(Some(Issue::EmptyPackageDirectory(empty_packages)))
+    }
+
+    /// Checks for a specific package if its package directory is empty.
+    /// Returns true if it's empty, false if not.
+    fn check_empty_package(&self, package_id: &PackageId) -> Result<bool> {
+        dbg!("HERE");
+        let installed_directory = self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
+        dbg!(&installed_directory);
+        self.directory_is_empty(&installed_directory)
+    }
+
+    /// Checks recursively if a directory is empty (contains nothing but empty directories).
+    /// Returns true if empty, false if not.
+    fn directory_is_empty(&self, directory: &PathBuf) -> Result<bool> {
+        for package in directory.read_dir()? {
+            let package = package?;
+
+            if !package.path().is_dir() {
+                return Ok(false);
+            }
+
+            if !self.directory_is_empty(&package.path())? {
+                return Ok(false);
+            }
+        }
+
+        Ok(true)
     }
 
     /// Checks if all packages in storage also exist in the register.

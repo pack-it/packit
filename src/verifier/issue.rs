@@ -20,6 +20,9 @@ pub enum Issue {
 
     /// The 'packit' group is missing.
     MissingPackitGroup,
+
+    /// A list of packages which are in the register, but have an empty corresponding package directory.
+    EmptyPackageDirectory(Vec<PackageId>),
 }
 
 impl Display for Issue {
@@ -50,6 +53,23 @@ impl Display for Issue {
             Issue::InconsistentStorage(package_ids) => {
                 write!(f, "Inconsistent storage\n")?;
                 let issue_explanation = "The following packages were found in Installed.toml, but not in the Packit package directory:\n";
+                write!(f, "{issue_explanation}")?;
+
+                for package in package_ids {
+                    write!(f, "  - {}\n", package.to_string().bold().blue())?;
+                }
+            },
+            Issue::EmptyPackageDirectory(package_ids) if package_ids.len() == 1 => {
+                write!(f, "Inconsistent storage\n")?;
+                let issue_explanation = format!(
+                    "{} has an empty package directory.\n",
+                    package_ids.first().expect("Expected one package id.").to_string().bold().blue()
+                );
+                write!(f, "{issue_explanation}")?;
+            },
+            Issue::EmptyPackageDirectory(package_ids) => {
+                write!(f, "Empty package directory\n")?;
+                let issue_explanation = "The following packages have an empty package directory:\n";
                 write!(f, "{issue_explanation}")?;
 
                 for package in package_ids {
