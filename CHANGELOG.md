@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The config command, to view and change the config through the CLI.
 - Support for using external files for test scripts in the package metadata.
 - The fuzzy-search feature, to provide a package suggestion in case of a wrong package parameter.
+- Add support for leading zeros in version numbers.
+- Add web prebuild provider for web prebuild support.
 
 ### Removed
 - The repositories command, this command is now integrated in the new config command.
