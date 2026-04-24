@@ -38,6 +38,9 @@ pub enum RepositoryError {
     #[error("No supported version for the current target could be found for package '{0}'.")]
     SupportError(String),
 
+    #[error("Request returned an unsuccessful status code '{0}'.")]
+    UnsuccessfulRequest(reqwest::StatusCode),
+
     #[error("Cannot read repository file from disk")]
     ReadError(#[from] std::io::Error),
 
@@ -49,6 +52,9 @@ pub enum RepositoryError {
 
     #[error("Cannot parse checksum from hex")]
     ChecksumParseError(#[from] hex::FromHexError),
+
+    #[error("Cannot parse url")]
+    UrlParseError(#[from] url::ParseError),
 }
 
 pub(super) type Result<T> = std::result::Result<T, RepositoryError>;
