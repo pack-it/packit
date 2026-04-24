@@ -31,13 +31,12 @@ pub struct Source {
     pub skip_unpack: bool,
     pub apply_patches_in: Option<String>,
 
-    #[serde(deserialize_with = "Source::deserialize_patches")]
+    #[serde(default, deserialize_with = "Source::deserialize_patches")]
     pub patches: HashMap<u32, Patch>,
 }
 
 /// Wrapper to differentiate between Single and Named sources in the metadata files.
-#[derive(Deserialize, Debug)]
-#[serde(untagged)]
+#[derive(Debug)]
 pub enum Sources {
     Single(Source),
     Named(HashMap<String, Source>),
@@ -48,6 +47,8 @@ pub enum Sources {
 pub struct Patch {
     pub url: String,
     pub checksum: Checksum,
+
+    #[serde(default)]
     pub mirrors: Vec<String>,
     pub apply_in: Option<String>,
 }
@@ -71,5 +72,25 @@ impl Source {
                 Err(_) => Err(de::Error::invalid_value(de::Unexpected::Str(&key), &"a non-negative integer")),
             })
             .collect()
+    }
+}
+
+// Custom deserialize implementation of source to differentiate between single and named sources.
+impl<'de> Deserialize<'de> for Sources {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value: toml::Value = Deserialize::deserialize(deserializer)?;
+
+        // If the toml contains an url and a checksum, we assume it is a single source
+        if value.get("url").is_some() && value.get("checksum").is_some() {
+            let single = Source::deserialize(value).map_err(de::Error::custom)?;
+
+            return Ok(Sources::Single(single));
+        }
+
+        let named = HashMap::deserialize(value).map_err(de::Error::custom)?;
+        Ok(Sources::Named(named))
     }
 }

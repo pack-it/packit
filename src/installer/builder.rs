@@ -174,6 +174,8 @@ impl<'a> Builder<'a> {
 
             // Apply patch
             patches::apply_patch(&patch_bytes, &apply_directory)?;
+
+            println!("Applied patch '{id}' to '{package_name}'");
         }
 
         // Create build env
