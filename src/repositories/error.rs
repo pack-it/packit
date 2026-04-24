@@ -1,3 +1,4 @@
+use reqwest::StatusCode;
 // SPDX-License-Identifier: GPL-3.0-only
 use thiserror::Error;
 use url::ParseError;
@@ -38,6 +39,9 @@ pub enum RepositoryError {
 
     #[error("No supported version for the current target could be found for package '{0}'.")]
     SupportError(String),
+
+    #[error("Request returned an unsuccessful status code '{0}'.")]
+    UnsuccessfulRequest(StatusCode),
 
     #[error("Cannot read repository file from disk")]
     ReadError(#[from] std::io::Error),

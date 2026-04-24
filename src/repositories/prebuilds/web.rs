@@ -2,7 +2,7 @@
 use std::str::FromStr;
 
 use bytes::Bytes;
-use reqwest::blocking::Response;
+use reqwest::{StatusCode, blocking::Response};
 use url::Url;
 
 use crate::{
@@ -82,8 +82,13 @@ impl WebPrebuildProvider {
         let response = requests::get(url.clone())?;
 
         // Check if the url exists
-        if !response.status().is_success() {
+        if response.status() == StatusCode::NOT_FOUND {
             return Ok(None);
+        }
+
+        // Return an error if something went wrong with the request (apart from not found error)
+        if !response.status().is_success() {
+            return Err(RepositoryError::UnsuccessfulRequest(response.status()));
         }
 
         Ok(Some((url, response)))
