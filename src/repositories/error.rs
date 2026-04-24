@@ -1,7 +1,5 @@
-use reqwest::StatusCode;
 // SPDX-License-Identifier: GPL-3.0-only
 use thiserror::Error;
-use url::ParseError;
 
 use crate::installer::types::PackageId;
 
@@ -41,7 +39,7 @@ pub enum RepositoryError {
     SupportError(String),
 
     #[error("Request returned an unsuccessful status code '{0}'.")]
-    UnsuccessfulRequest(StatusCode),
+    UnsuccessfulRequest(reqwest::StatusCode),
 
     #[error("Cannot read repository file from disk")]
     ReadError(#[from] std::io::Error),
@@ -56,7 +54,7 @@ pub enum RepositoryError {
     ChecksumParseError(#[from] hex::FromHexError),
 
     #[error("Cannot parse url")]
-    UrlParseError(#[from] ParseError),
+    UrlParseError(#[from] url::ParseError),
 }
 
 pub(super) type Result<T> = std::result::Result<T, RepositoryError>;
