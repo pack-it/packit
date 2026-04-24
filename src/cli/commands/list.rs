@@ -13,9 +13,9 @@ use crate::{
 /// Lists all the installed packages.
 #[derive(Args, Debug)]
 pub struct ListArgs {
-    /// List upgradeable packages
+    /// List updatables packages
     #[arg(long, default_value = "false")]
-    pub upgradeables: bool,
+    pub updatables: bool,
 }
 
 impl HandleCommand for ListArgs {
@@ -24,9 +24,10 @@ impl HandleCommand for ListArgs {
         let register_dir = PackageRegister::get_default_path(&config);
         let register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
-        if !self.upgradeables {
-            let mut packages: Vec<&InstalledPackageVersion> = register.iterate_all().collect();
-            packages.sort_by(|a, b| a.package_id.to_string().cmp(&b.package_id.to_string()));
+        let mut packages: Vec<&InstalledPackageVersion> = register.iterate_all().collect();
+        packages.sort_by(|a, b| a.package_id.to_string().cmp(&b.package_id.to_string()));
+
+        if !self.updatables {
             for package in packages {
                 println!("{}", package.package_id);
             }
@@ -35,10 +36,7 @@ impl HandleCommand for ListArgs {
         }
 
         let manager = RepositoryManager::new(&config);
-
-        let mut packages: Vec<&InstalledPackageVersion> = register.iterate_all().collect();
-        packages.sort_by(|a, b| a.package_id.to_string().cmp(&b.package_id.to_string()));
-        let mut upgradeable_found = false;
+        let mut updatables_found = false;
         for package in packages {
             let (_, package_meta) = manager.read_package(&package.package_id.name).unwrap_or_exit(1);
             let latest_version = package_meta.get_latest_version(&Target::current()).unwrap_or_exit(1);
@@ -47,12 +45,12 @@ impl HandleCommand for ListArgs {
                 continue;
             }
 
-            upgradeable_found = true;
+            updatables_found = true;
             println!("{}", package.package_id);
         }
 
-        if !upgradeable_found {
-            println!("No upgradeable packages found");
+        if !updatables_found {
+            println!("No updatable packages found");
         }
     }
 }
