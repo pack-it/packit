@@ -2,6 +2,7 @@
 use std::str::FromStr;
 
 use bytes::Bytes;
+use reqwest::blocking::Response;
 use url::Url;
 
 use crate::{
@@ -24,58 +25,67 @@ pub struct WebPrebuildProvider {
 
 impl PrebuildProvider for WebPrebuildProvider {
     fn get_prebuild_url(&self, package_id: &PackageId, revision: u64, target: &Target) -> Result<Option<String>> {
-        match self.get_file_path(package_id, revision, target, "tar.gz")? {
-            Some(url) => Ok(Some(url.to_string())),
+        match self.read_file_path(package_id, revision, target, "tar.gz")? {
+            Some((url, _)) => Ok(Some(url.to_string())),
             None => Ok(None),
         }
     }
 
     fn get_prebuild_checksum(&self, package_id: &PackageId, revision: u64, target: &Target) -> Result<Option<Checksum>> {
-        let url = match self.get_file_path(package_id, revision, target, "sha256")? {
-            Some(path) => path,
+        let response = match self.read_file_path(package_id, revision, target, "sha256")? {
+            Some((_, response)) => response,
             None => return Ok(None),
         };
 
-        let checksum_string = requests::get(url)?.text()?;
+        let checksum_string = response.text()?;
 
         Ok(Some(Checksum::from_str(&checksum_string)?))
     }
 
     fn read_prebuild(&self, package_id: &PackageId, revision: u64, target: &Target) -> Result<(ArchiveExtension, Bytes)> {
-        let url = self.get_prebuild_url(package_id, revision, target)?.ok_or(RepositoryError::PrebuildNotFound {
-            package_id: package_id.clone(),
-            revision,
-        })?;
+        let (url, bytes) = match self.read_file_path(package_id, revision, target, "tar.gz")? {
+            Some((url, response)) => (url, response.bytes()?),
+            None => {
+                return Err(RepositoryError::PrebuildNotFound {
+                    package_id: package_id.clone(),
+                    revision,
+                });
+            },
+        };
 
-        let bytes = requests::get(&url)?.bytes()?;
-
-        Ok((ArchiveExtension::from_path(&url), bytes))
+        Ok((ArchiveExtension::from_path(&url.to_string()), bytes))
     }
 }
 
 impl WebPrebuildProvider {
-    /// Creates a new filesystem prebuild provider for the given url.
+    /// Creates a new web prebuild provider for the given url.
     /// Returns None if the url is invalid.
     pub fn from_url(url: &str) -> Option<Self> {
-        let url = Url::from_str(url).ok()?;
+        // Ensure the url ends in a '/', so the join function adds the path on top of the existing path
+        let url = Url::from_str(&format!("{url}/")).ok()?;
+
         Some(Self { url })
     }
 
-    /// Gets the url for a file. Note that it doesn't check if the url exists.
+    /// Reads a file from the repository and return the url and response.
+    /// Returns None if the file cannot be found in the repository.
     /// Returns a `UrlParseError` if the created url cannot be parsed.
-    fn get_file_path(&self, package_id: &PackageId, revision: u64, target: &Target, extension: &str) -> Result<Option<Url>> {
+    fn read_file_path(&self, package_id: &PackageId, revision: u64, target: &Target, extension: &str) -> Result<Option<(Url, Response)>> {
         let prefix = package_id.name.chars().next().ok_or(RepositoryError::EmptyPackageName)?.to_string();
         let target = target.architecture.to_string();
-        let prebuild_name = format!("{package_id}-{revision}-{target}.{extension}");
-        let url = self
-            .url
-            .join(&target)?
-            .join("packages")?
-            .join(&prefix)?
-            .join(&package_id.name)?
-            .join(&package_id.version.to_string())?
-            .join(&prebuild_name)?;
+        let package_name = &package_id.name;
+        let file_name = format!("{package_id}-{revision}-{target}.{extension}");
 
-        Ok(Some(url))
+        let path = format!("packages/{target}/{prefix}/{package_name}/{file_name}");
+        let url = self.url.join(&path)?;
+
+        let response = requests::get(url.clone())?;
+
+        // Check if the url exists
+        if !response.status().is_success() {
+            return Ok(None);
+        }
+
+        Ok(Some((url, response)))
     }
 }

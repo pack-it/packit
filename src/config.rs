@@ -108,6 +108,10 @@ impl Config {
         // Remove trailing slashes from repository paths
         for repository in config.repositories.values_mut() {
             repository.path = repository.path.trim_end_matches("/").into();
+
+            if let Some(prebuilds_url) = &repository.prebuilds_url {
+                repository.prebuilds_url = Some(prebuilds_url.trim_end_matches("/").into());
+            }
         }
 
         Ok(config)
