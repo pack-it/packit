@@ -2,16 +2,21 @@
 use clap::Args;
 
 use crate::{
-    cli::commands::HandleCommand,
+    cli::{commands::HandleCommand, display},
     config::Config,
+    platforms::Target,
+    repositories::manager::RepositoryManager,
     storage::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
 /// Lists all the installed packages.
-// TODO: Expand command to list updateable packages
 #[derive(Args, Debug)]
-pub struct ListArgs;
+pub struct ListArgs {
+    /// List updatables packages
+    #[arg(long, default_value = "false")]
+    pub updatables: bool,
+}
 
 impl HandleCommand for ListArgs {
     fn handle(&self) {
@@ -21,8 +26,31 @@ impl HandleCommand for ListArgs {
 
         let mut packages: Vec<&InstalledPackageVersion> = register.iterate_all().collect();
         packages.sort_by(|a, b| a.package_id.to_string().cmp(&b.package_id.to_string()));
-        for package in packages {
-            println!("{}", package.package_id);
+
+        if !self.updatables {
+            display::print_grid(packages.iter().map(|p| &p.package_id).collect());
+
+            return;
         }
+
+        let manager = RepositoryManager::new(&config);
+        let mut updatables = Vec::new();
+        for package in packages {
+            let (_, package_meta) = manager.read_package(&package.package_id.name).unwrap_or_exit(1);
+            let latest_version = package_meta.get_latest_version(&Target::current()).unwrap_or_exit(1);
+
+            if *latest_version == package.package_id.version {
+                continue;
+            }
+
+            updatables.push(&package.package_id);
+        }
+
+        if updatables.is_empty() {
+            println!("No updatable packages found");
+            return;
+        }
+
+        display::print_grid(updatables);
     }
 }
