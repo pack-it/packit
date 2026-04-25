@@ -2,11 +2,12 @@
 use terminal_size::{Height, Width, terminal_size};
 
 /// Prints the given items in a grid.
+/// Falls back to vertical print if the terminal width cannot be obtained.
 pub fn print_grid(items: Vec<String>) {
     // Get the width of the terminal for grid calculations
     let terminal_width = match terminal_size() {
         Some((Width(width), Height(_))) => width as usize,
-        None => panic!("TODO"),
+        None => return vertical_print(items),
     };
 
     // Get the widest string in the given items
@@ -33,5 +34,12 @@ pub fn print_grid(items: Vec<String>) {
         }
 
         println!()
+    }
+}
+
+/// Prints items vertically.
+fn vertical_print(items: Vec<String>) {
+    for item in items {
+        println!("{item}");
     }
 }
