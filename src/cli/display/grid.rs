@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use terminal_size::{Height, Width, terminal_size};
 
+/// Prints the given items in a grid.
 pub fn print_grid(items: Vec<String>) {
     // Get the width of the terminal for grid calculations
     let terminal_width = match terminal_size() {

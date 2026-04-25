@@ -2,7 +2,7 @@
 use clap::Args;
 
 use crate::{
-    cli::{commands::HandleCommand, display::grid::print_grid},
+    cli::{commands::HandleCommand, display},
     config::Config,
     platforms::Target,
     repositories::manager::RepositoryManager,
@@ -28,13 +28,13 @@ impl HandleCommand for ListArgs {
         packages.sort_by(|a, b| a.package_id.to_string().cmp(&b.package_id.to_string()));
 
         if !self.updatables {
-            print_grid(packages.iter().map(|p| p.package_id.to_string()).collect());
+            display::print_grid(packages.iter().map(|p| p.package_id.to_string()).collect());
 
             return;
         }
 
         let manager = RepositoryManager::new(&config);
-        let mut updatables_found = false;
+        let mut updatables = Vec::new();
         for package in packages {
             let (_, package_meta) = manager.read_package(&package.package_id.name).unwrap_or_exit(1);
             let latest_version = package_meta.get_latest_version(&Target::current()).unwrap_or_exit(1);
@@ -43,12 +43,14 @@ impl HandleCommand for ListArgs {
                 continue;
             }
 
-            updatables_found = true;
-            println!("{}", package.package_id);
+            updatables.push(package.package_id.to_string());
         }
 
-        if !updatables_found {
+        if updatables.is_empty() {
             println!("No updatable packages found");
+            return;
         }
+
+        display::print_grid(updatables);
     }
 }

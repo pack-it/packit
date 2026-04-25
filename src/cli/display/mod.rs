@@ -7,6 +7,8 @@ mod prompts;
 mod reader;
 mod spinner;
 
+pub use grid::print_grid;
+
 pub use progressbar::ProgressBar;
 
 pub use prompts::QuestionResponse;

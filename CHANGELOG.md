@@ -12,6 +12,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The fuzzy-search feature, to provide a package suggestion in case of a wrong package parameter.
 - Add support for leading zeros in version numbers.
 - Add web prebuild provider for web prebuild support.
+- The `--updatables` flag on the list command, to list packages which can be updated.
+- The list command now has grid printing.
 
 ### Removed
 - The repositories command, this command is now integrated in the new config command.
