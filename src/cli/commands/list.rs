@@ -2,7 +2,7 @@
 use clap::Args;
 
 use crate::{
-    cli::commands::HandleCommand,
+    cli::{commands::HandleCommand, display::grid::print_grid},
     config::Config,
     platforms::Target,
     repositories::manager::RepositoryManager,
@@ -28,9 +28,7 @@ impl HandleCommand for ListArgs {
         packages.sort_by(|a, b| a.package_id.to_string().cmp(&b.package_id.to_string()));
 
         if !self.updatables {
-            for package in packages {
-                println!("{}", package.package_id);
-            }
+            print_grid(packages.iter().map(|p| p.package_id.to_string()).collect());
 
             return;
         }

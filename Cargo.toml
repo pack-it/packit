@@ -29,6 +29,7 @@ xz2 = "0.1.7"
 lief = { git = "https://github.com/lief-project/LIEF.git", rev = "1915b921dee222912880cfb8b1ddce0a00ca88cd" }
 url = "2.5.8"
 toml_edit = "0.25.11"
+terminal_size = "0.4.4"
 
 # macOS and Linux dependencies
 [target.'cfg(any(target_os = "macos", target_os = "linux"))'.dependencies]
@@ -38,4 +39,14 @@ libc = "0.2.184"
 [target.'cfg(target_os = "windows")'.dependencies]
 windows-version = "0.1.7"
 enable-ansi-support = "0.3.1"
-windows = { version = "0.62.2", features = ["Win32", "Win32_Security", "Win32_Security_Authorization", "Win32_System", "Win32_System_Threading", "Win32_Storage", "Win32_Storage_FileSystem", "Win32_System_SystemServices", "Win32_System_Memory"] }
+windows = { version = "0.62.2", features = [
+    "Win32",
+    "Win32_Security",
+    "Win32_Security_Authorization",
+    "Win32_System",
+    "Win32_System_Threading",
+    "Win32_Storage",
+    "Win32_Storage_FileSystem",
+    "Win32_System_SystemServices",
+    "Win32_System_Memory",
+] }
