@@ -1,9 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-only
+use std::fmt::Display;
+
 use terminal_size::{Height, Width, terminal_size};
 
 /// Prints the given items in a grid.
 /// Falls back to vertical print if the terminal width cannot be obtained.
-pub fn print_grid(items: Vec<String>) {
+pub fn print_grid<T>(items: Vec<T>)
+where
+    T: Display,
+{
     // Get the width of the terminal for grid calculations
     let terminal_width = match terminal_size() {
         Some((Width(width), Height(_))) => width as usize,
@@ -11,8 +16,9 @@ pub fn print_grid(items: Vec<String>) {
     };
 
     // Get the widest string in the given items
-    let mut widest = &String::from("");
+    let mut widest = String::from("");
     for item in &items {
+        let item = item.to_string();
         if item.len() > widest.len() {
             widest = item;
         }
@@ -27,7 +33,7 @@ pub fn print_grid(items: Vec<String>) {
     for i in 0..row_count {
         for j in 0..column_count {
             if let Some(item) = items.get(i * column_count + j) {
-                let current_length = item.len();
+                let current_length = item.to_string().len();
                 let padding = " ".repeat(column_width - current_length);
                 print!("{item}{padding}");
             }
@@ -38,7 +44,10 @@ pub fn print_grid(items: Vec<String>) {
 }
 
 /// Prints items vertically.
-fn vertical_print(items: Vec<String>) {
+fn vertical_print<T>(items: Vec<T>)
+where
+    T: Display,
+{
     for item in items {
         println!("{item}");
     }

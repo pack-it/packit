@@ -28,7 +28,7 @@ impl HandleCommand for ListArgs {
         packages.sort_by(|a, b| a.package_id.to_string().cmp(&b.package_id.to_string()));
 
         if !self.updatables {
-            display::print_grid(packages.iter().map(|p| p.package_id.to_string()).collect());
+            display::print_grid(packages.iter().map(|p| &p.package_id).collect());
 
             return;
         }
@@ -43,7 +43,7 @@ impl HandleCommand for ListArgs {
                 continue;
             }
 
-            updatables.push(package.package_id.to_string());
+            updatables.push(&package.package_id);
         }
 
         if updatables.is_empty() {
