@@ -15,8 +15,8 @@ use crate::{
 /// Checks for any inconsistencies or mistakes in the installed packages or in the Packit files itself.
 #[derive(Args, Debug)]
 pub struct CheckArgs {
-    /// Optional package id, to limit the check to the specified package
-    package: Option<PackageId>,
+    /// A vec of packages to fix. Could be empty, then all packages are checked.
+    pub packages: Vec<PackageId>,
 }
 
 impl HandleCommand for CheckArgs {
@@ -26,20 +26,37 @@ impl HandleCommand for CheckArgs {
         let register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
         let mut verifier = Verifier::new(&config);
 
-        // Check if the package exists before checking it with the verifier
-        if let Some(package_id) = &self.package {
+        let error_message = "An error occured during the check, this error could be caused by one of the issues above and might still be fixed by `pit fix`. It's possible that not all issues were found (especially when checking a single package).";
+        if self.packages.is_empty() {
+            while let Some(issue) = verifier.next_issue(&register).unwrap_or_exit_msg(error_message, 1) {
+                println!("{issue}")
+            }
+
+            // Return correct message based on found issues
+            if verifier.issues_found() {
+                println!("Consider running `pit fix` to resolve the issues above.");
+            } else {
+                println!("No issues were found");
+            }
+
+            return;
+        }
+
+        for package_id in &self.packages {
             // Check if the package exists in the register or in storage before doing any checks
+            // TODO: The verifier should handle this (at the places where it currently says "note doesn't check for existance in xyz")
             let installed_directory = config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
             if register.get_package_version(package_id).is_none() && !fs::exists(installed_directory).unwrap_or_exit(1) {
                 error!(msg: "Cannot perform checks, package '{package_id}' doesn't exist in register or storage.");
 
                 // Show possible versions if a package with the given name exists
                 if let Some(package_name) = register.get_package(&package_id.name) {
-                    let versions = package_name.versions.keys();
                     print!("Did you mean version(s): ");
+                    let versions = package_name.versions.keys();
                     for version in versions {
                         print!("'{version}' ");
                     }
+
                     println!();
                     return;
                 }
@@ -51,28 +68,17 @@ impl HandleCommand for CheckArgs {
 
                 exit(1);
             }
-        }
 
-        // Show all issues
-        let error_message = "An error occured during the check, this error could be caused by one of the issues above and might still be fixed by `pit fix`. It's possible that not all issues were found.";
-        match &self.package {
-            Some(id) => {
-                while let Some(issue) = verifier.next_package_issue(id, &register).unwrap_or_exit_msg(error_message, 1) {
-                    println!("{issue}")
-                }
-            },
-            None => {
-                while let Some(issue) = verifier.next_issue(&register).unwrap_or_exit_msg(error_message, 1) {
-                    println!("{issue}")
-                }
-            },
-        }
+            while let Some(issue) = verifier.next_package_issue(package_id, &register).unwrap_or_exit_msg(error_message, 1) {
+                println!("{issue}")
+            }
 
-        // Return correct message based on found issues
-        if verifier.issues_found() {
-            println!("Consider running `pit fix` to resolve the issues above.");
-        } else {
-            println!("No issues were found");
+            // Return correct message based on found issues
+            if verifier.issues_found() {
+                println!("Consider running `pit fix` to resolve the issues above.");
+            } else {
+                println!("No issues were found");
+            }
         }
     }
 }
