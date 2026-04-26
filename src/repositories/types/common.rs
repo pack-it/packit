@@ -55,8 +55,10 @@ pub struct Patch {
 
 impl Source {
     /// Gets all patches of the source, sorted by id.
-    pub fn get_sorted_patches(&self) -> &HashMap<u32, Patch> {
-        &self.patches //TODO
+    pub fn get_sorted_patches(&self) -> Vec<(u32, &Patch)> {
+        let mut vec: Vec<(u32, &Patch)> = self.patches.iter().map(|(key, value)| (*key, value)).collect();
+        vec.sort_by_key(|(key, _)| *key);
+        vec
     }
 
     /// Custom deserializer to deserialize integer keys correctly

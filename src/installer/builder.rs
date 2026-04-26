@@ -161,9 +161,11 @@ impl<'a> Builder<'a> {
             apply_directory = apply_directory.join(PathBuf::from(apply_in));
         }
 
+        let package_id = PackageId::new(package_name.clone(), version.clone());
+
         // Apply patches
         for (id, patch) in source.get_sorted_patches() {
-            let description = format!("patch {id}' of '{package_name}");
+            let description = format!("patch {id}' of '{package_id}");
             let patch_bytes = self.download_file(&patch.url, &patch.mirrors, &patch.checksum, &description)?;
 
             // Construct apply directory for this patch
@@ -175,7 +177,7 @@ impl<'a> Builder<'a> {
             // Apply patch
             patches::apply_patch(&patch_bytes, &apply_directory)?;
 
-            println!("Applied patch '{id}' to '{package_name}'");
+            println!("Applied patch '{id}' to '{package_id}'");
         }
 
         // Create build env
@@ -193,10 +195,8 @@ impl<'a> Builder<'a> {
         let script_path = install_meta.version_metadata.get_build_script_path(&install_meta.target_bounds)?;
         let script_path = scripts::download_script(self.repository_manager, &script_path, package_name, &install_meta.repository_id)?
             .ok_or(ScriptError::ScriptNotFound("build".into()))?;
-        let package_id = PackageId::new(package_name.clone(), version.clone());
         let script_data = ScriptData::new(&script_path, &destination_dir, &package_id, self.config, &script_args, self.verbose);
 
-        let package_id = PackageId::new(package_name.clone(), version.clone());
         println!("Executing build script of {package_id}");
 
         // Show build spinner
