@@ -176,7 +176,7 @@ impl<'a> Installer<'a> {
         }
 
         // Install the package with a prebuild if possible
-        let revision = node_value.version_metadata.revisions.len() as u64;
+        let revision = node_value.version_metadata.get_revision_count();
         match self.repository_manager.get_prebuild_url(&node_value.repository_id, node.get_id(), revision, &Target::current()) {
             Ok(Some(_)) => {
                 self.install_package(node_value, dependencies, true)?;
@@ -253,7 +253,7 @@ impl<'a> Installer<'a> {
         // Get build version of package
         match use_prebuild {
             true => {
-                let revision = install_meta.version_metadata.revisions.len() as u64;
+                let revision = install_meta.version_metadata.get_revision_count();
                 self.download_prebuild(&install_meta.repository_id, &package_id, revision, &install_directory)?
             },
             false => Builder::new(self.config, self.register, self.repository_manager, self.options.verbose)
