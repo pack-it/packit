@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::process::exit;
+use std::{path::PathBuf, process::exit};
 
 use clap::Subcommand;
 use reqwest::Url;
@@ -9,8 +9,11 @@ use crate::{
         commands::HandleCommand,
         display::{Spinner, logging::error},
     },
-    repositories::types::Checksum,
-    utils::requests,
+    config::Config,
+    installer::types::PackageId,
+    platforms::Target,
+    repositories::{manager::RepositoryManager, minirepo::MiniRepoCreator, types::Checksum},
+    utils::{requests, unwrap_or_exit::UnwrapOrExit},
 };
 
 /// Provides several utils for advanced users.
@@ -21,6 +24,15 @@ pub enum UtilArgs {
         /// The url to request the file from
         url: Url,
     },
+
+    /// Generates a minirepo containing the specified packages
+    Minirepo {
+        /// The destination directory
+        destination: PathBuf,
+
+        /// The packages to include in the minirepo
+        packages: Vec<PackageId>,
+    },
 }
 
 impl HandleCommand for UtilArgs {
@@ -28,6 +40,7 @@ impl HandleCommand for UtilArgs {
     fn handle(&self) {
         match self {
             Self::Checksum { url } => self.handle_checksum(url),
+            Self::Minirepo { destination, packages } => self.handle_minirepo(destination, packages),
         }
     }
 }
@@ -67,5 +80,15 @@ impl UtilArgs {
 
         spinner.finish("Downloading file successful".into());
         println!("Found checksum {}", checksum.to_string());
+    }
+
+    fn handle_minirepo(&self, destination: &PathBuf, packages: &Vec<PackageId>) {
+        let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
+        let manager = RepositoryManager::new(&config);
+
+        let creator = MiniRepoCreator::new(&manager, Target::current());
+        creator.create_minirepo(packages.iter().cloned().collect(), destination).unwrap_or_exit_msg("Cannot create minirepo", 1);
+
+        println!("Created minirepo at {}!", destination.display());
     }
 }
