@@ -39,7 +39,7 @@ impl HandleCommand for SearchArgs {
 }
 
 impl SearchArgs {
-    /// Searches through all repositories (using their index.toml) for packages which match the given regex.
+    /// Searches through all repositories for packages which match the given regex.
     /// Fails if the given query is not valid regex.
     fn regex_search(&self) {
         let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
@@ -65,7 +65,7 @@ impl SearchArgs {
         print_grid(matches.into_iter().collect());
     }
 
-    /// Searches information of a package based on the provider `OptionalPackageId`.
+    /// Searches information of a package based on the provided `OptionalPackageId`.
     /// Fails if the given query is not a valid `OptionalPackageId`.
     fn search_package(&self) {
         // Get the optional id
