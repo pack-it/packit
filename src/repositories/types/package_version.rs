@@ -148,6 +148,11 @@ impl PackageVersionMeta {
         Ok(self.script_args.iter().chain(target.script_args.iter()).map(|(key, value)| (key.as_str(), value.as_str())).collect())
     }
 
+    /// Gets the number of revisions of the current package version metadata.
+    pub fn get_revision_count(&self) -> u64 {
+        self.revisions.len() as u64
+    }
+
     /// Checks if there are conflicts in the package version metadata
     pub fn has_conflicts(&self) -> bool {
         // Check if a global dependency is also specified as target specific dependency
