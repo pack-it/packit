@@ -83,3 +83,19 @@ impl Display for Issue {
         Ok(())
     }
 }
+
+impl Issue {
+    /// Gets a message which descripes the fix for each issue.
+    pub fn get_fix_message(&self) -> String {
+        match &self {
+            Issue::BrokenTree(_) => "To fix this issue the missing packages will be installed.".to_string(),
+            Issue::InconsistentStorage(_) => {
+                "To fix this issue the packages are temporarily removed from the register and then reinstalled.".to_string()
+            },
+            Issue::InconsistentRegister(_) => {
+                "To fix this issue the packages are temporarily removed from storage and then reinstalled.".to_string()
+            },
+            _ => "There is no automatic fix for this issue available yet.".to_string(),
+        }
+    }
+}

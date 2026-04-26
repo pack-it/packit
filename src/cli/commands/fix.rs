@@ -31,7 +31,8 @@ impl HandleCommand for FixArgs {
         while let Some(issue) = verifier.next_issue(&register).unwrap_or_exit(1) {
             println!("{issue}");
 
-            let question = "Would you like to automatically fix the above issue with `pit fix`?";
+            println!("{}", issue.get_fix_message());
+            let question = "Would you like to automatically apply the fix above?";
             if ask_user(question, QuestionResponse::Yes).unwrap_or_exit(1).is_no() {
                 continue;
             }
