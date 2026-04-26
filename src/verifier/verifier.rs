@@ -26,11 +26,11 @@ enum Check {
 
 /// Defines the correct order to do verifier checks.
 const VERIFY_ORDER: &[Check] = &[
-    Check::PackitGroup,
-    Check::StorageConsistency,
-    Check::RegisterConsistency,
-    Check::Alterations,
-    Check::DependencyTree,
+    Check::PackitGroup,         // Permission related check should happen before check which require permissions
+    Check::StorageConsistency,  // Storage consistency must be checked before assuming consistency (in alteration check for example)
+    Check::RegisterConsistency, // Register consistency must be checked before assuming consistency (in alteration check for example)
+    Check::Alterations,         // Alteration check doesn't HAVE to happen before the dependency check
+    Check::DependencyTree,      // This check happens last, assumes most things work already
 ];
 
 /// Verifier that scans the Packit environment for issues.
@@ -185,9 +185,7 @@ impl<'a> Verifier<'a> {
         let correct_checksum = match provider.get_prebuild_checksum(package_id, revision, &Target::current()) {
             Ok(Some(checksum)) => checksum,
             Ok(None) => {
-                warning!(
-                    "Cannot perform alterations check for package '{package_id}', because no prebuild version of the package can be found"
-                );
+                warning!("Cannot perform alterations check for package '{package_id}', because no checksum of the prebuild can be found");
                 return Ok(false);
             },
             Err(e) => {
