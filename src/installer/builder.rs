@@ -19,7 +19,11 @@ use crate::{
         unpack::{ArchiveExtension, UnpackError, unpack},
     },
     platforms::binaries::{BinaryPatcher, BinaryPatcherError},
-    repositories::{error::RepositoryError, manager::RepositoryManager, types::Checksum},
+    repositories::{
+        error::RepositoryError,
+        manager::RepositoryManager,
+        types::{Checksum, Patch},
+    },
     storage::package_register::PackageRegister,
     utils::{
         patches::{self, PatchError},
@@ -44,6 +48,9 @@ pub enum BuilderError {
 
     #[error("The source url has an empty path")]
     EmptyUrlPath,
+
+    #[error("The required patch was not found in the repository")]
+    RepositoryPatchNotFound,
 
     #[error("Cannot unpack response")]
     UnpackError(#[from] UnpackError),
@@ -165,8 +172,7 @@ impl<'a> Builder<'a> {
 
         // Apply patches
         for (id, patch) in source.get_sorted_patches() {
-            let description = format!("patch {id}' of '{package_id}");
-            let patch_bytes = self.download_file(&patch.url, &patch.mirrors, &patch.checksum, &description)?;
+            let patch_bytes = self.download_patch(id, patch, &package_id, &install_meta.repository_id)?;
 
             // Construct apply directory for this patch
             let apply_directory = match &patch.apply_in {
@@ -219,6 +225,34 @@ impl<'a> Builder<'a> {
         BinaryPatcher::new(self.config).patch_binaries_in(&destination_dir.as_ref().to_path_buf(), &package_id, installed_dependencies)?;
 
         Ok(())
+    }
+
+    /// Downloads a patch, either from the given url or from the repository.
+    fn download_patch(&self, id: u32, patch: &Patch, package_id: &PackageId, repository_id: &str) -> Result<Bytes> {
+        // Download patch from the url if it starts with 'http://' or 'https://'
+        if patch.url.starts_with("http://") || patch.url.starts_with("https://") {
+            let download_description = format!("patch {id}' of '{package_id}");
+            return self.download_file(&patch.url, &patch.mirrors, &patch.checksum, &download_description);
+        }
+
+        // Create download spinner
+        let spinner = Spinner::new();
+        spinner.show(format!(
+            "Downloading 'patch {id}' of '{package_id}' from repository '{repository_id}'"
+        ));
+
+        // Download patch file from the repository itself
+        let file = self
+            .repository_manager
+            .read_file_bytes(repository_id, &package_id.name, &patch.url)?
+            .ok_or(BuilderError::RepositoryPatchNotFound)?;
+
+        // Finish download spinner
+        spinner.finish(format!(
+            "Downloading 'patch {id}' of '{package_id}' from repository '{repository_id}' successful"
+        ));
+
+        Ok(file)
     }
 
     /// Downloads a file from the url, or one of the mirrors. Checks against a checksum and shows a spinner.

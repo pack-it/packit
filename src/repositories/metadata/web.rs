@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+use bytes::Bytes;
 use reqwest::StatusCode;
 
 use crate::{
@@ -44,8 +45,16 @@ impl MetadataProvider for WebMetadataProvider {
         Ok(toml::de::from_str(&data)?)
     }
 
-    /// Reads a file and returns its content as a string. If the file doesn't exist Ok(None) is returned.
-    /// Returns a response error if `requests::get` or `Response::text` fails.
+    fn read_file_bytes(&self, package: &PackageName, file_path: &str) -> Result<Option<Bytes>> {
+        let response = requests::get(format!("{}/packages/{package}/{file_path}", self.url))?;
+
+        if response.status() == StatusCode::NOT_FOUND {
+            return Ok(None);
+        }
+
+        Ok(Some(response.bytes()?))
+    }
+
     fn read_file(&self, package: &PackageName, file_path: &str) -> Result<Option<String>> {
         let response = requests::get(format!("{}/packages/{package}/{file_path}", self.url))?;
 
