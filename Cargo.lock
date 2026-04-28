@@ -536,8 +536,9 @@ dependencies = [
 
 [[package]]
 name = "diffy"
-version = "0.4.2"
-source = "git+https://github.com/bmwill/diffy.git#420a9d6f5c0ef831392083a09c09f344f487babf"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "05264ab2aab4fb952fc4b0f3f6eff1ddfb4563064053a4ea174d91537584a769"
 dependencies = [
  "hashbrown 0.17.0",
  "zlib-rs",
