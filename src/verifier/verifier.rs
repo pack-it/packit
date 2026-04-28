@@ -2,7 +2,7 @@
 use std::{fs, path::PathBuf, str::FromStr};
 
 use crate::{
-    cli::display::logging::{debug, error, warning},
+    cli::display::logging::{debug, warning},
     config::{Config, Repository},
     installer::types::{PackageId, PackageName, Version},
     packager,
@@ -52,9 +52,24 @@ impl<'a> Verifier<'a> {
         }
     }
 
+    /// A wrapper around the `next_package_issue_impl` method.
+    /// Returns the next issue if it exists.
+    /// Returns an error if an error is returned and no issues have been found yet.
+    pub fn next_issue(&mut self, register: &PackageRegister) -> Result<Option<Issue>> {
+        match self.next_issue_impl(register) {
+            Ok(issue) => Ok(issue),
+            Err(e) if self.issues_found => {
+                debug!(err: e, "An error occured when issues were already found, skipping remaining issues.");
+                self.current_issue = VERIFY_ORDER.len();
+                return Ok(None);
+            },
+            Err(e) => return Err(e),
+        }
+    }
+
     /// Gets the next issue in the order defined in VERIFY_ORDER.
     /// Returns None if there are no more issues to return.
-    pub fn next_issue(&mut self, register: &PackageRegister) -> Result<Option<Issue>> {
+    fn next_issue_impl(&mut self, register: &PackageRegister) -> Result<Option<Issue>> {
         loop {
             let check = match VERIFY_ORDER.get(self.current_issue) {
                 Some(check) => check,
@@ -68,10 +83,7 @@ impl<'a> Verifier<'a> {
                 Check::StorageConsistency => self.check_storage_consistency(register)?,
                 Check::RegisterConsistency => self.check_register_consistency(register)?,
                 Check::DependencyTree => self.check_dependency_tree(register),
-                Check::Alterations => {
-                    warning!("This is an experimental check, issues from this check could be inaccurate.");
-                    self.check_alterations(register)?
-                },
+                Check::Alterations => self.check_alterations(register)?,
                 Check::PackitGroup => self.check_packit_group(),
 
                 // Continue if the check is package specific. Explicitly state them, because it's easy to forgot.
@@ -85,10 +97,24 @@ impl<'a> Verifier<'a> {
         }
     }
 
+    /// A wrapper around the `next_package_issue_impl` method.
+    /// Returns the next package issue if it exists.
+    /// Returns an error if an error is returned and no issues have been found yet.
+    pub fn next_package_issue(&mut self, package_id: &PackageId, register: &PackageRegister) -> Result<Option<Issue>> {
+        match self.next_package_issue_impl(package_id, register) {
+            Ok(issue) => Ok(issue),
+            Err(e) if self.issues_found => {
+                debug!(err: e, "An error occured when issues were already found, skipping remaining issues.");
+                self.current_issue = VERIFY_ORDER.len();
+                return Ok(None);
+            },
+            Err(e) => return Err(e),
+        }
+    }
+
     /// Gets the next issue for a specific package in the order defined in VERIFY_ORDER.
     /// Returns None if there are no more issues to return.
-    /// Note that this method assumes that the package exists.
-    pub fn next_package_issue(&mut self, package_id: &PackageId, register: &PackageRegister) -> Result<Option<Issue>> {
+    fn next_package_issue_impl(&mut self, package_id: &PackageId, register: &PackageRegister) -> Result<Option<Issue>> {
         loop {
             let check = match VERIFY_ORDER.get(self.current_issue) {
                 Some(check) => check,
@@ -124,6 +150,8 @@ impl<'a> Verifier<'a> {
     /// Checks for alterations in all packages using a checksum which is compared to the checksum from the pre-build.
     /// Returns an alteration issue or None if no packages can be found that are altered.
     fn check_alterations(&self, register: &PackageRegister) -> Result<Option<Issue>> {
+        warning!("This is an experimental check, issues from this check could be inaccurate.");
+
         // Check issue for all installed packages
         let mut altered = Vec::new();
         for package in register.iterate_all() {
@@ -144,7 +172,7 @@ impl<'a> Verifier<'a> {
     fn check_package_alterations(&self, package_id: &PackageId, register: &PackageRegister) -> Result<bool> {
         // Get the installed package from the register
         let Some(package_version) = register.get_package_version(package_id) else {
-            error!(msg: "Cannot retrieve package '{package_id}' from register for package alterations check");
+            warning!("Cannot retrieve package '{package_id}' from register for package alterations check, skipping check");
             return Ok(false);
         };
 
@@ -155,14 +183,15 @@ impl<'a> Verifier<'a> {
             let repository = Repository::new(&package_version.source_repository_url, &package_version.source_repository_provider);
 
             let Some(provider) = provider::create_metadata_provider(&repository) else {
-                error!(msg: "Cannot create metadata provider for '{package_id}'.");
+                warning!("Cannot create metadata provider for '{package_id}', skipping check");
                 return Ok(false);
             };
 
             let repo_metadata = match provider.read_repository_metadata() {
                 Ok(meta) => meta,
                 Err(e) => {
-                    error!(e, "Cannot retrieve repository metadata for '{package_id}'.");
+                    warning!("Cannot retrieve repository metadata for '{package_id}', skipping check");
+                    debug!(err: e, "Retrieving repository metadata failed");
                     return Ok(false);
                 },
             };
@@ -173,7 +202,7 @@ impl<'a> Verifier<'a> {
 
         let Some(prebuilds_url) = &prebuilds_url else {
             warning!(
-                "Cannot perform alterations check for package '{package_id}', because no prebuild repository for the package can be found"
+                "Cannot perform alterations check for package '{package_id}', because no prebuild repository for the package can be found, skipping check"
             );
             return Ok(false);
         };
@@ -181,7 +210,7 @@ impl<'a> Verifier<'a> {
         let provider = match provider::create_prebuild_provider_from_url(prebuilds_url, prebuilds_provider) {
             Some(provider) => provider,
             None => {
-                error!(msg: "Cannot create prebuild provider for '{package_id}'.");
+                warning!("Cannot create prebuild provider for '{package_id}', skipping check");
                 return Ok(false);
             },
         };
@@ -190,14 +219,14 @@ impl<'a> Verifier<'a> {
         let correct_checksum = match provider.get_prebuild_checksum(package_id, revision, &Target::current()) {
             Ok(Some(checksum)) => checksum,
             Ok(None) => {
-                warning!("Cannot perform alterations check for package '{package_id}', because no checksum of the prebuild can be found");
+                warning!(
+                    "Cannot perform alterations check for package '{package_id}', because no checksum of the prebuild can be found, skipping check"
+                );
                 return Ok(false);
             },
             Err(e) => {
-                error!(
-                    e,
-                    "Cannot perform alterations check for package '{package_id}', because checksum cannot be read"
-                );
+                warning!("Cannot perform alterations check for package '{package_id}', because checksum cannot be read, skipping check");
+                debug!(err: e, "Failed to read prebuild checksum");
                 return Ok(false);
             },
         };
