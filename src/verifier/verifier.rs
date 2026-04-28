@@ -149,7 +149,10 @@ impl<'a> Verifier<'a> {
 
     /// Checks for alterations in all packages using a checksum which is compared to the checksum from the pre-build.
     /// Returns an alteration issue or None if no packages can be found that are altered.
+    #[expect(unused_variables)]
     fn check_alterations(&self, register: &PackageRegister) -> Result<Option<Issue>> {
+        // TODO: For now skip this check, because it will never work (yet)
+        return Ok(None);
         warning!("This is an experimental check, issues from this check could be inaccurate.");
 
         // Check issue for all installed packages
@@ -169,7 +172,11 @@ impl<'a> Verifier<'a> {
 
     /// Checks for alterations in a single package using a checksum which is compared to the checksum from the pre-build.
     /// Returns true if the package was altered, false if not.
+    #[expect(unused_variables, unreachable_code)]
     fn check_package_alterations(&self, package_id: &PackageId, register: &PackageRegister) -> Result<bool> {
+        // TODO: For now skip this check, because it will never work (yet)
+        return Ok(false);
+
         // Get the installed package from the register
         let Some(package_version) = register.get_package_version(package_id) else {
             warning!("Cannot retrieve package '{package_id}' from register for package alterations check, skipping check");

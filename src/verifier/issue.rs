@@ -26,65 +26,57 @@ pub enum Issue {
 }
 
 impl Display for Issue {
-    // TODO: Unsure more uniform printing (get issue name from issue with a method) and package listing should be separated logic
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", "ISSUE: ".bold().yellow())?;
         match self {
             Issue::BrokenTree(missing) => {
-                write!(f, "Broken dependency tree\n")?;
-                write!(f, "The following dependencies are missing:\n")?;
+                writeln!(f, "Broken dependency tree")?;
+                writeln!(f, "The following dependencies are missing:")?;
 
                 for (parent, missing_package) in missing {
                     let item = format!(
-                        "  - {} missing {}\n",
+                        "  - {} missing {}",
                         parent.to_string().bold().blue(),
                         missing_package.to_string().bold().blue()
                     );
-                    write!(f, "{}", item)?;
+
+                    writeln!(f, "{}", item)?;
                 }
             },
-            Issue::InconsistentStorage(package_ids) if package_ids.len() == 1 => {
-                write!(f, "Inconsistent storage\n")?;
-                let issue_explanation = format!(
-                    "{} was found in Installed.toml, but not in the Packit package directory.\n",
-                    package_ids.first().expect("Expected one package id.").to_string().bold().blue()
-                );
-                write!(f, "{issue_explanation}")?;
-            },
             Issue::InconsistentStorage(package_ids) => {
-                write!(f, "Inconsistent storage\n")?;
-                let issue_explanation = "The following packages were found in Installed.toml, but not in the Packit package directory:\n";
-                write!(f, "{issue_explanation}")?;
+                writeln!(f, "Inconsistent storage")?;
+                let issue_explanation = "The following packages were found in Installed.toml, but not in the Packit package directory:";
+                writeln!(f, "{issue_explanation}")?;
 
                 for package in package_ids {
-                    write!(f, "  - {}\n", package.to_string().bold().blue())?;
+                    writeln!(f, "  - {}", package.to_string().bold().blue())?;
                 }
             },
             Issue::InconsistentRegister(package_ids) => {
-                write!(f, "Inconsistent register\n")?;
-                let issue_explanation = "The following packages were found in the Packit packages directory, but not in the register:\n";
-                write!(f, "{issue_explanation}")?;
+                writeln!(f, "Inconsistent register")?;
+                let issue_explanation = "The following packages were found in the Packit packages directory, but not in the register:";
+                writeln!(f, "{issue_explanation}")?;
 
                 for package in package_ids {
-                    write!(f, "  - {}\n", package.to_string().bold().blue())?;
+                    writeln!(f, "  - {}", package.to_string().bold().blue())?;
                 }
             },
             Issue::AlteredPackage(altered) => {
-                write!(f, "Altered packages\n")?;
-                let issue_explanation = "The following packages were found to be changed when they shouldn't be:\n";
-                write!(f, "{issue_explanation}")?;
+                writeln!(f, "Altered packages")?;
+                let issue_explanation = "The following packages were found to be changed when they shouldn't be:";
+                writeln!(f, "{issue_explanation}")?;
 
                 for package in altered {
-                    write!(f, "  - {}\n", package.to_string().bold().blue())?;
+                    writeln!(f, "  - {}", package.to_string().bold().blue())?;
                 }
             },
             Issue::MissingPackitGroup => {
-                write!(f, "Packit group missing\n")?;
-                write!(f, "The 'packit' group is missing while multiuser mode is turned on.\n")?;
+                writeln!(f, "Packit group missing")?;
+                writeln!(f, "The 'packit' group is missing while multiuser mode is turned on.")?;
             },
             Issue::NotFound(package_id) => {
-                write!(f, "Package existance\n")?;
-                write!(f, "{} cannot be found anywhere in Packit.\n", package_id.to_string().bold().blue())?
+                writeln!(f, "Package existance")?;
+                writeln!(f, "{} cannot be found anywhere in Packit.", package_id.to_string().bold().blue())?
 
                 // TODO: Somehow show result of fuzzy search here
             },
@@ -96,16 +88,16 @@ impl Display for Issue {
 
 impl Issue {
     /// Gets a message which descripes the fix for each issue.
-    pub fn get_fix_message(&self) -> String {
+    pub fn get_fix_message(&self) -> &str {
         match &self {
-            Issue::BrokenTree(_) => "To fix this issue the missing packages will be installed.".to_string(),
+            Issue::BrokenTree(_) => "To fix this issue the missing packages will be installed.",
             Issue::InconsistentStorage(_) => {
-                "To fix this issue the packages are temporarily removed from the register and then reinstalled.".to_string()
+                "To fix this issue the packages are temporarily removed from the register and then reinstalled."
             },
-            Issue::InconsistentRegister(_) => {
-                "To fix this issue the packages are temporarily removed from storage and then reinstalled.".to_string()
+            Issue::InconsistentRegister(_) => "To fix this issue the packages are temporarily removed from storage and then reinstalled.",
+            Issue::AlteredPackage(_) | Issue::MissingPackitGroup | Issue::NotFound(_) => {
+                "There is no automatic fix for this issue available yet."
             },
-            _ => "There is no automatic fix for this issue available yet.".to_string(),
         }
     }
 }
