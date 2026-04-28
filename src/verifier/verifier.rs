@@ -105,13 +105,9 @@ impl<'a> Verifier<'a> {
                 Check::StorageConsistency => Issue::InconsistentStorage(vec![package_id.clone()]),
                 Check::RegisterConsistency if self.register_package_is_consistent(package_id, register) => continue,
                 Check::RegisterConsistency => Issue::InconsistentRegister(vec![package_id.clone()]),
-                Check::DependencyTree => {
-                    let missing_dependencies = self.check_package_dependency_tree(package_id, register);
-                    if missing_dependencies.is_empty() {
-                        continue;
-                    }
-
-                    Issue::BrokenTree(missing_dependencies)
+                Check::DependencyTree => match self.check_package_dependency_tree(package_id, register) {
+                    Some(issue) => issue,
+                    None => continue,
                 },
                 Check::Alterations if !self.check_package_alterations(package_id, register)? => continue,
                 Check::Alterations => Issue::AlteredPackage(vec![package_id.clone()]),
@@ -330,7 +326,7 @@ impl<'a> Verifier<'a> {
     fn check_dependency_tree(&self, register: &PackageRegister) -> Option<Issue> {
         let mut all_missing = Vec::new();
         for package in register.iterate_all() {
-            all_missing.extend(self.check_package_dependency_tree(&package.package_id, register));
+            all_missing.extend(self.check_package_dependency_tree_impl(&package.package_id, register));
         }
 
         if all_missing.is_empty() {
@@ -340,10 +336,20 @@ impl<'a> Verifier<'a> {
         Some(Issue::BrokenTree(all_missing))
     }
 
+    /// Wraps around the `check_package_dependency_tree_impl` method to convert it into an `Option<Issue>`.
+    /// Returns an `Issue::BrokenTree` if missing packages are found, None if not packages are missing.
+    fn check_package_dependency_tree(&self, package_id: &PackageId, register: &PackageRegister) -> Option<Issue> {
+        let packages = self.check_package_dependency_tree_impl(package_id, register);
+        if packages.is_empty() {
+            return None;
+        }
+
+        return Some(Issue::BrokenTree(packages));
+    }
+
     /// Checks the completeness of the dependency tree from a specific package.
     /// Returns a list of missing packages, can be empty if there are no packages missing from the tree.
-    /// TODO: Refactor to have a separate method for recursion, so it can return an Issue like the other methods.
-    fn check_package_dependency_tree(&self, package_id: &PackageId, register: &PackageRegister) -> Vec<(PackageId, PackageId)> {
+    fn check_package_dependency_tree_impl(&self, package_id: &PackageId, register: &PackageRegister) -> Vec<(PackageId, PackageId)> {
         let package = match register.get_package_version(package_id) {
             Some(package) => package,
             None => {
@@ -360,7 +366,7 @@ impl<'a> Verifier<'a> {
             }
 
             // Recursively check if all the dependencies are installed
-            missing.extend(self.check_package_dependency_tree(dependency, register));
+            missing.extend(self.check_package_dependency_tree_impl(dependency, register));
         }
 
         missing
