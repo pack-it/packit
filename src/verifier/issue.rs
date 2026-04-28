@@ -20,9 +20,13 @@ pub enum Issue {
 
     /// The 'packit' group is missing.
     MissingPackitGroup,
+
+    /// The given package cannot be found anywhere. This issue only applies when a package is specified by the user.
+    NotFound(PackageId),
 }
 
 impl Display for Issue {
+    // TODO: Unsure more uniform printing (get issue name from issue with a method) and package listing should be separated logic
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", "ISSUE: ".bold().yellow())?;
         match self {
@@ -77,6 +81,12 @@ impl Display for Issue {
             Issue::MissingPackitGroup => {
                 write!(f, "Packit group missing\n")?;
                 write!(f, "The 'packit' group is missing while multiuser mode is turned on.\n")?;
+            },
+            Issue::NotFound(package_id) => {
+                write!(f, "Package existance\n")?;
+                write!(f, "{} cannot be found anywhere in Packit.\n", package_id.to_string().bold().blue())?
+
+                // TODO: Somehow show result of fuzzy search here
             },
         }
 

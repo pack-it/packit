@@ -1,15 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{fs, process::exit};
-
 use clap::Args;
 
 use crate::{
-    cli::{commands::HandleCommand, display::logging::error},
-    config::Config,
-    installer::types::PackageId,
-    storage::package_register::PackageRegister,
-    utils::{fuzzy, unwrap_or_exit::UnwrapOrExit},
-    verifier::Verifier,
+    cli::commands::HandleCommand, config::Config, installer::types::PackageId, storage::package_register::PackageRegister,
+    utils::unwrap_or_exit::UnwrapOrExit, verifier::Verifier,
 };
 
 /// Checks for any inconsistencies or mistakes in the installed packages or in the Packit files itself.
@@ -43,32 +37,7 @@ impl HandleCommand for CheckArgs {
         }
 
         for package_id in &self.packages {
-            // Check if the package exists in the register or in storage before doing any checks
-            // TODO: The verifier should handle this (at the places where it currently says "note doesn't check for existance in xyz")
-            let installed_directory = config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
-            if register.get_package_version(package_id).is_none() && !fs::exists(installed_directory).unwrap_or_exit(1) {
-                error!(msg: "Cannot perform checks, package '{package_id}' doesn't exist in register or storage.");
-
-                // Show possible versions if a package with the given name exists
-                if let Some(package_name) = register.get_package(&package_id.name) {
-                    print!("Did you mean version(s): ");
-                    let versions = package_name.versions.keys();
-                    for version in versions {
-                        print!("'{version}' ");
-                    }
-
-                    println!();
-                    return;
-                }
-
-                let fuzzy_match = fuzzy::min_search(register.iterate_package_names(), &package_id.name);
-                if let Some(fuzzy_match) = fuzzy_match {
-                    println!("Did you mean: '{fuzzy_match}'?");
-                }
-
-                exit(1);
-            }
-
+            // TODO: Don't throw an error when some issues are already found (not only here, but for every call to the verifier)
             while let Some(issue) = verifier.next_package_issue(package_id, &register).unwrap_or_exit_msg(error_message, 1) {
                 println!("{issue}")
             }
