@@ -83,6 +83,7 @@ impl<'a> Repairer<'a> {
         Ok(())
     }
 
+    // TODO: Somehow store the package info somewhere before deleting, so package history is preserved
     /// Fixes an inconsistent register by temporarily removing the missing packages from storage and then re-installing the packages.
     /// Note that it's not possible to recreate the register entries, because some entries like the source repository cannot be defered from the package storage.
     fn fix_inconsistent_register(&mut self, missing: Vec<PackageId>, register: &mut PackageRegister) -> Result<()> {

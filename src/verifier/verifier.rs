@@ -2,7 +2,7 @@
 use std::{fs, path::PathBuf, str::FromStr};
 
 use crate::{
-    cli::display::logging::{error, warning},
+    cli::display::logging::{debug, error, warning},
     config::{Config, Repository},
     installer::types::{PackageId, PackageName, Version},
     packager,
@@ -22,11 +22,13 @@ enum Check {
     DependencyTree,
     Alterations,
     PackitGroup,
+    PackageExistance,
 }
 
 /// Defines the correct order to do verifier checks.
 const VERIFY_ORDER: &[Check] = &[
     Check::PackitGroup,         // Permission related check should happen before check which require permissions
+    Check::PackageExistance,    // Checked before storage and register consistency, because they assume a specified package exists somewhere
     Check::StorageConsistency,  // Storage consistency must be checked before assuming consistency (in alteration check for example)
     Check::RegisterConsistency, // Register consistency must be checked before assuming consistency (in alteration check for example)
     Check::Alterations,         // Alteration check doesn't HAVE to happen before the dependency check
@@ -71,6 +73,9 @@ impl<'a> Verifier<'a> {
                     self.check_alterations(register)?
                 },
                 Check::PackitGroup => self.check_packit_group(),
+
+                // Continue if the check is package specific. Explicitly state them, because it's easy to forgot.
+                Check::PackageExistance => continue,
             };
 
             if let Some(issue) = issue {
@@ -94,6 +99,8 @@ impl<'a> Verifier<'a> {
             self.current_issue += 1;
 
             let issue = match check {
+                Check::PackageExistance if self.check_package_existance(package_id, register)? => continue,
+                Check::PackageExistance => Issue::NotFound(package_id.clone()),
                 Check::StorageConsistency if self.package_storage_is_consistent(package_id)? => continue,
                 Check::StorageConsistency => Issue::InconsistentStorage(vec![package_id.clone()]),
                 Check::RegisterConsistency if self.register_package_is_consistent(package_id, register) => continue,
@@ -108,7 +115,9 @@ impl<'a> Verifier<'a> {
                 },
                 Check::Alterations if !self.check_package_alterations(package_id, register)? => continue,
                 Check::Alterations => Issue::AlteredPackage(vec![package_id.clone()]),
-                _ => continue, // Continue if the check if not package specific
+
+                // Continue if the check is not package specific. Explicitly state them, because it's easy to forgot.
+                Check::PackitGroup => continue,
             };
 
             self.issues_found = true;
@@ -202,6 +211,18 @@ impl<'a> Verifier<'a> {
         let checksum = Checksum::from_bytes(&compressed);
 
         Ok(checksum != correct_checksum)
+    }
+
+    /// Checks if a package exists in the register or in storage.
+    /// Returns true if the package exists, false if not.
+    /// Could return an IO error.
+    fn check_package_existance(&self, package_id: &PackageId, register: &PackageRegister) -> Result<bool> {
+        let installed_directory = self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
+        if register.get_package_version(package_id).is_none() && !fs::exists(installed_directory)? {
+            return Ok(false);
+        }
+
+        Ok(true)
     }
 
     /// Checks if all packages in the register also exist in the package storage in the prefix directory.
@@ -321,11 +342,12 @@ impl<'a> Verifier<'a> {
 
     /// Checks the completeness of the dependency tree from a specific package.
     /// Returns a list of missing packages, can be empty if there are no packages missing from the tree.
+    /// TODO: Refactor to have a separate method for recursion, so it can return an Issue like the other methods.
     fn check_package_dependency_tree(&self, package_id: &PackageId, register: &PackageRegister) -> Vec<(PackageId, PackageId)> {
         let package = match register.get_package_version(package_id) {
             Some(package) => package,
             None => {
-                warning!("Parent node '{package_id}' doesn't exist, while checking dependency tree.");
+                debug!("Parent node '{package_id}' doesn't exist, while checking dependency tree.");
                 return Vec::new();
             },
         };
