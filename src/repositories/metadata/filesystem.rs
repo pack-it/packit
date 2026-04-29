@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::{fs, path::PathBuf};
 
+use bytes::Bytes;
+
 use crate::{
     config::Repository,
     installer::types::{PackageName, Version},
@@ -44,8 +46,17 @@ impl MetadataProvider for FileSystemMetadataProvider {
         Ok(toml::de::from_str(&data)?)
     }
 
-    /// Reads a file and returns its content as a string. If the file doesn't exist Ok(None) is returned.
-    /// Returns an IO error if `fs::read_to_string` fails.
+    fn read_file_bytes(&self, package: &PackageName, file_path: &str) -> Result<Option<Bytes>> {
+        let file_path = PathBuf::from(file_path);
+        let path = self.path.join("packages").join(package.to_string()).join(file_path);
+
+        if !fs::exists(&path)? {
+            return Ok(None);
+        }
+
+        Ok(Some(fs::read(&path)?.into()))
+    }
+
     fn read_file(&self, package: &PackageName, file_path: &str) -> Result<Option<String>> {
         let file_path = PathBuf::from(file_path);
         let path = self.path.join("packages").join(package.to_string()).join(file_path);

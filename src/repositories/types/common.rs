@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::collections::HashMap;
 
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer, de};
 
 use crate::repositories::types::Checksum;
 
@@ -18,7 +18,7 @@ pub enum Script {
 }
 
 /// Represents a source, holding a URL and mirror URLs to the source code of a package.
-/// Also has a checksum to check the validity of the recieved source code.
+/// Also has a checksum to check the validity of the received source code.
 #[derive(Deserialize, Debug)]
 pub struct Source {
     pub url: String,
@@ -29,12 +29,70 @@ pub struct Source {
 
     #[serde(default)]
     pub skip_unpack: bool,
+    pub apply_patches_in: Option<String>,
+
+    #[serde(default, deserialize_with = "Source::deserialize_patches")]
+    pub patches: HashMap<u32, Patch>,
 }
 
 /// Wrapper to differentiate between Single and Named sources in the metadata files.
-#[derive(Deserialize, Debug)]
-#[serde(untagged)]
+#[derive(Debug)]
 pub enum Sources {
     Single(Source),
     Named(HashMap<String, Source>),
+}
+
+/// Represents a patch to a source file, holding a URL, mirror URLs and a checksum to check validity.
+#[derive(Deserialize, Debug)]
+pub struct Patch {
+    pub url: String,
+    pub checksum: Checksum,
+
+    #[serde(default)]
+    pub mirrors: Vec<String>,
+    pub apply_in: Option<String>,
+}
+
+impl Source {
+    /// Gets all patches of the source, sorted by id.
+    pub fn get_sorted_patches(&self) -> Vec<(u32, &Patch)> {
+        let mut vec: Vec<(u32, &Patch)> = self.patches.iter().map(|(key, value)| (*key, value)).collect();
+        vec.sort_by_key(|(key, _)| *key);
+        vec
+    }
+
+    /// Custom deserializer to deserialize integer keys correctly
+    fn deserialize_patches<'de, D>(deserializer: D) -> Result<HashMap<u32, Patch>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let map = HashMap::<String, Patch>::deserialize(deserializer)?;
+
+        map.into_iter()
+            .map(|(key, value)| match key.parse() {
+                Ok(key) => Ok((key, value)),
+                Err(_) => Err(de::Error::invalid_value(de::Unexpected::Str(&key), &"a non-negative integer")),
+            })
+            .collect()
+    }
+}
+
+// Custom deserialize implementation of source to differentiate between single and named sources.
+impl<'de> Deserialize<'de> for Sources {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value: toml::Value = Deserialize::deserialize(deserializer)?;
+
+        // If the toml contains an url and a checksum, we assume it is a single source
+        if value.get("url").is_some() && value.get("checksum").is_some() {
+            let single = Source::deserialize(value).map_err(de::Error::custom)?;
+
+            return Ok(Sources::Single(single));
+        }
+
+        let named = HashMap::deserialize(value).map_err(de::Error::custom)?;
+        Ok(Sources::Named(named))
+    }
 }

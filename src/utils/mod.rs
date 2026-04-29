@@ -4,6 +4,7 @@ pub mod duplicates;
 pub mod env;
 pub mod fuzzy;
 pub mod io;
+pub mod patches;
 pub mod requests;
 pub mod tree;
 pub mod unwrap_or_exit;

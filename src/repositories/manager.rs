@@ -205,6 +205,21 @@ impl<'a> RepositoryManager<'a> {
     }
 
     /// Reads a file of the given package from the given repository.
+    /// Returns the file as bytes.
+    pub fn read_file_bytes(&self, repository_id: &str, package: &PackageName, file_path: &str) -> Result<Option<Bytes>> {
+        let provider = match self.metadata_providers.get(repository_id) {
+            Some(provider) => provider,
+            None => {
+                return Err(RepositoryError::RepositoryNotFoundError {
+                    repository_id: repository_id.into(),
+                });
+            },
+        };
+
+        provider.read_file_bytes(package, file_path)
+    }
+
+    /// Reads a file of the given package from the given repository.
     /// Returns the file as a string.
     pub fn read_file(&self, repository_id: &str, package: &PackageName, file_path: &str) -> Result<Option<String>> {
         let provider = match self.metadata_providers.get(repository_id) {

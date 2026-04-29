@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{fs, path::Path};
+use std::{ffi::OsStr, fs, path::Path, str::Utf8Error};
+
+#[cfg(unix)]
+use std::os::unix::ffi::OsStrExt;
 
 use crate::{cli::display::logging::warning, platforms::symlink};
 
@@ -66,4 +69,16 @@ pub fn remove_symlinks(search_dir: &Path, destination_dir: &Path) -> symlink::Re
     }
 
     Ok(())
+}
+
+/// Parses a path from an array of bytes.
+/// Can return a Utf8Error on Windows.
+pub fn parse_path_from_bytes(bytes: &[u8]) -> Result<&Path, Utf8Error> {
+    #[cfg(unix)]
+    let string = OsStr::from_bytes(bytes);
+
+    #[cfg(not(unix))]
+    let string = str::from_utf8(bytes)?;
+
+    Ok(Path::new(string))
 }
