@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::str::FromStr;
+use std::{fmt::Display, str::FromStr};
 
-use serde::{Deserialize, de};
+use serde::{Deserialize, Serialize, de};
 
 use crate::installer::types::{Version, VersionBounds, VersionError};
 
@@ -20,6 +20,15 @@ impl<'de> Deserialize<'de> for VersionIntervals {
         let string: String = de::Deserialize::deserialize(deserializer)?;
 
         Self::from_str(&string).map_err(de::Error::custom)
+    }
+}
+
+impl Serialize for VersionIntervals {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.collect_str(&self.to_string())
     }
 }
 
@@ -49,6 +58,17 @@ impl FromStr for VersionIntervals {
         }
 
         Ok(Self { version_bounds })
+    }
+}
+
+impl Display for VersionIntervals {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.is_empty() {
+            return Ok(());
+        }
+
+        let bounds: Vec<_> = self.version_bounds.iter().map(|x| x.to_string()).collect();
+        write!(f, "{}", bounds.join("|"))
     }
 }
 

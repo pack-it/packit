@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::str::FromStr;
+use std::{fmt::Display, str::FromStr};
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{
@@ -60,6 +60,16 @@ impl FromStr for TargetName {
     }
 }
 
+impl Display for TargetName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TargetName::Architecture(target_architecture) => write!(f, "{target_architecture}"),
+            TargetName::Os(os) => write!(f, "{}", os.as_str()),
+            TargetName::Unix => write!(f, "unix"),
+        }
+    }
+}
+
 impl TargetName {
     /// Checks if the target name is a Unix target. Returns true if it is, false otherwise.
     pub fn is_unix(&self) -> bool {
@@ -101,6 +111,15 @@ impl<'de> Deserialize<'de> for TargetBounds {
     }
 }
 
+impl Serialize for TargetBounds {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.collect_str(&self.to_string())
+    }
+}
+
 impl FromStr for TargetBounds {
     type Err = TargetBoundsError;
 
@@ -137,6 +156,25 @@ impl FromStr for TargetBounds {
             addition: addition.map(|x| x.into()),
             version_intervals,
         })
+    }
+}
+
+impl Display for TargetBounds {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // Add target name
+        write!(f, "{}", self.name)?;
+
+        // Add addition if it exists
+        if let Some(addition) = &self.addition {
+            write!(f, ":{addition}")?;
+        }
+
+        // Add version intervals if there are any
+        if !self.version_intervals.is_empty() {
+            write!(f, "@{}", self.version_intervals)?;
+        }
+
+        Ok(())
     }
 }
 

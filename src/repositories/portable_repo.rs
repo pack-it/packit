@@ -5,6 +5,7 @@ use std::{
     path::PathBuf,
 };
 
+use serde::Serialize;
 use thiserror::Error;
 
 use crate::{
@@ -116,9 +117,7 @@ impl<'a> PortableRepoCreator<'a> {
             prebuilds_url: None,
             prebuilds_provider: None,
         };
-
-        let repository_meta_str = toml::ser::to_string_pretty(&repository_meta)?;
-        fs::write(destination.join("repository.toml"), repository_meta_str)?;
+        self.write_metadata(repository_meta, destination.join("repository.toml"))?;
 
         // TODO: create index.toml
 
@@ -129,7 +128,8 @@ impl<'a> PortableRepoCreator<'a> {
         let package_path = destination.join("packages").join(package_name);
 
         // Download package.toml
-        self.download_file(&package_name, repository_id, "package.toml", &package_path, false)?;
+        let package_meta = self.repository_manager.read_repo_package(repository_id, package_name)?;
+        self.write_metadata(package_meta, package_path.join("package.toml"))?;
 
         Ok(())
     }
@@ -144,8 +144,8 @@ impl<'a> PortableRepoCreator<'a> {
         let package_path = destination.join("packages").join(&package_id.name);
 
         // Download targets.toml
-        let file_path = format!("{}/targets.toml", package_id.version);
-        self.download_file(&package_id.name, repository_id, &file_path, &package_path, false)?;
+        let version_meta = self.repository_manager.read_repo_package_version(repository_id, package_id)?;
+        self.write_metadata(version_meta, package_path.join(package_id.version.to_string()).join("targets.toml"))?;
 
         let target_bounds = package_version.get_best_target(&self.target)?;
 
@@ -208,6 +208,19 @@ impl<'a> PortableRepoCreator<'a> {
 
         // Write file
         fs::write(destination, contents)?;
+
+        Ok(())
+    }
+
+    fn write_metadata<M: Serialize>(&self, metadata: M, destination: PathBuf) -> Result<()> {
+        // Create parent directories
+        if let Some(parent) = destination.parent() {
+            fs::create_dir_all(&parent)?;
+        }
+
+        // Write metadata
+        let meta_str = toml::ser::to_string_pretty(&metadata)?;
+        fs::write(destination, meta_str)?;
 
         Ok(())
     }
