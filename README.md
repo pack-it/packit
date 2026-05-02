@@ -23,8 +23,10 @@ curl -fsSL https://raw.githubusercontent.com/pack-it/packit/main/install.bat --o
 You can also build Packit from source locally, by simply using Cargo. Please note that Rust needs link.exe on Windows, which is part of the Visual C++ toolchain.
 
 1. First download the provided source code or clone the Git repository.
-2. Open the terminal inside the source folder and run `cargo build`. Use `cargo build --release` to create a release build.
-3. After building, the `packit` binary (`packit.exe` on Windows) will be located at `target/debug/packit` or at `target/release/packit` for a release build.
+2. Open the terminal inside the source folder and run `cargo build-install`. Use `cargo build-install --destination=<DESTINATION>` to use a different destination than the default.
+3. After building and installing, there will be a `target/build` directory (or the destination you specified in the command) which contains the `bin` directory, containing the `packit` binary (`packit.exe` on Windows).
+
+If you only need the `packit` binary itself, you could build it directly using `cargo build`, or `cargo build --release` for a release build. This will result in the `packit` binary (`packit.exe` on Windows) which will be located at `target/debug/packit` or at `target/release/packit` for a release build.
 
 
 ## License
