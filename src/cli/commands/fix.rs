@@ -25,43 +25,62 @@ pub struct FixArgs {
 
 impl HandleCommand for FixArgs {
     fn handle(&self) {
-        let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
-        let manager = RepositoryManager::new(&config);
-        let register_dir = PackageRegister::get_default_path(&config);
-        let mut register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
-        let mut verifier = Verifier::new(&config);
-        let mut repairer = Repairer::new(&config, &manager);
+        let mut verifier = Verifier::new();
+        let mut repairer = Repairer::new();
 
         match self.packages.is_empty() {
-            true => self.fix_all(&mut verifier, &mut repairer, &mut register, &register_dir),
-            false => self.fix_packages(&mut verifier, &mut repairer, &mut register, &register_dir),
+            true => self.fix_all(&mut verifier, &mut repairer),
+            false => self.fix_packages(&mut verifier, &mut repairer),
         }
-
-        // Save changes
-        register.save_to(&register_dir).unwrap_or_exit(1);
     }
 }
 
 impl FixArgs {
     /// Fixes all packages.
-    fn fix_all(&self, verifier: &mut Verifier, repairer: &mut Repairer, register: &mut PackageRegister, register_dir: &Path) {
+    fn fix_all(&self, verifier: &mut Verifier, repairer: &mut Repairer) {
+        while let Some(issue) = verifier.next_initial_issue().unwrap_or_exit(1) {
+            println!("{issue}");
+
+            println!("{}", issue.get_fix_message());
+            let question = "Would you like to automatically apply the fix above?";
+            if ask_user(question, QuestionResponse::Yes).unwrap_or_exit(1).is_no() {
+                return;
+            }
+
+            // Repair the found issues
+            repairer.fix_initial_issues(issue).unwrap_or_exit(1);
+        }
+
+        let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
+        let manager = RepositoryManager::new(&config);
+        let register_dir = PackageRegister::get_default_path(&config);
+        let mut register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
+
         // Retrieve and fix the issues one by one
-        while let Some(issue) = verifier.next_issue(register).unwrap_or_exit(1) {
-            self.fix_issue(issue, repairer, register, register_dir);
+        while let Some(issue) = verifier.next_issue(&register, &config).unwrap_or_exit(1) {
+            self.fix_issue(issue, repairer, &mut register, &register_dir, &config, &manager);
         }
 
         // Return correct message based on found issues
         if !verifier.issues_found() {
             println!("No issues were found");
         }
+
+        // Save changes
+        register.save_to(&register_dir).unwrap_or_exit(1);
     }
 
     /// Fixes the packages specified by the user.
-    fn fix_packages(&self, verifier: &mut Verifier, repairer: &mut Repairer, register: &mut PackageRegister, register_dir: &Path) {
+    fn fix_packages(&self, verifier: &mut Verifier, repairer: &mut Repairer) {
+        let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
+        let manager = RepositoryManager::new(&config);
+        let register_dir = PackageRegister::get_default_path(&config);
+        let mut register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
+
         for package_id in &self.packages {
             // Retrieve and fix the issues one by one
-            while let Some(issue) = verifier.next_package_issue(package_id, register).unwrap_or_exit(1) {
-                self.fix_issue(issue, repairer, register, register_dir);
+            while let Some(issue) = verifier.next_package_issue(package_id, &register, &config).unwrap_or_exit(1) {
+                self.fix_issue(issue, repairer, &mut register, &register_dir, &config, &manager);
             }
 
             // Show when no errors are found for the current package
@@ -69,10 +88,21 @@ impl FixArgs {
                 println!("No issues were found for {package_id}");
             }
         }
+
+        // Save changes
+        register.save_to(&register_dir).unwrap_or_exit(1);
     }
 
     /// Fixes a specific issue.
-    fn fix_issue(&self, issue: Issue, repairer: &mut Repairer, register: &mut PackageRegister, register_dir: &Path) {
+    fn fix_issue(
+        &self,
+        issue: Issue,
+        repairer: &mut Repairer,
+        register: &mut PackageRegister,
+        register_dir: &Path,
+        config: &Config,
+        manager: &RepositoryManager,
+    ) {
         println!("{issue}");
 
         println!("{}", issue.get_fix_message());
@@ -82,7 +112,7 @@ impl FixArgs {
         }
 
         // Repair the found issues
-        repairer.fix(issue, register).unwrap_or_exit(1);
+        repairer.fix(issue, register, config, manager).unwrap_or_exit(1);
 
         // Save register after each fix
         register.save_to(&register_dir).unwrap_or_exit(1);

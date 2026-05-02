@@ -23,10 +23,12 @@ enum Check {
     Alterations,
     PackitGroup,
     PackageExistance,
+    ConfigExistance,
 }
 
 /// Defines the correct order to do verifier checks.
 const VERIFY_ORDER: &[Check] = &[
+    Check::ConfigExistance,     // This is one of the initial checks, everything needs the config to work
     Check::PackitGroup,         // Permission related check should happen before check which require permissions
     Check::PackageExistance,    // Checked before storage and register consistency, because they assume a specified package exists somewhere
     Check::StorageConsistency,  // Storage consistency must be checked before assuming consistency (in alteration check for example)
@@ -36,27 +38,71 @@ const VERIFY_ORDER: &[Check] = &[
 ];
 
 /// Verifier that scans the Packit environment for issues.
-pub struct Verifier<'a> {
-    config: &'a Config,
+pub struct Verifier {
     current_issue: usize,
     issues_found: bool,
 }
 
-impl<'a> Verifier<'a> {
+impl Verifier {
     /// Creates a new verifier.
-    pub fn new(config: &'a Config) -> Self {
+    pub fn new() -> Self {
         Self {
-            config,
             current_issue: 0,
             issues_found: false,
+        }
+    }
+
+    pub fn next_initial_issue(&mut self) -> Result<Option<Issue>> {
+        match self.next_initial_issue_impl() {
+            Ok(issue) => Ok(issue),
+            Err(e) if self.issues_found => {
+                debug!(err: e, "An error occured when issues were already found, skipping remaining issues.");
+                self.current_issue = VERIFY_ORDER.len();
+                return Ok(None);
+            },
+            Err(e) => return Err(e),
+        }
+    }
+
+    fn next_initial_issue_impl(&mut self) -> Result<Option<Issue>> {
+        loop {
+            let check = match VERIFY_ORDER.get(self.current_issue) {
+                Some(check) => check,
+                None => return Ok(None),
+            };
+
+            // Increase current issue
+            self.current_issue += 1;
+
+            let issue = match check {
+                Check::ConfigExistance => self.check_config_existance()?,
+
+                // Continue if the check is not an initial check. Explicitly state them, because it's easy to forgot.
+                Check::StorageConsistency
+                | Check::RegisterConsistency
+                | Check::DependencyTree
+                | Check::Alterations
+                | Check::PackitGroup
+                | Check::PackageExistance => continue,
+            };
+
+            if let Some(issue) = issue {
+                self.issues_found = true;
+                return Ok(Some(issue));
+            }
+
+            // TODO: Temporary ugly check
+            if matches!(check, Check::ConfigExistance) {
+                return Ok(None);
+            }
         }
     }
 
     /// A wrapper around the `next_package_issue_impl` method.
     /// Returns the next issue if it exists.
     /// Returns an error if an error is returned and no issues have been found yet.
-    pub fn next_issue(&mut self, register: &PackageRegister) -> Result<Option<Issue>> {
-        match self.next_issue_impl(register) {
+    pub fn next_issue(&mut self, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
+        match self.next_issue_impl(register, config) {
             Ok(issue) => Ok(issue),
             Err(e) if self.issues_found => {
                 debug!(err: e, "An error occured when issues were already found, skipping remaining issues.");
@@ -69,7 +115,7 @@ impl<'a> Verifier<'a> {
 
     /// Gets the next issue in the order defined in VERIFY_ORDER.
     /// Returns None if there are no more issues to return.
-    fn next_issue_impl(&mut self, register: &PackageRegister) -> Result<Option<Issue>> {
+    fn next_issue_impl(&mut self, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
         loop {
             let check = match VERIFY_ORDER.get(self.current_issue) {
                 Some(check) => check,
@@ -80,14 +126,14 @@ impl<'a> Verifier<'a> {
             self.current_issue += 1;
 
             let issue = match check {
-                Check::StorageConsistency => self.check_storage_consistency(register)?,
-                Check::RegisterConsistency => self.check_register_consistency(register)?,
+                Check::StorageConsistency => self.check_storage_consistency(register, config)?,
+                Check::RegisterConsistency => self.check_register_consistency(register, config)?,
                 Check::DependencyTree => self.check_dependency_tree(register),
-                Check::Alterations => self.check_alterations(register)?,
-                Check::PackitGroup => self.check_packit_group(),
+                Check::Alterations => self.check_alterations(register, config)?,
+                Check::PackitGroup => self.check_packit_group(config),
 
-                // Continue if the check is package specific. Explicitly state them, because it's easy to forgot.
-                Check::PackageExistance => continue,
+                // Continue if the check is package specific or is an initial check. Explicitly state them, because it's easy to forgot.
+                Check::PackageExistance | Check::ConfigExistance => continue,
             };
 
             if let Some(issue) = issue {
@@ -100,8 +146,8 @@ impl<'a> Verifier<'a> {
     /// A wrapper around the `next_package_issue_impl` method.
     /// Returns the next package issue if it exists.
     /// Returns an error if an error is returned and no issues have been found yet.
-    pub fn next_package_issue(&mut self, package_id: &PackageId, register: &PackageRegister) -> Result<Option<Issue>> {
-        match self.next_package_issue_impl(package_id, register) {
+    pub fn next_package_issue(&mut self, package_id: &PackageId, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
+        match self.next_package_issue_impl(package_id, register, config) {
             Ok(issue) => Ok(issue),
             Err(e) if self.issues_found => {
                 debug!(err: e, "An error occured when issues were already found, skipping remaining issues.");
@@ -114,7 +160,7 @@ impl<'a> Verifier<'a> {
 
     /// Gets the next issue for a specific package in the order defined in VERIFY_ORDER.
     /// Returns None if there are no more issues to return.
-    fn next_package_issue_impl(&mut self, package_id: &PackageId, register: &PackageRegister) -> Result<Option<Issue>> {
+    fn next_package_issue_impl(&mut self, package_id: &PackageId, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
         loop {
             let check = match VERIFY_ORDER.get(self.current_issue) {
                 Some(check) => check,
@@ -125,9 +171,9 @@ impl<'a> Verifier<'a> {
             self.current_issue += 1;
 
             let issue = match check {
-                Check::PackageExistance if self.check_package_existance(package_id, register)? => continue,
+                Check::PackageExistance if self.check_package_existance(package_id, register, config)? => continue,
                 Check::PackageExistance => Issue::NotFound(package_id.clone()),
-                Check::StorageConsistency if self.package_storage_is_consistent(package_id)? => continue,
+                Check::StorageConsistency if self.package_storage_is_consistent(package_id, config)? => continue,
                 Check::StorageConsistency => Issue::InconsistentStorage(vec![package_id.clone()]),
                 Check::RegisterConsistency if self.register_package_is_consistent(package_id, register) => continue,
                 Check::RegisterConsistency => Issue::InconsistentRegister(vec![package_id.clone()]),
@@ -135,11 +181,11 @@ impl<'a> Verifier<'a> {
                     Some(issue) => issue,
                     None => continue,
                 },
-                Check::Alterations if !self.check_package_alterations(package_id, register)? => continue,
+                Check::Alterations if !self.check_package_alterations(package_id, register, config)? => continue,
                 Check::Alterations => Issue::AlteredPackage(vec![package_id.clone()]),
 
                 // Continue if the check is not package specific. Explicitly state them, because it's easy to forgot.
-                Check::PackitGroup => continue,
+                Check::PackitGroup | Check::ConfigExistance => continue,
             };
 
             self.issues_found = true;
@@ -150,7 +196,7 @@ impl<'a> Verifier<'a> {
     /// Checks for alterations in all packages using a checksum which is compared to the checksum from the pre-build.
     /// Returns an alteration issue or None if no packages can be found that are altered.
     #[expect(unused_variables)]
-    fn check_alterations(&self, register: &PackageRegister) -> Result<Option<Issue>> {
+    fn check_alterations(&self, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
         // TODO: For now skip this check, because it will never work (yet)
         return Ok(None);
         warning!("This is an experimental check, issues from this check could be inaccurate.");
@@ -158,7 +204,7 @@ impl<'a> Verifier<'a> {
         // Check issue for all installed packages
         let mut altered = Vec::new();
         for package in register.iterate_all() {
-            if self.check_package_alterations(&package.package_id, register)? {
+            if self.check_package_alterations(&package.package_id, register, config)? {
                 altered.push(package.package_id.clone());
             }
         }
@@ -170,10 +216,21 @@ impl<'a> Verifier<'a> {
         Ok(Some(Issue::AlteredPackage(altered)))
     }
 
+    /// Checks if the config exists.
+    /// Returns `None` if the config exists or an `Issue::MissingConfig` otherwise.
+    /// Could return an IO error.
+    fn check_config_existance(&self) -> Result<Option<Issue>> {
+        if fs::exists(&Config::get_default_path())? {
+            return Ok(None);
+        }
+
+        Ok(Some(Issue::MissingConfig))
+    }
+
     /// Checks for alterations in a single package using a checksum which is compared to the checksum from the pre-build.
     /// Returns true if the package was altered, false if not.
     #[expect(unused_variables, unreachable_code)]
-    fn check_package_alterations(&self, package_id: &PackageId, register: &PackageRegister) -> Result<bool> {
+    fn check_package_alterations(&self, package_id: &PackageId, register: &PackageRegister, config: &Config) -> Result<bool> {
         // TODO: For now skip this check, because it will never work (yet)
         return Ok(false);
 
@@ -238,7 +295,7 @@ impl<'a> Verifier<'a> {
             },
         };
 
-        let install_directory = self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
+        let install_directory = config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
         let compressed = packager::compress(&install_directory)?;
         let checksum = Checksum::from_bytes(&compressed);
 
@@ -248,8 +305,8 @@ impl<'a> Verifier<'a> {
     /// Checks if a package exists in the register or in storage.
     /// Returns true if the package exists, false if not.
     /// Could return an IO error.
-    fn check_package_existance(&self, package_id: &PackageId, register: &PackageRegister) -> Result<bool> {
-        let installed_directory = self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
+    fn check_package_existance(&self, package_id: &PackageId, register: &PackageRegister, config: &Config) -> Result<bool> {
+        let installed_directory = config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
         if register.get_package_version(package_id).is_none() && !fs::exists(installed_directory)? {
             return Ok(false);
         }
@@ -259,10 +316,10 @@ impl<'a> Verifier<'a> {
 
     /// Checks if all packages in the register also exist in the package storage in the prefix directory.
     /// Returns a storage consistency issue or None if there are no packages missing from storage.
-    fn check_storage_consistency(&self, register: &PackageRegister) -> Result<Option<Issue>> {
+    fn check_storage_consistency(&self, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
         let mut missing = Vec::new();
         for package in register.iterate_all() {
-            if !self.package_storage_is_consistent(&package.package_id)? {
+            if !self.package_storage_is_consistent(&package.package_id, config)? {
                 missing.push(package.package_id.clone());
             }
         }
@@ -276,8 +333,8 @@ impl<'a> Verifier<'a> {
 
     /// Checks if a specific package exists in storage. Note that it doesn't check if the package also exists in the register.
     /// Returns false if the package can not be found in the storage, true if it can be found.
-    fn package_storage_is_consistent(&self, package_id: &PackageId) -> Result<bool> {
-        let installed_directory = self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
+    fn package_storage_is_consistent(&self, package_id: &PackageId, config: &Config) -> Result<bool> {
+        let installed_directory = config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
 
         // Check if the directory exists, if so return true
         if fs::exists(&installed_directory)? && !self.directory_is_empty(&installed_directory)? {
@@ -307,8 +364,8 @@ impl<'a> Verifier<'a> {
 
     /// Checks if all packages in storage also exist in the register.
     /// Returns a register consistency issue or None if there are packages missing from the register.
-    fn check_register_consistency(&self, register: &PackageRegister) -> Result<Option<Issue>> {
-        let package_directory = self.config.prefix_directory.join("packages");
+    fn check_register_consistency(&self, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
+        let package_directory = config.prefix_directory.join("packages");
         let mut missing = Vec::new();
         for file_package in fs::read_dir(package_directory)? {
             let file_package = file_package?;
@@ -410,8 +467,8 @@ impl<'a> Verifier<'a> {
 
     /// Checks if the packit group exists if multiuser mode is enabled in the config.
     /// Returns the issue if the group does not exist, None otherwise.
-    fn check_packit_group(&self) -> Option<Issue> {
-        if !self.config.multiuser {
+    fn check_packit_group(&self, config: &Config) -> Option<Issue> {
+        if !config.multiuser {
             return None; // We don't need the packit group if multiuser mode is not enabled
         }
 

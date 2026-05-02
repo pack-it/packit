@@ -3,12 +3,14 @@ use thiserror::Error;
 
 use crate::{
     cli::display::error::DisplayError,
+    config::ConfigError,
     installer::{
         error::InstallerError,
         types::{PackageNameError, VersionError},
     },
     packager::PackagerError,
     platforms::symlink::SymlinkError,
+    storage::error::RegisterError,
 };
 
 /// The errors that occur during verification.
@@ -40,6 +42,12 @@ pub enum VerifierError {
 
     #[error("Could not verify because of an invalid package name")]
     PackageNameError(#[from] PackageNameError),
+
+    #[error("Could not use register for fix")]
+    RegisterError(#[from] RegisterError),
+
+    #[error("Could not use config for fix")]
+    ConfigError(#[from] ConfigError),
 }
 
 pub(super) type Result<T> = std::result::Result<T, VerifierError>;

@@ -3,7 +3,7 @@ use std::{fs, path::Path, str::FromStr};
 
 use crate::{
     cli::display::logging::warning,
-    config::Config,
+    config::{Config, EditableConfig},
     installer::{
         Installer, InstallerOptions,
         types::{PackageId, Version},
@@ -18,32 +18,53 @@ use crate::{
 };
 
 /// Repairer that fixes issues found by the verifier.
-pub struct Repairer<'a> {
-    config: &'a Config,
-    manager: &'a RepositoryManager<'a>,
-}
+pub struct Repairer;
 
-impl<'a> Repairer<'a> {
+impl Repairer {
     /// Creates a new repairer.
-    pub fn new(config: &'a Config, manager: &'a RepositoryManager) -> Self {
-        Self { config, manager }
+    pub fn new() -> Self {
+        Self
+    }
+
+    pub fn fix_initial_issues(&mut self, issue: Issue) -> Result<()> {
+        match issue {
+            Issue::MissingConfig => self.fix_missing_config()?,
+
+            _ => warning!("Fix not executed, because it is not an initial issue"),
+        }
+
+        Ok(())
     }
 
     /// Fixes the given issue by executing the fix for that issue.
     /// Note: The register is not saved after the fix is applied.
-    pub fn fix(&mut self, issue: Issue, register: &mut PackageRegister) -> Result<()> {
+    pub fn fix(&mut self, issue: Issue, register: &mut PackageRegister, config: &Config, manager: &RepositoryManager) -> Result<()> {
         match issue {
-            Issue::BrokenTree(missing) => self.fix_broken_tree(missing, register)?,
-            Issue::InconsistentStorage(missing) => self.fix_inconsistent_storage(missing, register)?,
-            Issue::InconsistentRegister(missing) => self.fix_inconsistent_register(missing, register)?,
+            Issue::BrokenTree(missing) => self.fix_broken_tree(missing, register, config, manager)?,
+            Issue::InconsistentStorage(missing) => self.fix_inconsistent_storage(missing, register, config, manager)?,
+            Issue::InconsistentRegister(missing) => self.fix_inconsistent_register(missing, register, config, manager)?,
             _ => warning!("Fix not executed, because the issue fix is not yet implemented"),
         }
 
         Ok(())
     }
 
+    /// Fixes a missing Config.toml. Either by rebuilding the config from known information or using default values.
+    /// TODO: Implement rebuilding config from known data
+    fn fix_missing_config(&self) -> Result<()> {
+        // Create a default config and adjust when fields can be recovered so new config fields don't create bugs
+        EditableConfig::default()?.save_to(&Config::get_default_path())?;
+        Ok(())
+    }
+
     /// Fixes broken dependency trees by installing the missing packages.
-    fn fix_broken_tree(&mut self, missing: Vec<(PackageId, PackageId)>, register: &mut PackageRegister) -> Result<()> {
+    fn fix_broken_tree(
+        &self,
+        missing: Vec<(PackageId, PackageId)>,
+        register: &mut PackageRegister,
+        config: &Config,
+        manager: &RepositoryManager,
+    ) -> Result<()> {
         for (_, missing_package) in missing {
             // There could be duplicates in the missing packages, so skip when already seen
             if register.get_package_version(&missing_package).is_some() {
@@ -52,7 +73,7 @@ impl<'a> Repairer<'a> {
 
             // Install the package
             let installer_options = InstallerOptions::default().skip_symlinking(true);
-            let mut installer = Installer::new(self.config, register, self.manager, installer_options);
+            let mut installer = Installer::new(config, register, manager, installer_options);
             installer.install(&missing_package.clone().into())?;
         }
 
@@ -60,7 +81,13 @@ impl<'a> Repairer<'a> {
     }
 
     /// Fixes inconsistent storage by temporarily removing the missing package from the register and then re-installing the packages.
-    fn fix_inconsistent_storage(&mut self, missing: Vec<PackageId>, register: &mut PackageRegister) -> Result<()> {
+    fn fix_inconsistent_storage(
+        &mut self,
+        missing: Vec<PackageId>,
+        register: &mut PackageRegister,
+        config: &Config,
+        manager: &RepositoryManager,
+    ) -> Result<()> {
         for missing_package in missing {
             // Gather the package settings before removing the package from the register
             let (symlinked, active) = match register.get_package(&missing_package.name) {
@@ -75,7 +102,7 @@ impl<'a> Repairer<'a> {
             register.remove_package_version(&missing_package);
 
             let installer_options = InstallerOptions::default().skip_symlinking(!symlinked).skip_active(!active);
-            let mut installer = Installer::new(self.config, register, self.manager, installer_options);
+            let mut installer = Installer::new(config, register, manager, installer_options);
 
             installer.install(&missing_package.into())?;
         }
@@ -86,10 +113,16 @@ impl<'a> Repairer<'a> {
     // TODO: Somehow store the package info somewhere before deleting, so package history is preserved
     /// Fixes an inconsistent register by temporarily removing the missing packages from storage and then re-installing the packages.
     /// Note that it's not possible to recreate the register entries, because some entries like the source repository cannot be defered from the package storage.
-    fn fix_inconsistent_register(&mut self, missing: Vec<PackageId>, register: &mut PackageRegister) -> Result<()> {
-        let active_directory = self.config.prefix_directory.join("active");
-        let bin_directory = self.config.prefix_directory.join("bin");
-        let package_directory = self.config.prefix_directory.join("packages");
+    fn fix_inconsistent_register(
+        &mut self,
+        missing: Vec<PackageId>,
+        register: &mut PackageRegister,
+        config: &Config,
+        manager: &RepositoryManager,
+    ) -> Result<()> {
+        let active_directory = config.prefix_directory.join("active");
+        let bin_directory = config.prefix_directory.join("bin");
+        let package_directory = config.prefix_directory.join("packages");
         for package_id in missing {
             // Figure out the active version
             let active_target = fs::read_link(active_directory.join(&package_id.name))?;
@@ -106,7 +139,7 @@ impl<'a> Repairer<'a> {
             // We have to uninstall and install, because we can't know the repository source otherwise
             // Remove the symlinks first
             if symlinked {
-                remove_symlinks(Path::new(&self.config.prefix_directory), &package_directory)?;
+                remove_symlinks(Path::new(&config.prefix_directory), &package_directory)?;
             }
 
             // Remove the package
@@ -114,7 +147,7 @@ impl<'a> Repairer<'a> {
 
             // Re-install the package
             let installer_options = InstallerOptions::default().skip_symlinking(!symlinked).skip_active(!active);
-            let mut installer = Installer::new(self.config, register, self.manager, installer_options);
+            let mut installer = Installer::new(config, register, manager, installer_options);
 
             installer.install(&package_id.into())?;
         }

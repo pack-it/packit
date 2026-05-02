@@ -15,22 +15,26 @@ pub struct CheckArgs {
 
 impl HandleCommand for CheckArgs {
     fn handle(&self) {
-        let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
-        let register_dir = PackageRegister::get_default_path(&config);
-        let register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
-        let mut verifier = Verifier::new(&config);
-
         match self.packages.is_empty() {
-            true => self.check_all(&mut verifier, &register),
-            false => self.check_packages(&mut verifier, &register),
+            true => self.check_all(),
+            false => self.check_packages(),
         }
     }
 }
 
 impl CheckArgs {
     /// Checks all packages.
-    fn check_all(&self, verifier: &mut Verifier, register: &PackageRegister) {
-        while let Some(issue) = verifier.next_issue(&register).unwrap_or_exit(1) {
+    fn check_all(&self) {
+        let mut verifier = Verifier::new();
+        while let Some(issue) = verifier.next_initial_issue().unwrap_or_exit(1) {
+            println!("{issue}")
+        }
+
+        let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
+        let register_dir = PackageRegister::get_default_path(&config);
+        let register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
+
+        while let Some(issue) = verifier.next_issue(&register, &config).unwrap_or_exit(1) {
             println!("{issue}")
         }
 
@@ -43,9 +47,14 @@ impl CheckArgs {
     }
 
     /// Checks the packages specified by the user.
-    fn check_packages(&self, verifier: &mut Verifier, register: &PackageRegister) {
+    fn check_packages(&self) {
+        let mut verifier = Verifier::new();
+        let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
+        let register_dir = PackageRegister::get_default_path(&config);
+        let register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
+
         for package_id in &self.packages {
-            while let Some(issue) = verifier.next_package_issue(package_id, &register).unwrap_or_exit(1) {
+            while let Some(issue) = verifier.next_package_issue(package_id, &register, &config).unwrap_or_exit(1) {
                 println!("{issue}")
             }
 

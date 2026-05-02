@@ -6,6 +6,9 @@ use crate::installer::types::PackageId;
 
 /// Holds a single issue and the data regarding that issue.
 pub enum Issue {
+    /// The Packit Config.toml is missing.
+    MissingConfig,
+
     /// A list of parents and their missing dependencies `<parent> : <missing>`.
     BrokenTree(Vec<(PackageId, PackageId)>),
 
@@ -29,6 +32,9 @@ impl Display for Issue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", "ISSUE: ".bold().yellow())?;
         match self {
+            Issue::MissingConfig => {
+                writeln!(f, "Missing Config.toml file")?;
+            },
             Issue::BrokenTree(missing) => {
                 writeln!(f, "Broken dependency tree")?;
                 writeln!(f, "The following dependencies are missing:")?;
@@ -90,6 +96,7 @@ impl Issue {
     /// Gets a message which descripes the fix for each issue.
     pub fn get_fix_message(&self) -> &str {
         match &self {
+            Issue::MissingConfig => "To fix this issue we try to reconstruct the Config.toml based on data still in the Packit directory.",
             Issue::BrokenTree(_) => "To fix this issue the missing packages will be installed.",
             Issue::InconsistentStorage(_) => {
                 "To fix this issue the packages are temporarily removed from the register and then reinstalled."
