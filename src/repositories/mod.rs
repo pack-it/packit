@@ -2,7 +2,7 @@
 pub mod error;
 pub mod manager;
 pub mod metadata;
-pub mod minirepo;
+pub mod portable_repo;
 pub mod prebuilds;
 pub mod provider;
 pub mod types;

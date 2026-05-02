@@ -12,7 +12,7 @@ use crate::{
     config::Config,
     installer::types::PackageId,
     platforms::Target,
-    repositories::{manager::RepositoryManager, minirepo::MiniRepoCreator, types::Checksum},
+    repositories::{manager::RepositoryManager, portable_repo::PortableRepoCreator, types::Checksum},
     utils::{requests, unwrap_or_exit::UnwrapOrExit},
 };
 
@@ -25,12 +25,12 @@ pub enum UtilArgs {
         url: Url,
     },
 
-    /// Generates a minirepo containing the specified packages
-    Minirepo {
+    /// Generates a portable repository containing the specified packages
+    PortableRepo {
         /// The destination directory
         destination: PathBuf,
 
-        /// The packages to include in the minirepo
+        /// The packages to include in the portable repository
         packages: Vec<PackageId>,
     },
 }
@@ -40,7 +40,7 @@ impl HandleCommand for UtilArgs {
     fn handle(&self) {
         match self {
             Self::Checksum { url } => self.handle_checksum(url),
-            Self::Minirepo { destination, packages } => self.handle_minirepo(destination, packages),
+            Self::PortableRepo { destination, packages } => self.handle_portable_repo(destination, packages),
         }
     }
 }
@@ -82,13 +82,15 @@ impl UtilArgs {
         println!("Found checksum {}", checksum.to_string());
     }
 
-    fn handle_minirepo(&self, destination: &PathBuf, packages: &Vec<PackageId>) {
+    fn handle_portable_repo(&self, destination: &PathBuf, packages: &Vec<PackageId>) {
         let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
         let manager = RepositoryManager::new(&config);
 
-        let creator = MiniRepoCreator::new(&manager, Target::current());
-        creator.create_minirepo(packages.iter().cloned().collect(), destination).unwrap_or_exit_msg("Cannot create minirepo", 1);
+        let creator = PortableRepoCreator::new(&manager, Target::current());
+        creator
+            .create_portable_repo(packages.iter().cloned().collect(), destination)
+            .unwrap_or_exit_msg("Cannot create portable repository", 1);
 
-        println!("Created minirepo at {}!", destination.display());
+        println!("Created portable repository at {}!", destination.display());
     }
 }
