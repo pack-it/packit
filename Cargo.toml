@@ -1,3 +1,11 @@
+[workspace]
+resolver = "3"
+members = ["xtasks/*"]
+
+[workspace.package]
+rust-version = "1.85.0"
+edition = "2024"
+
 [package]
 name = "packit"
 description = "The universal package manager."
@@ -6,8 +14,8 @@ license = "GPL-3.0-only"
 authors = ["The Packit Team"]
 repository = "https://github.com/pack-it/packit"
 categories = ["command-line-utilities", "development-tools"]
-edition = "2024"
-rust-version = "1.85.0"                                      # Earliest stable compiler for rust 2024 edition
+edition.workspace = true
+rust-version.workspace = true
 
 [dependencies]
 thiserror = "2.0.18"
