@@ -147,11 +147,19 @@ impl PackageVersionMeta {
     }
 
     /// Gets the script arguments for the given target.
-    /// Returns None when the target cannot be found.
+    /// Returns a `RepositoryError::TargetError` if the target cannot be found.
     pub fn get_script_args(&self, target_bounds: &TargetBounds) -> Result<HashMap<&str, &str>> {
         let target = self.get_target(target_bounds)?;
 
         Ok(self.script_args.iter().chain(target.script_args.iter()).map(|(key, value)| (key.as_str(), value.as_str())).collect())
+    }
+
+    /// Gets the external test files for the given target.
+    /// Returns a `RepositoryError::TargetError` if the target cannot be found.
+    pub fn get_external_test_files(&self, target_bounds: &TargetBounds) -> Result<HashSet<&str>> {
+        let target = self.get_target(target_bounds)?;
+
+        Ok(self.external_test_files.iter().chain(target.external_test_files.iter()).map(|x| x.as_str()).collect())
     }
 
     /// Gets the number of revisions of the current package version metadata.

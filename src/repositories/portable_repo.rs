@@ -14,7 +14,7 @@ use crate::{
     repositories::{
         error::RepositoryError,
         manager::RepositoryManager,
-        types::{Licenses, PackageVersionMeta, RepositoryMeta},
+        types::{IndexMeta, Licenses, PackageVersionMeta, RepositoryMeta},
     },
 };
 
@@ -38,6 +38,9 @@ pub enum PortableRepoError {
         package_name: PackageName,
         file_name: String,
     },
+
+    #[error("The destination does already exist and is not an empty directory")]
+    DestinationNotEmpty,
 
     #[error("Cannot fetch package from repository")]
     RepositoryError(#[from] RepositoryError),
@@ -67,7 +70,10 @@ impl<'a> PortableRepoCreator<'a> {
     }
 
     pub fn create_portable_repo(&self, included_packages: HashSet<PackageId>, destination: &PathBuf) -> Result<()> {
-        // TODO: check if destination is empty
+        // Check if destination is empty
+        if destination.exists() && (destination.is_file() || fs::read_dir(destination)?.next().is_some()) {
+            return Err(PortableRepoError::DestinationNotEmpty);
+        }
 
         let mut package_index = HashMap::new();
 
@@ -100,7 +106,7 @@ impl<'a> PortableRepoCreator<'a> {
             // Download the package version files
             self.download_package_version_files(&package_id, &repository_id, package_version, destination)?;
 
-            // TODO: download prebuild
+            // TODO: download prebuild (requires relative prebuild repositories definitions in repostiory.toml)
 
             package_index.insert(package_id.name, repository_id);
         }
@@ -119,7 +125,11 @@ impl<'a> PortableRepoCreator<'a> {
         };
         self.write_metadata(repository_meta, destination.join("repository.toml"))?;
 
-        // TODO: create index.toml
+        // Create index.toml
+        let index_meta = IndexMeta {
+            supported_packages: package_index.keys().cloned().collect(),
+        };
+        self.write_metadata(index_meta, destination.join("index.toml"))?;
 
         Ok(())
     }
@@ -166,7 +176,9 @@ impl<'a> PortableRepoCreator<'a> {
         self.download_file(&package_id.name, repository_id, &file_path, &package_path, true)?;
 
         // Download external test files
-        // TODO
+        for file_path in package_version.get_external_test_files(&target_bounds)? {
+            self.download_file(&package_id.name, repository_id, &file_path, &package_path, false)?;
+        }
 
         Ok(())
     }
