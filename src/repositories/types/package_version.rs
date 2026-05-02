@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::collections::{HashMap, HashSet};
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     installer::{
@@ -16,7 +16,7 @@ use crate::{
 };
 
 /// Represents the package version metadata, containing dependencies and targets.
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct PackageVersionMeta {
     pub version: Version,
 
@@ -27,34 +27,40 @@ pub struct PackageVersionMeta {
     #[serde(rename = "source")]
     pub sources: Sources,
 
-    #[serde(skip_serializing_if = "Licenses::is_unknown", default)]
+    #[serde(default, skip_serializing_if = "Licenses::is_unknown")]
     pub license: Licenses,
 
     #[serde(default = "PackageVersionMeta::default_skip_symlinking")]
+    #[serde(skip_serializing_if = "PackageVersionMeta::is_default_skip_symlinking")]
     pub skip_symlinking: bool,
 
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub script_args: HashMap<String, String>,
 
     #[serde(default = "PackageVersionMeta::default_use_version_specific")]
+    #[serde(skip_serializing_if = "PackageVersionMeta::is_default_use_version_specific")]
     pub use_version_specific_build: bool,
 
     #[serde(default = "PackageVersionMeta::default_use_version_specific")]
+    #[serde(skip_serializing_if = "PackageVersionMeta::is_default_use_version_specific")]
     pub use_version_specific_preinstall: bool,
 
     #[serde(default = "PackageVersionMeta::default_use_version_specific")]
+    #[serde(skip_serializing_if = "PackageVersionMeta::is_default_use_version_specific")]
     pub use_version_specific_postinstall: bool,
 
     #[serde(default = "PackageVersionMeta::default_use_version_specific")]
+    #[serde(skip_serializing_if = "PackageVersionMeta::is_default_use_version_specific")]
     pub use_version_specific_test: bool,
 
     #[serde(default = "PackageVersionMeta::default_use_version_specific")]
+    #[serde(skip_serializing_if = "PackageVersionMeta::is_default_use_version_specific")]
     pub use_version_specific_uninstall: bool,
 
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "HashSet::is_empty")]
     pub external_test_files: HashSet<String>,
 
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub revisions: Vec<String>,
 }
 
@@ -202,7 +208,15 @@ impl PackageVersionMeta {
         false
     }
 
+    fn is_default_skip_symlinking(val: &bool) -> bool {
+        *val == Self::default_skip_symlinking()
+    }
+
     fn default_use_version_specific() -> bool {
         false
+    }
+
+    fn is_default_use_version_specific(val: &bool) -> bool {
+        *val == Self::default_use_version_specific()
     }
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::str::FromStr;
+use std::{fmt::Display, str::FromStr};
 
-use serde::{Deserialize, de};
+use serde::{Deserialize, Serialize, de};
 use sha2::{Digest, Sha256};
 
 /// Represents a checksum, wraps around a byte array.
@@ -22,6 +22,15 @@ impl<'de> Deserialize<'de> for Checksum {
     }
 }
 
+impl Serialize for Checksum {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.collect_str(&self.to_string())
+    }
+}
+
 impl FromStr for Checksum {
     type Err = hex::FromHexError;
 
@@ -34,15 +43,16 @@ impl FromStr for Checksum {
     }
 }
 
+impl Display for Checksum {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", hex::encode(self.sha256))
+    }
+}
+
 impl Checksum {
     /// Creates a checksum from the given bytes.
     pub fn from_bytes(bytes: &[u8]) -> Self {
         let checksum: [u8; 32] = Sha256::digest(bytes).into();
         Self { sha256: checksum }
-    }
-
-    /// Converts a Checksum into a string and returns it.
-    pub fn to_string(&self) -> String {
-        hex::encode(self.sha256)
     }
 }
