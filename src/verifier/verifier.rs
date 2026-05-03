@@ -175,6 +175,11 @@ impl Verifier {
     /// Returns the next issue if it exists.
     /// Returns an error if an error is returned and no issues have been found yet.
     pub fn next_issue(&mut self, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
+        // Make sure the initial checks have been run before doing general checks
+        if self.current_intial_check != Check::get_initial_checks().len() {
+            return Err(VerifierError::InitialChecksSkippedError);
+        }
+
         match self.next_issue_impl(register, config) {
             Ok(issue) => Ok(issue),
             Err(e) if self.issues_found => {

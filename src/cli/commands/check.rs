@@ -13,6 +13,9 @@ pub struct CheckArgs {
     pub packages: Vec<PackageId>,
 }
 
+const ISSUE_FOUND_MESSAGE: &str = "Consider running `pit fix` to resolve the issues above.";
+const NO_ISSUE_FOUND_MESSAGE: &str = "No issues were found";
+
 impl HandleCommand for CheckArgs {
     fn handle(&self) {
         match self.packages.is_empty() {
@@ -30,6 +33,14 @@ impl CheckArgs {
             println!("{issue}")
         }
 
+        // Return correct message based on found issues
+        if verifier.issues_found() {
+            println!("{ISSUE_FOUND_MESSAGE}");
+            return;
+        } else {
+            println!("{NO_ISSUE_FOUND_MESSAGE}");
+        }
+
         let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
         let register_dir = PackageRegister::get_default_path(&config);
         let register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
@@ -40,9 +51,9 @@ impl CheckArgs {
 
         // Return correct message based on found issues
         if verifier.issues_found() {
-            println!("Consider running `pit fix` to resolve the issues above.");
+            println!("{ISSUE_FOUND_MESSAGE}");
         } else {
-            println!("No issues were found");
+            println!("{NO_ISSUE_FOUND_MESSAGE}");
         }
     }
 
@@ -60,9 +71,9 @@ impl CheckArgs {
 
             // Return correct message based on found issues
             if verifier.issues_found() {
-                println!("Consider running `pit fix` to resolve the issues above.");
+                println!("{ISSUE_FOUND_MESSAGE}");
             } else {
-                println!("No issues were found");
+                println!("{NO_ISSUE_FOUND_MESSAGE}");
             }
         }
     }

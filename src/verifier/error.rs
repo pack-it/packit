@@ -22,6 +22,9 @@ pub enum VerifierError {
     #[error("Cannot parse filename, because it contains invalid unicode")]
     InvalidUnicodeError,
 
+    #[error("Cannot do general checks before doing intial checks")]
+    InitialChecksSkippedError,
+
     #[error("Could not verify")]
     IOError(#[from] std::io::Error),
 
