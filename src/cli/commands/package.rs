@@ -60,7 +60,7 @@ impl HandleCommand for PackageArgs {
         let spinner_message = format!("Packaging {}", self.package_id);
         spinner.show(spinner_message.clone());
 
-        packager::package(&config, &self.package_id, &self.destination, package_version.revisions.len()).unwrap_or_exit(1);
+        packager::package(&config, &self.package_id, &self.destination, package_version.revisions.len() as u64).unwrap_or_exit(1);
 
         spinner.finish(format!("{spinner_message} successful"));
         println!("Successfully packaged {} to {:?}", self.package_id, self.destination);

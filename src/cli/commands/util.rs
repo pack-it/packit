@@ -13,6 +13,7 @@ use crate::{
     installer::types::PackageId,
     platforms::Target,
     repositories::{manager::RepositoryManager, portable_repo::PortableRepoCreator, types::Checksum},
+    storage::package_register::PackageRegister,
     utils::{requests, unwrap_or_exit::UnwrapOrExit},
 };
 
@@ -93,11 +94,12 @@ impl UtilArgs {
     fn handle_portable_repo(&self, destination: &PathBuf, packages: &Vec<PackageId>, exclude_prebuilds: bool) {
         let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
         let manager = RepositoryManager::new(&config);
+        let register = PackageRegister::from(&PackageRegister::get_default_path(&config)).unwrap_or_exit_msg("Cannot load register", 1);
 
         let spinner = Spinner::new();
         spinner.show("Generating portable repository".into());
 
-        let creator = PortableRepoCreator::new(&manager, Target::current(), exclude_prebuilds);
+        let creator = PortableRepoCreator::new(&config, &manager, &register, Target::current(), exclude_prebuilds);
         creator
             .create_portable_repo(packages.iter().cloned().collect(), destination)
             .unwrap_or_exit_msg("Cannot create portable repository", 1);
