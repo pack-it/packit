@@ -37,8 +37,6 @@ impl CheckArgs {
         if verifier.issues_found() {
             println!("{ISSUE_FOUND_MESSAGE}");
             return;
-        } else {
-            println!("{NO_ISSUE_FOUND_MESSAGE}");
         }
 
         let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);

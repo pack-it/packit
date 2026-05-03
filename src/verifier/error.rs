@@ -25,6 +25,9 @@ pub enum VerifierError {
     #[error("Cannot do general checks before doing intial checks")]
     InitialChecksSkippedError,
 
+    #[error("Cannot continue with checks, missing check implementation")]
+    UnimplementedCheckError,
+
     #[error("Could not verify")]
     IOError(#[from] std::io::Error),
 

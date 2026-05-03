@@ -67,7 +67,7 @@ impl Verifier {
                 Check::ConfigExistance => self.check_config_existance()?,
 
                 // Make sure that the check is not an initial check
-                _ if Check::get_initial_checks().contains(check) => panic!("TODO"),
+                _ if Check::get_initial_checks().contains(check) => return Err(VerifierError::UnimplementedCheckError),
 
                 // Continue if the check is not an initial check
                 _ => continue,
@@ -121,7 +121,7 @@ impl Verifier {
                 Check::PackitGroup => self.check_packit_group(config),
 
                 // Make sure that the check is not a general check
-                _ if Check::get_general_checks().contains(check) => panic!("TODO"),
+                _ if Check::get_general_checks().contains(check) => return Err(VerifierError::UnimplementedCheckError),
 
                 // Continue if the check is package specific or is an initial check
                 _ => continue,
@@ -177,7 +177,7 @@ impl Verifier {
                 Check::Alterations => Issue::AlteredPackage(vec![package_id.clone()]),
 
                 // Make sure that the check is not a package specific check
-                _ if Check::get_package_checks().contains(check) => panic!("TODO"),
+                _ if Check::get_package_checks().contains(check) => return Err(VerifierError::UnimplementedCheckError),
 
                 // Continue if the check is not package specific
                 _ => continue,

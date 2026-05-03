@@ -1,6 +1,4 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::path::Path;
-
 use clap::Args;
 
 use crate::{
@@ -13,7 +11,7 @@ use crate::{
     repositories::manager::RepositoryManager,
     storage::package_register::PackageRegister,
     utils::unwrap_or_exit::UnwrapOrExit,
-    verifier::{Issue, Repairer, Verifier},
+    verifier::{Repairer, Verifier},
 };
 
 /// Fixes all issues found by the check command. The user will be asked if they want to fix an issue for each issue type.
@@ -22,6 +20,8 @@ pub struct FixArgs {
     /// A vec of packages to fix. Could be empty, then all packages are fixed.
     pub packages: Vec<PackageId>,
 }
+
+const FIX_MESSAGE: &str = "Would you like to automatically apply the fix above?";
 
 impl HandleCommand for FixArgs {
     fn handle(&self) {
@@ -40,10 +40,8 @@ impl FixArgs {
     fn fix_all(&self, verifier: &mut Verifier, repairer: &mut Repairer) {
         while let Some(issue) = verifier.next_initial_issue().unwrap_or_exit(1) {
             println!("{issue}");
-
             println!("{}", issue.get_fix_message());
-            let question = "Would you like to automatically apply the fix above?";
-            if ask_user(question, QuestionResponse::Yes).unwrap_or_exit(1).is_no() {
+            if ask_user(FIX_MESSAGE, QuestionResponse::Yes).unwrap_or_exit(1).is_no() {
                 return;
             }
 
@@ -61,7 +59,17 @@ impl FixArgs {
 
         // Retrieve and fix the issues one by one
         while let Some(issue) = verifier.next_issue(&register, &config).unwrap_or_exit(1) {
-            self.fix_issue(issue, repairer, &mut register, &register_dir, &config, &manager);
+            println!("{issue}");
+            println!("{}", issue.get_fix_message());
+            if ask_user(FIX_MESSAGE, QuestionResponse::Yes).unwrap_or_exit(1).is_no() {
+                return;
+            }
+
+            // Repair the found issues
+            repairer.fix(issue, &mut register, &config, &manager).unwrap_or_exit(1);
+
+            // Save register after each fix
+            register.save_to(&register_dir).unwrap_or_exit(1);
 
             // Reverse the verifier to redo the check to make sure the fix worked
             verifier.reverse_general_check();
@@ -86,7 +94,17 @@ impl FixArgs {
         for package_id in &self.packages {
             // Retrieve and fix the issues one by one
             while let Some(issue) = verifier.next_package_issue(package_id, &register, &config).unwrap_or_exit(1) {
-                self.fix_issue(issue, repairer, &mut register, &register_dir, &config, &manager);
+                println!("{issue}");
+                println!("{}", issue.get_fix_message());
+                if ask_user(FIX_MESSAGE, QuestionResponse::Yes).unwrap_or_exit(1).is_no() {
+                    return;
+                }
+
+                // Repair the found issues
+                repairer.fix(issue, &mut register, &config, &manager).unwrap_or_exit(1);
+
+                // Save register after each fix
+                register.save_to(&register_dir).unwrap_or_exit(1);
 
                 // Reverse the verifier to redo the check to make sure the fix worked
                 verifier.reverse_package_check();
@@ -99,30 +117,6 @@ impl FixArgs {
         }
 
         // Save changes
-        register.save_to(&register_dir).unwrap_or_exit(1);
-    }
-
-    /// Fixes a specific issue.
-    fn fix_issue(
-        &self,
-        issue: Issue,
-        repairer: &mut Repairer,
-        register: &mut PackageRegister,
-        register_dir: &Path,
-        config: &Config,
-        manager: &RepositoryManager,
-    ) {
-        println!("{issue}");
-        println!("{}", issue.get_fix_message());
-        let question = "Would you like to automatically apply the fix above?";
-        if ask_user(question, QuestionResponse::Yes).unwrap_or_exit(1).is_no() {
-            return;
-        }
-
-        // Repair the found issues
-        repairer.fix(issue, register, config, manager).unwrap_or_exit(1);
-
-        // Save register after each fix
         register.save_to(&register_dir).unwrap_or_exit(1);
     }
 }
