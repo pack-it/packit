@@ -58,14 +58,16 @@ pub type Result<T> = std::result::Result<T, PortableRepoError>;
 pub struct PortableRepoCreator<'a> {
     repository_manager: &'a RepositoryManager<'a>,
     target: Target,
+    exclude_prebuilds: bool,
 }
 
 impl<'a> PortableRepoCreator<'a> {
     /// Creates a new PortableRepoCreator.
-    pub fn new(repository_manager: &'a RepositoryManager, target: Target) -> Self {
+    pub fn new(repository_manager: &'a RepositoryManager, target: Target, exclude_prebuilds: bool) -> Self {
         Self {
             repository_manager,
             target,
+            exclude_prebuilds,
         }
     }
 
@@ -87,15 +89,18 @@ impl<'a> PortableRepoCreator<'a> {
                 });
             }
 
-            // Check if the package has a prebuild
-            let prebuild_url = self.repository_manager.get_prebuild_url(
-                &repository_id,
-                &package_id,
-                package_version.get_revision_count() as u64,
-                &self.target,
-            )?;
-            if prebuild_url.is_none() {
-                return Err(PortableRepoError::PrebuildNotFound { package_id });
+            if !self.exclude_prebuilds {
+                // Check if the package has a prebuild
+                let prebuild_url = self.repository_manager.get_prebuild_url(
+                    &repository_id,
+                    &package_id,
+                    package_version.get_revision_count() as u64,
+                    &self.target,
+                )?;
+
+                if prebuild_url.is_none() {
+                    return Err(PortableRepoError::PrebuildNotFound { package_id });
+                }
             }
 
             // Download the package metadata
