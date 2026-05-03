@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{fs, path::PathBuf, str::FromStr};
+use std::{collections::HashSet, fs, path::PathBuf, str::FromStr};
 
 use crate::{
     cli::display::logging::{debug, warning},
@@ -15,31 +15,103 @@ use crate::{
     },
 };
 
-/// Represents a specific check.
+#[derive(Debug, PartialEq, Eq, Hash)]
 enum Check {
+    // Initial checks (checks which verify methods which the verifier uses internally)
+    ConfigExistance,
+
+    // General package checks
     StorageConsistency,
     RegisterConsistency,
     DependencyTree,
     Alterations,
     PackitGroup,
+
+    // Checks which are specific to a package
     PackageExistance,
-    ConfigExistance,
+    PackageStorageConsistancy,
+    PackageRegisterConsistency,
+    PackageDependencyTree,
+    PackageAlterations,
 }
 
-/// Defines the correct order to do verifier checks.
-const VERIFY_ORDER: &[Check] = &[
-    Check::ConfigExistance,     // This is one of the initial checks, everything needs the config to work
-    Check::PackitGroup,         // Permission related check should happen before check which require permissions
-    Check::PackageExistance,    // Checked before storage and register consistency, because they assume a specified package exists somewhere
-    Check::StorageConsistency,  // Storage consistency must be checked before assuming consistency (in alteration check for example)
-    Check::RegisterConsistency, // Register consistency must be checked before assuming consistency (in alteration check for example)
-    Check::Alterations,         // Alteration check doesn't HAVE to happen before the dependency check
-    Check::DependencyTree,      // This check happens last, assumes most things work already
-];
+impl Check {
+    /// Gets the dependencies of a check (the checks which should happen before the given check).
+    fn get_dependencies(&self) -> &[Self] {
+        match self {
+            // Initial checks
+            Self::ConfigExistance => &[],
+
+            // General checks
+            Self::PackitGroup => &[],
+            Self::StorageConsistency => &[Self::PackitGroup],
+            Self::RegisterConsistency => &[Self::PackitGroup],
+            Self::DependencyTree => &[Self::PackitGroup, Self::StorageConsistency, Self::RegisterConsistency],
+            Self::Alterations => &[Self::PackitGroup, Self::StorageConsistency, Self::RegisterConsistency],
+
+            // Package specific checks
+            Self::PackageExistance => &[],
+            Self::PackageStorageConsistancy => &[Self::PackageExistance],
+            Self::PackageRegisterConsistency => &[Self::PackageExistance],
+            Self::PackageDependencyTree => &[Self::PackageExistance, Self::PackageStorageConsistancy, Self::PackageDependencyTree],
+            Self::PackageAlterations => &[Self::PackageExistance, Self::PackageStorageConsistancy, Self::PackageDependencyTree],
+        }
+    }
+
+    /// Gets all intial checks.
+    fn get_initial_checks<'a>() -> &'a [Self] {
+        &[Self::ConfigExistance]
+    }
+
+    /// Gets all general checks.
+    fn get_general_checks<'a>() -> &'a [Self] {
+        &[
+            Self::StorageConsistency,
+            Self::RegisterConsistency,
+            Self::DependencyTree,
+            Self::Alterations,
+            Self::PackitGroup,
+        ]
+    }
+
+    /// Gets all package specific checks.
+    fn get_package_checks<'a>() -> &'a [Self] {
+        &[
+            Self::PackageExistance,
+            Self::PackageStorageConsistancy,
+            Self::PackageRegisterConsistency,
+            Self::PackageDependencyTree,
+            Self::PackageAlterations,
+        ]
+    }
+
+    /// Gets the checks in the correct order based on the 'check dependency tree'.
+    /// Returns a flattened 'check dependency tree'
+    fn get_ordered_checks<'a>(checks: &'a [Self]) -> Vec<&'a Self> {
+        let mut ordered = Vec::new();
+        for check in checks {
+            ordered.extend(Self::get_ordered_checks(check.get_dependencies()));
+            ordered.push(check);
+        }
+
+        let mut seen = HashSet::new();
+        let mut unique_ordered = Vec::new();
+        for check in ordered {
+            if !seen.contains(check) {
+                unique_ordered.push(check);
+                seen.insert(check);
+            }
+        }
+
+        unique_ordered
+    }
+}
 
 /// Verifier that scans the Packit environment for issues.
 pub struct Verifier {
-    current_issue: usize,
+    current_intial_check: usize,
+    current_general_check: usize,
+    current_package_check: usize,
     issues_found: bool,
 }
 
@@ -47,53 +119,54 @@ impl Verifier {
     /// Creates a new verifier.
     pub fn new() -> Self {
         Self {
-            current_issue: 0,
+            current_intial_check: 0,
+            current_general_check: 0,
+            current_package_check: 0,
             issues_found: false,
         }
     }
 
+    /// A wrapper around the `next_initial_issue_impl` method.
+    /// Returns the next issue if it exists.
+    /// Returns an error if an error is returned and no issues have been found yet.
     pub fn next_initial_issue(&mut self) -> Result<Option<Issue>> {
         match self.next_initial_issue_impl() {
             Ok(issue) => Ok(issue),
             Err(e) if self.issues_found => {
                 debug!(err: e, "An error occured when issues were already found, skipping remaining issues.");
-                self.current_issue = VERIFY_ORDER.len();
+                self.current_intial_check = Check::get_initial_checks().len();
                 return Ok(None);
             },
             Err(e) => return Err(e),
         }
     }
 
+    /// Gets the next initial issue.
+    /// Returns None if there are no issues to return.
     fn next_initial_issue_impl(&mut self) -> Result<Option<Issue>> {
         loop {
-            let check = match VERIFY_ORDER.get(self.current_issue) {
+            let ordered_checks = Check::get_ordered_checks(Check::get_initial_checks());
+            let check = match ordered_checks.get(self.current_intial_check) {
                 Some(check) => check,
                 None => return Ok(None),
             };
 
             // Increase current issue
-            self.current_issue += 1;
+            self.current_intial_check += 1;
 
             let issue = match check {
                 Check::ConfigExistance => self.check_config_existance()?,
 
-                // Continue if the check is not an initial check. Explicitly state them, because it's easy to forgot.
-                Check::StorageConsistency
-                | Check::RegisterConsistency
-                | Check::DependencyTree
-                | Check::Alterations
-                | Check::PackitGroup
-                | Check::PackageExistance => continue,
+                // Make sure that the check is not an initial check
+                _ if Check::get_initial_checks().contains(check) => panic!("TODO"),
+
+                // Continue if the check is not an initial check
+                _ => continue,
             };
 
             if let Some(issue) = issue {
                 self.issues_found = true;
                 return Ok(Some(issue));
-            }
-
-            // TODO: Temporary ugly check
-            if matches!(check, Check::ConfigExistance) {
-                return Ok(None);
             }
         }
     }
@@ -106,24 +179,25 @@ impl Verifier {
             Ok(issue) => Ok(issue),
             Err(e) if self.issues_found => {
                 debug!(err: e, "An error occured when issues were already found, skipping remaining issues.");
-                self.current_issue = VERIFY_ORDER.len();
+                self.current_general_check = Check::get_general_checks().len();
                 return Ok(None);
             },
             Err(e) => return Err(e),
         }
     }
 
-    /// Gets the next issue in the order defined in VERIFY_ORDER.
-    /// Returns None if there are no more issues to return.
+    /// Gets the next general issue.
+    /// Returns None if there are no issues to return.
     fn next_issue_impl(&mut self, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
         loop {
-            let check = match VERIFY_ORDER.get(self.current_issue) {
+            let ordered_checks = Check::get_ordered_checks(Check::get_general_checks());
+            let check = match ordered_checks.get(self.current_general_check) {
                 Some(check) => check,
                 None => return Ok(None),
             };
 
             // Increase current issue
-            self.current_issue += 1;
+            self.current_general_check += 1;
 
             let issue = match check {
                 Check::StorageConsistency => self.check_storage_consistency(register, config)?,
@@ -132,8 +206,11 @@ impl Verifier {
                 Check::Alterations => self.check_alterations(register, config)?,
                 Check::PackitGroup => self.check_packit_group(config),
 
-                // Continue if the check is package specific or is an initial check. Explicitly state them, because it's easy to forgot.
-                Check::PackageExistance | Check::ConfigExistance => continue,
+                // Make sure that the check is not a general check
+                _ if Check::get_general_checks().contains(check) => panic!("TODO"),
+
+                // Continue if the check is package specific or is an initial check
+                _ => continue,
             };
 
             if let Some(issue) = issue {
@@ -151,7 +228,7 @@ impl Verifier {
             Ok(issue) => Ok(issue),
             Err(e) if self.issues_found => {
                 debug!(err: e, "An error occured when issues were already found, skipping remaining issues.");
-                self.current_issue = VERIFY_ORDER.len();
+                self.current_package_check = Check::get_package_checks().len();
                 return Ok(None);
             },
             Err(e) => return Err(e),
@@ -162,13 +239,14 @@ impl Verifier {
     /// Returns None if there are no more issues to return.
     fn next_package_issue_impl(&mut self, package_id: &PackageId, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
         loop {
-            let check = match VERIFY_ORDER.get(self.current_issue) {
+            let ordered_checks = Check::get_ordered_checks(Check::get_package_checks());
+            let check = match ordered_checks.get(self.current_package_check) {
                 Some(check) => check,
                 None => return Ok(None),
             };
 
             // Increase current issue
-            self.current_issue += 1;
+            self.current_package_check += 1;
 
             let issue = match check {
                 Check::PackageExistance if self.check_package_existance(package_id, register, config)? => continue,
@@ -184,8 +262,11 @@ impl Verifier {
                 Check::Alterations if !self.check_package_alterations(package_id, register, config)? => continue,
                 Check::Alterations => Issue::AlteredPackage(vec![package_id.clone()]),
 
-                // Continue if the check is not package specific. Explicitly state them, because it's easy to forgot.
-                Check::PackitGroup | Check::ConfigExistance => continue,
+                // Make sure that the check is not a package specific check
+                _ if Check::get_package_checks().contains(check) => panic!("TODO"),
+
+                // Continue if the check is not package specific
+                _ => continue,
             };
 
             self.issues_found = true;
