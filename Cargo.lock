@@ -3676,6 +3676,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "xtask-build-install"
+version = "0.0.0"
+dependencies = [
+ "clap",
+]
+
+[[package]]
 name = "xz2"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"

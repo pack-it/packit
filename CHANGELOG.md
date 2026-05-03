@@ -17,6 +17,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The regex search, to search packages based on a given regex pattern.
 - Add support for applying patches to the source code of packages.
 
+### Changes
+- The build system now includes a new `build-install` xtask to create a full Packit build in a `bin` directory structure.
+
 ### Removed
 - The repositories command, this command is now integrated in the new config command.
 
