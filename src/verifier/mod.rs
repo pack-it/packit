@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+mod checks;
 pub mod error;
 mod issue;
 mod repairer;

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{collections::HashSet, fs, path::PathBuf, str::FromStr};
+use std::{fs, path::PathBuf, str::FromStr};
 
 use crate::{
     cli::display::logging::{debug, warning},
@@ -11,101 +11,10 @@ use crate::{
     storage::package_register::PackageRegister,
     verifier::{
         Issue,
+        checks::Check,
         error::{Result, VerifierError},
     },
 };
-
-#[derive(Debug, PartialEq, Eq, Hash)]
-enum Check {
-    // Initial checks (checks which verify methods which the verifier uses internally)
-    ConfigExistance,
-
-    // General package checks
-    StorageConsistency,
-    RegisterConsistency,
-    DependencyTree,
-    Alterations,
-    PackitGroup,
-
-    // Checks which are specific to a package
-    PackageExistance,
-    PackageStorageConsistancy,
-    PackageRegisterConsistency,
-    PackageDependencyTree,
-    PackageAlterations,
-}
-
-impl Check {
-    /// Gets the dependencies of a check (the checks which should happen before the given check).
-    fn get_dependencies(&self) -> &[Self] {
-        match self {
-            // Initial checks
-            Self::ConfigExistance => &[],
-
-            // General checks
-            Self::PackitGroup => &[],
-            Self::StorageConsistency => &[Self::PackitGroup],
-            Self::RegisterConsistency => &[Self::PackitGroup],
-            Self::DependencyTree => &[Self::PackitGroup, Self::StorageConsistency, Self::RegisterConsistency],
-            Self::Alterations => &[Self::PackitGroup, Self::StorageConsistency, Self::RegisterConsistency],
-
-            // Package specific checks
-            Self::PackageExistance => &[],
-            Self::PackageStorageConsistancy => &[Self::PackageExistance],
-            Self::PackageRegisterConsistency => &[Self::PackageExistance],
-            Self::PackageDependencyTree => &[Self::PackageExistance, Self::PackageStorageConsistancy, Self::PackageDependencyTree],
-            Self::PackageAlterations => &[Self::PackageExistance, Self::PackageStorageConsistancy, Self::PackageDependencyTree],
-        }
-    }
-
-    /// Gets all intial checks.
-    fn get_initial_checks<'a>() -> &'a [Self] {
-        &[Self::ConfigExistance]
-    }
-
-    /// Gets all general checks.
-    fn get_general_checks<'a>() -> &'a [Self] {
-        &[
-            Self::StorageConsistency,
-            Self::RegisterConsistency,
-            Self::DependencyTree,
-            Self::Alterations,
-            Self::PackitGroup,
-        ]
-    }
-
-    /// Gets all package specific checks.
-    fn get_package_checks<'a>() -> &'a [Self] {
-        &[
-            Self::PackageExistance,
-            Self::PackageStorageConsistancy,
-            Self::PackageRegisterConsistency,
-            Self::PackageDependencyTree,
-            Self::PackageAlterations,
-        ]
-    }
-
-    /// Gets the checks in the correct order based on the 'check dependency tree'.
-    /// Returns a flattened 'check dependency tree'
-    fn get_ordered_checks<'a>(checks: &'a [Self]) -> Vec<&'a Self> {
-        let mut ordered = Vec::new();
-        for check in checks {
-            ordered.extend(Self::get_ordered_checks(check.get_dependencies()));
-            ordered.push(check);
-        }
-
-        let mut seen = HashSet::new();
-        let mut unique_ordered = Vec::new();
-        for check in ordered {
-            if !seen.contains(check) {
-                unique_ordered.push(check);
-                seen.insert(check);
-            }
-        }
-
-        unique_ordered
-    }
-}
 
 /// Verifier that scans the Packit environment for issues.
 pub struct Verifier {
