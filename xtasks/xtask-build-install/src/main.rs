@@ -6,6 +6,7 @@ use std::{
 
 use clap::Parser;
 
+/// Represents the build-install command, holding the given options.
 #[derive(Parser, Debug)]
 #[command(name = "build-install", version, about)]
 pub struct TaskCommand {
@@ -44,6 +45,7 @@ fn main() {
     println!("Finished building and installing Packit to {}", destination.display())
 }
 
+/// Runs the Packit build using `cargo build --release`.
 fn run_build() {
     // Create build command
     let mut cmd = Command::new(std::env!("CARGO"));
@@ -66,6 +68,7 @@ fn run_build() {
     }
 }
 
+/// Copies the `packit` binary to the destinationa and creates the `pit` symlink.
 fn copy_binary_to_destination(destination: &PathBuf) {
     // Create destination bin directory
     let bin_directory = destination.join("bin");
@@ -92,14 +95,21 @@ fn copy_binary_to_destination(destination: &PathBuf) {
     }
 }
 
+/// Gets the path to the proejct root directory.
 fn get_project_root_path() -> PathBuf {
-    Path::new(std::env!("CARGO_MANIFEST_DIR")).ancestors().nth(2).unwrap().to_path_buf()
+    Path::new(std::env!("CARGO_MANIFEST_DIR"))
+        .ancestors()
+        .nth(2)
+        .expect("Expected CARGO_MANIFEST_DIR to return the xtask-build-install directory path.")
+        .to_path_buf()
 }
 
+/// Gets the target directory path in the project root.
 fn get_target_path() -> PathBuf {
     get_project_root_path().join("target")
 }
 
+/// Creates a file symlink. The link at `link` will point to `original`.
 fn create_file_symlink<P: AsRef<Path>, Q: AsRef<Path>>(original: P, link: Q) -> std::io::Result<()> {
     #[cfg(unix)]
     return std::os::unix::fs::symlink(original, link);
