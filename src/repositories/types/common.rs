@@ -22,10 +22,10 @@ pub enum Script {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Source {
     pub url: String,
-    pub checksum: Checksum,
 
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mirrors: Vec<String>,
+    pub checksum: Checksum,
 
     #[serde(default, skip_serializing_if = "<&bool>::not")]
     pub skip_unpack: bool,

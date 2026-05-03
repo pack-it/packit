@@ -8,8 +8,6 @@ use crate::{installer::types::Dependency, repositories::types::Script};
 /// Represents the package target data, containing the download url and installer type.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct PackageTarget {
-    pub source: Option<String>,
-
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub dependencies: Vec<Dependency>,
 
@@ -18,8 +16,7 @@ pub struct PackageTarget {
 
     pub skip_symlinking: Option<bool>,
 
-    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
-    pub script_args: HashMap<String, String>,
+    pub source: Option<String>,
 
     pub build_script: Option<Script>,
     pub preinstall_script: Option<Script>,
@@ -29,4 +26,7 @@ pub struct PackageTarget {
 
     #[serde(default, skip_serializing_if = "HashSet::is_empty")]
     pub external_test_files: HashSet<String>,
+
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub script_args: HashMap<String, String>,
 }
