@@ -576,4 +576,31 @@ impl Verifier {
     pub fn issues_found(&self) -> bool {
         self.issues_found
     }
+
+    /// Reverses the initial checks counter by 1. Except if the current is 0.
+    pub fn reverse_initial_check(&mut self) {
+        if self.current_intial_check == 0 {
+            return;
+        }
+
+        self.current_intial_check -= 1;
+    }
+
+    /// Reverses the general checks counter by 1. Except if the current is 0.
+    pub fn reverse_general_check(&mut self) {
+        if self.current_general_check == 0 {
+            return;
+        }
+
+        self.current_general_check -= 1;
+    }
+
+    /// Reverses the package checks counter by 1. Except if the current is 0.
+    pub fn reverse_package_check(&mut self) {
+        if self.current_package_check == 0 {
+            return;
+        }
+
+        self.current_package_check -= 1;
+    }
 }

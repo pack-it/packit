@@ -49,6 +49,9 @@ impl FixArgs {
 
             // Repair the found issues
             repairer.fix_initial_issues(issue).unwrap_or_exit(1);
+
+            // Reverse the verifier to redo the check to make sure the fix worked
+            verifier.reverse_initial_check();
         }
 
         let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
@@ -59,6 +62,9 @@ impl FixArgs {
         // Retrieve and fix the issues one by one
         while let Some(issue) = verifier.next_issue(&register, &config).unwrap_or_exit(1) {
             self.fix_issue(issue, repairer, &mut register, &register_dir, &config, &manager);
+
+            // Reverse the verifier to redo the check to make sure the fix worked
+            verifier.reverse_general_check();
         }
 
         // Return correct message based on found issues
@@ -81,6 +87,9 @@ impl FixArgs {
             // Retrieve and fix the issues one by one
             while let Some(issue) = verifier.next_package_issue(package_id, &register, &config).unwrap_or_exit(1) {
                 self.fix_issue(issue, repairer, &mut register, &register_dir, &config, &manager);
+
+                // Reverse the verifier to redo the check to make sure the fix worked
+                verifier.reverse_package_check();
             }
 
             // Show when no errors are found for the current package
