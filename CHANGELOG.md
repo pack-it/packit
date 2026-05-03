@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The list command now has grid printing.
 - The regex search, to search packages based on a given regex pattern.
 - Add support for applying patches to the source code of packages.
+- Add portable repositories, a generated repository containing only specific packages for use on airgapped systems.
 
 ### Removed
 - The repositories command, this command is now integrated in the new config command.
