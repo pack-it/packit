@@ -9,13 +9,16 @@ use serde::Serialize;
 use thiserror::Error;
 
 use crate::{
+    config::Config,
     installer::types::{PackageId, PackageName},
+    packager::{self, PackagerError},
     platforms::Target,
     repositories::{
         error::RepositoryError,
         manager::RepositoryManager,
         types::{IndexMeta, Licenses, PackageVersionMeta, RepositoryMeta},
     },
+    storage::package_register::PackageRegister,
 };
 
 const PORTABLE_REPO_MAINTAINER: &str = concat!("Packit v", env!("CARGO_PKG_VERSION"));
@@ -42,8 +45,14 @@ pub enum PortableRepoError {
     #[error("The destination does already exist and is not an empty directory")]
     DestinationNotEmpty,
 
+    #[error("The given package name is empty")]
+    EmptyPackageName,
+
     #[error("Cannot fetch package from repository")]
     RepositoryError(#[from] RepositoryError),
+
+    #[error("Cannot create package prebuild")]
+    PackagerError(#[from] PackagerError),
 
     #[error("Cannot serialize toml file")]
     SerializeError(#[from] toml::ser::Error),
@@ -56,16 +65,26 @@ pub type Result<T> = std::result::Result<T, PortableRepoError>;
 
 /// The PortableRepoCreator, managing the creation of portable repositories.
 pub struct PortableRepoCreator<'a> {
+    config: &'a Config,
     repository_manager: &'a RepositoryManager<'a>,
+    register: &'a PackageRegister,
     target: Target,
     exclude_prebuilds: bool,
 }
 
 impl<'a> PortableRepoCreator<'a> {
     /// Creates a new PortableRepoCreator.
-    pub fn new(repository_manager: &'a RepositoryManager, target: Target, exclude_prebuilds: bool) -> Self {
+    pub fn new(
+        config: &'a Config,
+        repository_manager: &'a RepositoryManager,
+        register: &'a PackageRegister,
+        target: Target,
+        exclude_prebuilds: bool,
+    ) -> Self {
         Self {
+            config,
             repository_manager,
+            register,
             target,
             exclude_prebuilds,
         }
@@ -99,7 +118,9 @@ impl<'a> PortableRepoCreator<'a> {
                     &self.target,
                 )?;
 
-                if prebuild_url.is_none() {
+                // Check if prebuild is downloadable, or if package is installed
+                if prebuild_url.is_none() && (self.target != Target::current() || self.register.get_package_version(&package_id).is_none())
+                {
                     return Err(PortableRepoError::PrebuildNotFound { package_id });
                 }
             }
@@ -110,9 +131,12 @@ impl<'a> PortableRepoCreator<'a> {
             }
 
             // Download the package version files
-            self.download_package_version_files(&package_id, &repository_id, package_version, destination)?;
+            self.download_package_version_files(&package_id, &repository_id, &package_version, destination)?;
 
-            // TODO: download prebuild (requires relative prebuild repositories definitions in repostiory.toml)
+            // Download prebuild
+            if !self.exclude_prebuilds {
+                self.download_prebuild(&package_id, &repository_id, &package_version, destination)?;
+            }
 
             package_index.insert(package_id.name, repository_id);
         }
@@ -156,7 +180,7 @@ impl<'a> PortableRepoCreator<'a> {
         &self,
         package_id: &PackageId,
         repository_id: &str,
-        package_version: PackageVersionMeta,
+        package_version: &PackageVersionMeta,
         destination: &PathBuf,
     ) -> Result<()> {
         let package_path = destination.join("packages").join(&package_id.name);
@@ -188,6 +212,49 @@ impl<'a> PortableRepoCreator<'a> {
         for file_path in package_version.get_external_test_files(&target_bounds)? {
             self.download_file(&package_id.name, repository_id, &file_path, &package_path, false)?;
         }
+
+        Ok(())
+    }
+
+    /// Downloads the prebuilds of a the given package.
+    fn download_prebuild(
+        &self,
+        package_id: &PackageId,
+        repository_id: &str,
+        package_version: &PackageVersionMeta,
+        destination: &PathBuf,
+    ) -> Result<()> {
+        let prefix = package_id.name.chars().next().ok_or(PortableRepoError::EmptyPackageName)?.to_string();
+        let target = self.target.architecture.to_string();
+        let destination = destination.join("prebuilds").join(&target).join(&prefix).join(&package_id.name);
+        fs::create_dir_all(&destination)?;
+
+        // Get checksum
+        let revision = package_version.get_revision_count();
+        let checksum = match self.repository_manager.get_prebuild_checksum(repository_id, package_id, revision, &self.target) {
+            Ok(Some(checksum)) => checksum,
+            // Only try to package locally if the current target is the target we generate a portable repo for
+            Ok(None) if self.target == Target::current() => {
+                packager::package(&self.config, &package_id, &destination, revision)?;
+                return Ok(());
+            },
+            Ok(None) => {
+                return Err(PortableRepoError::PrebuildNotFound {
+                    package_id: package_id.clone(),
+                });
+            },
+            Err(e) => return Err(e.into()),
+        };
+
+        let (_, prebuild) = self.repository_manager.read_prebuild(repository_id, package_id, revision, &self.target)?;
+
+        // Write to file
+        let prebuild_name = format!("{package_id}-{revision}-{target}.tar.gz");
+        let prebuild_path = destination.join(prebuild_name);
+        let checksum_name = format!("{package_id}-{revision}-{target}.sha256");
+        let checksum_path = destination.join(checksum_name);
+        fs::write(prebuild_path, &prebuild)?;
+        fs::write(checksum_path, checksum.to_string().as_bytes())?;
 
         Ok(())
     }
