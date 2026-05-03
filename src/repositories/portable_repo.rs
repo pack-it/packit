@@ -71,6 +71,7 @@ impl<'a> PortableRepoCreator<'a> {
         }
     }
 
+    /// Creates a portable repo, containing all given included packages at the given destination.
     pub fn create_portable_repo(&self, included_packages: HashSet<PackageId>, destination: &PathBuf) -> Result<()> {
         // Check if destination is empty
         if destination.exists() && (destination.is_file() || fs::read_dir(destination)?.next().is_some()) {
@@ -128,27 +129,29 @@ impl<'a> PortableRepoCreator<'a> {
             prebuilds_url: None,
             prebuilds_provider: None,
         };
-        self.write_metadata(repository_meta, destination.join("repository.toml"))?;
+        self.write_metadata(repository_meta, destination.join("repository.toml"), false)?;
 
         // Create index.toml
         let index_meta = IndexMeta {
             supported_packages: package_index.keys().cloned().collect(),
         };
-        self.write_metadata(index_meta, destination.join("index.toml"))?;
+        self.write_metadata(index_meta, destination.join("index.toml"), true)?;
 
         Ok(())
     }
 
+    /// Downloads all files of the given package. Note that this does not download version specific files.
     fn download_package_files(&self, package_name: &PackageName, repository_id: &str, destination: &PathBuf) -> Result<()> {
         let package_path = destination.join("packages").join(package_name);
 
         // Download package.toml
         let package_meta = self.repository_manager.read_repo_package(repository_id, package_name)?;
-        self.write_metadata(package_meta, package_path.join("package.toml"))?;
+        self.write_metadata(package_meta, package_path.join("package.toml"), false)?;
 
         Ok(())
     }
 
+    /// Downloads all files of the given package version.
     fn download_package_version_files(
         &self,
         package_id: &PackageId,
@@ -160,7 +163,8 @@ impl<'a> PortableRepoCreator<'a> {
 
         // Download targets.toml
         let version_meta = self.repository_manager.read_repo_package_version(repository_id, package_id)?;
-        self.write_metadata(version_meta, package_path.join(package_id.version.to_string()).join("targets.toml"))?;
+        let targets_path = package_path.join(package_id.version.to_string()).join("targets.toml");
+        self.write_metadata(version_meta, targets_path, false)?;
 
         let target_bounds = package_version.get_best_target(&self.target)?;
 
@@ -188,6 +192,8 @@ impl<'a> PortableRepoCreator<'a> {
         Ok(())
     }
 
+    /// Downloads the file of the given package name from the given repository from the path specified in `file_path`.
+    /// The file is saved at `package_path`/`file_path`. Set `allow_missing` to true to skip erroring when the file is missing.
     fn download_file(
         &self,
         package_name: &PackageName,
@@ -229,14 +235,19 @@ impl<'a> PortableRepoCreator<'a> {
         Ok(())
     }
 
-    fn write_metadata<M: Serialize>(&self, metadata: M, destination: PathBuf) -> Result<()> {
+    /// Writes the given metadata to the destination file. The pretty option can be used to enable toml pretty printing,
+    /// this currently only includes multiline arrays.
+    fn write_metadata<M: Serialize>(&self, metadata: M, destination: PathBuf, pretty: bool) -> Result<()> {
         // Create parent directories
         if let Some(parent) = destination.parent() {
             fs::create_dir_all(&parent)?;
         }
 
         // Write metadata
-        let meta_str = toml::ser::to_string_pretty(&metadata)?;
+        let meta_str = match pretty {
+            true => toml::ser::to_string_pretty(&metadata)?,
+            false => toml::ser::to_string(&metadata)?,
+        };
         fs::write(destination, meta_str)?;
 
         Ok(())

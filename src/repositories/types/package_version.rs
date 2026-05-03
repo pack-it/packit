@@ -20,22 +20,15 @@ use crate::{
 pub struct PackageVersionMeta {
     pub version: Version,
 
-    pub dependencies: Vec<Dependency>,
-    pub build_dependencies: Vec<Dependency>,
-    pub targets: HashMap<TargetBounds, PackageTarget>,
-
-    #[serde(rename = "source")]
-    pub sources: Sources,
-
     #[serde(default, skip_serializing_if = "Licenses::is_unknown")]
     pub license: Licenses,
+
+    pub dependencies: Vec<Dependency>,
+    pub build_dependencies: Vec<Dependency>,
 
     #[serde(default = "PackageVersionMeta::default_skip_symlinking")]
     #[serde(skip_serializing_if = "PackageVersionMeta::is_default_skip_symlinking")]
     pub skip_symlinking: bool,
-
-    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
-    pub script_args: HashMap<String, String>,
 
     #[serde(default = "PackageVersionMeta::default_use_version_specific")]
     #[serde(skip_serializing_if = "PackageVersionMeta::is_default_use_version_specific")]
@@ -62,6 +55,14 @@ pub struct PackageVersionMeta {
 
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub revisions: Vec<String>,
+
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub script_args: HashMap<String, String>,
+
+    #[serde(rename = "source")]
+    pub sources: Sources,
+
+    pub targets: HashMap<TargetBounds, PackageTarget>,
 }
 
 impl PackageVersionMeta {
