@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::collections::{HashMap, HashSet};
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     installer::{
@@ -16,46 +16,53 @@ use crate::{
 };
 
 /// Represents the package version metadata, containing dependencies and targets.
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct PackageVersionMeta {
     pub version: Version,
 
+    #[serde(default, skip_serializing_if = "Licenses::is_unknown")]
+    pub license: Licenses,
+
     pub dependencies: Vec<Dependency>,
     pub build_dependencies: Vec<Dependency>,
-    pub targets: HashMap<TargetBounds, PackageTarget>,
+
+    #[serde(default = "PackageVersionMeta::default_skip_symlinking")]
+    #[serde(skip_serializing_if = "PackageVersionMeta::is_default_skip_symlinking")]
+    pub skip_symlinking: bool,
+
+    #[serde(default = "PackageVersionMeta::default_use_version_specific")]
+    #[serde(skip_serializing_if = "PackageVersionMeta::is_default_use_version_specific")]
+    pub use_version_specific_build: bool,
+
+    #[serde(default = "PackageVersionMeta::default_use_version_specific")]
+    #[serde(skip_serializing_if = "PackageVersionMeta::is_default_use_version_specific")]
+    pub use_version_specific_preinstall: bool,
+
+    #[serde(default = "PackageVersionMeta::default_use_version_specific")]
+    #[serde(skip_serializing_if = "PackageVersionMeta::is_default_use_version_specific")]
+    pub use_version_specific_postinstall: bool,
+
+    #[serde(default = "PackageVersionMeta::default_use_version_specific")]
+    #[serde(skip_serializing_if = "PackageVersionMeta::is_default_use_version_specific")]
+    pub use_version_specific_test: bool,
+
+    #[serde(default = "PackageVersionMeta::default_use_version_specific")]
+    #[serde(skip_serializing_if = "PackageVersionMeta::is_default_use_version_specific")]
+    pub use_version_specific_uninstall: bool,
+
+    #[serde(default, skip_serializing_if = "HashSet::is_empty")]
+    pub external_test_files: HashSet<String>,
+
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub revisions: Vec<String>,
+
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub script_args: HashMap<String, String>,
 
     #[serde(rename = "source")]
     pub sources: Sources,
 
-    #[serde(skip_serializing_if = "Licenses::is_unknown", default)]
-    pub license: Licenses,
-
-    #[serde(default = "PackageVersionMeta::default_skip_symlinking")]
-    pub skip_symlinking: bool,
-
-    #[serde(default)]
-    pub script_args: HashMap<String, String>,
-
-    #[serde(default = "PackageVersionMeta::default_use_version_specific")]
-    pub use_version_specific_build: bool,
-
-    #[serde(default = "PackageVersionMeta::default_use_version_specific")]
-    pub use_version_specific_preinstall: bool,
-
-    #[serde(default = "PackageVersionMeta::default_use_version_specific")]
-    pub use_version_specific_postinstall: bool,
-
-    #[serde(default = "PackageVersionMeta::default_use_version_specific")]
-    pub use_version_specific_test: bool,
-
-    #[serde(default = "PackageVersionMeta::default_use_version_specific")]
-    pub use_version_specific_uninstall: bool,
-
-    #[serde(default)]
-    pub external_test_files: HashSet<String>,
-
-    #[serde(default)]
-    pub revisions: Vec<String>,
+    pub targets: HashMap<TargetBounds, PackageTarget>,
 }
 
 impl PackageVersionMeta {
@@ -141,11 +148,24 @@ impl PackageVersionMeta {
     }
 
     /// Gets the script arguments for the given target.
-    /// Returns None when the target cannot be found.
+    /// Returns a `RepositoryError::TargetError` if the target cannot be found.
     pub fn get_script_args(&self, target_bounds: &TargetBounds) -> Result<HashMap<&str, &str>> {
         let target = self.get_target(target_bounds)?;
 
         Ok(self.script_args.iter().chain(target.script_args.iter()).map(|(key, value)| (key.as_str(), value.as_str())).collect())
+    }
+
+    /// Gets the external test files for the given target.
+    /// Returns a `RepositoryError::TargetError` if the target cannot be found.
+    pub fn get_external_test_files(&self, target_bounds: &TargetBounds) -> Result<HashSet<&str>> {
+        let target = self.get_target(target_bounds)?;
+
+        Ok(self.external_test_files.iter().chain(target.external_test_files.iter()).map(|x| x.as_str()).collect())
+    }
+
+    /// Gets the number of revisions of the current package version metadata.
+    pub fn get_revision_count(&self) -> u64 {
+        self.revisions.len() as u64
     }
 
     /// Checks if there are conflicts in the package version metadata
@@ -197,7 +217,15 @@ impl PackageVersionMeta {
         false
     }
 
+    fn is_default_skip_symlinking(val: &bool) -> bool {
+        *val == Self::default_skip_symlinking()
+    }
+
     fn default_use_version_specific() -> bool {
         false
+    }
+
+    fn is_default_use_version_specific(val: &bool) -> bool {
+        *val == Self::default_use_version_specific()
     }
 }

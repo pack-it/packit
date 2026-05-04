@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::str::FromStr;
+use std::{fmt::Display, str::FromStr};
 
 use serde::Deserialize;
 
@@ -57,6 +57,20 @@ impl FromStr for VersionBounds {
         }
 
         Ok(VersionBounds::Equal(Version::from_str(string)?))
+    }
+}
+
+impl Display for VersionBounds {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            VersionBounds::Range(lower, upper) => write!(f, "{lower}-{upper}"),
+            VersionBounds::IncludingRange(lower, upper) => write!(f, "{lower}-={upper}"),
+            VersionBounds::Lower(version) => write!(f, "<{version}"),
+            VersionBounds::LowerEqual(version) => write!(f, "<={version}"),
+            VersionBounds::Higher(version) => write!(f, ">{version}"),
+            VersionBounds::HigherEqual(version) => write!(f, ">={version}"),
+            VersionBounds::Equal(version) => write!(f, "{version}"),
+        }
     }
 }
 

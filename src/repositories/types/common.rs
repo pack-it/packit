@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Not};
 
-use serde::{Deserialize, Deserializer, de};
+use serde::{Deserialize, Deserializer, Serialize, de};
 
 use crate::repositories::types::Checksum;
 
 /// Represents a script identifier, holding the scripts name and a bool which specifies
 /// if the script should be version specific.
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 pub enum Script {
     NameOnly(String),
@@ -19,37 +19,38 @@ pub enum Script {
 
 /// Represents a source, holding a URL and mirror URLs to the source code of a package.
 /// Also has a checksum to check the validity of the received source code.
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Source {
     pub url: String,
+
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub mirrors: Vec<String>,
     pub checksum: Checksum,
 
-    #[serde(default)]
-    pub mirrors: Vec<String>,
-
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "<&bool>::not")]
     pub skip_unpack: bool,
     pub apply_patches_in: Option<String>,
 
-    #[serde(default, deserialize_with = "Source::deserialize_patches")]
+    #[serde(default, deserialize_with = "Source::deserialize_patches", skip_serializing_if = "HashMap::is_empty")]
     pub patches: HashMap<u32, Patch>,
 }
 
 /// Wrapper to differentiate between Single and Named sources in the metadata files.
-#[derive(Debug)]
+#[derive(Serialize, Debug)]
+#[serde(untagged)]
 pub enum Sources {
     Single(Source),
     Named(HashMap<String, Source>),
 }
 
 /// Represents a patch to a source file, holding a URL, mirror URLs and a checksum to check validity.
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Patch {
     pub url: String,
-    pub checksum: Checksum,
 
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mirrors: Vec<String>,
+    pub checksum: Checksum,
     pub apply_in: Option<String>,
 }
 
