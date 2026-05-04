@@ -7,6 +7,7 @@ pub enum Check {
     ConfigSyntax, // Separate from ConfigExistance, because in the future we implement a different fix (reconstruct from Config.toml)
 
     // General package checks
+    StrayDirectory,
     StorageConsistency,
     RegisterConsistency,
     DependencyTree,
@@ -31,8 +32,9 @@ impl Check {
 
             // General checks
             Self::PackitGroup => &[],
-            Self::StorageConsistency => &[Self::PackitGroup],
-            Self::RegisterConsistency => &[Self::PackitGroup],
+            Self::StrayDirectory => &[Self::PackitGroup],
+            Self::StorageConsistency => &[Self::PackitGroup, Self::StrayDirectory],
+            Self::RegisterConsistency => &[Self::PackitGroup, Self::StrayDirectory],
             Self::DependencyTree => &[Self::PackitGroup, Self::StorageConsistency, Self::RegisterConsistency],
             Self::Alterations => &[Self::PackitGroup, Self::StorageConsistency, Self::RegisterConsistency],
 
@@ -66,6 +68,7 @@ impl Check {
             Self::DependencyTree,
             Self::Alterations,
             Self::PackitGroup,
+            Self::StrayDirectory,
         ]
     }
 

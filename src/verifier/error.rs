@@ -28,7 +28,7 @@ pub enum VerifierError {
     #[error("Cannot continue with checks, missing check implementation")]
     UnimplementedCheckError,
 
-    #[error("Could not verify")]
+    #[error("Could not verify or fix")]
     IOError(#[from] std::io::Error),
 
     #[error("Could not display issues")]

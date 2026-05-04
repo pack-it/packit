@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use colored::Colorize;
-use std::fmt::Display;
+use std::{collections::HashSet, fmt::Display, path::PathBuf};
 
 use crate::installer::types::PackageId;
 
@@ -26,6 +26,9 @@ pub enum Issue {
 
     /// The given package cannot be found anywhere. This issue only applies when a package is specified by the user.
     NotFound(PackageId),
+
+    /// A list of stray directories.
+    StrayDirectories(HashSet<PathBuf>),
 }
 
 impl Display for Issue {
@@ -86,6 +89,15 @@ impl Display for Issue {
 
                 // TODO: Somehow show result of fuzzy search here
             },
+            Issue::StrayDirectories(directories) => {
+                writeln!(f, "Stray directories")?;
+                let issue_explanation = "The following stray directories were found inside of prefix/packages:";
+                writeln!(f, "{issue_explanation}")?;
+
+                for directory in directories {
+                    writeln!(f, "  - {}", directory.display())?;
+                }
+            },
         }
 
         Ok(())
@@ -97,6 +109,7 @@ impl Issue {
     pub fn get_fix_message(&self) -> &str {
         match &self {
             Issue::MissingConfig => "To fix this issue we try to reconstruct the Config.toml based on data still in the Packit directory.",
+            Issue::StrayDirectories(_) => "To fix this issue we remove the stray directories.",
             Issue::BrokenTree(_) => "To fix this issue the missing packages will be installed.",
             Issue::InconsistentStorage(_) => {
                 "To fix this issue the packages are temporarily removed from the register and then reinstalled."

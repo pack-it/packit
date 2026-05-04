@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     fs,
     path::{Path, PathBuf},
     str::FromStr,
@@ -52,6 +52,7 @@ impl Repairer {
             Issue::BrokenTree(missing) => self.fix_broken_tree(missing, register, config, manager)?,
             Issue::InconsistentStorage(missing) => self.fix_inconsistent_storage(missing, register, config, manager)?,
             Issue::InconsistentRegister(missing) => self.fix_inconsistent_register(missing, register, config, manager)?,
+            Issue::StrayDirectories(strays) => self.fix_stray_directories(strays)?,
             _ => warning!("Fix not executed, because the issue fix is not yet implemented"),
         }
 
@@ -247,6 +248,25 @@ impl Repairer {
             let mut installer = Installer::new(config, register, manager, installer_options);
 
             installer.install(&package_id.into())?;
+        }
+
+        Ok(())
+    }
+
+    /// Fixes stray directories by removing them.
+    fn fix_stray_directories(&self, strays: HashSet<PathBuf>) -> Result<()> {
+        for directory in strays {
+            if !fs::exists(&directory)? {
+                warning!(
+                    "Skipping deletion of stray directory '{}' because it doesn't exist.",
+                    directory.display()
+                );
+            }
+
+            match directory.is_dir() {
+                true => fs::remove_dir_all(directory)?,
+                false => fs::remove_file(directory)?,
+            }
         }
 
         Ok(())
