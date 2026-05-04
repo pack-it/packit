@@ -9,7 +9,7 @@ use crate::{
         types::{PackageNameError, VersionError},
     },
     packager::PackagerError,
-    platforms::symlink::SymlinkError,
+    platforms::{permissions::error::PermissionError, symlink::SymlinkError},
     storage::error::RegisterError,
 };
 
@@ -54,6 +54,9 @@ pub enum VerifierError {
 
     #[error("Could not use config for fix")]
     ConfigError(#[from] ConfigError),
+
+    #[error("Could not check permissions")]
+    PermissionError(#[from] PermissionError),
 }
 
 pub(super) type Result<T> = std::result::Result<T, VerifierError>;

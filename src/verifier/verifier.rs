@@ -6,7 +6,10 @@ use crate::{
     config::{Config, Repository},
     installer::types::{PackageId, PackageName, Version},
     packager,
-    platforms::{Target, permissions::packit_group_exists},
+    platforms::{
+        DEFAULT_PREFIX, Target,
+        permissions::{is_writable, packit_group_exists},
+    },
     repositories::{provider, types::Checksum},
     storage::package_register::PackageRegister,
     verifier::{
@@ -64,6 +67,7 @@ impl Verifier {
             self.current_intial_check += 1;
 
             let issue = match check {
+                Check::Permissions => self.check_permissions()?,
                 Check::ConfigExistance => self.check_config_existance()?,
                 Check::ConfigSyntax => self.check_config_syntax()?,
 
@@ -211,6 +215,44 @@ impl Verifier {
         }
 
         Ok(Some(Issue::AlteredPackage(altered)))
+    }
+
+    /// Checks the permissions of the prefix directory and all its sub directories.
+    /// If the config can be used it will use the prefix directory specified there,
+    /// otherwise the default prefix directory is checked.
+    fn check_permissions(&self) -> Result<Option<Issue>> {
+        let prefix_directory = match Config::from(&Config::get_default_path()) {
+            Ok(config) => config.prefix_directory,
+            Err(_) => DEFAULT_PREFIX.into(),
+        };
+
+        let unwritable = self.check_permissions_impl(&prefix_directory)?;
+        if unwritable.is_empty() {
+            return Ok(None);
+        }
+
+        Ok(Some(Issue::IncorrectPermissions(unwritable.into_iter().collect())))
+    }
+
+    /// Recursively checks if all files in directory are writable.
+    /// Returns all directories which are not writable (could be empty).
+    fn check_permissions_impl(&self, directory: &PathBuf) -> Result<Vec<PathBuf>> {
+        let mut unwritable = Vec::new();
+        if !is_writable(directory)? {
+            unwritable.push(directory.clone());
+        }
+
+        if !directory.is_dir() {
+            return Ok(unwritable);
+        }
+
+        // Recurse
+        for sub_directory in fs::read_dir(directory)? {
+            let sub_directory = sub_directory?;
+            unwritable.extend(self.check_permissions_impl(&sub_directory.path())?);
+        }
+
+        Ok(unwritable)
     }
 
     /// Checks if the config exists.

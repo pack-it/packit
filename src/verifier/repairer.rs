@@ -13,7 +13,10 @@ use crate::{
         Installer, InstallerOptions,
         types::{PackageId, Version},
     },
-    platforms::{DEFAULT_PREFIX, permissions::packit_group_exists},
+    platforms::{
+        DEFAULT_PREFIX,
+        permissions::{packit_group_exists, set_packit_permissions},
+    },
     repositories::manager::RepositoryManager,
     storage::package_register::PackageRegister,
     utils::{
@@ -38,6 +41,7 @@ impl Repairer {
     pub fn fix_initial_issues(&mut self, issue: Issue) -> Result<()> {
         match issue {
             Issue::MissingConfig => self.fix_missing_config()?,
+            Issue::IncorrectPermissions(directories) => self.fix_unwritable_directories(directories)?,
 
             _ => warning!("Fix not executed, because it is not an initial issue"),
         }
@@ -153,6 +157,25 @@ impl Repairer {
         let mut repositories: Vec<_> = seen_repositories.into_iter().collect();
         repositories.sort_by_key(|(_, v)| *v);
         repositories.into_iter().map(|(k, _)| k).collect()
+    }
+
+    /// Fix unwritable directories by setting the permissions again.
+    fn fix_unwritable_directories(&self, directories: HashSet<PathBuf>) -> Result<()> {
+        // Check for multiuser, promt the user if the config doesn't work
+        let multiuser = match Config::from(&Config::get_default_path()) {
+            Ok(config) => config.multiuser,
+            Err(_) => {
+                let question = "Config.toml could not be loaded, do you wish to set permissions for multiuser?";
+                if ask_user(question, QuestionResponse::No)?.is_no() { false } else { true }
+            },
+        };
+
+        // Set permissions for all unwritable directories
+        for directory in directories {
+            set_packit_permissions(&directory, multiuser, false)?;
+        }
+
+        Ok(())
     }
 
     /// Fixes broken dependency trees by installing the missing packages.

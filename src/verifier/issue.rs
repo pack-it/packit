@@ -6,6 +6,9 @@ use crate::installer::types::PackageId;
 
 /// Holds a single issue and the data regarding that issue.
 pub enum Issue {
+    /// The user cannot write to the prefix directory (or one if its sub directories).
+    IncorrectPermissions(HashSet<PathBuf>),
+
     /// The Packit Config.toml is missing.
     MissingConfig,
 
@@ -35,6 +38,15 @@ impl Display for Issue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", "ISSUE: ".bold().yellow())?;
         match self {
+            Issue::IncorrectPermissions(directories) => {
+                writeln!(f, "Incorrect permissions")?;
+                let issue_explanation = "The following directories were not writable:";
+                writeln!(f, "{issue_explanation}")?;
+
+                for directory in directories {
+                    writeln!(f, "  - {}", directory.display())?;
+                }
+            },
             Issue::MissingConfig => {
                 writeln!(f, "Missing Config.toml file")?;
             },
@@ -108,6 +120,7 @@ impl Issue {
     /// Gets a message which descripes the fix for each issue.
     pub fn get_fix_message(&self) -> &str {
         match &self {
+            Issue::IncorrectPermissions(_) => "To fix this issue we set the permissions again.",
             Issue::MissingConfig => "To fix this issue we try to reconstruct the Config.toml based on data still in the Packit directory.",
             Issue::StrayDirectories(_) => "To fix this issue we remove the stray directories.",
             Issue::BrokenTree(_) => "To fix this issue the missing packages will be installed.",

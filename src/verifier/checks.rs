@@ -3,6 +3,7 @@ use std::collections::HashSet;
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum Check {
     // Initial checks (checks which verify methods which the verifier uses internally)
+    Permissions,
     ConfigExistance,
     ConfigSyntax, // Separate from ConfigExistance, because in the future we implement a different fix (reconstruct from Config.toml)
 
@@ -27,8 +28,9 @@ impl Check {
     fn get_dependencies(&self) -> &[Self] {
         match self {
             // Initial checks
-            Self::ConfigExistance => &[],
-            Self::ConfigSyntax => &[Self::ConfigExistance],
+            Self::Permissions => &[],
+            Self::ConfigExistance => &[Self::Permissions],
+            Self::ConfigSyntax => &[Self::Permissions, Self::ConfigExistance],
 
             // General checks
             Self::PackitGroup => &[],
@@ -57,7 +59,7 @@ impl Check {
 
     /// Gets all intial checks.
     pub fn get_initial_checks<'a>() -> &'a [Self] {
-        &[Self::ConfigExistance, Self::ConfigSyntax]
+        &[Self::Permissions, Self::ConfigExistance, Self::ConfigSyntax]
     }
 
     /// Gets all general checks.
