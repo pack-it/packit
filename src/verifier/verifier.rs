@@ -16,6 +16,7 @@ use crate::{
         Issue,
         checks::Check,
         error::{Result, VerifierError},
+        utils::get_storage_packages,
     },
 };
 
@@ -174,7 +175,7 @@ impl Verifier {
                 Check::StorageConsistency if self.package_storage_is_consistent(package_id, config)? => continue,
                 Check::StorageConsistency => Issue::InconsistentStorage(vec![package_id.clone()]),
                 Check::RegisterConsistency if self.register_package_is_consistent(package_id, register) => continue,
-                Check::RegisterConsistency => Issue::InconsistentRegister(vec![package_id.clone()]),
+                Check::RegisterConsistency => Issue::InconsistentRegister(HashSet::from([package_id.clone()])),
                 Check::DependencyTree => match self.check_package_dependency_tree(package_id, register) {
                     Some(issue) => issue,
                     None => continue,
@@ -414,33 +415,12 @@ impl Verifier {
     /// Checks if all packages in storage also exist in the register.
     /// Returns a register consistency issue or None if there are packages missing from the register.
     fn check_register_consistency(&self, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
-        let package_directory = config.prefix_directory.join("packages");
+        let storage_packages = get_storage_packages(config)?;
         let mut missing = Vec::new();
-        for file_package in fs::read_dir(package_directory)? {
-            let file_package = file_package?;
-            if !file_package.path().is_dir() {
-                continue;
-            }
-
-            // Get the package name
-            let package_name = file_package.file_name();
-            let package_name = package_name.to_str().ok_or(VerifierError::InvalidUnicodeError)?;
-            let package_name = PackageName::from_str(package_name)?;
-
-            for file_version in fs::read_dir(file_package.path())? {
-                let file_version = file_version?;
-                if !file_version.path().is_dir() {
-                    continue;
-                }
-
-                // Get the version, and create the package id
-                let version = Version::from_str(file_version.file_name().to_str().ok_or(VerifierError::InvalidUnicodeError)?)?;
-                let package_id = PackageId::new(package_name.clone(), version);
-
-                // Check if the package version also exists in the register, if not add it to missing
-                if register.get_package_version(&package_id).is_none() {
-                    missing.push(package_id);
-                }
+        for package_id in storage_packages {
+            // Check if the package version also exists in the register, if not add it to missing
+            if register.get_package_version(&package_id).is_none() {
+                missing.push(package_id);
             }
         }
 
@@ -448,7 +428,7 @@ impl Verifier {
             return Ok(None);
         }
 
-        Ok(Some(Issue::InconsistentRegister(missing)))
+        Ok(Some(Issue::InconsistentRegister(missing.into_iter().collect())))
     }
 
     /// Checks if a specific package exists in the register. Note that it doesn't check if the package also exists in storage.

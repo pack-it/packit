@@ -19,7 +19,7 @@ pub enum Issue {
     InconsistentStorage(Vec<PackageId>),
 
     /// A list of packages which are present in the package directory, but not in the Installed.toml.
-    InconsistentRegister(Vec<PackageId>),
+    InconsistentRegister(HashSet<PackageId>),
 
     /// A list of packages which are changed (when they shouldn't be).
     AlteredPackage(Vec<PackageId>),

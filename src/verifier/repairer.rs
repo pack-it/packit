@@ -2,7 +2,7 @@
 use std::{
     collections::{HashMap, HashSet},
     fs,
-    path::{Path, PathBuf},
+    path::PathBuf,
     str::FromStr,
 };
 
@@ -14,18 +14,16 @@ use crate::{
         types::{PackageId, Version},
     },
     platforms::{
-        DEFAULT_PREFIX,
+        DEFAULT_PREFIX, Target,
         permissions::{packit_group_exists, set_packit_permissions},
     },
-    repositories::manager::RepositoryManager,
+    repositories::{manager::RepositoryManager, types::PackageVersionMeta},
     storage::package_register::PackageRegister,
-    utils::{
-        constants::{DEFAULT_METADATA_REPOSITORY_NAME, REGISTER_FILENAME},
-        io::remove_symlinks,
-    },
+    utils::constants::{DEFAULT_METADATA_REPOSITORY_NAME, REGISTER_FILENAME},
     verifier::{
         Issue,
         error::{Result, VerifierError},
+        utils::get_storage_packages,
     },
 };
 
@@ -231,49 +229,102 @@ impl Repairer {
         Ok(())
     }
 
-    // TODO: Somehow store the package info somewhere before deleting, so package history is preserved
     /// Fixes an inconsistent register by temporarily removing the missing packages from storage and then re-installing the packages.
     /// Note that it's not possible to recreate the register entries, because some entries like the source repository cannot be defered from the package storage.
     fn fix_inconsistent_register(
         &mut self,
-        missing: Vec<PackageId>,
+        missing: HashSet<PackageId>,
         register: &mut PackageRegister,
         config: &Config,
         manager: &RepositoryManager,
     ) -> Result<()> {
+        let storage_packages = get_storage_packages(config)?;
         let active_directory = config.prefix_directory.join("active");
         let bin_directory = config.prefix_directory.join("bin");
         let package_directory = config.prefix_directory.join("packages");
-        for package_id in missing {
+        for package_id in &missing {
             // Figure out the active version
             let active_target = fs::read_link(active_directory.join(&package_id.name))?;
             let target_name = active_target.file_name().ok_or(VerifierError::InvalidSymlink)?;
             let version = Version::from_str(target_name.to_str().ok_or(VerifierError::InvalidUnicodeError)?)?;
 
-            // Check if the package should be the active package when installed
+            // Check if the package is the active package version
             let active = package_id.version == version;
 
             // Figure out if symlinked
             let symlinked = fs::symlink_metadata(bin_directory.join(&package_id.name)).is_ok();
 
-            // Temporarily remove the package from the storage
-            // We have to uninstall and install, because we can't know the repository source otherwise
-            // Remove the symlinks first
-            if symlinked {
-                remove_symlinks(Path::new(&config.prefix_directory), &package_directory)?;
-            }
+            // Get information with the manager
+            // Note that this information is valid, but necessarily the same as before the issue arised
+            let (_, package_meta) = manager.read_package(&package_id.name)?;
+            let (repository_id, package_version_meta) = manager.read_package_version(&package_id, &Target::current())?;
+            let dependencies = match self.get_latest_satisfying_packages(&package_id, &package_version_meta, &storage_packages) {
+                Some(dependencies) => dependencies,
+                None => continue,
+            };
+            let source_repository = config.repositories.get(&repository_id).expect("Expected repository in config");
+            let install_path = &package_directory.join(&package_id.name).join(package_id.version.to_string());
+            let prebuild_url = manager.get_prebuild_url(
+                &repository_id,
+                &package_id,
+                package_version_meta.revisions.len() as u64,
+                &Target::current(),
+            )?;
 
-            // Remove the package
-            fs::remove_dir_all(&package_directory.join(&package_id.name).join(package_id.version.to_string()))?;
+            // Make sure that all dependencies are registered as well
+            let missing_dependencies = dependencies.iter().filter(|d| missing.contains(d)).cloned().collect();
+            self.fix_inconsistent_register(missing_dependencies, register, config, manager)?;
 
-            // Re-install the package
-            let installer_options = InstallerOptions::default().skip_symlinking(!symlinked).skip_active(!active);
-            let mut installer = Installer::new(config, register, manager, installer_options);
-
-            installer.install(&package_id.into())?;
+            register.add_package(
+                &package_meta,
+                &package_version_meta,
+                dependencies,
+                source_repository,
+                install_path,
+                symlinked,
+                active,
+                prebuild_url.is_some(),
+            )?;
         }
 
         Ok(())
+    }
+
+    /// Gets the latest satisfying dependencies for a given package from the given storage packages.
+    /// Returns a `HashSet` with all the latest packages which satisfy the dependencies of the given package id.
+    fn get_latest_satisfying_packages(
+        &self,
+        package_id: &PackageId,
+        package_version_meta: &PackageVersionMeta,
+        storage_packages: &HashSet<PackageId>,
+    ) -> Option<HashSet<PackageId>> {
+        // Find the latest satisfying dependency
+        let mut dependencies = HashSet::new();
+        for dependency in &package_version_meta.dependencies {
+            let mut latest: Option<&PackageId> = None;
+            for package in storage_packages {
+                if !dependency.satisfied(&package.name, &package.version) {
+                    continue;
+                }
+
+                match latest {
+                    Some(id) if id.version < package.version => latest = Some(package),
+                    Some(_) => {},
+                    None => latest = Some(package),
+                }
+            }
+
+            match latest {
+                Some(latest) => _ = dependencies.insert(latest.clone()),
+                None => {
+                    // TODO: Add promt for user to install dependency
+                    println!("Could not fix {package_id}, because its dependencies couldn't be found");
+                    return None;
+                },
+            }
+        }
+
+        Some(dependencies)
     }
 
     /// Fixes stray directories by removing them.

@@ -119,6 +119,7 @@ impl PackageRegister {
             if let Some(package) = self.get_package_version_mut(dependency) {
                 package.dependents.insert(installed_package_version.package_id.clone());
             } else {
+                // TODO: This should be an error
                 warning!("Cannot retrieve package {dependency} from register to insert dependents");
             }
         }

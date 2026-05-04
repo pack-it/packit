@@ -3,6 +3,7 @@ mod checks;
 pub mod error;
 mod issue;
 mod repairer;
+mod utils;
 mod verifier;
 
 pub use issue::Issue;
