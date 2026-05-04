@@ -41,16 +41,31 @@ See the tables below for all different fields, see [Target fields](#target-field
 | `skip_symlinking`               | When set to yes, the package is not symlinked after installation, preventing the package to be detectable through the PATH. |
 | `revisions`                     | A list of strings containing a description of what changed in each metadata or script revision. |
 | `script_args`                   | A table of key-value pairs containing arguments passed to scripts.             |
+| `external_test_files`           | A list of external test files that are needed for executing the test script. These files are automatically downloaded. |
 
 #### Sources
 The targets.toml file can contain one or multiple sources, specified in the following format. When multiple sources are defined, they need to be named.
 
-| Field         | Explanation                                                                                                  |
-| ------------- | ------------------------------------------------------------------------------------------------------------ |
-| `url`         | Defines the url of the archive containing the sourcecode of the package.                                     |
-| `checksum`    | Defines the sha256 checksum of the source archive.                                                           |
-| `mirrors`     | Defines a list of mirrors which could be used to download the sourcecode if the original url is unavailable. |
-| `skip_unpack` | True to skip the unpack step and just download the source file, false to use the build in unpack.            |
+| Field              | Explanation                                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------------------------ |
+| `url`              | Defines the url of the archive containing the sourcecode of the package.                                     |
+| `checksum`         | Defines the sha256 checksum of the source archive.                                                           |
+| `mirrors`          | Defines a list of mirrors which could be used to download the sourcecode if the original url is unavailable. |
+| `skip_unpack`      | True to skip the unpack step and just download the source file, false to use the build in unpack.            |
+| `apply_patches_in` | Defines the directory that should be used to apply all patches in.                                           |
+| `patches`          | A list of patches to apply to the source. See patches section below.                                         |
+
+#### Patches
+The `patches` field in a source is specified in the following format. Patches are indexed with a number, so the first patch is specified by key `patches.0`.
+
+| Field      | Explanation                                                                                             |
+| ---------- | ------------------------------------------------------------------------------------------------------- |
+| `url`      | Defines the url of the patch. Can contain a url, or a local file relative to the package directory.     |
+| `checksum` | Defines the sha256 checksum of the patch.                                                               |
+| `mirrors`  | Defines a list of mirrors which could be used to download the patch if the original url is unavailable. |
+| `apply_in` | Defines the directory that should be used to apply this specific patches in.                            |
+
+Please note that the `mirrors` is not used when the url contains a file in the repository, this file is then expected to exist.
 
 #### Target fields
 
@@ -64,6 +79,8 @@ Targets are specified as `[targets.<bounds>]`, where bounds specify the support 
 | `<script-type>_script`          | Defines the name of the script to use instead of the default script name.            |
 | `script_args`                   | A table of key-value pairs containing arguments passed to scripts, additional to the args defined in the global field. |
 | `source`                        | Defines which source to use, required when multiple sources are defined.             |
+| `external_test_files`           | A list of external test files that are needed for executing the test script for this target, additional to the files specified in the global field. These files are automatically downloaded. |
+
 
 ### Target bounds
 
