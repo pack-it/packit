@@ -10,6 +10,7 @@ use crate::{
     },
     packager::PackagerError,
     platforms::{permissions::error::PermissionError, symlink::SymlinkError},
+    repositories::error::RepositoryError,
     storage::error::RegisterError,
 };
 
@@ -57,6 +58,9 @@ pub enum VerifierError {
 
     #[error("Could not check permissions")]
     PermissionError(#[from] PermissionError),
+
+    #[error("Could not use repository manager for check or fix")]
+    RepositoryError(#[from] RepositoryError),
 }
 
 pub(super) type Result<T> = std::result::Result<T, VerifierError>;

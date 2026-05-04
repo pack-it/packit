@@ -71,6 +71,8 @@ impl Verifier {
                 Check::Permissions => self.check_permissions()?,
                 Check::ConfigExistance => self.check_config_existance()?,
                 Check::ConfigSyntax => self.check_config_syntax()?,
+                Check::RegisterExistance => self.check_register_existance()?,
+                Check::RegisterSyntax => self.check_register_syntax()?,
 
                 // Make sure that the check is not an initial check
                 _ if Check::get_initial_checks().contains(check) => return Err(VerifierError::UnimplementedCheckError),
@@ -256,7 +258,7 @@ impl Verifier {
         Ok(unwritable)
     }
 
-    /// Checks if the config exists.
+    /// Checks if the Config.toml exists.
     /// Returns `None` if the config exists or an `Issue::MissingConfig` otherwise.
     /// Could return an IO error.
     fn check_config_existance(&self) -> Result<Option<Issue>> {
@@ -267,13 +269,35 @@ impl Verifier {
         Ok(Some(Issue::MissingConfig))
     }
 
-    /// Checks if the config syntax is valid.
+    /// Checks if the Config.toml syntax is valid.
     /// Returns `None` if the config syntax is valid or an `Issue::MissingConfig` otherwise.
     /// Could return an IO error.
     fn check_config_syntax(&self) -> Result<Option<Issue>> {
         match Config::from(&Config::get_default_path()) {
             Ok(_) => Ok(None),
             Err(_) => Ok(Some(Issue::MissingConfig)),
+        }
+    }
+
+    /// Checks if the Installed.toml exists.
+    /// Returns `None` if the register exists or an `Issue::MissingRegister` otherwise.
+    fn check_register_existance(&self) -> Result<Option<Issue>> {
+        let config = Config::from(&Config::get_default_path())?;
+        let register_directory = &PackageRegister::get_default_path(&config);
+        if fs::exists(register_directory)? {
+            return Ok(None);
+        }
+
+        Ok(Some(Issue::MissingRegister))
+    }
+
+    /// Checks if the Installed.toml syntax is valid.
+    /// Returns `None` if the register syntax is valid or an `Issue::MissingRegister` otherwise.
+    fn check_register_syntax(&self) -> Result<Option<Issue>> {
+        let config = Config::from(&Config::get_default_path())?;
+        match PackageRegister::from(&PackageRegister::get_default_path(&config)) {
+            Ok(_) => Ok(None),
+            Err(_) => Ok(Some(Issue::MissingRegister)),
         }
     }
 

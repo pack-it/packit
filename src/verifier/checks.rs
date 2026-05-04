@@ -6,6 +6,8 @@ pub enum Check {
     Permissions,
     ConfigExistance,
     ConfigSyntax, // Separate from ConfigExistance, because in the future we implement a different fix (reconstruct from Config.toml)
+    RegisterExistance,
+    RegisterSyntax, // Separate from RegisterExistance, same reason as for ConfigSyntax
 
     // General package checks
     StrayDirectory,
@@ -31,6 +33,13 @@ impl Check {
             Self::Permissions => &[],
             Self::ConfigExistance => &[Self::Permissions],
             Self::ConfigSyntax => &[Self::Permissions, Self::ConfigExistance],
+            Self::RegisterExistance => &[Self::Permissions, Self::ConfigExistance, Self::ConfigSyntax],
+            Self::RegisterSyntax => &[
+                Self::Permissions,
+                Self::ConfigExistance,
+                Self::ConfigSyntax,
+                Self::RegisterExistance,
+            ],
 
             // General checks
             Self::PackitGroup => &[],
@@ -59,7 +68,13 @@ impl Check {
 
     /// Gets all intial checks.
     pub fn get_initial_checks<'a>() -> &'a [Self] {
-        &[Self::Permissions, Self::ConfigExistance, Self::ConfigSyntax]
+        &[
+            Self::Permissions,
+            Self::ConfigExistance,
+            Self::ConfigSyntax,
+            Self::RegisterExistance,
+            Self::RegisterSyntax,
+        ]
     }
 
     /// Gets all general checks.

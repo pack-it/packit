@@ -12,6 +12,9 @@ pub enum Issue {
     /// The Packit Config.toml is missing.
     MissingConfig,
 
+    /// The Packit Installed.toml is missing.
+    MissingRegister,
+
     /// A list of parents and their missing dependencies `<parent> : <missing>`.
     BrokenTree(Vec<(PackageId, PackageId)>),
 
@@ -49,6 +52,9 @@ impl Display for Issue {
             },
             Issue::MissingConfig => {
                 writeln!(f, "Missing Config.toml file")?;
+            },
+            Issue::MissingRegister => {
+                writeln!(f, "Missing Installed.toml file")?;
             },
             Issue::BrokenTree(missing) => {
                 writeln!(f, "Broken dependency tree")?;
@@ -121,7 +127,8 @@ impl Issue {
     pub fn get_fix_message(&self) -> &str {
         match &self {
             Issue::IncorrectPermissions(_) => "To fix this issue we set the permissions again.",
-            Issue::MissingConfig => "To fix this issue we try to reconstruct the Config.toml based on data still in the Packit directory.",
+            Issue::MissingConfig => "To fix this issue we try to reconstruct the Config.toml with data still in the Packit directory.",
+            Issue::MissingRegister => "To fix this issue we try to reconstruct the Installed.toml with data still in the Packit directory.",
             Issue::StrayDirectories(_) => "To fix this issue we remove the stray directories.",
             Issue::BrokenTree(_) => "To fix this issue the missing packages will be installed.",
             Issue::InconsistentStorage(_) => {

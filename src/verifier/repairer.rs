@@ -40,6 +40,7 @@ impl Repairer {
         match issue {
             Issue::MissingConfig => self.fix_missing_config()?,
             Issue::IncorrectPermissions(directories) => self.fix_unwritable_directories(directories)?,
+            Issue::MissingRegister => self.fix_missing_register()?,
 
             _ => warning!("Fix not executed, because it is not an initial issue"),
         }
@@ -229,8 +230,20 @@ impl Repairer {
         Ok(())
     }
 
-    /// Fixes an inconsistent register by temporarily removing the missing packages from storage and then re-installing the packages.
-    /// Note that it's not possible to recreate the register entries, because some entries like the source repository cannot be defered from the package storage.
+    /// Fixes a missing register. It considders all packages as missing and makes use of the inconsistent register fix.
+    fn fix_missing_register(&mut self) -> Result<()> {
+        // Note that the config can be used, because the check for a missing register depends on the config checks
+        let config = Config::from(&Config::get_default_path())?;
+        let mut register = PackageRegister::new();
+        let missing_packages = get_storage_packages(&config)?;
+        let manager = RepositoryManager::new(&config);
+        self.fix_inconsistent_register(missing_packages, &mut register, &config, &manager)?;
+        register.save_to(&PackageRegister::get_default_path(&config))?;
+        Ok(())
+    }
+
+    /// Fixes an inconsistent register by gathering still existing data from the Packit directories.
+    /// TODO: Expand with a check with package checksums, to make sure that the found repository has the same checksum
     fn fix_inconsistent_register(
         &mut self,
         missing: HashSet<PackageId>,
@@ -258,10 +271,7 @@ impl Repairer {
             // Note that this information is valid, but necessarily the same as before the issue arised
             let (_, package_meta) = manager.read_package(&package_id.name)?;
             let (repository_id, package_version_meta) = manager.read_package_version(&package_id, &Target::current())?;
-            let dependencies = match self.get_latest_satisfying_packages(&package_id, &package_version_meta, &storage_packages) {
-                Some(dependencies) => dependencies,
-                None => continue,
-            };
+            let dependencies = self.get_latest_satisfying_packages(&package_version_meta, &storage_packages);
             let source_repository = config.repositories.get(&repository_id).expect("Expected repository in config");
             let install_path = &package_directory.join(&package_id.name).join(package_id.version.to_string());
             let prebuild_url = manager.get_prebuild_url(
@@ -291,13 +301,13 @@ impl Repairer {
     }
 
     /// Gets the latest satisfying dependencies for a given package from the given storage packages.
+    /// Assumes that all dependencies are present in the given storage packages.
     /// Returns a `HashSet` with all the latest packages which satisfy the dependencies of the given package id.
     fn get_latest_satisfying_packages(
         &self,
-        package_id: &PackageId,
         package_version_meta: &PackageVersionMeta,
         storage_packages: &HashSet<PackageId>,
-    ) -> Option<HashSet<PackageId>> {
+    ) -> HashSet<PackageId> {
         // Find the latest satisfying dependency
         let mut dependencies = HashSet::new();
         for dependency in &package_version_meta.dependencies {
@@ -314,17 +324,13 @@ impl Repairer {
                 }
             }
 
-            match latest {
-                Some(latest) => _ = dependencies.insert(latest.clone()),
-                None => {
-                    // TODO: Add promt for user to install dependency
-                    println!("Could not fix {package_id}, because its dependencies couldn't be found");
-                    return None;
-                },
+            // This assumes that all dependencies can be satisfied with packages in the given storage packages
+            if let Some(latest) = latest {
+                dependencies.insert(latest.clone());
             }
         }
 
-        Some(dependencies)
+        dependencies
     }
 
     /// Fixes stray directories by removing them.
