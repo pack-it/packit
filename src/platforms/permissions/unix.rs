@@ -70,6 +70,11 @@ pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool, recurse: bool)
     set_file_permissions(path, metadata.permissions(), group_id, recurse)
 }
 
+/// Checks if the packit group exists.
+pub fn packit_group_exists() -> bool {
+    get_group_id(PACKIT_GROUP_NAME).is_ok()
+}
+
 /// Sets the permissions of a given directory. It does so recursively if the recurse parameter is true.
 /// Could return an IO error.
 fn set_file_permissions(path: &PathBuf, mut old_permissions: Permissions, group_id: Option<u32>, recurse: bool) -> Result<()> {

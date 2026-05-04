@@ -84,17 +84,7 @@ impl HandleCommand for ConfigArgs {
 impl ConfigArgs {
     /// Handles the config show command.
     fn handle_show(&self, config: EditableConfig) {
-        let config = config.get_config();
-        println!("Prefix directory: {}", config.prefix_directory.display());
-
-        print!("Multiuser mode: ");
-        if config.multiuser {
-            println!("on");
-        } else {
-            println!("off");
-        }
-
-        println!("Repositories rank: {}", config.repositories_rank.join(", "));
+        config.get_config().display();
     }
 
     /// Handles the config set-prefix command.

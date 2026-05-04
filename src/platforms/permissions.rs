@@ -37,8 +37,11 @@ pub fn is_writable(path: &PathBuf) -> Result<bool> {
     platform::is_writable(path, metadata)
 }
 
-/// Sets the permissions of packit files
+/// Sets the permissions of packit files.
 pub use self::platform::set_packit_permissions;
+
+/// Checks if the packit group exists.
+pub use self::platform::packit_group_exists;
 
 pub use self::platform::PlatformError;
 

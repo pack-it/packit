@@ -42,7 +42,7 @@ pub struct Config {
 }
 
 /// Represents a repository, containing connection information.
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Hash)]
 pub struct Repository {
     /// The path to the repository
     pub path: String,
@@ -156,6 +156,28 @@ impl Config {
     fn default_multiuser() -> bool {
         false
     }
+
+    /// Displays the Config settings.
+    pub fn display(&self) {
+        println!("Prefix directory: {}", self.prefix_directory.display());
+        print!("Multiuser mode: ");
+        match self.multiuser {
+            true => println!("on"),
+            false => println!("off"),
+        }
+
+        println!("Repositories rank: {}", self.repositories_rank.join(", "));
+        for (name, repo) in &self.repositories {
+            println!("{name}");
+            println!("    Path: {}", repo.path);
+            println!("    Provider: {}", repo.provider);
+            println!(
+                "    Prebuilds provider: {}",
+                repo.prebuilds_provider.as_ref().unwrap_or(&"None".to_string())
+            );
+            println!("    Prebuilds url: {}", repo.prebuilds_url.as_ref().unwrap_or(&"None".to_string()));
+        }
+    }
 }
 
 impl EditableConfig {
@@ -221,6 +243,21 @@ impl EditableConfig {
         self.document["repositories"][id] = new_value.into();
 
         self.config.repositories.insert(id.into(), repository);
+    }
+
+    // Removes a repository with the given id from the config.
+    // TODO: Implement this for the config command (making sure that we handle packages which currently use this repo)
+    pub fn remove_repository(&mut self, id: &str) {
+        if let Some(repositories) = self.document.get_mut("repositories").and_then(|r| r.as_table_mut()) {
+            repositories.remove(id);
+        }
+
+        if let Some(repositories) = self.document.get_mut("repositories_rank").and_then(|r| r.as_array_mut()) {
+            repositories.retain(|v| v.as_str() != Some(id));
+        }
+
+        self.config.repositories.remove(id);
+        self.config.repositories_rank.retain(|v| v != id);
     }
 
     /// Sets the repositories rank.

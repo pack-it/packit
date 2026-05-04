@@ -58,3 +58,20 @@ pub fn ask_user(question: &str, default: QuestionResponse) -> Result<QuestionRes
     warning!("Invalid input");
     Ok(QuestionResponse::Invalid)
 }
+
+/// Prompts the user to give input. The user can skip by pressing enter.
+pub fn ask_user_input(question: &str) -> Result<Option<String>, DisplayError> {
+    print!("{question} [press enter to skip]: ");
+
+    // Get user input
+    io::stdout().flush()?;
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+    let input = input.trim();
+
+    if input.is_empty() {
+        return Ok(None);
+    }
+
+    Ok(Some(input.to_string()))
+}

@@ -265,6 +265,11 @@ pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool, recurse: bool)
     }
 }
 
+/// Checks if the packit group exists.
+pub fn packit_group_exists() -> bool {
+    get_group_sid().is_ok()
+}
+
 /// Enables a given privilege.
 /// Could return a `PlatformError::WindowsAPIError` error.
 fn enable_privilege(name: &str) -> Result<()> {
