@@ -13,6 +13,14 @@ This file should be present in every Packit repository, it quickly describes wha
 | `prebuilds_provider` | Defines the provider of the prebuilds repository, defaults to `fs`. |
 
 
+### `index.toml`
+This file should be present in every Packit repository, it describes which packages are available.
+
+| Field                | Explanation                                                            |
+| -------------------- | ---------------------------------------------------------------------- |
+| `supported_packages` | A list of names of all packages that are available in this repository. |
+
+
 ### `packages`
 The packages directory contains the metadata of all packages which are supported by this repository.
 
