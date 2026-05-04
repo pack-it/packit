@@ -159,3 +159,8 @@ The active binaries will be symlinked in: `<prefix>/bin/<EXECUTABLE-NAME>`. This
 #### Packit configs
 On Linux we use `/etc/packit` for the configs, on macOS we use `/Library/Application Support/packit` and on Windows we use `C:\Program Files\packit`.
 Currently the only config is `Config.toml`, containing all configured repositories.
+
+
+## Documentation
+
+See [the docs directory](docs/README.md) for more detailed documentation of Packit.
