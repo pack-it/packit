@@ -6,7 +6,7 @@ use crate::{
     config::{Config, Repository},
     installer::types::{PackageId, PackageName, Version},
     packager,
-    platforms::Target,
+    platforms::{Target, permissions::packit_group_exists},
     repositories::{provider, types::Checksum},
     storage::package_register::PackageRegister,
     verifier::{
@@ -65,6 +65,7 @@ impl Verifier {
 
             let issue = match check {
                 Check::ConfigExistance => self.check_config_existance()?,
+                Check::ConfigSyntax => self.check_config_syntax()?,
 
                 // Make sure that the check is not an initial check
                 _ if Check::get_initial_checks().contains(check) => return Err(VerifierError::UnimplementedCheckError),
@@ -220,6 +221,16 @@ impl Verifier {
         }
 
         Ok(Some(Issue::MissingConfig))
+    }
+
+    /// Checks if the config syntax is valid.
+    /// Returns `None` if the config syntax is valid or an `Issue::MissingConfig` otherwise.
+    /// Could return an IO error.
+    fn check_config_syntax(&self) -> Result<Option<Issue>> {
+        match Config::from(&Config::get_default_path()) {
+            Ok(_) => Ok(None),
+            Err(_) => Ok(Some(Issue::MissingConfig)),
+        }
     }
 
     /// Checks for alterations in a single package using a checksum which is compared to the checksum from the pre-build.
@@ -463,18 +474,9 @@ impl Verifier {
     /// Checks if the packit group exists if multiuser mode is enabled in the config.
     /// Returns the issue if the group does not exist, None otherwise.
     fn check_packit_group(&self, config: &Config) -> Option<Issue> {
-        if !config.multiuser {
-            return None; // We don't need the packit group if multiuser mode is not enabled
-        }
-
-        // TODO: Also implement for Windows
-        #[cfg(any(target_os = "macos", target_os = "linux"))]
-        {
-            use crate::platforms::permissions;
-
-            if permissions::platform::get_group_id(permissions::PACKIT_GROUP_NAME).is_err() {
-                return Some(Issue::MissingPackitGroup);
-            }
+        // We don't need the packit group if multiuser mode is not enabled
+        if config.multiuser && !packit_group_exists() {
+            return Some(Issue::MissingPackitGroup);
         }
 
         None

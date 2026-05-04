@@ -4,6 +4,7 @@ use std::collections::HashSet;
 pub enum Check {
     // Initial checks (checks which verify methods which the verifier uses internally)
     ConfigExistance,
+    ConfigSyntax, // Separate from ConfigExistance, because in the future we implement a different fix (reconstruct from Config.toml)
 
     // General package checks
     StorageConsistency,
@@ -26,6 +27,7 @@ impl Check {
         match self {
             // Initial checks
             Self::ConfigExistance => &[],
+            Self::ConfigSyntax => &[Self::ConfigExistance],
 
             // General checks
             Self::PackitGroup => &[],
@@ -53,7 +55,7 @@ impl Check {
 
     /// Gets all intial checks.
     pub fn get_initial_checks<'a>() -> &'a [Self] {
-        &[Self::ConfigExistance]
+        &[Self::ConfigExistance, Self::ConfigSyntax]
     }
 
     /// Gets all general checks.
