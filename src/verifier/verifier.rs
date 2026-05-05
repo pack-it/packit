@@ -603,29 +603,47 @@ impl Verifier {
     }
 
     /// Reverses the initial checks counter by 1. Except if the current is 0.
-    pub fn reverse_initial_check(&mut self) {
-        if self.current_intial_check == 0 {
-            return;
+    /// Returns the new value of current_intial_check.
+    pub fn reverse_initial_check(&mut self) -> usize {
+        if self.current_intial_check > 0 {
+        self.current_intial_check -= 1;
         }
 
-        self.current_intial_check -= 1;
+        self.current_intial_check
     }
 
     /// Reverses the general checks counter by 1. Except if the current is 0.
-    pub fn reverse_general_check(&mut self) {
-        if self.current_general_check == 0 {
-            return;
+    /// Returns the new value of current_general_check.
+    pub fn reverse_general_check(&mut self) -> usize {
+        if self.current_general_check > 0 {
+        self.current_general_check -= 1;
         }
 
-        self.current_general_check -= 1;
+        self.current_general_check
     }
 
     /// Reverses the package checks counter by 1. Except if the current is 0.
-    pub fn reverse_package_check(&mut self) {
-        if self.current_package_check == 0 {
-            return;
+    /// Returns the new value of current_package_check.
+    pub fn reverse_package_check(&mut self) -> usize {
+        if self.current_package_check > 0 {
+            self.current_package_check -= 1;
         }
 
-        self.current_package_check -= 1;
+        self.current_package_check
+    }
+
+    /// Gets the current initial check index.
+    pub fn get_initial_check_index(&self) -> usize {
+        self.current_intial_check
+    }
+
+    /// Gets the current general check index.
+    pub fn get_general_check_index(&self) -> usize {
+        self.current_general_check
+    }
+
+    /// Gets the current package check index.
+    pub fn get_package_check_index(&self) -> usize {
+        self.current_package_check
     }
 }

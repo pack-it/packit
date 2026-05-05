@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
+use std::process::exit;
+
 use clap::Args;
 
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{QuestionResponse, ask_user},
+        display::{QuestionResponse, ask_user, logging::error},
     },
     config::Config,
     installer::types::PackageId,
@@ -22,6 +24,7 @@ pub struct FixArgs {
 }
 
 const FIX_MESSAGE: &str = "Would you like to automatically apply the fix above?";
+const UNSUCCESSFUL_FIX_MESSAGE: &str = "The issue could not be fixed, due to unknown reasons";
 
 impl HandleCommand for FixArgs {
     fn handle(&self) {
@@ -38,7 +41,13 @@ impl HandleCommand for FixArgs {
 impl FixArgs {
     /// Fixes all packages.
     fn fix_all(&self, verifier: &mut Verifier, repairer: &mut Repairer) {
+        let mut issue_index = -1;
         while let Some(issue) = verifier.next_initial_issue().unwrap_or_exit(1) {
+            if verifier.get_initial_check_index() as i32 - 1 == issue_index {
+                error!(msg: UNSUCCESSFUL_FIX_MESSAGE);
+                exit(1);
+            }
+
             println!("{issue}");
             println!("{}", issue.get_fix_message());
             if ask_user(FIX_MESSAGE, QuestionResponse::Yes).unwrap_or_exit(1).is_no() {
@@ -49,7 +58,7 @@ impl FixArgs {
             repairer.fix_initial_issues(issue).unwrap_or_exit(1);
 
             // Reverse the verifier to redo the check to make sure the fix worked
-            verifier.reverse_initial_check();
+            issue_index = verifier.reverse_initial_check() as i32;
         }
 
         let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
@@ -58,7 +67,13 @@ impl FixArgs {
         let mut register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
         // Retrieve and fix the issues one by one
+        let mut issue_index = -1;
         while let Some(issue) = verifier.next_issue(&register, &config).unwrap_or_exit(1) {
+            if verifier.get_general_check_index() as i32 - 1 == issue_index {
+                error!(msg: UNSUCCESSFUL_FIX_MESSAGE);
+                exit(1);
+            }
+
             println!("{issue}");
             println!("{}", issue.get_fix_message());
             if ask_user(FIX_MESSAGE, QuestionResponse::Yes).unwrap_or_exit(1).is_no() {
@@ -72,7 +87,7 @@ impl FixArgs {
             register.save_to(&register_dir).unwrap_or_exit(1);
 
             // Reverse the verifier to redo the check to make sure the fix worked
-            verifier.reverse_general_check();
+            issue_index = verifier.reverse_general_check() as i32;
         }
 
         // Return correct message based on found issues
@@ -93,7 +108,13 @@ impl FixArgs {
 
         for package_id in &self.packages {
             // Retrieve and fix the issues one by one
+            let mut issue_index = -1;
             while let Some(issue) = verifier.next_package_issue(package_id, &register, &config).unwrap_or_exit(1) {
+                if verifier.get_package_check_index() as i32 - 1 == issue_index {
+                    error!(msg: UNSUCCESSFUL_FIX_MESSAGE);
+                    exit(1);
+                }
+
                 println!("{issue}");
                 println!("{}", issue.get_fix_message());
                 if ask_user(FIX_MESSAGE, QuestionResponse::Yes).unwrap_or_exit(1).is_no() {
@@ -107,7 +128,7 @@ impl FixArgs {
                 register.save_to(&register_dir).unwrap_or_exit(1);
 
                 // Reverse the verifier to redo the check to make sure the fix worked
-                verifier.reverse_package_check();
+                issue_index = verifier.reverse_package_check() as i32;
             }
 
             // Show when no errors are found for the current package
