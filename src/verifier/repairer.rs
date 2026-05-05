@@ -256,6 +256,11 @@ impl Repairer {
         let bin_directory = config.prefix_directory.join("bin");
         let package_directory = config.prefix_directory.join("packages");
         for package_id in &missing {
+            // Skip if the package already exists in the register (from recursive step)
+            if register.get_package_version(package_id).is_some() {
+                continue;
+            }
+
             // Figure out the active version
             let active_target = fs::read_link(active_directory.join(&package_id.name))?;
             let target_name = active_target.file_name().ok_or(VerifierError::InvalidSymlink)?;
@@ -282,7 +287,7 @@ impl Repairer {
             )?;
 
             // Make sure that all dependencies are registered as well
-            let missing_dependencies = dependencies.iter().filter(|d| missing.contains(d)).cloned().collect();
+            let missing_dependencies = dependencies.iter().filter(|d| register.get_package_version(d).is_none()).cloned().collect();
             self.fix_inconsistent_register(missing_dependencies, register, config, manager)?;
 
             register.add_package(
