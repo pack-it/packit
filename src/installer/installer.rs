@@ -730,9 +730,15 @@ impl<'a> Installer<'a> {
             };
 
             if !dependency.satisfied(&new_package_id.name, new_version) {
-                return Err(InstallerError::SatisfyError {
-                    new_version: new_version.clone(),
-                });
+                let question = "Could not update, because the current version has dependents. Do you wish to install the newer version and set it as the active version?";
+                if ask_user(question, QuestionResponse::Yes)?.is_no() {
+                    return Err(InstallerError::SatisfyError {
+                        new_version: new_version.clone(),
+                    });
+                }
+
+                // Install the new beside the old package
+                return self.install(&OptionalPackageId::from(new_package_id));
             }
         }
 
