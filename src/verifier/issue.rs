@@ -102,7 +102,7 @@ impl Display for Issue {
                 writeln!(f, "The 'packit' group is missing while multiuser mode is turned on.")?;
             },
             Issue::NotFound(package_id) => {
-                writeln!(f, "Package existance")?;
+                writeln!(f, "Package existence")?;
                 writeln!(f, "{} cannot be found anywhere in Packit.", package_id.to_string().bold().blue())?
 
                 // TODO: Somehow show result of fuzzy search here

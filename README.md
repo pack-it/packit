@@ -61,11 +61,11 @@ Updates the specified package to the new version, or the latest version if no ne
 #### `pit info <PACKAGE-NAME>[@<VERSION>] [-v] [--tree]`
 Shows info about the specified installed package. If the `-v` option is given, extra information is shown. If the `--tree` option is enabled, the whole dependency tree is shown.
 
-#### `pit check [<PACKAGE-NAME>@<VERSION>]`
-Checks the Packit installation for issues. When a package name and version is given, only that package is checked for issues.
+#### `pit check [<PACKAGE-NAME>@<VERSION> ...]`
+Checks the Packit installation for issues. When package name(s) and version(s) are given, only those package(s) are checked for issues. 
 
 #### `pit fix`
-Fix all issues found by the check command. You will be asked if you want to fix an issue for each issue type.
+Fix all issues found by the check command. You will be asked if you want to fix an issue for each issue type. When package name(s) and version(s) are given, only those package(s) are checked and fixed. 
 
 #### `pit switch <PACKAGE-NAME> <VERSION> [--skip-symlinking]`
 Switches the active version of the specified package to the specified version. If the `--skip-symlinking` option is given, the new active version is not symlinked into the /bin, /lib, /share, etc. directories.

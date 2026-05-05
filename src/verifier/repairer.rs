@@ -78,7 +78,7 @@ impl Repairer {
                 }
             }
 
-            let question = format!("Please provide a different prefix path");
+            let question = "Please provide a different prefix path".to_string();
             match ask_user_input(&question)? {
                 Some(path) => {
                     prefix_string = path.to_string();
@@ -165,7 +165,7 @@ impl Repairer {
             Ok(config) => config.multiuser,
             Err(_) => {
                 let question = "Config.toml could not be loaded, do you wish to set permissions for multiuser?";
-                if ask_user(question, QuestionResponse::No)?.is_no() { false } else { true }
+                ask_user(question, QuestionResponse::No)?.is_yes()
             },
         };
 
@@ -234,7 +234,7 @@ impl Repairer {
     fn fix_missing_register(&mut self) -> Result<()> {
         // Note that the config can be used, because the check for a missing register depends on the config checks
         let config = Config::from(&Config::get_default_path())?;
-        let mut register = PackageRegister::new();
+        let mut register = PackageRegister::new_empty();
         let missing_packages = get_storage_packages(&config)?;
         let manager = RepositoryManager::new(&config);
         self.fix_inconsistent_register(missing_packages, &mut register, &config, &manager)?;
@@ -275,13 +275,13 @@ impl Repairer {
             // Get information with the manager
             // Note that this information is valid, but necessarily the same as before the issue arised
             let (_, package_meta) = manager.read_package(&package_id.name)?;
-            let (repository_id, package_version_meta) = manager.read_package_version(&package_id, &Target::current())?;
+            let (repository_id, package_version_meta) = manager.read_package_version(package_id, &Target::current())?;
             let dependencies = self.get_latest_satisfying_packages(&package_version_meta, &storage_packages);
             let source_repository = config.repositories.get(&repository_id).expect("Expected repository in config");
             let install_path = &package_directory.join(&package_id.name).join(package_id.version.to_string());
             let prebuild_url = manager.get_prebuild_url(
                 &repository_id,
-                &package_id,
+                package_id,
                 package_version_meta.revisions.len() as u64,
                 &Target::current(),
             )?;

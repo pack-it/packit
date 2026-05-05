@@ -4,10 +4,10 @@ use std::collections::HashSet;
 pub enum Check {
     // Initial checks (checks which verify methods which the verifier uses internally)
     Permissions,
-    ConfigExistance,
-    ConfigSyntax, // Separate from ConfigExistance, because in the future we implement a different fix (reconstruct from Config.toml)
-    RegisterExistance,
-    RegisterSyntax, // Separate from RegisterExistance, same reason as for ConfigSyntax
+    ConfigExistence,
+    ConfigSyntax, // Separate from ConfigExistence, because in the future we implement a different fix (reconstruct from Config.toml)
+    RegisterExistence,
+    RegisterSyntax, // Separate from RegisterExistence, same reason as for ConfigSyntax
 
     // General package checks
     StrayDirectory,
@@ -18,8 +18,8 @@ pub enum Check {
     PackitGroup,
 
     // Checks which are specific to a package
-    PackageExistance,
-    PackageStorageConsistancy,
+    PackageExistence,
+    PackageStorageConsistency,
     PackageRegisterConsistency,
     PackageDependencyTree,
     PackageAlterations,
@@ -31,14 +31,14 @@ impl Check {
         match self {
             // Initial checks
             Self::Permissions => &[],
-            Self::ConfigExistance => &[Self::Permissions],
-            Self::ConfigSyntax => &[Self::Permissions, Self::ConfigExistance],
-            Self::RegisterExistance => &[Self::Permissions, Self::ConfigExistance, Self::ConfigSyntax],
+            Self::ConfigExistence => &[Self::Permissions],
+            Self::ConfigSyntax => &[Self::Permissions, Self::ConfigExistence],
+            Self::RegisterExistence => &[Self::Permissions, Self::ConfigExistence, Self::ConfigSyntax],
             Self::RegisterSyntax => &[
                 Self::Permissions,
-                Self::ConfigExistance,
+                Self::ConfigExistence,
                 Self::ConfigSyntax,
-                Self::RegisterExistance,
+                Self::RegisterExistence,
             ],
 
             // General checks
@@ -50,17 +50,17 @@ impl Check {
             Self::Alterations => &[Self::PackitGroup, Self::StorageConsistency, Self::RegisterConsistency],
 
             // Package specific checks
-            Self::PackageExistance => &[],
-            Self::PackageStorageConsistancy => &[Self::PackageExistance],
-            Self::PackageRegisterConsistency => &[Self::PackageExistance],
+            Self::PackageExistence => &[],
+            Self::PackageStorageConsistency => &[Self::PackageExistence],
+            Self::PackageRegisterConsistency => &[Self::PackageExistence],
             Self::PackageDependencyTree => &[
-                Self::PackageExistance,
-                Self::PackageStorageConsistancy,
+                Self::PackageExistence,
+                Self::PackageStorageConsistency,
                 Self::PackageRegisterConsistency,
             ],
             Self::PackageAlterations => &[
-                Self::PackageExistance,
-                Self::PackageStorageConsistancy,
+                Self::PackageExistence,
+                Self::PackageStorageConsistency,
                 Self::PackageRegisterConsistency,
             ],
         }
@@ -70,9 +70,9 @@ impl Check {
     pub fn get_initial_checks<'a>() -> &'a [Self] {
         &[
             Self::Permissions,
-            Self::ConfigExistance,
+            Self::ConfigExistence,
             Self::ConfigSyntax,
-            Self::RegisterExistance,
+            Self::RegisterExistence,
             Self::RegisterSyntax,
         ]
     }
@@ -92,8 +92,8 @@ impl Check {
     /// Gets all package specific checks.
     pub fn get_package_checks<'a>() -> &'a [Self] {
         &[
-            Self::PackageExistance,
-            Self::PackageStorageConsistancy,
+            Self::PackageExistence,
+            Self::PackageStorageConsistency,
             Self::PackageRegisterConsistency,
             Self::PackageDependencyTree,
             Self::PackageAlterations,
@@ -102,7 +102,7 @@ impl Check {
 
     /// Gets the checks in the correct order based on the 'check dependency tree'.
     /// Returns a flattened 'check dependency tree'
-    pub fn get_ordered_checks<'a>(checks: &'a [Self]) -> Vec<&'a Self> {
+    pub fn get_ordered_checks(checks: &[Self]) -> Vec<&Self> {
         let mut ordered = Vec::new();
         for check in checks {
             ordered.extend(Self::get_ordered_checks(check.get_dependencies()));
@@ -128,16 +128,13 @@ mod tests {
 
     #[test]
     fn check_order() {
-        assert_eq!(
-            Check::get_ordered_checks(&[Check::ConfigExistance]),
-            Vec::from([&Check::ConfigExistance])
-        );
+        assert_eq!(Check::get_ordered_checks(&[Check::Permissions]), Vec::from([&Check::Permissions]));
 
         assert_eq!(
             Check::get_ordered_checks(&[Check::PackageAlterations, Check::PackageRegisterConsistency]),
             Vec::from([
-                &Check::PackageExistance,
-                &Check::PackageStorageConsistancy,
+                &Check::PackageExistence,
+                &Check::PackageStorageConsistency,
                 &Check::PackageRegisterConsistency,
                 &Check::PackageAlterations
             ])
@@ -147,6 +144,7 @@ mod tests {
             Check::get_ordered_checks(&[Check::DependencyTree]),
             Vec::from([
                 &Check::PackitGroup,
+                &Check::StrayDirectory,
                 &Check::StorageConsistency,
                 &Check::RegisterConsistency,
                 &Check::DependencyTree,

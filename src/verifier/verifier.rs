@@ -1,5 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{collections::HashSet, fs, path::PathBuf, str::FromStr};
+use std::{
+    collections::HashSet,
+    fs,
+    path::{Path, PathBuf},
+    str::FromStr,
+};
 
 use crate::{
     cli::display::logging::{debug, warning},
@@ -48,9 +53,9 @@ impl Verifier {
             Err(e) if self.issues_found => {
                 debug!(err: e, "An error occured when issues were already found, skipping remaining issues.");
                 self.current_intial_check = Check::get_initial_checks().len();
-                return Ok(None);
+                Ok(None)
             },
-            Err(e) => return Err(e),
+            Err(e) => Err(e),
         }
     }
 
@@ -69,9 +74,9 @@ impl Verifier {
 
             let issue = match check {
                 Check::Permissions => self.check_permissions()?,
-                Check::ConfigExistance => self.check_config_existance()?,
+                Check::ConfigExistence => self.check_config_existence()?,
                 Check::ConfigSyntax => self.check_config_syntax()?,
-                Check::RegisterExistance => self.check_register_existance()?,
+                Check::RegisterExistence => self.check_register_existence()?,
                 Check::RegisterSyntax => self.check_register_syntax()?,
 
                 // Make sure that the check is not an initial check
@@ -102,9 +107,9 @@ impl Verifier {
             Err(e) if self.issues_found => {
                 debug!(err: e, "An error occured when issues were already found, skipping remaining issues.");
                 self.current_general_check = Check::get_general_checks().len();
-                return Ok(None);
+                Ok(None)
             },
-            Err(e) => return Err(e),
+            Err(e) => Err(e),
         }
     }
 
@@ -152,9 +157,9 @@ impl Verifier {
             Err(e) if self.issues_found => {
                 debug!(err: e, "An error occured when issues were already found, skipping remaining issues.");
                 self.current_package_check = Check::get_package_checks().len();
-                return Ok(None);
+                Ok(None)
             },
-            Err(e) => return Err(e),
+            Err(e) => Err(e),
         }
     }
 
@@ -172,18 +177,18 @@ impl Verifier {
             self.current_package_check += 1;
 
             let issue = match check {
-                Check::PackageExistance if self.check_package_existance(package_id, register, config)? => continue,
-                Check::PackageExistance => Issue::NotFound(package_id.clone()),
-                Check::StorageConsistency if self.package_storage_is_consistent(package_id, config)? => continue,
-                Check::StorageConsistency => Issue::InconsistentStorage(vec![package_id.clone()]),
-                Check::RegisterConsistency if self.register_package_is_consistent(package_id, register) => continue,
-                Check::RegisterConsistency => Issue::InconsistentRegister(HashSet::from([package_id.clone()])),
-                Check::DependencyTree => match self.check_package_dependency_tree(package_id, register) {
+                Check::PackageExistence if self.check_package_existence(package_id, register, config)? => continue,
+                Check::PackageExistence => Issue::NotFound(package_id.clone()),
+                Check::PackageStorageConsistency if self.package_storage_is_consistent(package_id, config)? => continue,
+                Check::PackageStorageConsistency => Issue::InconsistentStorage(vec![package_id.clone()]),
+                Check::PackageRegisterConsistency if self.register_package_is_consistent(package_id, register) => continue,
+                Check::PackageRegisterConsistency => Issue::InconsistentRegister(HashSet::from([package_id.clone()])),
+                Check::PackageDependencyTree => match self.check_package_dependency_tree(package_id, register) {
                     Some(issue) => issue,
                     None => continue,
                 },
-                Check::Alterations if !self.check_package_alterations(package_id, register, config)? => continue,
-                Check::Alterations => Issue::AlteredPackage(vec![package_id.clone()]),
+                Check::PackageAlterations if !self.check_package_alterations(package_id, register, config)? => continue,
+                Check::PackageAlterations => Issue::AlteredPackage(vec![package_id.clone()]),
 
                 // Make sure that the check is not a package specific check
                 _ if Check::get_package_checks().contains(check) => return Err(VerifierError::UnimplementedCheckError),
@@ -261,8 +266,8 @@ impl Verifier {
     /// Checks if the Config.toml exists.
     /// Returns `None` if the config exists or an `Issue::MissingConfig` otherwise.
     /// Could return an IO error.
-    fn check_config_existance(&self) -> Result<Option<Issue>> {
-        if fs::exists(&Config::get_default_path())? {
+    fn check_config_existence(&self) -> Result<Option<Issue>> {
+        if fs::exists(Config::get_default_path())? {
             return Ok(None);
         }
 
@@ -281,7 +286,7 @@ impl Verifier {
 
     /// Checks if the Installed.toml exists.
     /// Returns `None` if the register exists or an `Issue::MissingRegister` otherwise.
-    fn check_register_existance(&self) -> Result<Option<Issue>> {
+    fn check_register_existence(&self) -> Result<Option<Issue>> {
         let config = Config::from(&Config::get_default_path())?;
         let register_directory = &PackageRegister::get_default_path(&config);
         if fs::exists(register_directory)? {
@@ -379,7 +384,7 @@ impl Verifier {
     /// Checks if a package exists in the register or in storage.
     /// Returns true if the package exists, false if not.
     /// Could return an IO error.
-    fn check_package_existance(&self, package_id: &PackageId, register: &PackageRegister, config: &Config) -> Result<bool> {
+    fn check_package_existence(&self, package_id: &PackageId, register: &PackageRegister, config: &Config) -> Result<bool> {
         let installed_directory = config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
         if register.get_package_version(package_id).is_none() && !fs::exists(installed_directory)? {
             return Ok(false);
@@ -420,7 +425,7 @@ impl Verifier {
 
     /// Checks recursively if a directory is empty (contains nothing but empty directories).
     /// Returns true if empty, false if not.
-    fn directory_is_empty(&self, directory: &PathBuf) -> Result<bool> {
+    fn directory_is_empty(&self, directory: &Path) -> Result<bool> {
         for package in directory.read_dir()? {
             let package = package?;
 
@@ -490,7 +495,7 @@ impl Verifier {
             return None;
         }
 
-        return Some(Issue::BrokenTree(packages));
+        Some(Issue::BrokenTree(packages))
     }
 
     /// Checks the completeness of the dependency tree from a specific package.
@@ -606,7 +611,7 @@ impl Verifier {
     /// Returns the new value of current_intial_check.
     pub fn reverse_initial_check(&mut self) -> usize {
         if self.current_intial_check > 0 {
-        self.current_intial_check -= 1;
+            self.current_intial_check -= 1;
         }
 
         self.current_intial_check
@@ -616,7 +621,7 @@ impl Verifier {
     /// Returns the new value of current_general_check.
     pub fn reverse_general_check(&mut self) -> usize {
         if self.current_general_check > 0 {
-        self.current_general_check -= 1;
+            self.current_general_check -= 1;
         }
 
         self.current_general_check

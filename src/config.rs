@@ -169,13 +169,13 @@ impl Config {
         println!("Repositories rank: {}", self.repositories_rank.join(", "));
         for (name, repo) in &self.repositories {
             println!("{name}");
-            println!("    Path: {}", repo.path);
-            println!("    Provider: {}", repo.provider);
+            println!("\tPath: {}", repo.path);
+            println!("\tProvider: {}", repo.provider);
             println!(
-                "    Prebuilds provider: {}",
+                "\tPrebuilds provider: {}",
                 repo.prebuilds_provider.as_ref().unwrap_or(&"None".to_string())
             );
-            println!("    Prebuilds url: {}", repo.prebuilds_url.as_ref().unwrap_or(&"None".to_string()));
+            println!("\tPrebuilds url: {}", repo.prebuilds_url.as_ref().unwrap_or(&"None".to_string()));
         }
     }
 }

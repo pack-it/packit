@@ -27,9 +27,9 @@ pub struct PackageRegister {
 }
 
 impl PackageRegister {
-    /// Creates a new `PackageRegister`. Should normally never be used.
+    /// Creates a new empty `PackageRegister`. Should normally never be used.
     /// This is mainly used in the `Verifier`. Under normal circumstances use `PackageRegister::from`.
-    pub fn new() -> Self {
+    pub fn new_empty() -> Self {
         Self { packages: HashMap::new() }
     }
 
