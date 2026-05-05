@@ -6,7 +6,7 @@ use std::{
     str::FromStr,
 };
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use thiserror::Error;
 use toml_edit::DocumentMut;
 
@@ -14,7 +14,9 @@ use crate::{
     cli::display::logging::warning,
     platforms::{DEFAULT_CONFIG_DIR, DEFAULT_PREFIX},
     repositories::metadata::DEFAULT_METADATA_PROVIDER_ID,
-    utils::constants::{CONFIG_FILENAME, DEFAULT_METADATA_REPOSITORY_NAME, DEFAULT_METADATA_REPOSITORY_PATH},
+    utils::constants::{
+        CONFIG_FILENAME, DEFAULT_METADATA_REPOSITORY_NAME, DEFAULT_METADATA_REPOSITORY_PATH, DEFAULT_METADATA_REPOSITORY_PROVIDER,
+    },
 };
 
 #[derive(Debug)]
@@ -24,7 +26,7 @@ pub struct EditableConfig {
 }
 
 /// Represents the main config file of Packit.
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct Config {
     /// Contains all repositories
     pub repositories: HashMap<String, Repository>,
@@ -42,7 +44,7 @@ pub struct Config {
 }
 
 /// Represents a repository, containing connection information.
-#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Hash)]
+#[derive(Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Repository {
     /// The path to the repository
     pub path: String,
@@ -86,9 +88,6 @@ pub enum ConfigError {
 
     #[error("Cannot parse config file from string")]
     TomlError(#[from] toml_edit::TomlError),
-
-    #[error("Cannot serialize config")]
-    SerializeError(#[from] toml::ser::Error),
 }
 
 pub type Result<T> = core::result::Result<T, ConfigError>;
@@ -123,30 +122,9 @@ impl Config {
         Ok(config)
     }
 
-    /// Creates a default instance of Config.
-    pub fn default() -> Config {
-        Config {
-            repositories: Self::default_repositories(),
-            repositories_rank: vec![DEFAULT_METADATA_REPOSITORY_NAME.to_string()],
-            prefix_directory: PathBuf::from(DEFAULT_PREFIX),
-            multiuser: false,
-        }
-    }
-
     /// Gets the default path of the Packit config file.
     pub fn get_default_path() -> PathBuf {
         Path::new(DEFAULT_CONFIG_DIR).join(CONFIG_FILENAME)
-    }
-
-    fn default_repositories() -> HashMap<String, Repository> {
-        let repository = Repository {
-            path: DEFAULT_METADATA_REPOSITORY_PATH.to_string(),
-            provider: DEFAULT_METADATA_PROVIDER_ID.to_string(),
-            prebuilds_url: None,
-            prebuilds_provider: None,
-        };
-
-        HashMap::from([(DEFAULT_METADATA_REPOSITORY_NAME.to_string(), repository)])
     }
 
     fn default_prefix_directory() -> PathBuf {
@@ -180,6 +158,39 @@ impl Config {
     }
 }
 
+impl Default for EditableConfig {
+    /// Creates a default `EditableConfig`.
+    fn default() -> Self {
+        let default_repository = Repository {
+            path: DEFAULT_METADATA_REPOSITORY_PATH.to_string(),
+            provider: DEFAULT_METADATA_REPOSITORY_PROVIDER.to_string(),
+            prebuilds_url: None,
+            prebuilds_provider: None,
+        };
+
+        let config = Config {
+            repositories: HashMap::from([(DEFAULT_METADATA_REPOSITORY_NAME.to_string(), default_repository)]),
+            repositories_rank: vec![DEFAULT_METADATA_REPOSITORY_NAME.to_string()],
+            prefix_directory: Config::default_prefix_directory(),
+            multiuser: Config::default_multiuser(),
+        };
+
+        let repositories_rank = config.repositories_rank.clone();
+        let repositories = config.repositories.clone();
+
+        let document = DocumentMut::new();
+
+        let mut editable_config = Self { config, document };
+        editable_config.set_repositories_rank(repositories_rank);
+        for (id, repository) in repositories {
+            editable_config.set_repository(&id, repository);
+        }
+        // We don't need to set prefix_directory or multiuser, since the default value is automatically deserialized.
+
+        editable_config
+    }
+}
+
 impl EditableConfig {
     /// Loads the Packit config from a file.
     ///
@@ -191,17 +202,6 @@ impl EditableConfig {
         let file_content = fs::read_to_string(file_path)?;
         let document = DocumentMut::from_str(&file_content)?;
 
-        Ok(Self { config, document })
-    }
-
-    /// Creates a default `EditableConfig`.
-    ///
-    /// # Errors
-    ///
-    /// This will return an error if the default config cannot be parsed or serialized.
-    pub fn default() -> Result<Self> {
-        let config = Config::default();
-        let document = DocumentMut::from_str(&toml::to_string(&config)?)?;
         Ok(Self { config, document })
     }
 

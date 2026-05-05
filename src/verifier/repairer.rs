@@ -65,16 +65,13 @@ impl Repairer {
     /// Fixes a missing Config.toml. Either by rebuilding the config from known information or using default values.
     fn fix_missing_config(&self) -> Result<()> {
         // Create a default config and adjust when fields can be recovered so new config fields don't create bugs
-        let mut default_config = EditableConfig::default()?;
+        let mut default_config = EditableConfig::default();
 
         // Figure out the prefix path
         let mut prefix_path = PathBuf::from(DEFAULT_PREFIX);
         loop {
             if fs::exists(&prefix_path)? {
-                let question = format!(
-                    "Prefix directory '{}' was found, do you wish to use this?",
-                    prefix_path.to_string_lossy()
-                );
+                let question = format!("Prefix directory '{}' was found, do you wish to use this?", prefix_path.display());
                 if ask_user(&question, QuestionResponse::Yes)?.is_yes() {
                     break;
                 }
@@ -111,7 +108,7 @@ impl Repairer {
         } else {
             println!(
                 "Could not open or parse '{REGISTER_FILENAME}' from '{}', using the default repositories instead",
-                prefix_path.to_string_lossy()
+                prefix_path.display()
             );
         }
 
