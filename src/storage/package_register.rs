@@ -27,6 +27,12 @@ pub struct PackageRegister {
 }
 
 impl PackageRegister {
+    /// Creates a new empty `PackageRegister`. Should normally never be used.
+    /// This is mainly used in the `Verifier`. Under normal circumstances use `PackageRegister::from`.
+    pub fn new_empty() -> Self {
+        Self { packages: HashMap::new() }
+    }
+
     /// Loads the register file from the given path.
     ///
     /// # Errors
@@ -35,7 +41,7 @@ impl PackageRegister {
     pub fn from(path: &Path) -> Result<Self> {
         // If the file does not exist, we return an empty storage
         if !fs::exists(path)? {
-            return Ok(PackageRegister { packages: HashMap::new() });
+            return Ok(Self { packages: HashMap::new() });
         }
 
         // Read data from file
@@ -43,7 +49,7 @@ impl PackageRegister {
 
         // If the file is empty, return an empty storage
         if file_content.trim().is_empty() {
-            return Ok(PackageRegister { packages: HashMap::new() });
+            return Ok(Self { packages: HashMap::new() });
         }
 
         // Parse data and return
@@ -119,6 +125,7 @@ impl PackageRegister {
             if let Some(package) = self.get_package_version_mut(dependency) {
                 package.dependents.insert(installed_package_version.package_id.clone());
             } else {
+                // TODO: This should be an error
                 warning!("Cannot retrieve package {dependency} from register to insert dependents");
             }
         }

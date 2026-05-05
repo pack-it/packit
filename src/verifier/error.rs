@@ -3,12 +3,15 @@ use thiserror::Error;
 
 use crate::{
     cli::display::error::DisplayError,
+    config::ConfigError,
     installer::{
         error::InstallerError,
         types::{PackageNameError, VersionError},
     },
     packager::PackagerError,
-    platforms::symlink::SymlinkError,
+    platforms::{permissions::error::PermissionError, symlink::SymlinkError},
+    repositories::error::RepositoryError,
+    storage::error::RegisterError,
 };
 
 /// The errors that occur during verification.
@@ -20,7 +23,13 @@ pub enum VerifierError {
     #[error("Cannot parse filename, because it contains invalid unicode")]
     InvalidUnicodeError,
 
-    #[error("Could not verify")]
+    #[error("Cannot do general checks before doing initial checks")]
+    InitialChecksSkippedError,
+
+    #[error("Cannot continue with checks, missing check implementation")]
+    UnimplementedCheckError,
+
+    #[error("Cannot perform check or fix, because of an error while interacting with the filesystem")]
     IOError(#[from] std::io::Error),
 
     #[error("Could not display issues")]
@@ -40,6 +49,18 @@ pub enum VerifierError {
 
     #[error("Could not verify because of an invalid package name")]
     PackageNameError(#[from] PackageNameError),
+
+    #[error("Could not use register for fix")]
+    RegisterError(#[from] RegisterError),
+
+    #[error("Could not use config for fix")]
+    ConfigError(#[from] ConfigError),
+
+    #[error("Could not check permissions")]
+    PermissionError(#[from] PermissionError),
+
+    #[error("Could not use repository manager for check or fix")]
+    RepositoryError(#[from] RepositoryError),
 }
 
 pub(super) type Result<T> = std::result::Result<T, VerifierError>;

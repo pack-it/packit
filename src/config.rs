@@ -14,7 +14,9 @@ use crate::{
     cli::display::logging::warning,
     platforms::{DEFAULT_CONFIG_DIR, DEFAULT_PREFIX},
     repositories::metadata::DEFAULT_METADATA_PROVIDER_ID,
-    utils::constants::CONFIG_FILENAME,
+    utils::constants::{
+        CONFIG_FILENAME, DEFAULT_METADATA_REPOSITORY_NAME, DEFAULT_METADATA_REPOSITORY_PATH, DEFAULT_METADATA_REPOSITORY_PROVIDER,
+    },
 };
 
 #[derive(Debug)]
@@ -42,7 +44,7 @@ pub struct Config {
 }
 
 /// Represents a repository, containing connection information.
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Repository {
     /// The path to the repository
     pub path: String,
@@ -83,6 +85,9 @@ pub enum ConfigError {
 
     #[error("Cannot parse config file")]
     ParseError(#[from] toml::de::Error),
+
+    #[error("Cannot parse config file from string")]
+    TomlError(#[from] toml_edit::TomlError),
 }
 
 pub type Result<T> = core::result::Result<T, ConfigError>;
@@ -129,6 +134,61 @@ impl Config {
     fn default_multiuser() -> bool {
         false
     }
+
+    /// Displays the Config settings.
+    pub fn display(&self) {
+        println!("Prefix directory: {}", self.prefix_directory.display());
+        print!("Multiuser mode: ");
+        match self.multiuser {
+            true => println!("on"),
+            false => println!("off"),
+        }
+
+        println!("Repositories rank: {}", self.repositories_rank.join(", "));
+        for (name, repo) in &self.repositories {
+            println!("{name}");
+            println!("\tPath: {}", repo.path);
+            println!("\tProvider: {}", repo.provider);
+            println!(
+                "\tPrebuilds provider: {}",
+                repo.prebuilds_provider.as_ref().unwrap_or(&"None".to_string())
+            );
+            println!("\tPrebuilds url: {}", repo.prebuilds_url.as_ref().unwrap_or(&"None".to_string()));
+        }
+    }
+}
+
+impl Default for EditableConfig {
+    /// Creates a default `EditableConfig`.
+    fn default() -> Self {
+        let default_repository = Repository {
+            path: DEFAULT_METADATA_REPOSITORY_PATH.to_string(),
+            provider: DEFAULT_METADATA_REPOSITORY_PROVIDER.to_string(),
+            prebuilds_url: None,
+            prebuilds_provider: None,
+        };
+
+        let config = Config {
+            repositories: HashMap::from([(DEFAULT_METADATA_REPOSITORY_NAME.to_string(), default_repository)]),
+            repositories_rank: vec![DEFAULT_METADATA_REPOSITORY_NAME.to_string()],
+            prefix_directory: Config::default_prefix_directory(),
+            multiuser: Config::default_multiuser(),
+        };
+
+        let repositories_rank = config.repositories_rank.clone();
+        let repositories = config.repositories.clone();
+
+        let document = DocumentMut::new();
+
+        let mut editable_config = Self { config, document };
+        editable_config.set_repositories_rank(repositories_rank);
+        for (id, repository) in repositories {
+            editable_config.set_repository(&id, repository);
+        }
+        // We don't need to set prefix_directory or multiuser, since the default value is automatically deserialized.
+
+        editable_config
+    }
 }
 
 impl EditableConfig {
@@ -140,7 +200,7 @@ impl EditableConfig {
     pub fn from(file_path: &Path) -> Result<Self> {
         let config = Config::from(file_path)?;
         let file_content = fs::read_to_string(file_path)?;
-        let document = DocumentMut::from_str(&file_content).unwrap();
+        let document = DocumentMut::from_str(&file_content)?;
 
         Ok(Self { config, document })
     }
@@ -183,6 +243,21 @@ impl EditableConfig {
         self.document["repositories"][id] = new_value.into();
 
         self.config.repositories.insert(id.into(), repository);
+    }
+
+    // Removes a repository with the given id from the config.
+    // TODO: Implement this for the config command (making sure that we handle packages which currently use this repo)
+    pub fn remove_repository(&mut self, id: &str) {
+        if let Some(repositories) = self.document.get_mut("repositories").and_then(|r| r.as_table_mut()) {
+            repositories.remove(id);
+        }
+
+        if let Some(repositories) = self.document.get_mut("repositories_rank").and_then(|r| r.as_array_mut()) {
+            repositories.retain(|v| v.as_str() != Some(id));
+        }
+
+        self.config.repositories.remove(id);
+        self.config.repositories_rank.retain(|v| v != id);
     }
 
     /// Sets the repositories rank.
