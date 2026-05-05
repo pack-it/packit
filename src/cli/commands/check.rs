@@ -9,7 +9,7 @@ use crate::{
 /// Checks for any inconsistencies or mistakes in the installed packages or in the Packit files itself.
 #[derive(Args, Debug)]
 pub struct CheckArgs {
-    /// A vec of packages to check. Could be empty, then all packages are checked.
+    /// A list of packages to check. Could be empty, then all packages are checked.
     pub packages: Vec<PackageId>,
 }
 

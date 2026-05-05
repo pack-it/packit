@@ -41,7 +41,7 @@ pub fn is_writable(path: &PathBuf) -> Result<bool> {
 pub use self::platform::set_packit_permissions;
 
 /// Checks if the packit group exists.
-pub use self::platform::packit_group_exists;
+pub use self::platform::does_packit_group_exist;
 
 pub use self::platform::PlatformError;
 
@@ -63,5 +63,9 @@ mod platform {
 
     pub fn set_packit_permissions(_path: &PathBuf, _is_multiuser: bool, _recurse: bool) -> Result<()> {
         panic!("Cannot set ownership for target, target is not supported.");
+    }
+
+    pub fn does_packit_group_exist() -> Result<bool> {
+        panic!("Cannot check if group exists, target is not supported.")
     }
 }

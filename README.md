@@ -64,7 +64,7 @@ Shows info about the specified installed package. If the `-v` option is given, e
 #### `pit check [<PACKAGE-NAME>@<VERSION> ...]`
 Checks the Packit installation for issues. When package name(s) and version(s) are given, only those package(s) are checked for issues. 
 
-#### `pit fix`
+#### `pit fix [<PACKAGE-NAME>@<VERSION> ...]`
 Fix all issues found by the check command. You will be asked if you want to fix an issue for each issue type. When package name(s) and version(s) are given, only those package(s) are checked and fixed. 
 
 #### `pit switch <PACKAGE-NAME> <VERSION> [--skip-symlinking]`

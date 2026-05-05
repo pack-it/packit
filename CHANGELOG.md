@@ -17,8 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The regex search, to search packages based on a given regex pattern.
 - Add support for applying patches to the source code of packages.
 - Verifier and Repairer features
-    - The check and fix command now except multiple package parameters.
-    - Add support for 'check dependencies' (checks which have to be executed before the current check).
+    - The check and fix command now accept multiple package parameters.
     - The inconsistent register fix doesn't require a re-install anymore.
     - Add check after fix (re-run check to make sure the fix worked).
     - Add checks and fixes for: stray directories, empty directories, package existence, correct permissions, missing Config.toml and missing Installed.toml.

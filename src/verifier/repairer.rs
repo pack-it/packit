@@ -15,7 +15,7 @@ use crate::{
     },
     platforms::{
         DEFAULT_PREFIX, Target,
-        permissions::{packit_group_exists, set_packit_permissions},
+        permissions::{does_packit_group_exist, set_packit_permissions},
     },
     repositories::{manager::RepositoryManager, types::PackageVersionMeta},
     storage::package_register::PackageRegister,
@@ -68,11 +68,13 @@ impl Repairer {
         let mut default_config = EditableConfig::default()?;
 
         // Figure out the prefix path
-        let mut prefix_string = DEFAULT_PREFIX.to_string();
-        let mut prefix_path = PathBuf::from(&prefix_string);
+        let mut prefix_path = PathBuf::from(DEFAULT_PREFIX);
         loop {
             if fs::exists(&prefix_path)? {
-                let question = format!("Prefix directory '{prefix_string}' was found, do you wish to use this?");
+                let question = format!(
+                    "Prefix directory '{}' was found, do you wish to use this?",
+                    prefix_path.to_string_lossy()
+                );
                 if ask_user(&question, QuestionResponse::Yes)?.is_yes() {
                     break;
                 }
@@ -81,8 +83,7 @@ impl Repairer {
             let question = "Please provide a different prefix path".to_string();
             match ask_user_input(&question)? {
                 Some(path) => {
-                    prefix_string = path.to_string();
-                    prefix_path = PathBuf::from(&prefix_string);
+                    prefix_path = PathBuf::from(path);
                 },
 
                 // Return if no valid prefix path can be found (no possibility for reconstruction)
@@ -108,15 +109,16 @@ impl Repairer {
                 default_config.set_repositories_rank(new_rank);
             }
         } else {
-            println!("Could not open or parse '{REGISTER_FILENAME}' from '{prefix_string}', using the default repositories instead");
+            println!(
+                "Could not open or parse '{REGISTER_FILENAME}' from '{}', using the default repositories instead",
+                prefix_path.to_string_lossy()
+            );
         }
 
         // Set multi-user to true if the packit group exists
-        default_config.set_multiuser(packit_group_exists());
+        default_config.set_multiuser(does_packit_group_exist()?);
 
-        self.confirm_config_construction(&mut default_config)?;
-
-        Ok(())
+        self.confirm_config_construction(&mut default_config)
     }
 
     /// Saves the reconstructed Config.toml to the default config path if the user confirms it.

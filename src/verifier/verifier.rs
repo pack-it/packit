@@ -1,10 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{
-    collections::HashSet,
-    fs,
-    path::{Path, PathBuf},
-    str::FromStr,
-};
+use std::{collections::HashSet, fs, path::PathBuf, str::FromStr};
 
 use crate::{
     cli::display::logging::{debug, warning},
@@ -13,10 +8,11 @@ use crate::{
     packager,
     platforms::{
         DEFAULT_PREFIX, Target,
-        permissions::{is_writable, packit_group_exists},
+        permissions::{does_packit_group_exist, is_writable},
     },
     repositories::{provider, types::Checksum},
     storage::package_register::PackageRegister,
+    utils::io::directory_is_empty,
     verifier::{
         Issue,
         checks::Check,
@@ -44,9 +40,8 @@ impl Verifier {
         }
     }
 
-    /// A wrapper around the `next_initial_issue_impl` method.
-    /// Returns the next issue if it exists.
-    /// Returns an error if an error is returned and no issues have been found yet.
+    /// Gets the next initial issue if it exists.
+    /// If an error occurs during the check it's only returned if no previous issues were found.
     pub fn next_initial_issue(&mut self) -> Result<Option<Issue>> {
         match self.next_initial_issue_impl() {
             Ok(issue) => Ok(issue),
@@ -93,9 +88,8 @@ impl Verifier {
         }
     }
 
-    /// A wrapper around the `next_package_issue_impl` method.
-    /// Returns the next issue if it exists.
-    /// Returns an error if an error is returned and no issues have been found yet.
+    /// Gets the next general issue if it exists.
+    /// If an error occurs during the check it's only returned if no previous issues were found.
     pub fn next_issue(&mut self, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
         // Make sure the initial checks have been run before doing general checks
         if self.current_intial_check != Check::get_initial_checks().len() {
@@ -131,7 +125,7 @@ impl Verifier {
                 Check::RegisterConsistency => self.check_register_consistency(register, config)?,
                 Check::DependencyTree => self.check_dependency_tree(register),
                 Check::Alterations => self.check_alterations(register, config)?,
-                Check::PackitGroup => self.check_packit_group(config),
+                Check::PackitGroup => self.check_packit_group(config)?,
                 Check::StrayDirectory => self.check_stray_directories(config)?,
 
                 // Make sure that the check is not a general check
@@ -148,9 +142,8 @@ impl Verifier {
         }
     }
 
-    /// A wrapper around the `next_package_issue_impl` method.
-    /// Returns the next package issue if it exists.
-    /// Returns an error if an error is returned and no issues have been found yet.
+    /// Gets the next package issue if it exists.
+    /// If an error occurs during the check it's only returned if no previous issues were found.
     pub fn next_package_issue(&mut self, package_id: &PackageId, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
         match self.next_package_issue_impl(package_id, register, config) {
             Ok(issue) => Ok(issue),
@@ -416,40 +409,22 @@ impl Verifier {
         let installed_directory = config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
 
         // Check if the directory exists, if so return true
-        if fs::exists(&installed_directory)? && !self.directory_is_empty(&installed_directory)? {
+        if fs::exists(&installed_directory)? && !directory_is_empty(&installed_directory)? {
             return Ok(true);
         }
 
         Ok(false)
     }
 
-    /// Checks recursively if a directory is empty (contains nothing but empty directories).
-    /// Returns true if empty, false if not.
-    fn directory_is_empty(&self, directory: &Path) -> Result<bool> {
-        for package in directory.read_dir()? {
-            let package = package?;
-
-            if !package.path().is_dir() {
-                return Ok(false);
-            }
-
-            if !self.directory_is_empty(&package.path())? {
-                return Ok(false);
-            }
-        }
-
-        Ok(true)
-    }
-
     /// Checks if all packages in storage also exist in the register.
     /// Returns a register consistency issue or None if there are packages missing from the register.
     fn check_register_consistency(&self, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
         let storage_packages = get_storage_packages(config)?;
-        let mut missing = Vec::new();
+        let mut missing = HashSet::new();
         for package_id in storage_packages {
             // Check if the package version also exists in the register, if not add it to missing
             if register.get_package_version(&package_id).is_none() {
-                missing.push(package_id);
+                missing.insert(package_id);
             }
         }
 
@@ -457,7 +432,7 @@ impl Verifier {
             return Ok(None);
         }
 
-        Ok(Some(Issue::InconsistentRegister(missing.into_iter().collect())))
+        Ok(Some(Issue::InconsistentRegister(missing)))
     }
 
     /// Checks if a specific package exists in the register. Note that it doesn't check if the package also exists in storage.
@@ -525,13 +500,13 @@ impl Verifier {
 
     /// Checks if the packit group exists if multiuser mode is enabled in the config.
     /// Returns the issue if the group does not exist, None otherwise.
-    fn check_packit_group(&self, config: &Config) -> Option<Issue> {
+    fn check_packit_group(&self, config: &Config) -> Result<Option<Issue>> {
         // We don't need the packit group if multiuser mode is not enabled
-        if config.multiuser && !packit_group_exists() {
-            return Some(Issue::MissingPackitGroup);
+        if config.multiuser && !does_packit_group_exist()? {
+            return Ok(Some(Issue::MissingPackitGroup));
         }
 
-        None
+        Ok(None)
     }
 
     /// Checks for directories which shouldn't be in the prefix/packages directory.
@@ -561,7 +536,7 @@ impl Verifier {
             }
 
             // Check if the name directory is empty
-            if self.directory_is_empty(&directory.path())? {
+            if directory_is_empty(&directory.path())? {
                 strays.insert(directory.path());
                 continue;
             }
@@ -587,7 +562,7 @@ impl Verifier {
                 };
 
                 // Check if the version directory is empty
-                if self.directory_is_empty(&version_directory.path())? {
+                if directory_is_empty(&version_directory.path())? {
                     strays.insert(version_directory.path());
                     continue;
                 }

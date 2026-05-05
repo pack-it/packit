@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum Check {
-    // Initial checks (checks which verify methods which the verifier uses internally)
+    // Initial checks (which verify methods that the verifier uses internally)
     Permissions,
     ConfigExistence,
     ConfigSyntax, // Separate from ConfigExistence, because in the future we implement a different fix (reconstruct from Config.toml)
@@ -27,7 +27,7 @@ pub enum Check {
 
 impl Check {
     /// Gets the dependencies of a check (the checks which should happen before the given check).
-    fn get_dependencies(&self) -> &[Self] {
+    const fn get_dependencies(&self) -> &[Self] {
         match self {
             // Initial checks
             Self::Permissions => &[],
@@ -67,7 +67,7 @@ impl Check {
     }
 
     /// Gets all intial checks.
-    pub fn get_initial_checks<'a>() -> &'a [Self] {
+    pub const fn get_initial_checks<'a>() -> &'a [Self] {
         &[
             Self::Permissions,
             Self::ConfigExistence,
@@ -78,7 +78,7 @@ impl Check {
     }
 
     /// Gets all general checks.
-    pub fn get_general_checks<'a>() -> &'a [Self] {
+    pub const fn get_general_checks<'a>() -> &'a [Self] {
         &[
             Self::StorageConsistency,
             Self::RegisterConsistency,
@@ -90,7 +90,7 @@ impl Check {
     }
 
     /// Gets all package specific checks.
-    pub fn get_package_checks<'a>() -> &'a [Self] {
+    pub const fn get_package_checks<'a>() -> &'a [Self] {
         &[
             Self::PackageExistence,
             Self::PackageStorageConsistency,

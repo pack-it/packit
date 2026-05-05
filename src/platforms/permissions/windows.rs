@@ -266,8 +266,12 @@ pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool, recurse: bool)
 }
 
 /// Checks if the packit group exists.
-pub fn packit_group_exists() -> bool {
-    get_group_sid().is_ok()
+pub fn packit_group_exists() -> Result<bool> {
+    match get_group_sid(PACKIT_GROUP_NAME) {
+        Ok(_) => Ok(true),
+        Err(PermissionError::GroupDoesNotExist) => Ok(false),
+        Err(e) => Err(e),
+    }
 }
 
 /// Enables a given privilege.

@@ -82,3 +82,21 @@ pub fn parse_path_from_bytes(bytes: &[u8]) -> Result<&Path, Utf8Error> {
 
     Ok(Path::new(string))
 }
+
+/// Checks recursively if a directory is empty (contains nothing but empty directories).
+/// Returns true if empty, false if not.
+pub fn directory_is_empty(directory: &Path) -> Result<bool, std::io::Error> {
+    for package in directory.read_dir()? {
+        let package = package?;
+
+        if !package.path().is_dir() {
+            return Ok(false);
+        }
+
+        if !directory_is_empty(&package.path())? {
+            return Ok(false);
+        }
+    }
+
+    Ok(true)
+}

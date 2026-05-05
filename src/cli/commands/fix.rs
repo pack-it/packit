@@ -19,7 +19,7 @@ use crate::{
 /// Fixes all issues found by the check command. The user will be asked if they want to fix an issue for each issue type.
 #[derive(Args, Debug)]
 pub struct FixArgs {
-    /// A vec of packages to fix. Could be empty, then all packages are fixed.
+    /// A list of packages to fix. Could be empty, then all packages are fixed.
     pub packages: Vec<PackageId>,
 }
 
@@ -43,6 +43,7 @@ impl FixArgs {
     fn fix_all(&self, verifier: &mut Verifier, repairer: &mut Repairer) {
         let mut issue_index = -1;
         while let Some(issue) = verifier.next_initial_issue().unwrap_or_exit(1) {
+            // Check if the index is the same as the previously found issue (meaning the same issue is found and the fix didn't work)
             if verifier.get_initial_check_index() as i32 - 1 == issue_index {
                 error!(msg: UNSUCCESSFUL_FIX_MESSAGE);
                 exit(1);
@@ -69,6 +70,7 @@ impl FixArgs {
         // Retrieve and fix the issues one by one
         let mut issue_index = -1;
         while let Some(issue) = verifier.next_issue(&register, &config).unwrap_or_exit(1) {
+            // Check if the index is the same as the previously found issue (meaning the same issue is found and the fix didn't work)
             if verifier.get_general_check_index() as i32 - 1 == issue_index {
                 error!(msg: UNSUCCESSFUL_FIX_MESSAGE);
                 exit(1);
@@ -110,6 +112,7 @@ impl FixArgs {
             // Retrieve and fix the issues one by one
             let mut issue_index = -1;
             while let Some(issue) = verifier.next_package_issue(package_id, &register, &config).unwrap_or_exit(1) {
+                // Check if the index is the same as the previously found issue (meaning the same issue is found and the fix didn't work)
                 if verifier.get_package_check_index() as i32 - 1 == issue_index {
                     error!(msg: UNSUCCESSFUL_FIX_MESSAGE);
                     exit(1);

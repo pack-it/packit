@@ -6,7 +6,7 @@ use crate::installer::types::PackageId;
 
 /// Holds a single issue and the data regarding that issue.
 pub enum Issue {
-    /// The user cannot write to the prefix directory (or one if its sub directories).
+    /// The user cannot write to the prefix directory (or one of its sub directories).
     IncorrectPermissions(HashSet<PathBuf>),
 
     /// The Packit Config.toml is missing.
