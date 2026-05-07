@@ -715,6 +715,8 @@ impl<'a> Installer<'a> {
         }
 
         // Check if the new version still satisfies all dependents
+        let mut dependents = HashSet::new();
+        let mut unsatisfied_dependents = HashSet::new();
         for dependent in &old_package.dependents {
             let (repository_id, _) = self.repository_manager.read_package(&dependent.name)?;
             let package_version_meta = self.repository_manager.read_repo_package_version(&repository_id, dependent)?;
@@ -729,7 +731,18 @@ impl<'a> Installer<'a> {
                 },
             };
 
-            if !dependency.satisfied(&new_package_id.name, new_version) {
+            if dependency.satisfied(&new_package_id.name, new_version) {
+                dependents.insert(dependent.clone());
+                continue;
+            }
+
+            unsatisfied_dependents.insert(dependent.clone());
+            if unsatisfied_dependents.len() > 1 {
+                continue;
+            }
+
+            let question = "Could not update, because the current version has dependents. Do you wish to install the newer version as active version, but keep the older version as well?";
+            if ask_user(question, QuestionResponse::Yes)?.is_no() {
                 return Err(InstallerError::SatisfyError {
                     new_version: new_version.clone(),
                 });
@@ -738,7 +751,6 @@ impl<'a> Installer<'a> {
 
         // Use the old package reference before another borrow from self.install
         // Clone to avoid borrowing issues
-        let dependents = old_package.dependents.clone();
         let old_package_id = old_package.package_id.clone();
 
         // Install the newer packager first
@@ -784,10 +796,12 @@ impl<'a> Installer<'a> {
         // Remove the old package dependents, because the old package is no longer a dependency
         // Note that this is necessary before doing an uninstall.
         let old_package = self.register.get_package_version_mut(&old_package_id).expect("Expected old package to still exist.");
-        old_package.dependents.clear();
+        old_package.dependents = unsatisfied_dependents;
 
-        // Uninstall the package
-        self.uninstall(&old_package_id.into())?;
+        // Only uninstall the package if an update has been done
+        if old_package.dependents.is_empty() {
+            self.uninstall(&old_package_id.into())?;
+        }
 
         Ok(new_package_id)
     }

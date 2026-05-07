@@ -87,7 +87,7 @@ impl HandleCommand for UpdateArgs {
             exit(1);
         }
 
-        let options = InstallerOptions::default().skip_active(true).skip_symlinking(true);
+        let options = InstallerOptions::default();
         let mut installer = Installer::new(&config, &mut register, &manager, options);
 
         let new_package_id = installer.update(&self.optional_id, new_version).unwrap_or_exit(1);
