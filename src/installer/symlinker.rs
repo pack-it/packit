@@ -91,7 +91,7 @@ impl<'a> Symlinker<'a> {
         }
 
         // Save package storage
-        register.save_to(&PackageRegister::get_default_path(self.config))?;
+        register.save_to(&PackageRegister::get_default_path(&self.config.prefix_directory))?;
 
         Ok(())
     }
@@ -139,7 +139,7 @@ impl<'a> Symlinker<'a> {
         };
 
         // Save package register
-        register.save_to(&PackageRegister::get_default_path(self.config))?;
+        register.save_to(&PackageRegister::get_default_path(&self.config.prefix_directory))?;
 
         Ok(())
     }

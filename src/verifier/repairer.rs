@@ -237,7 +237,7 @@ impl Repairer {
         let missing_packages = get_storage_packages(&config)?;
         let manager = RepositoryManager::new(&config);
         self.fix_inconsistent_register(missing_packages, &mut register, &config, &manager)?;
-        register.save_to(&PackageRegister::get_default_path(&config))?;
+        register.save_to(&PackageRegister::get_default_path(&config.prefix_directory))?;
         Ok(())
     }
 

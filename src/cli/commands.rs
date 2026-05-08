@@ -3,6 +3,7 @@ mod check;
 mod config;
 mod fix;
 mod info;
+mod init;
 mod install;
 mod link;
 mod list;
@@ -22,9 +23,9 @@ use clap::{Parser, Subcommand, builder::Styles};
 use crate::cli::display::logging::debug;
 use crate::cli::{
     commands::{
-        check::CheckArgs, config::ConfigArgs, fix::FixArgs, info::InfoArgs, install::InstallArgs, link::LinkArgs, list::ListArgs,
-        package::PackageArgs, search::SearchArgs, switch::SwitchArgs, uninstall::UninstallArgs, unlink::UnlinkArgs, update::UpdateArgs,
-        util::UtilArgs,
+        check::CheckArgs, config::ConfigArgs, fix::FixArgs, info::InfoArgs, init::InitArgs, install::InstallArgs, link::LinkArgs,
+        list::ListArgs, package::PackageArgs, search::SearchArgs, switch::SwitchArgs, uninstall::UninstallArgs, unlink::UnlinkArgs,
+        update::UpdateArgs, util::UtilArgs,
     },
     display::logging::error,
 };
@@ -75,6 +76,9 @@ enum Commands {
 
     /// Update an installed package
     Update(UpdateArgs),
+
+    /// Initializes the Packit installation
+    Init(InitArgs),
 
     /// Several utils for advanced users
     #[clap(subcommand)]
@@ -138,6 +142,7 @@ impl Cli {
             Commands::Package(args) => args,
             Commands::Info(args) => args,
             Commands::Update(args) => args,
+            Commands::Init(args) => args,
             Commands::Util(args) => args,
             Commands::Config(args) => args,
         };

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{installer::types::Version, repositories::types::PackageMeta, storage::installed_package_version::InstalledPackageVersion};
+use crate::{installer::types::Version, storage::installed_package_version::InstalledPackageVersion};
 
 /// Represents a package that is installed on the system, holding package specific info
 /// and a mapping from the installed versions to package versions.
@@ -22,14 +22,19 @@ pub struct InstalledPackage {
 
 impl InstalledPackage {
     /// Creates a new installed package with its first entry and package specific data.
-    pub fn new(package_version: InstalledPackageVersion, symlinked: bool, package: &PackageMeta) -> Self {
+    pub fn new(
+        package_version: InstalledPackageVersion,
+        symlinked: bool,
+        package_description: String,
+        package_homepage: Option<String>,
+    ) -> Self {
         let version = package_version.package_id.version.clone();
         Self {
             versions: HashMap::from([(version.clone(), package_version)]),
             symlinked,
             active_version: version,
-            description: package.description.clone(),
-            homepage: package.homepage.clone(),
+            description: package_description,
+            homepage: package_homepage,
         }
     }
 

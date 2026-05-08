@@ -274,7 +274,7 @@ impl<'a> Installer<'a> {
             false,
             use_prebuild,
         )?;
-        self.register.save_to(&PackageRegister::get_default_path(self.config))?;
+        self.register.save_to(&PackageRegister::get_default_path(&self.config.prefix_directory))?;
 
         // Download and run post install script if it exists
         let script_path = version_meta.get_postinstall_script_path(&install_meta.target_bounds)?;

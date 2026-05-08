@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     cli::display::logging::warning,
-    config::{Config, Repository},
+    config::Repository,
     installer::types::{Dependency, OptionalPackageId, PackageId, PackageName},
     repositories::types::{PackageMeta, PackageVersionMeta},
     storage::{error::Result, installed_package::InstalledPackage, installed_package_version::InstalledPackageVersion},
@@ -28,7 +28,7 @@ pub struct PackageRegister {
 
 impl PackageRegister {
     /// Creates a new empty `PackageRegister`. Should normally never be used.
-    /// This is mainly used in the `Verifier`. Under normal circumstances use `PackageRegister::from`.
+    /// This is mainly used in the `Verifier` and init command. Under normal circumstances use `PackageRegister::from`.
     pub fn new_empty() -> Self {
         Self { packages: HashMap::new() }
     }
@@ -82,8 +82,8 @@ impl PackageRegister {
     }
 
     /// Gets the default path of the Packit installed packages file.
-    pub fn get_default_path(config: &Config) -> PathBuf {
-        Path::new(&config.prefix_directory).join(REGISTER_FILENAME)
+    pub fn get_default_path(prefix_directory: &PathBuf) -> PathBuf {
+        Path::new(prefix_directory).join(REGISTER_FILENAME)
     }
 
     /// Adds a package to the register storage.
@@ -120,6 +120,25 @@ impl PackageRegister {
             revisions: package_version.revisions.clone(),
         };
 
+        self.add_package_raw(
+            installed_package_version,
+            active,
+            symlinked,
+            package.description.clone(),
+            package.homepage.clone(),
+        )
+    }
+
+    /// Adds a raw InstalledPackageVersion to the register storage.
+    /// Please note that this does not save the storage and does not read the currently installed packages from the toml.
+    pub fn add_package_raw(
+        &mut self,
+        installed_package_version: InstalledPackageVersion,
+        active: bool,
+        symlinked: bool,
+        package_description: String,
+        package_homepage: Option<String>,
+    ) -> Result<()> {
         // Add the package as a dependent in its dependencies
         for dependency in &installed_package_version.dependencies {
             if let Some(package) = self.get_package_version_mut(dependency) {
@@ -130,13 +149,15 @@ impl PackageRegister {
             }
         }
 
+        let package_name = &installed_package_version.package_id.name;
+
         // Add the new installed package version and if there are no entries for the current package yet, also create a new entry
-        match self.packages.get_mut(&package.name) {
+        match self.packages.get_mut(package_name) {
             Some(package) => package.add_package_version(installed_package_version, active),
             None => {
                 self.packages.insert(
-                    package.name.clone(),
-                    InstalledPackage::new(installed_package_version, symlinked, package),
+                    package_name.clone(),
+                    InstalledPackage::new(installed_package_version, symlinked, package_description, package_homepage),
                 );
             },
         };
