@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{HashMap, HashSet, VecDeque},
     fs,
     path::PathBuf,
 };
@@ -10,7 +10,7 @@ use thiserror::Error;
 
 use crate::{
     config::Config,
-    installer::types::{PackageId, PackageName},
+    installer::types::{Dependency, PackageId, PackageName},
     packager::{self, PackagerError},
     platforms::Target,
     repositories::{
@@ -70,6 +70,7 @@ pub struct PortableRepoCreator<'a> {
     register: &'a PackageRegister,
     target: Target,
     exclude_prebuilds: bool,
+    skip_dependency_resolution: bool,
 }
 
 impl<'a> PortableRepoCreator<'a> {
@@ -80,6 +81,7 @@ impl<'a> PortableRepoCreator<'a> {
         register: &'a PackageRegister,
         target: Target,
         exclude_prebuilds: bool,
+        skip_dependency_resolution: bool,
     ) -> Self {
         Self {
             config,
@@ -87,6 +89,7 @@ impl<'a> PortableRepoCreator<'a> {
             register,
             target,
             exclude_prebuilds,
+            skip_dependency_resolution,
         }
     }
 
@@ -97,17 +100,11 @@ impl<'a> PortableRepoCreator<'a> {
             return Err(PortableRepoError::DestinationNotEmpty);
         }
 
-        let mut package_index = HashMap::new();
+        // Create package tree
+        let (all_packages, package_index) = self.create_package_tree(included_packages)?;
 
-        for package_id in included_packages {
+        for package_id in all_packages {
             let (repository_id, package_version) = self.repository_manager.read_package_version(&package_id, &self.target)?;
-
-            // Check if the package name was previously requested from a different repository
-            if package_index.contains_key(&package_id.name) && package_index[&package_id.name] != repository_id {
-                return Err(PortableRepoError::PackageFromMultipleRepositories {
-                    package_name: package_id.name,
-                });
-            }
 
             if !self.exclude_prebuilds {
                 // Check if the package has a prebuild
@@ -137,8 +134,6 @@ impl<'a> PortableRepoCreator<'a> {
             if !self.exclude_prebuilds {
                 self.download_prebuild(&package_id, &repository_id, &package_version, destination)?;
             }
-
-            package_index.insert(package_id.name, repository_id);
         }
 
         // Create repository.toml file
@@ -162,6 +157,61 @@ impl<'a> PortableRepoCreator<'a> {
         self.write_metadata(index_meta, destination.join("index.toml"), true)?;
 
         Ok(())
+    }
+
+    /// Creates a set of all packages that are in the dependency trees of the included packages.
+    /// Checks for multiple repository conflicts.
+    fn create_package_tree(&self, included_packages: HashSet<PackageId>) -> Result<(HashSet<PackageId>, HashMap<PackageName, String>)> {
+        let mut all_packages = HashSet::new();
+        let mut package_index = HashMap::new();
+
+        let mut package_queue = VecDeque::new();
+        for package_id in included_packages {
+            package_queue.push_back(package_id);
+        }
+
+        while let Some(package_id) = package_queue.pop_front() {
+            // Continue if we've already seen the package
+            if all_packages.contains(&package_id) {
+                continue;
+            }
+
+            let package_name = package_id.name.clone();
+
+            let (repository_id, package_version) = self.repository_manager.read_package_version(&package_id, &self.target)?;
+
+            // Check if the package name was previously requested from a different repository
+            if package_index.contains_key(&package_name) && package_index[&package_name] != repository_id {
+                return Err(PortableRepoError::PackageFromMultipleRepositories { package_name });
+            }
+
+            // Add package data to package set and index
+            all_packages.insert(package_id);
+            package_index.insert(package_name, repository_id);
+
+            // Skip dependency resolution if the flag is enabled
+            if self.skip_dependency_resolution {
+                continue;
+            }
+
+            let target = package_version.get_target(&package_version.get_best_target(&self.target)?)?;
+
+            let dependencies = package_version.dependencies.iter().chain(target.dependencies.iter());
+            let dependencies: Vec<&Dependency> = match self.exclude_prebuilds {
+                true => dependencies.chain(package_version.build_dependencies.iter()).chain(target.build_dependencies.iter()).collect(),
+                false => dependencies.collect(),
+            };
+
+            // Add the dependencies to the queue
+            for dependency in dependencies {
+                let (_, package_metadata) = self.repository_manager.read_package(dependency.get_name())?;
+                let version = package_metadata.get_latest_dependency_version(dependency, &self.target)?;
+                let dependency_id = PackageId::new(dependency.get_name().clone(), version.clone());
+                package_queue.push_back(dependency_id);
+            }
+        }
+
+        Ok((all_packages, package_index))
     }
 
     /// Downloads all files of the given package. Note that this does not download version specific files.

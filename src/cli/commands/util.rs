@@ -37,6 +37,10 @@ pub enum UtilArgs {
         /// True to exclude prebuilds in the portable repository
         #[arg(long, default_value = "false")]
         exclude_prebuilds: bool,
+
+        /// True to skip automatic addition fo dependencies to the portable repository
+        #[arg(long, default_value = "false")]
+        skip_dependency_resolution: bool,
     },
 }
 
@@ -49,7 +53,8 @@ impl HandleCommand for UtilArgs {
                 destination,
                 packages,
                 exclude_prebuilds,
-            } => self.handle_portable_repo(destination, packages, *exclude_prebuilds),
+                skip_dependency_resolution,
+            } => self.handle_portable_repo(destination, packages, *exclude_prebuilds, *skip_dependency_resolution),
         }
     }
 }
@@ -91,7 +96,13 @@ impl UtilArgs {
         println!("Found checksum {}", checksum.to_string());
     }
 
-    fn handle_portable_repo(&self, destination: &PathBuf, packages: &Vec<PackageId>, exclude_prebuilds: bool) {
+    fn handle_portable_repo(
+        &self,
+        destination: &PathBuf,
+        packages: &Vec<PackageId>,
+        exclude_prebuilds: bool,
+        skip_dependency_resolution: bool,
+    ) {
         let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
         let manager = RepositoryManager::new(&config);
         let register = PackageRegister::from(&PackageRegister::get_default_path(&config)).unwrap_or_exit_msg("Cannot load register", 1);
@@ -99,7 +110,15 @@ impl UtilArgs {
         let spinner = Spinner::new();
         spinner.show("Generating portable repository".into());
 
-        let creator = PortableRepoCreator::new(&config, &manager, &register, Target::current(), exclude_prebuilds);
+        let creator = PortableRepoCreator::new(
+            &config,
+            &manager,
+            &register,
+            Target::current(),
+            exclude_prebuilds,
+            skip_dependency_resolution,
+        );
+
         creator
             .create_portable_repo(packages.iter().cloned().collect(), destination)
             .unwrap_or_exit_msg("Cannot create portable repository", 1);
