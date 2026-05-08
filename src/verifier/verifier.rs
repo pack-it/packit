@@ -127,7 +127,8 @@ impl Verifier {
                 Check::Alterations => self.check_alterations(register, config)?,
                 Check::PackitGroup => self.check_packit_group(config)?,
                 Check::StrayDirectory => self.check_stray_directories(config)?,
-                Check::MissingDependents => self.check_missing_dependents(register)?,
+                Check::MissingDependents => self.check_missing_dependents(register),
+                Check::InvalidDependents => self.check_invalid_dependents(register),
 
                 // Make sure that the check is not a general check
                 _ if Check::get_general_checks().contains(check) => return Err(VerifierError::UnimplementedCheckError),
@@ -177,13 +178,17 @@ impl Verifier {
                 Check::PackageStorageConsistency => Issue::InconsistentStorage(vec![package_id.clone()]),
                 Check::PackageRegisterConsistency if self.register_package_is_consistent(package_id, register) => continue,
                 Check::PackageRegisterConsistency => Issue::InconsistentRegister(HashSet::from([package_id.clone()])),
-                Check::PackageMissingDependents => {
-                    let missing = self.check_missing_package_dependents(package_id, register)?;
-                    if missing.is_empty() {
+                Check::PackageMissingDependents => match self.check_missing_package_dependents(package_id, register) {
+                    Some(issue) => issue,
+                    None => continue,
+                },
+                Check::PackageInvalidDependents => {
+                    let invalid = self.check_invalid_package_dependents(package_id, register);
+                    if invalid.is_empty() {
                         continue;
                     }
 
-                    Issue::MissingDependents(missing)
+                    Issue::InvalidDependents(invalid)
                 },
                 Check::PackageDependencyTree => match self.check_package_dependency_tree(package_id, register) {
                     Some(issue) => issue,
@@ -456,8 +461,46 @@ impl Verifier {
         false
     }
 
+    /// Checks for all packages if they have invalid dependents. Where an invalid dependent is a package which doesn't
+    /// exist or a package which doesn't have the given package as a dependency.
+    /// Returns a `Vec<(PackageId, PackageId)>`, with format `<child> : <dependent>`.
+    fn check_invalid_dependents(&self, register: &PackageRegister) -> Option<Issue> {
+        let mut invalid_dependents = Vec::new();
+        for package in register.iterate_all() {
+            invalid_dependents.extend(self.check_invalid_package_dependents(&package.package_id, register));
+        }
+
+        if invalid_dependents.is_empty() {
+            return None;
+        }
+
+        Some(Issue::InvalidDependents(invalid_dependents))
+    }
+
+    /// Checks if a given package has invalid dependents. Where an invalid dependent is a package which doesn't
+    /// exist or a package which doesn't have the given package as a dependency.
+    /// Returns a `Vec<(PackageId, PackageId)>`, with format `<child> : <dependent>`.
+    fn check_invalid_package_dependents(&self, package_id: &PackageId, register: &PackageRegister) -> Vec<(PackageId, PackageId)> {
+        let mut invalid_dependents = Vec::new();
+        let Some(package_version) = register.get_package_version(package_id) else {
+            return invalid_dependents;
+        };
+
+        for dependent in &package_version.dependents {
+            match register.get_package_version(dependent) {
+                Some(package) if !package.dependencies.contains(package_id) => {
+                    invalid_dependents.push((package_id.clone(), dependent.clone()));
+                },
+                Some(_) => {},
+                None => invalid_dependents.push((package_id.clone(), dependent.clone())),
+            }
+        }
+
+        invalid_dependents
+    }
+
     /// Checks for all packages if they miss any of their dependents.
-    fn check_missing_dependents(&self, register: &PackageRegister) -> Result<Option<Issue>> {
+    fn check_missing_dependents(&self, register: &PackageRegister) -> Option<Issue> {
         let mut missing_dependents = Vec::new();
         for package in register.iterate_all() {
             for dependency in &package.dependencies {
@@ -473,17 +516,17 @@ impl Verifier {
         }
 
         if missing_dependents.is_empty() {
-            return Ok(None);
+            return None;
         }
 
-        Ok(Some(Issue::MissingDependents(missing_dependents)))
+        Some(Issue::MissingDependents(missing_dependents))
     }
 
     /// Check for the given package if its dependencies have it as a dependent.
-    fn check_missing_package_dependents(&self, package_id: &PackageId, register: &PackageRegister) -> Result<Vec<(PackageId, PackageId)>> {
+    fn check_missing_package_dependents(&self, package_id: &PackageId, register: &PackageRegister) -> Option<Issue> {
         let mut missing_dependents = Vec::new();
         let Some(package_version) = register.get_package_version(package_id) else {
-            return Ok(missing_dependents);
+            return None;
         };
 
         for package in register.iterate_all() {
@@ -498,7 +541,11 @@ impl Verifier {
             }
         }
 
-        Ok(missing_dependents)
+        if missing_dependents.is_empty() {
+            return None;
+        }
+
+        Some(Issue::MissingDependents(missing_dependents))
     }
 
     /// Checks the completeness of the depedency trees from the packages.

@@ -21,6 +21,9 @@ pub enum Issue {
     /// A list of children and their missing dependents (parents) `<child> : <missing>`.
     MissingDependents(Vec<(PackageId, PackageId)>),
 
+    /// A list of packages which have invalid dependents `<child> : <invalid>`.
+    InvalidDependents(Vec<(PackageId, PackageId)>),
+
     /// A list of packages which are present in the Installed.toml, but not in the package directory.
     InconsistentStorage(Vec<PackageId>),
 
@@ -80,6 +83,21 @@ impl Display for Issue {
                 for (child, missing_dependent) in missing {
                     let item = format!(
                         "  - {} missing {}",
+                        child.to_string().bold().blue(),
+                        missing_dependent.to_string().bold().blue()
+                    );
+
+                    writeln!(f, "{}", item)?;
+                }
+            },
+            Issue::InvalidDependents(missing) => {
+                writeln!(f, "Invalid dependents")?;
+                let message = "The following dependents are invalid:";
+                writeln!(f, "{message}")?;
+
+                for (child, missing_dependent) in missing {
+                    let item = format!(
+                        "  - {} incorrectly has {}",
                         child.to_string().bold().blue(),
                         missing_dependent.to_string().bold().blue()
                     );
@@ -149,6 +167,7 @@ impl Issue {
             Issue::StrayDirectories(_) => "To fix this issue we remove the stray directories.",
             Issue::BrokenTree(_) => "To fix this issue the missing packages will be installed.",
             Issue::MissingDependents(_) => "To fix this issue the dependents will be added to the package from which they are missing.",
+            Issue::InvalidDependents(_) => "To fix this issue we remove the invalid dependents from the register.",
             Issue::InconsistentStorage(_) => {
                 "To fix this issue the packages are temporarily removed from the register and then reinstalled."
             },

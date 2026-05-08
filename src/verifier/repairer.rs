@@ -56,7 +56,8 @@ impl Repairer {
             Issue::InconsistentStorage(missing) => self.fix_inconsistent_storage(missing, register, config, manager)?,
             Issue::InconsistentRegister(missing) => self.fix_inconsistent_register(missing, register, config, manager)?,
             Issue::StrayDirectories(strays) => self.fix_stray_directories(strays)?,
-            Issue::MissingDependents(missing) => self.fix_missing_dependents(missing, register)?,
+            Issue::MissingDependents(missing) => self.fix_missing_dependents(missing, register),
+            Issue::InvalidDependents(invalid) => self.fix_invalid_dependents(invalid, register),
             _ => warning!("Fix not executed, because the issue fix is not yet implemented"),
         }
 
@@ -358,7 +359,7 @@ impl Repairer {
     }
 
     /// Fixes the missing dependents issue.
-    fn fix_missing_dependents(&self, missing: Vec<(PackageId, PackageId)>, register: &mut PackageRegister) -> Result<()> {
+    fn fix_missing_dependents(&self, missing: Vec<(PackageId, PackageId)>, register: &mut PackageRegister) {
         for (child, parent) in missing {
             let Some(package_version) = register.get_package_version_mut(&child) else {
                 warning!("Could not fix missing dependents for {child}");
@@ -367,7 +368,17 @@ impl Repairer {
 
             package_version.dependents.insert(parent);
         }
+    }
 
-        Ok(())
+    /// Fixes the invalid dependents issue.
+    fn fix_invalid_dependents(&self, invalid: Vec<(PackageId, PackageId)>, register: &mut PackageRegister) {
+        for (child, parent) in invalid {
+            let Some(package_version) = register.get_package_version_mut(&child) else {
+                warning!("Could not fix invalid dependents for {child}");
+                continue;
+            };
+
+            package_version.dependents.remove(&parent);
+        }
     }
 }
