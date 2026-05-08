@@ -56,6 +56,7 @@ impl Repairer {
             Issue::InconsistentStorage(missing) => self.fix_inconsistent_storage(missing, register, config, manager)?,
             Issue::InconsistentRegister(missing) => self.fix_inconsistent_register(missing, register, config, manager)?,
             Issue::StrayDirectories(strays) => self.fix_stray_directories(strays)?,
+            Issue::MissingDependents(missing) => self.fix_missing_dependents(missing, register)?,
             _ => warning!("Fix not executed, because the issue fix is not yet implemented"),
         }
 
@@ -351,6 +352,20 @@ impl Repairer {
                 true => fs::remove_dir_all(directory)?,
                 false => fs::remove_file(directory)?,
             }
+        }
+
+        Ok(())
+    }
+
+    /// Fixes the missing dependents issue.
+    fn fix_missing_dependents(&self, missing: Vec<(PackageId, PackageId)>, register: &mut PackageRegister) -> Result<()> {
+        for (child, parent) in missing {
+            let Some(package_version) = register.get_package_version_mut(&child) else {
+                warning!("Could not fix missing dependents for {child}");
+                continue;
+            };
+
+            package_version.dependents.insert(parent);
         }
 
         Ok(())

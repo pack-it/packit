@@ -16,6 +16,7 @@ pub enum Check {
     DependencyTree,
     Alterations,
     PackitGroup,
+    MissingDependents,
 
     // Checks which are specific to a package
     PackageExistence,
@@ -23,6 +24,7 @@ pub enum Check {
     PackageRegisterConsistency,
     PackageDependencyTree,
     PackageAlterations,
+    PackageMissingDependents,
 }
 
 impl Check {
@@ -46,6 +48,7 @@ impl Check {
             Self::StrayDirectory => &[Self::PackitGroup],
             Self::StorageConsistency => &[Self::PackitGroup, Self::StrayDirectory],
             Self::RegisterConsistency => &[Self::PackitGroup, Self::StrayDirectory],
+            Self::MissingDependents => &[Self::PackitGroup, Self::StorageConsistency, Self::RegisterConsistency],
             Self::DependencyTree => &[Self::PackitGroup, Self::StorageConsistency, Self::RegisterConsistency],
             Self::Alterations => &[Self::PackitGroup, Self::StorageConsistency, Self::RegisterConsistency],
 
@@ -53,6 +56,11 @@ impl Check {
             Self::PackageExistence => &[],
             Self::PackageStorageConsistency => &[Self::PackageExistence],
             Self::PackageRegisterConsistency => &[Self::PackageExistence],
+            Self::PackageMissingDependents => &[
+                Self::PackageExistence,
+                Self::PackageStorageConsistency,
+                Self::PackageRegisterConsistency,
+            ],
             Self::PackageDependencyTree => &[
                 Self::PackageExistence,
                 Self::PackageStorageConsistency,
@@ -86,6 +94,7 @@ impl Check {
             Self::Alterations,
             Self::PackitGroup,
             Self::StrayDirectory,
+            Self::MissingDependents,
         ]
     }
 
@@ -97,6 +106,7 @@ impl Check {
             Self::PackageRegisterConsistency,
             Self::PackageDependencyTree,
             Self::PackageAlterations,
+            Self::PackageMissingDependents,
         ]
     }
 

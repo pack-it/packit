@@ -18,6 +18,9 @@ pub enum Issue {
     /// A list of parents and their missing dependencies `<parent> : <missing>`.
     BrokenTree(Vec<(PackageId, PackageId)>),
 
+    /// A list of children and their missing dependents (parents) `<child> : <missing>`.
+    MissingDependents(Vec<(PackageId, PackageId)>),
+
     /// A list of packages which are present in the Installed.toml, but not in the package directory.
     InconsistentStorage(Vec<PackageId>),
 
@@ -65,6 +68,20 @@ impl Display for Issue {
                         "  - {} missing {}",
                         parent.to_string().bold().blue(),
                         missing_package.to_string().bold().blue()
+                    );
+
+                    writeln!(f, "{}", item)?;
+                }
+            },
+            Issue::MissingDependents(missing) => {
+                writeln!(f, "Missing dependents")?;
+                writeln!(f, "The following dependents are missing in the register:")?;
+
+                for (child, missing_dependent) in missing {
+                    let item = format!(
+                        "  - {} missing {}",
+                        child.to_string().bold().blue(),
+                        missing_dependent.to_string().bold().blue()
                     );
 
                     writeln!(f, "{}", item)?;
@@ -131,6 +148,7 @@ impl Issue {
             Issue::MissingRegister => "To fix this issue we try to reconstruct the Installed.toml with data still in the Packit directory.",
             Issue::StrayDirectories(_) => "To fix this issue we remove the stray directories.",
             Issue::BrokenTree(_) => "To fix this issue the missing packages will be installed.",
+            Issue::MissingDependents(_) => "To fix this issue the dependents will be added to the package from which they are missing.",
             Issue::InconsistentStorage(_) => {
                 "To fix this issue the packages are temporarily removed from the register and then reinstalled."
             },
