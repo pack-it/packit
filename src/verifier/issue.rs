@@ -2,7 +2,7 @@
 use colored::Colorize;
 use std::{collections::HashSet, fmt::Display, path::PathBuf};
 
-use crate::installer::types::PackageId;
+use crate::installer::types::{PackageId, PackageName};
 
 /// Holds a single issue and the data regarding that issue.
 pub enum Issue {
@@ -41,6 +41,9 @@ pub enum Issue {
 
     /// A list of stray directories.
     StrayDirectories(HashSet<PathBuf>),
+
+    /// A list of packages from which the active version is invalid.
+    InvalidActive(Vec<PackageName>),
 }
 
 impl Display for Issue {
@@ -61,6 +64,13 @@ impl Display for Issue {
             },
             Issue::MissingRegister => {
                 writeln!(f, "Missing Installed.toml file")?;
+            },
+            Issue::InvalidActive(invalid) => {
+                writeln!(f, "Invalid active version")?;
+                writeln!(f, "The following packages have an invalid active version:")?;
+                for package in invalid {
+                    writeln!(f, "  - {}", package.to_string().bold().blue())?;
+                }
             },
             Issue::BrokenTree(missing) => {
                 writeln!(f, "Broken dependency tree")?;
@@ -165,6 +175,7 @@ impl Issue {
             Issue::MissingConfig => "To fix this issue we try to reconstruct the Config.toml with data still in the Packit directory.",
             Issue::MissingRegister => "To fix this issue we try to reconstruct the Installed.toml with data still in the Packit directory.",
             Issue::StrayDirectories(_) => "To fix this issue we remove the stray directories.",
+            Issue::InvalidActive(_) => "To fix this issue we set the active version to the latest installed version.",
             Issue::BrokenTree(_) => "To fix this issue the missing packages will be installed.",
             Issue::MissingDependents(_) => "To fix this issue the dependents will be added to the package from which they are missing.",
             Issue::InvalidDependents(_) => "To fix this issue we remove the invalid dependents from the register.",

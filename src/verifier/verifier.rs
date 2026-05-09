@@ -129,6 +129,7 @@ impl Verifier {
                 Check::StrayDirectory => self.check_stray_directories(config)?,
                 Check::MissingDependents => self.check_missing_dependents(register),
                 Check::InvalidDependents => self.check_invalid_dependents(register),
+                Check::InvalidActive => self.check_invalid_active(register, config)?,
 
                 // Make sure that the check is not a general check
                 _ if Check::get_general_checks().contains(check) => return Err(VerifierError::UnimplementedCheckError),
@@ -196,6 +197,8 @@ impl Verifier {
                 },
                 Check::PackageAlterations if !self.check_package_alterations(package_id, register, config)? => continue,
                 Check::PackageAlterations => Issue::AlteredPackage(vec![package_id.clone()]),
+                Check::PackageInvalidActive if self.check_invalid_package_active(&package_id.name, register, config)?.is_none() => continue,
+                Check::PackageInvalidActive => Issue::InvalidActive(vec![package_id.name.clone()]),
 
                 // Make sure that the check is not a package specific check
                 _ if Check::get_package_checks().contains(check) => return Err(VerifierError::UnimplementedCheckError),
@@ -459,6 +462,50 @@ impl Verifier {
 
         // Return an inconsistent register issue if the package exists in storage, but not in the register
         false
+    }
+
+    /// Checks for all packages if the package active is valid.
+    fn check_invalid_active(&self, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
+        let mut invalid_active = Vec::new();
+        for package_name in register.iterate_package_names() {
+            if let Some(package) = self.check_invalid_package_active(package_name, register, config)? {
+                invalid_active.push(package);
+            }
+        }
+
+        if invalid_active.is_empty() {
+            return Ok(None);
+        }
+
+        Ok(Some(Issue::InvalidActive(invalid_active)))
+    }
+
+    /// Checks for a given package name if the package active is valid.
+    /// It's invalid if:
+    ///     - the link or link destination doesn't exist
+    ///     - if the package version doesn't exist
+    ///     - if the version specified in the register doesn't match the linked version
+    fn check_invalid_package_active(
+        &self,
+        package_name: &PackageName,
+        register: &PackageRegister,
+        config: &Config,
+    ) -> Result<Option<PackageName>> {
+        let Some(package) = register.get_package(package_name) else {
+            return Ok(None);
+        };
+
+        let active_directory = config.prefix_directory.join("active").join(package_name);
+        if !fs::exists(&active_directory)? {
+            return Ok(Some(package_name.clone()));
+        }
+
+        let active_link = fs::read_link(&active_directory)?;
+        if active_link != config.prefix_directory.join("packages").join(package_name).join(package.active_version.to_string()) {
+            return Ok(Some(package_name.clone()));
+        }
+
+        return Ok(None);
     }
 
     /// Checks for all packages if they have invalid dependents. Where an invalid dependent is a package which doesn't

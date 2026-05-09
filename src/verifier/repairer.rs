@@ -11,11 +11,12 @@ use crate::{
     config::{Config, EditableConfig, Repository},
     installer::{
         Installer, InstallerOptions,
-        types::{PackageId, Version},
+        types::{PackageId, PackageName, Version},
     },
     platforms::{
         DEFAULT_PREFIX, Target,
         permissions::{does_packit_group_exist, set_packit_permissions},
+        symlink::{create_symlink, remove_symlink},
     },
     repositories::{manager::RepositoryManager, types::PackageVersionMeta},
     storage::package_register::PackageRegister,
@@ -58,6 +59,7 @@ impl Repairer {
             Issue::StrayDirectories(strays) => self.fix_stray_directories(strays)?,
             Issue::MissingDependents(missing) => self.fix_missing_dependents(missing, register),
             Issue::InvalidDependents(invalid) => self.fix_invalid_dependents(invalid, register),
+            Issue::InvalidActive(invalid) => self.fix_invalid_active(invalid, register, config)?,
             _ => warning!("Fix not executed, because the issue fix is not yet implemented"),
         }
 
@@ -380,5 +382,34 @@ impl Repairer {
 
             package_version.dependents.remove(&parent);
         }
+    }
+
+    /// Fixes the invalid active issue.
+    fn fix_invalid_active(&self, invalid: Vec<PackageName>, register: &mut PackageRegister, config: &Config) -> Result<()> {
+        let active_directory = config.prefix_directory.join("active");
+        let package_directory = config.prefix_directory.join("packages");
+        for package_name in invalid {
+            let Some(package) = register.get_package_mut(&package_name) else {
+                warning!("Could not fix invalid active for {package_name}");
+                continue;
+            };
+
+            // Set the active to the latest installed version of the package
+            if let Some(version) = package.versions.keys().into_iter().max() {
+                package.active_version = version.clone();
+            }
+
+            // Remove symlink for the package name if it exists
+            let active_symlink = active_directory.join(&package_name);
+            if fs::exists(&active_symlink)? {
+                remove_symlink(&active_symlink)?;
+            }
+
+            // Link the correct active version
+            let active_original = package_directory.join(&package_name).join(package.active_version.to_string());
+            create_symlink(&active_original, &active_symlink)?;
+        }
+
+        Ok(())
     }
 }
