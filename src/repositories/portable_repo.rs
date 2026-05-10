@@ -160,7 +160,8 @@ impl<'a> PortableRepoCreator<'a> {
     }
 
     /// Creates a set of all packages that are in the dependency trees of the included packages.
-    /// Checks for multiple repository conflicts.
+    /// Checks for multiple repository conflicts. Where a conflict is two (or more) versions of the same package that come from different repositories.
+    /// Returns a PortableRepoError::PackageFromMultipleRepositories in case of a repository conflict.
     fn create_package_tree(&self, included_packages: HashSet<PackageId>) -> Result<(HashSet<PackageId>, HashMap<PackageName, String>)> {
         let mut all_packages = HashSet::new();
         let mut package_index = HashMap::new();

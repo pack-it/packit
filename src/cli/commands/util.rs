@@ -38,7 +38,7 @@ pub enum UtilArgs {
         #[arg(long, default_value = "false")]
         exclude_prebuilds: bool,
 
-        /// True to skip automatic addition fo dependencies to the portable repository
+        /// True to skip automatic addition of dependencies to the portable repository
         #[arg(long, default_value = "false")]
         skip_dependency_resolution: bool,
     },
