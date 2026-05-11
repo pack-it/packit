@@ -27,6 +27,10 @@ pub struct PackageArgs {
     /// True to sort the package into a prebuild directory
     #[arg(short, long, default_value = "false")]
     pub sorted: bool,
+
+    /// True to build all installed packages
+    #[arg(short, long, default_value = "false")]
+    pub all: bool,
 }
 
 impl HandleCommand for PackageArgs {
@@ -35,12 +39,17 @@ impl HandleCommand for PackageArgs {
         let register_dir = PackageRegister::get_default_path(&config.prefix_directory);
         let register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
-        if self.packages.is_empty() {
+        let packages: Vec<&PackageId> = match self.all {
+            true => register.iterate_all().map(|p| &p.package_id).collect(),
+            false => self.packages.iter().collect(),
+        };
+
+        if packages.is_empty() {
             error!(msg: "Nothing packaged, no packages specified");
             exit(1);
         }
 
-        for package_id in &self.packages {
+        for package_id in &packages {
             // Get the correct install directory
             let destination = match self.sorted {
                 true => {
