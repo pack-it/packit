@@ -4,6 +4,14 @@ Packit is a universal package manager, designed to streamline the experience of 
 
 Please note Packit is still in early development, breaking changes are possible in future versions.
 
+### Why use Packit?
+You might be asking yourself: why use this new package manager when I already have one? 
+As mentioned before, Packit is a universal package manager that works on macOS, Linux and native Windows (no subsystem for Linux required!). Its interface and usage remain consistent across all platforms, making it ideal for developers who frequently switch between operating systems. In addition to being a universal package manager Packit also offers some unique features:
+- **Active versions**, which allows multiple package versions to be installed next to each other without conflict.
+- **Flexible dependency resolution**, each package dependency can be satisfied with any satisfying package, instead of requiring a single fixed version.
+- **(Un)linked packages**, which allows a package to be installed, but not in the PATH to avoid conflicts with existing packages when necessary.
+- **Portable repositories** which can be used to create repositories for offline or air-gapped systems.
+
 ## Install
 Packit can be installed by simply copying one of the commands below in your terminal.
 
@@ -81,9 +89,6 @@ Packages the specified package into a prebuild and stores it in the destination 
 
 #### `pit util checksum <URL>`
 Calculates the checksum of the file at the given url.
-
-#### `pit util portable-repo <DESTINATION> <PACKAGE-NAME>@<VERSION> ... [--exclude-prebuilds] [--skip-dependency-resolution]`
-Generates a portable repository at the given destination, containing the specified packages. Normally all dependencies of the packages are added automatically, when the `--skip-dependency-resolution` flag is given, this step is skipped. If the `--exclude-prebuilds` flag is given, prebuilds are not included in the portable repository and are not required for the generation.
 
 #### `pit config show`
 Shows the current configuration.
