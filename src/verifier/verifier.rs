@@ -566,7 +566,7 @@ impl Verifier {
         }
 
         // Return early if symlinking is allowed according to the metadata
-        if link_allowed && package_id.name.to_string() != "htop" {
+        if link_allowed {
             return Ok(Vec::new());
         }
 

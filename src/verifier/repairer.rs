@@ -10,7 +10,7 @@ use crate::{
     cli::display::{QuestionResponse, ask_user, ask_user_input, logging::warning},
     config::{Config, EditableConfig, Repository},
     installer::{
-        Installer, InstallerOptions,
+        Installer, InstallerOptions, Symlinker,
         types::{PackageId, PackageName, Version},
     },
     platforms::{
@@ -60,6 +60,7 @@ impl Repairer {
             Issue::MissingDependents(missing) => self.fix_missing_dependents(missing, register),
             Issue::InvalidDependents(invalid) => self.fix_invalid_dependents(invalid, register),
             Issue::InvalidActive(invalid) => self.fix_invalid_active(invalid, register, config)?,
+            Issue::ForbiddenLink(forbidden) => self.fix_forbidden_link(forbidden, register, config)?,
             _ => warning!("Fix not executed, because the issue fix is not yet implemented"),
         }
 
@@ -410,6 +411,18 @@ impl Repairer {
             // Link the correct active version
             let active_original = package_directory.join(&package_name).join(package.active_version.to_string());
             create_symlink(&active_original, &active_symlink)?;
+        }
+
+        Ok(())
+    }
+
+    /// Fixes the forbidden link issue.
+    fn fix_forbidden_link(&self, forbidden: Vec<PackageName>, register: &mut PackageRegister, config: &Config) -> Result<()> {
+        let symlinker = Symlinker::new(config);
+
+        // Unlink all packages which shouldn't be symlinked
+        for package_name in forbidden {
+            symlinker.unlink_package(register, &package_name)?;
         }
 
         Ok(())
