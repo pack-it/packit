@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::collections::HashMap;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     installer::types::{Dependency, PackageName, Version, VersionIntervals},
@@ -13,7 +13,7 @@ use crate::{
 };
 
 /// Represents the package metadata, containing package information.
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct PackageMeta {
     pub name: PackageName,
     pub description: String,

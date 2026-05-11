@@ -82,6 +82,9 @@ Packages the specified package into a prebuild and stores it in the destination 
 #### `pit util checksum <URL>`
 Calculates the checksum of the file at the given url.
 
+#### `pit util portable-repo <DESTINATION> <PACKAGE-NAME>@<VERSION> ... [--exclude-prebuilds] [--skip-dependency-resolution]`
+Generates a portable repository at the given destination, containing the specified packages. Normally all dependencies of the packages are added automatically, when the `--skip-dependency-resolution` flag is given, this step is skipped. If the `--exclude-prebuilds` flag is given, prebuilds are not included in the portable repository and are not required for the generation.
+
 #### `pit config show`
 Shows the current configuration.
 

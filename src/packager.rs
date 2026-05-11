@@ -35,7 +35,7 @@ pub type Result<T> = core::result::Result<T, PackagerError>;
 
 /// Packages a package to a given destination. If the destination doesn't exist an IO [NotADirectory](std::io::ErrorKind::NotADirectory) error is returned.
 /// The revision is used to create a unique filename for different package revisions.
-pub fn package(config: &Config, package_id: &PackageId, destination: &PathBuf, revisions: usize) -> Result<()> {
+pub fn package(config: &Config, package_id: &PackageId, destination: &PathBuf, revisions: u64) -> Result<()> {
     let install_directory = config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
 
     // Return an error if the destination is not a directory

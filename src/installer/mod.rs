@@ -2,7 +2,7 @@
 mod build_env;
 mod builder;
 pub mod error;
-mod install_tree;
+pub mod install_tree;
 mod installer;
 mod options;
 pub mod scripts;

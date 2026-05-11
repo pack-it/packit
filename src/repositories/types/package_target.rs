@@ -1,25 +1,22 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::collections::{HashMap, HashSet};
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{installer::types::Dependency, repositories::types::Script};
 
 /// Represents the package target data, containing the download url and installer type.
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct PackageTarget {
-    pub source: Option<String>,
-
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub dependencies: Vec<Dependency>,
 
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub build_dependencies: Vec<Dependency>,
 
     pub skip_symlinking: Option<bool>,
 
-    #[serde(default)]
-    pub script_args: HashMap<String, String>,
+    pub source: Option<String>,
 
     pub build_script: Option<Script>,
     pub preinstall_script: Option<Script>,
@@ -27,6 +24,9 @@ pub struct PackageTarget {
     pub test_script: Option<Script>,
     pub uninstall_script: Option<Script>,
 
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "HashSet::is_empty")]
     pub external_test_files: HashSet<String>,
+
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub script_args: HashMap<String, String>,
 }

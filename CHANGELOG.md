@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     - Add check after fix (re-run check to make sure the fix worked).
     - Add checks and fixes for: stray directories, empty directories, package existence, correct permissions, missing Config.toml and missing Installed.toml.
 - Skip uninstall option when update is not possible because of dependents which need the older version.
+- Add portable repositories, a generated repository containing only specific packages for use on airgapped systems.
 
 ### Changes
 - The build system now includes a new `build-install` xtask to create a full Packit build in a `bin` directory structure.
