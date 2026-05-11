@@ -44,6 +44,9 @@ pub enum Issue {
 
     /// A list of packages from which the active version is invalid.
     InvalidActive(Vec<PackageName>),
+
+    /// A list of forbidden linked packages.
+    ForbiddenLink(Vec<PackageName>),
 }
 
 impl Display for Issue {
@@ -69,6 +72,13 @@ impl Display for Issue {
                 writeln!(f, "Invalid active version")?;
                 writeln!(f, "The following packages have an invalid active version:")?;
                 for package in invalid {
+                    writeln!(f, "  - {}", package.to_string().bold().blue())?;
+                }
+            },
+            Issue::ForbiddenLink(forbidden) => {
+                writeln!(f, "Forbidden symlinks")?;
+                writeln!(f, "The following packages have a forbidden symlink:")?;
+                for package in forbidden {
                     writeln!(f, "  - {}", package.to_string().bold().blue())?;
                 }
             },
@@ -176,6 +186,7 @@ impl Issue {
             Issue::MissingRegister => "To fix this issue we try to reconstruct the Installed.toml with data still in the Packit directory.",
             Issue::StrayDirectories(_) => "To fix this issue we remove the stray directories.",
             Issue::InvalidActive(_) => "To fix this issue we set the active version to the latest installed version.",
+            Issue::ForbiddenLink(_) => "To fix this issue we unlink the packages which have a forbidden link.",
             Issue::BrokenTree(_) => "To fix this issue the missing packages will be installed.",
             Issue::MissingDependents(_) => "To fix this issue the dependents will be added to the package from which they are missing.",
             Issue::InvalidDependents(_) => "To fix this issue we remove the invalid dependents from the register.",

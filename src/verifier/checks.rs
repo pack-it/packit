@@ -19,6 +19,7 @@ pub enum Check {
     MissingDependents,
     InvalidDependents,
     InvalidActive,
+    ForbiddenLink,
 
     // Checks which are specific to a package
     PackageExistence,
@@ -29,6 +30,7 @@ pub enum Check {
     PackageMissingDependents,
     PackageInvalidDependents,
     PackageInvalidActive,
+    PackageForbiddenLink,
 }
 
 impl Check {
@@ -50,6 +52,7 @@ impl Check {
             // General checks
             Self::PackitGroup => &[],
             Self::InvalidActive => &[],
+            Self::ForbiddenLink => &[],
             Self::StrayDirectory => &[Self::PackitGroup],
             Self::StorageConsistency => &[Self::PackitGroup, Self::StrayDirectory],
             Self::RegisterConsistency => &[Self::PackitGroup, Self::StrayDirectory],
@@ -61,6 +64,7 @@ impl Check {
             // Package specific checks
             Self::PackageExistence => &[],
             Self::PackageInvalidActive => &[],
+            Self::PackageForbiddenLink => &[Self::PackageExistence],
             Self::PackageStorageConsistency => &[Self::PackageExistence],
             Self::PackageRegisterConsistency => &[Self::PackageExistence],
             Self::PackageMissingDependents => &[
@@ -109,6 +113,7 @@ impl Check {
             Self::MissingDependents,
             Self::InvalidDependents,
             Self::InvalidActive,
+            Self::ForbiddenLink,
         ]
     }
 
@@ -123,6 +128,7 @@ impl Check {
             Self::PackageMissingDependents,
             Self::PackageInvalidDependents,
             Self::PackageInvalidActive,
+            Self::PackageForbiddenLink,
         ]
     }
 

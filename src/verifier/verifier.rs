@@ -10,7 +10,10 @@ use crate::{
         DEFAULT_PREFIX, Target,
         permissions::{does_packit_group_exist, is_writable},
     },
-    repositories::{provider, types::Checksum},
+    repositories::{
+        provider::{self, create_metadata_provider},
+        types::Checksum,
+    },
     storage::package_register::PackageRegister,
     utils::io::directory_is_empty,
     verifier::{
@@ -130,6 +133,7 @@ impl Verifier {
                 Check::MissingDependents => self.check_missing_dependents(register),
                 Check::InvalidDependents => self.check_invalid_dependents(register),
                 Check::InvalidActive => self.check_invalid_active(register, config)?,
+                Check::ForbiddenLink => self.check_forbidden_link(register, config)?,
 
                 // Make sure that the check is not a general check
                 _ if Check::get_general_checks().contains(check) => return Err(VerifierError::UnimplementedCheckError),
@@ -199,6 +203,8 @@ impl Verifier {
                 Check::PackageAlterations => Issue::AlteredPackage(vec![package_id.clone()]),
                 Check::PackageInvalidActive if self.check_invalid_package_active(&package_id.name, register, config)?.is_none() => continue,
                 Check::PackageInvalidActive => Issue::InvalidActive(vec![package_id.name.clone()]),
+                Check::PackageForbiddenLink if self.check_forbidden_package_link(package_id, register, config)?.is_empty() => continue,
+                Check::PackageForbiddenLink => Issue::ForbiddenLink(vec![package_id.name.clone()]),
 
                 // Make sure that the check is not a package specific check
                 _ if Check::get_package_checks().contains(check) => return Err(VerifierError::UnimplementedCheckError),
@@ -506,6 +512,73 @@ impl Verifier {
         }
 
         return Ok(None);
+    }
+
+    /// Checks all packages for a forbidden link. Where a forbidden link is a package which is symlinked
+    /// while it shouldn't be according to the repository metadata.
+    fn check_forbidden_link(&self, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
+        let mut forbidden = Vec::new();
+        for package in register.iterate_all() {
+            forbidden.extend(self.check_forbidden_package_link(&package.package_id, register, config)?);
+        }
+
+        if forbidden.is_empty() {
+            return Ok(None);
+        }
+
+        Ok(Some(Issue::ForbiddenLink(forbidden)))
+    }
+
+    /// Checks a given package for a forbidden link. Where a forbidden link is a package which is symlinked
+    /// while it shouldn't be according to the repository metadata.
+    fn check_forbidden_package_link(
+        &self,
+        package_id: &PackageId,
+        register: &PackageRegister,
+        config: &Config,
+    ) -> Result<Vec<PackageName>> {
+        let Some(package_version) = register.get_package_version(package_id) else {
+            return Ok(Vec::new());
+        };
+
+        // Check if this package is allowed to be symlinked
+        // TODO: Refactor this, this shouldn't implemented here (also this assumes that everything is okay when repository cannot be found)
+        let mut link_allowed = true;
+        for repository_id in &config.repositories_rank {
+            let Some(repository) = config.repositories.get(repository_id) else {
+                continue;
+            };
+
+            // Continue if the repository doesn't match
+            if repository.path != package_version.source_repository_url {
+                continue;
+            }
+
+            let Some(provider) = create_metadata_provider(repository) else {
+                continue;
+            };
+
+            let package_version_meta = provider.read_package_version(&package_id.name, &package_id.version)?;
+            if package_version_meta.skip_symlinking {
+                link_allowed = false;
+                break;
+            }
+        }
+
+        // Return early if symlinking is allowed according to the metadata
+        if link_allowed && package_id.name.to_string() != "htop" {
+            return Ok(Vec::new());
+        }
+
+        let Some(package) = register.get_package(&package_id.name) else {
+            return Ok(Vec::new());
+        };
+
+        if !package.symlinked {
+            return Ok(Vec::new());
+        }
+
+        Ok(vec![package_id.name.clone()])
     }
 
     /// Checks for all packages if they have invalid dependents. Where an invalid dependent is a package which doesn't
