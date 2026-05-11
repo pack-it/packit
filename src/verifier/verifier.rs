@@ -134,6 +134,7 @@ impl Verifier {
                 Check::InvalidDependents => self.check_invalid_dependents(register),
                 Check::InvalidActive => self.check_invalid_active(register, config)?,
                 Check::ForbiddenLink => self.check_forbidden_link(register, config)?,
+                Check::MissingLink => self.check_missing_link(register, config)?,
 
                 // Make sure that the check is not a general check
                 _ if Check::get_general_checks().contains(check) => return Err(VerifierError::UnimplementedCheckError),
@@ -205,6 +206,8 @@ impl Verifier {
                 Check::PackageInvalidActive => Issue::InvalidActive(vec![package_id.name.clone()]),
                 Check::PackageForbiddenLink if self.check_forbidden_package_link(package_id, register, config)?.is_empty() => continue,
                 Check::PackageForbiddenLink => Issue::ForbiddenLink(vec![package_id.name.clone()]),
+                Check::PackageMissingLink if !self.check_missing_package_link(package_id, register, config)? => continue,
+                Check::PackageMissingLink => Issue::MissingLinks(vec![package_id.clone()]),
 
                 // Make sure that the check is not a package specific check
                 _ if Check::get_package_checks().contains(check) => return Err(VerifierError::UnimplementedCheckError),
@@ -579,6 +582,78 @@ impl Verifier {
         }
 
         Ok(vec![package_id.name.clone()])
+    }
+
+    /// Checks for all packages if symlinks are missing.
+    /// Returns an `Issue::MissingLinks` if symlinks are missing, None otherwise.
+    fn check_missing_link(&self, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
+        let mut missing = Vec::new();
+        for package in register.iterate_all() {
+            if self.check_missing_package_link(&package.package_id, register, config)? {
+                missing.push(package.package_id.clone());
+            }
+        }
+
+        if missing.is_empty() {
+            return Ok(None);
+        }
+
+        Ok(Some(Issue::MissingLinks(missing)))
+    }
+
+    /// Checks for a given package if symlinks are missing.
+    /// Returns true if symlinks are missing, false otherwise.
+    fn check_missing_package_link(&self, package_id: &PackageId, register: &PackageRegister, config: &Config) -> Result<bool> {
+        let Some(package) = register.get_package(&package_id.name) else {
+            return Ok(false);
+        };
+
+        // Return early if the packages shouldn't be symlinked
+        if !package.symlinked {
+            return Ok(false);
+        }
+
+        let package_path = config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
+        for directory_name in ["bin", "include", "lib", "share"] {
+            let symlink_directory = config.prefix_directory.join(directory_name);
+            let directory = package_path.join(&directory_name);
+
+            // Continue if the directory doesn't exist in the package
+            if !fs::exists(&directory)? {
+                continue;
+            }
+
+            if self.check_symlinks(&directory, &symlink_directory)? {
+                return Ok(true);
+            }
+        }
+
+        Ok(false)
+    }
+
+    /// Checks if a symlink can be found for the given directory.
+    /// Returns true if a symlink cannot be found, false otherwise.
+    fn check_symlinks(&self, directory: &PathBuf, symlink_directory: &PathBuf) -> Result<bool> {
+        for file in fs::read_dir(directory)? {
+            let file = file?;
+            let file_path = file.path();
+
+            // Recurse
+            if file_path.is_dir() {
+                if self.check_symlinks(&file_path, &symlink_directory.join(file.file_name()))? {
+                    return Ok(true);
+                }
+
+                continue;
+            }
+
+            // Read the sylink metadata to check if the symlink exists
+            if fs::symlink_metadata(symlink_directory.join(file.file_name())).is_err() {
+                return Ok(true);
+            }
+        }
+
+        Ok(false)
     }
 
     /// Checks for all packages if they have invalid dependents. Where an invalid dependent is a package which doesn't

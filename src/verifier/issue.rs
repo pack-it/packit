@@ -47,6 +47,9 @@ pub enum Issue {
 
     /// A list of forbidden linked packages.
     ForbiddenLink(Vec<PackageName>),
+
+    /// A list of packages which have missing symlinks.
+    MissingLinks(Vec<PackageId>),
 }
 
 impl Display for Issue {
@@ -79,6 +82,13 @@ impl Display for Issue {
                 writeln!(f, "Forbidden symlinks")?;
                 writeln!(f, "The following packages have a forbidden symlink:")?;
                 for package in forbidden {
+                    writeln!(f, "  - {}", package.to_string().bold().blue())?;
+                }
+            },
+            Issue::MissingLinks(missing) => {
+                writeln!(f, "Missing symlinks")?;
+                writeln!(f, "The following packages have missing symlinks:")?;
+                for package in missing {
                     writeln!(f, "  - {}", package.to_string().bold().blue())?;
                 }
             },
@@ -187,6 +197,7 @@ impl Issue {
             Issue::StrayDirectories(_) => "To fix this issue we remove the stray directories.",
             Issue::InvalidActive(_) => "To fix this issue we set the active version to the latest installed version.",
             Issue::ForbiddenLink(_) => "To fix this issue we unlink the packages which have a forbidden link.",
+            Issue::MissingLinks(_) => "To fix this issue we (temporarily) unlink and then link the package again.",
             Issue::BrokenTree(_) => "To fix this issue the missing packages will be installed.",
             Issue::MissingDependents(_) => "To fix this issue the dependents will be added to the package from which they are missing.",
             Issue::InvalidDependents(_) => "To fix this issue we remove the invalid dependents from the register.",
