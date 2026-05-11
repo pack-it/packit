@@ -105,7 +105,8 @@ impl UtilArgs {
     ) {
         let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
         let manager = RepositoryManager::new(&config);
-        let register = PackageRegister::from(&PackageRegister::get_default_path(&config)).unwrap_or_exit_msg("Cannot load register", 1);
+        let register = PackageRegister::from(&PackageRegister::get_default_path(&config.prefix_directory))
+            .unwrap_or_exit_msg("Cannot load register", 1);
 
         let spinner = Spinner::new();
         spinner.show("Generating portable repository".into());
