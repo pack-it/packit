@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::path::PathBuf;
+use std::{fs, path::PathBuf};
 
 use clap::Args;
 
@@ -10,7 +10,7 @@ use crate::{
     },
     config::Config,
     installer::types::PackageId,
-    packager::{self},
+    packager,
     storage::package_register::PackageRegister,
     utils::unwrap_or_exit::UnwrapOrExit,
 };
@@ -23,6 +23,10 @@ pub struct PackageArgs {
 
     /// Destination of the compressed package
     pub destination: PathBuf,
+
+    /// True to sort the package into a prebuild directory
+    #[arg(short, long, default_value = "false")]
+    pub sorted: bool,
 }
 
 impl HandleCommand for PackageArgs {
@@ -36,11 +40,23 @@ impl HandleCommand for PackageArgs {
             None => not_found::register_package_version(&self.package_id, &register),
         };
 
+        // Get the correct install directory
+        let destination = match self.sorted {
+            true => {
+                let prefix = self.package_id.name.get_prefix().to_string();
+                &self.destination.join("packages").join(prefix).join(&self.package_id.name).join(self.package_id.version.to_string())
+            },
+            false => &self.destination,
+        };
+
+        // Automatically create the destination directory
+        fs::create_dir_all(destination).unwrap_or_exit_msg("Failed to create prebuild directory", 1);
+
         let spinner = Spinner::new();
         let spinner_message = format!("Packaging {}", self.package_id);
         spinner.show(spinner_message.clone());
 
-        packager::package(&config, &self.package_id, &self.destination, package_version.revisions.len() as u64).unwrap_or_exit(1);
+        packager::package(&config, &self.package_id, destination, package_version.revisions.len() as u64).unwrap_or_exit(1);
 
         spinner.finish(format!("{spinner_message} successful"));
         println!("Successfully packaged {} to {:?}", self.package_id, self.destination);

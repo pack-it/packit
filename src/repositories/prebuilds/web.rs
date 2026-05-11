@@ -71,7 +71,7 @@ impl WebPrebuildProvider {
     /// Returns None if the file cannot be found in the repository.
     /// Returns a `UrlParseError` if the created url cannot be parsed.
     fn read_file_path(&self, package_id: &PackageId, revision: u64, target: &Target, extension: &str) -> Result<Option<(Url, Response)>> {
-        let prefix = package_id.name.chars().next().ok_or(RepositoryError::EmptyPackageName)?.to_string();
+        let prefix = package_id.name.get_prefix().to_string();
         let target = target.architecture.to_string();
         let package_name = &package_id.name;
         let file_name = format!("{package_id}-{revision}-{target}.{extension}");

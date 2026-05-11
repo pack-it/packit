@@ -17,6 +17,13 @@ pub enum PackageNameError {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PackageName(String);
 
+impl PackageName {
+    /// Get the prefix from the package name. The package name regex assures that one character is always present.
+    pub fn get_prefix(&self) -> char {
+        self.0.chars().next().expect("Expected first char, based on regex")
+    }
+}
+
 impl<'de> Deserialize<'de> for PackageName {
     /// Deserializes a string into a `PackageName`.
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
