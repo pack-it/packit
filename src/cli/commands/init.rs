@@ -28,6 +28,7 @@ use crate::{
 #[derive(Args, Debug)]
 pub struct InitArgs {
     /// The prefix to use
+    #[arg(long)]
     prefix: Option<PathBuf>,
 }
 
