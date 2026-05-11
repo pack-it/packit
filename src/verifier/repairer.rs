@@ -282,12 +282,14 @@ impl Repairer {
             let dependencies = self.get_latest_satisfying_packages(&package_version_meta, &storage_packages);
             let source_repository = config.repositories.get(&repository_id).expect("Expected repository in config");
             let install_path = &package_directory.join(&package_id.name).join(package_id.version.to_string());
-            let prebuild_url = manager.get_prebuild_url(
-                &repository_id,
-                package_id,
-                package_version_meta.revisions.len() as u64,
-                &Target::current(),
-            )?;
+            let prebuild_url = manager
+                .get_prebuild_url(
+                    &repository_id,
+                    package_id,
+                    package_version_meta.revisions.len() as u64,
+                    &Target::current(),
+                )
+                .unwrap_or(None);
 
             // Make sure that all dependencies are registered as well
             let missing_dependencies = dependencies.iter().filter(|d| register.get_package_version(d).is_none()).cloned().collect();

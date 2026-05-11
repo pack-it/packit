@@ -182,7 +182,9 @@ impl Issue {
             Issue::InconsistentStorage(_) => {
                 "To fix this issue the packages are temporarily removed from the register and then reinstalled."
             },
-            Issue::InconsistentRegister(_) => "To fix this issue the packages are temporarily removed from storage and then reinstalled.",
+            Issue::InconsistentRegister(_) => {
+                "To fix this issue we try to reconstruct the Installed.toml with data still in the Packit directory."
+            },
             Issue::AlteredPackage(_) | Issue::MissingPackitGroup | Issue::NotFound(_) => {
                 "There is no automatic fix for this issue available yet."
             },
