@@ -108,6 +108,9 @@ Sets the repositories rank in the config. Multiple `<REPOSITORY-ID>` can be give
 #### `pit config repositories add <ID> <URL> [PROVIDER]`
 Adds a new repository to the config. Also adds the new repository to the back of the repositories rank.
 
+#### `pit init [--prefix <PREFIX>]`
+Initializes the Packit environment by setting up all required files and directories. If the `--prefix` option is given, the given path is used as prefix, instead of the [default prefix](#prefix).
+
 
 ## Config
 All available fields in the config are listed below. The [`pit config`](#pit-config-show) command can also be used to change the config.

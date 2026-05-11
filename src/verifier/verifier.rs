@@ -281,7 +281,7 @@ impl Verifier {
     /// Returns `None` if the register exists or an `Issue::MissingRegister` otherwise.
     fn check_register_existence(&self) -> Result<Option<Issue>> {
         let config = Config::from(&Config::get_default_path())?;
-        let register_directory = &PackageRegister::get_default_path(&config);
+        let register_directory = &PackageRegister::get_default_path(&config.prefix_directory);
         if fs::exists(register_directory)? {
             return Ok(None);
         }
@@ -293,7 +293,7 @@ impl Verifier {
     /// Returns `None` if the register syntax is valid or an `Issue::MissingRegister` otherwise.
     fn check_register_syntax(&self) -> Result<Option<Issue>> {
         let config = Config::from(&Config::get_default_path())?;
-        match PackageRegister::from(&PackageRegister::get_default_path(&config)) {
+        match PackageRegister::from(&PackageRegister::get_default_path(&config.prefix_directory)) {
             Ok(_) => Ok(None),
             Err(_) => Ok(Some(Issue::MissingRegister)),
         }

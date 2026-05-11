@@ -31,7 +31,7 @@ impl HandleCommand for UpdateArgs {
     fn handle(&self) {
         let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
         let manager = RepositoryManager::new(&config);
-        let register_dir = PackageRegister::get_default_path(&config);
+        let register_dir = PackageRegister::get_default_path(&config.prefix_directory);
         let mut register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
         if let Some(package_id) = self.optional_id.versioned() {

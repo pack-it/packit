@@ -94,7 +94,7 @@ impl ConfigArgs {
             return;
         }
 
-        let register_dir = PackageRegister::get_default_path(&config.get_config());
+        let register_dir = PackageRegister::get_default_path(&config.get_config().prefix_directory);
         let register = PackageRegister::from(&register_dir).unwrap_or_exit_msg("Cannot read package register", 1);
 
         // Check if there are installed packages
@@ -117,7 +117,7 @@ impl ConfigArgs {
             return;
         }
 
-        let register_dir = PackageRegister::get_default_path(&config.get_config());
+        let register_dir = PackageRegister::get_default_path(&config.get_config().prefix_directory);
         let register = PackageRegister::from(&register_dir).unwrap_or_exit_msg("Cannot read package register", 1);
 
         // Check if there are installed packages

@@ -30,7 +30,7 @@ pub struct LinkArgs {
 impl HandleCommand for LinkArgs {
     fn handle(&self) {
         let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
-        let register_path = PackageRegister::get_default_path(&config);
+        let register_path = PackageRegister::get_default_path(&config.prefix_directory);
         let mut register = PackageRegister::from(&register_path).unwrap_or_exit(1);
 
         // Get installed package
