@@ -4,11 +4,17 @@ use std::process::exit;
 use clap::Args;
 
 use crate::{
-    cli::{commands::HandleCommand, display::logging::error},
+    cli::{
+        commands::HandleCommand,
+        display::{logging::error, not_found},
+    },
     config::Config,
     installer::types::{OptionalPackageId, PackageId},
     storage::{installed_package::InstalledPackage, package_register::PackageRegister},
-    utils::{fuzzy, tree::EmptyNode, unwrap_or_exit::UnwrapOrExit},
+    utils::{
+        tree::{EmptyNode, TreeError},
+        unwrap_or_exit::UnwrapOrExit,
+    },
 };
 
 /// Shows info about the specified installed package.
@@ -35,28 +41,24 @@ impl HandleCommand for InfoArgs {
         // Get package information
         let package = match register.get_package(&self.package.name) {
             Some(package) => package,
-            None => {
-                error!(msg: "Package '{}' is not installed", self.package);
-
-                let fuzzy_match = fuzzy::min_search(register.iterate_package_names(), &self.package.name);
-                if let Some(fuzzy_match) = fuzzy_match {
-                    println!("Did you mean: '{fuzzy_match}'?");
-                }
-
-                exit(1)
-            },
+            None => not_found::package_not_found(&self.package.name, &register),
         };
 
         // Display tree if tree flag is given
         if self.tree {
-            if let Some(package_id) = self.package.versioned() {
-                let tree = EmptyNode::build_simple_tree(package_id, &register).unwrap_or_exit(1);
-                println!("{tree}");
-                return;
-            } else {
+            let Some(package_id) = self.package.versioned() else {
                 error!(msg: "Displaying a tree requires package version to be specified.");
-                exit(1)
-            }
+                exit(1);
+            };
+
+            let tree = match EmptyNode::build_simple_tree(package_id.clone(), &register) {
+                Ok(tree) => tree,
+                Err(TreeError::NotFound(..)) => not_found::package_version_not_found(&package_id, &register),
+                Err(e) => Err(e).unwrap_or_exit(1),
+            };
+
+            println!("{tree}");
+            return;
         }
 
         // Show package version specific information
@@ -92,10 +94,7 @@ impl InfoArgs {
     fn display_package_version_info(&self, package_id: &PackageId, register: &PackageRegister, package: &InstalledPackage) {
         let package_version = match register.get_package_version(package_id) {
             Some(package) => package,
-            None => {
-                error!(msg: "Package '{}' doesn't exist", package_id);
-                exit(1)
-            },
+            None => not_found::package_version_not_found(package_id, register),
         };
 
         println!("{}", package_id);
