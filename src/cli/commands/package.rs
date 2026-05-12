@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{path::PathBuf, process::exit};
+use std::path::PathBuf;
 
 use clap::Args;
 
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{Spinner, logging::error},
+        display::{Spinner, not_found},
     },
     config::Config,
     installer::types::PackageId,
     packager::{self},
     storage::package_register::PackageRegister,
-    utils::{fuzzy, unwrap_or_exit::UnwrapOrExit},
+    utils::unwrap_or_exit::UnwrapOrExit,
 };
 
 /// Packages the specified package into a prebuild and store it in the destination directory, together with a checksum of the prebuild.
@@ -33,27 +33,7 @@ impl HandleCommand for PackageArgs {
 
         let package_version = match register.get_package_version(&self.package_id) {
             Some(package_version) => package_version,
-            None => {
-                error!(msg: "Package '{}' cannot be found.", self.package_id);
-
-                // Show possible versions if a package with the given name exists
-                if let Some(package_name) = register.get_package(&self.package_id.name) {
-                    let versions = package_name.versions.keys();
-                    print!("Did you mean version(s): ");
-                    for version in versions {
-                        print!("'{version}' ");
-                    }
-                    println!();
-                    return;
-                }
-
-                let fuzzy_match = fuzzy::min_search(register.iterate_package_names(), &self.package_id.name);
-                if let Some(fuzzy_match) = fuzzy_match {
-                    println!("Did you mean: '{fuzzy_match}'?");
-                }
-
-                exit(1);
-            },
+            None => not_found::register_package_version(&self.package_id, &register),
         };
 
         let spinner = Spinner::new();

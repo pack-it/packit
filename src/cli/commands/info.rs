@@ -41,7 +41,7 @@ impl HandleCommand for InfoArgs {
         // Get package information
         let package = match register.get_package(&self.package.name) {
             Some(package) => package,
-            None => not_found::package_not_found(&self.package.name, &register),
+            None => not_found::register_package(&self.package.name, &register),
         };
 
         // Display tree if tree flag is given
@@ -53,7 +53,7 @@ impl HandleCommand for InfoArgs {
 
             let tree = match EmptyNode::build_simple_tree(package_id.clone(), &register) {
                 Ok(tree) => tree,
-                Err(TreeError::NotFound(..)) => not_found::package_version_not_found(&package_id, &register),
+                Err(TreeError::NotFound(..)) => not_found::register_package_version(&package_id, &register),
                 Err(e) => Err(e).unwrap_or_exit(1),
             };
 
@@ -94,7 +94,7 @@ impl InfoArgs {
     fn display_package_version_info(&self, package_id: &PackageId, register: &PackageRegister, package: &InstalledPackage) {
         let package_version = match register.get_package_version(package_id) {
             Some(package) => package,
-            None => not_found::package_version_not_found(package_id, register),
+            None => not_found::register_package_version(package_id, register),
         };
 
         println!("{}", package_id);

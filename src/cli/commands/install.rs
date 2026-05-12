@@ -4,13 +4,16 @@ use std::process::exit;
 use clap::Args;
 
 use crate::{
-    cli::{commands::HandleCommand, display::logging::error},
+    cli::{
+        commands::HandleCommand,
+        display::{logging::error, not_found},
+    },
     config::Config,
     installer::{InstallType, Installer, InstallerOptions, types::OptionalPackageId},
     platforms::Target,
     repositories::manager::RepositoryManager,
     storage::package_register::PackageRegister,
-    utils::{duplicates, fuzzy, unwrap_or_exit::UnwrapOrExit},
+    utils::{duplicates, unwrap_or_exit::UnwrapOrExit},
 };
 
 /// Installs the specified packages, if a version is given that version will be installed,
@@ -69,37 +72,12 @@ impl HandleCommand for InstallArgs {
 
         // Check if all packages exist before starting installation
         for optional_id in &self.packages {
-            if let Some(package_id) = optional_id.versioned() {
-                if manager.read_package_version(&package_id, &Target::current()).is_ok() {
-                    continue;
-                }
-
-                error!(msg: "Package '{}' cannot be found.", package_id);
-
-                // Show possible versions if a package with the given name exists
-                if let Ok((_, package_name)) = manager.read_package(&package_id.name) {
-                    let versions = package_name.versions;
-                    print!("Did you mean version(s): ");
-                    for version in versions {
-                        print!("'{version}' ");
-                    }
-                    println!();
-                    return;
-                }
+            match optional_id.versioned() {
+                Some(package_id) if manager.read_package_version(&package_id, &Target::current()).is_ok() => continue,
+                Some(package_id) => not_found::repository_package_version(&package_id, &manager, &config),
+                None if manager.read_package(&optional_id.name).is_ok() => continue,
+                None => not_found::repository_package(&optional_id.name, &manager, &config),
             }
-
-            if manager.read_package(&optional_id.name).is_ok() {
-                continue;
-            }
-
-            error!(msg: "Package '{}' cannot be found.", optional_id.name);
-
-            let fuzzy_match = fuzzy::repository_search(&config, &manager, &optional_id.name).unwrap_or_exit(1);
-            if let Some(fuzzy_match) = fuzzy_match {
-                println!("Did you mean: '{fuzzy_match}'?");
-            }
-
-            return;
         }
 
         // Determine the install type. Note that clap already check if build and build-all are both set (which should not be possible).

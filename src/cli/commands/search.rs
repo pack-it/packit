@@ -7,13 +7,13 @@ use std::{collections::HashSet, str::FromStr};
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{logging::error, print_grid},
+        display::{logging::error, not_found, print_grid},
     },
     config::Config,
     installer::types::OptionalPackageId,
     platforms::Target,
     repositories::{error::RepositoryError, manager::RepositoryManager},
-    utils::{fuzzy, unwrap_or_exit::UnwrapOrExit},
+    utils::unwrap_or_exit::UnwrapOrExit,
 };
 
 /// Searches a package with `<PACKAGE-NAME>` and shows information based on the package metadata.
@@ -76,16 +76,7 @@ impl SearchArgs {
         let manager = RepositoryManager::new(&config);
         let (repository_id, package) = match manager.read_package(&optional_id.name) {
             Ok(package) => package,
-            Err(RepositoryError::PackageNotFoundError { .. }) => {
-                println!("Cannot find package '{}'", optional_id.name);
-
-                let fuzzy_match = fuzzy::repository_search(&config, &manager, &optional_id.name).unwrap_or_exit(1);
-                if let Some(fuzzy_match) = fuzzy_match {
-                    println!("Did you mean: '{fuzzy_match}'?");
-                }
-
-                return;
-            },
+            Err(RepositoryError::PackageNotFoundError { .. }) => not_found::repository_package(&optional_id.name, &manager, &config),
             Err(e) => {
                 error!(e, "Cannot read package");
                 return;

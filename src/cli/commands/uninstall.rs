@@ -4,12 +4,15 @@ use std::process::exit;
 use clap::Args;
 
 use crate::{
-    cli::{commands::HandleCommand, display::logging::error},
+    cli::{
+        commands::HandleCommand,
+        display::{logging::error, not_found},
+    },
     config::Config,
     installer::{Installer, InstallerOptions, types::OptionalPackageId},
     repositories::manager::RepositoryManager,
     storage::package_register::PackageRegister,
-    utils::{duplicates, fuzzy, unwrap_or_exit::UnwrapOrExit},
+    utils::{duplicates, unwrap_or_exit::UnwrapOrExit},
 };
 
 /// Uninstalls the specified packages, if a version is given that version will be uninstalled, if not,
@@ -44,37 +47,12 @@ impl HandleCommand for UninstallArgs {
 
         // Check if all packages are installed before starting uninstall
         for optional_id in &self.packages {
-            if let Some(package_id) = optional_id.versioned() {
-                if register.get_package_version(&package_id).is_some() {
-                    continue;
-                }
-
-                error!(msg: "Package '{}' cannot be found.", package_id);
-
-                // Show possible versions if a package with the given name exists
-                if let Some(package) = register.get_package(&package_id.name) {
-                    let versions = package.versions.keys();
-                    print!("Did you mean version(s): ");
-                    for version in versions {
-                        print!("'{version}' ");
-                    }
-                    println!();
-                    return;
-                }
+            match optional_id.versioned() {
+                Some(package_id) if register.get_package_version(&package_id).is_some() => continue,
+                Some(package_id) => not_found::register_package_version(&package_id, &register),
+                None if register.get_package(&optional_id.name).is_some() => continue,
+                None => not_found::register_package(&optional_id.name, &register),
             }
-
-            if register.get_package(&optional_id.name).is_some() {
-                continue;
-            }
-
-            error!(msg: "Package '{}' cannot be found.", optional_id.name);
-
-            let fuzzy_match = fuzzy::min_search(register.iterate_package_names(), &optional_id.name);
-            if let Some(fuzzy_match) = fuzzy_match {
-                println!("Did you mean: '{fuzzy_match}'?");
-            }
-
-            return;
         }
 
         let mut installer = Installer::new(&config, &mut register, &manager, InstallerOptions::default());

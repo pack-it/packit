@@ -4,7 +4,10 @@ use std::process::exit;
 use clap::Args;
 
 use crate::{
-    cli::{commands::HandleCommand, display::logging::error},
+    cli::{
+        commands::HandleCommand,
+        display::{logging::error, not_found},
+    },
     config::Config,
     installer::{
         Installer, InstallerOptions,
@@ -13,7 +16,7 @@ use crate::{
     platforms::Target,
     repositories::manager::RepositoryManager,
     storage::package_register::PackageRegister,
-    utils::{fuzzy, unwrap_or_exit::UnwrapOrExit},
+    utils::unwrap_or_exit::UnwrapOrExit,
 };
 
 /// Updates the specified package to the new version, or the latest version if no new version is specified.
@@ -34,32 +37,11 @@ impl HandleCommand for UpdateArgs {
         let register_dir = PackageRegister::get_default_path(&config.prefix_directory);
         let mut register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
-        if let Some(package_id) = self.optional_id.versioned() {
-            if register.get_package_version(&package_id).is_none() {
-                error!(msg: "Package '{}' cannot be found.", package_id);
-
-                // Show possible versions if a package with the given name exists
-                if let Some(package) = register.get_package(&package_id.name) {
-                    let versions = package.versions.keys();
-                    print!("Did you mean version(s): ");
-                    for version in versions {
-                        print!("'{version}' ");
-                    }
-                    println!();
-                    return;
-                }
-            }
-        }
-
-        if register.get_package(&self.optional_id.name).is_none() {
-            error!(msg: "Package '{}' cannot be found.", self.optional_id.name);
-
-            let fuzzy_match = fuzzy::min_search(register.iterate_package_names(), &self.optional_id.name);
-            if let Some(fuzzy_match) = fuzzy_match {
-                println!("Did you mean: '{fuzzy_match}'?");
-            }
-
-            return;
+        match self.optional_id.versioned() {
+            Some(package_id) if register.get_package_version(&package_id).is_some() => {},
+            Some(package_id) => not_found::register_package_version(&package_id, &register),
+            None if register.get_package(&self.optional_id.name).is_some() => {},
+            None => not_found::register_package(&self.optional_id.name, &register),
         }
 
         let (_, package_meta) = manager.read_package(&self.optional_id.name).unwrap_or_exit(1);
@@ -69,21 +51,10 @@ impl HandleCommand for UpdateArgs {
             None => package_meta.get_latest_version(&Target::current()).unwrap_or_exit(1),
         };
 
-        // Check if new version exists
+        // Check if the new version exists
         if !package_meta.versions.contains(new_version) {
             error!(msg: "New package version '{new_version}' does not exist.");
-
-            // Show possible versions if a package with the given name exists
-            if let Ok((_, package_name)) = manager.read_package(&self.optional_id.name) {
-                let versions = package_name.versions;
-                print!("Did you mean version(s): ");
-                for version in versions {
-                    print!("'{version}' ");
-                }
-                println!();
-                return;
-            }
-
+            not_found::repository_version(&self.optional_id.name, &manager);
             exit(1);
         }
 

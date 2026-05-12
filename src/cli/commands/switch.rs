@@ -6,7 +6,10 @@ use clap::Args;
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::logging::{error, warning},
+        display::{
+            logging::{error, warning},
+            not_found,
+        },
     },
     config::Config,
     installer::{
@@ -14,7 +17,7 @@ use crate::{
         types::{PackageName, Version},
     },
     storage::package_register::PackageRegister,
-    utils::{fuzzy, unwrap_or_exit::UnwrapOrExit},
+    utils::unwrap_or_exit::UnwrapOrExit,
 };
 
 /// Switches the active version of the specified package to the specified version.
@@ -40,16 +43,7 @@ impl HandleCommand for SwitchArgs {
         // Get installed package
         let package = match register.get_package(&self.package_name) {
             Some(package) => package,
-            None => {
-                error!(msg: "Package {} is not installed!", self.package_name);
-
-                let fuzzy_match = fuzzy::min_search(register.iterate_package_names(), &self.package_name);
-                if let Some(fuzzy_match) = fuzzy_match {
-                    println!("Did you mean: '{fuzzy_match}'?");
-                }
-
-                exit(1);
-            },
+            None => not_found::register_package(&self.package_name, &register),
         };
 
         // Check if the package version is already active
@@ -63,18 +57,7 @@ impl HandleCommand for SwitchArgs {
             Some(package_version) => package_version,
             None => {
                 error!(msg: "Package '{}@{}' cannot be found.", self.package_name, self.package_version);
-
-                // Show possible versions if a package with the given name exists
-                if let Some(package_name) = register.get_package(&self.package_name) {
-                    let versions = package_name.versions.keys();
-                    print!("Did you mean version(s): ");
-                    for version in versions {
-                        print!("'{version}' ");
-                    }
-                    println!();
-                    return;
-                }
-
+                not_found::register_version(&self.package_name, &register);
                 exit(1);
             },
         };
