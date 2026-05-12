@@ -84,7 +84,7 @@ Links the specified package into the /bin, /lib, /share, etc. directories. If th
 #### `pit unlink <PACKAGE-NAME>`
 Unlinks the specified package, causing the package to be unavailable from the `PATH` environment variable.
 
-#### `pit package <PACKAGE-NAME>@<VERSION> ... <DESTINATION> [--sorted] [--all]`
+#### `pit package <DESTINATION> <PACKAGE-NAME>@<VERSION> ... [--sorted] [--all]`
 Packages the specified package(s) into a prebuild and stores it in the destination directory, together with a checksum of the prebuild. When `--sorted` is used the packages will be sorted into a prebuild directory structure. `--all` will package all installed packages.
 
 #### `pit util checksum <URL>`

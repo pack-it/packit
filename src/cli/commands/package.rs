@@ -21,14 +21,14 @@ pub struct PackageArgs {
     /// Destination of the compressed package
     pub destination: PathBuf,
 
-    /// The package id of the package
+    /// The ids of the packages to package
     pub packages: Vec<PackageId>,
 
     /// True to sort the package into a prebuild directory
     #[arg(short, long, default_value = "false")]
     pub sorted: bool,
 
-    /// True to build all installed packages
+    /// True to package all installed packages
     #[arg(short, long, default_value = "false")]
     pub all: bool,
 }
