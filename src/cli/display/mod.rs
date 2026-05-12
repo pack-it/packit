@@ -2,6 +2,7 @@
 pub mod error;
 pub mod grid;
 pub mod logging;
+pub mod not_found;
 mod progressbar;
 mod prompts;
 mod reader;
