@@ -61,6 +61,7 @@ impl Repairer {
             Issue::InvalidDependents(invalid) => self.fix_invalid_dependents(invalid, register),
             Issue::InvalidActive(invalid) => self.fix_invalid_active(invalid, register, config)?,
             Issue::ForbiddenLink(forbidden) => self.fix_forbidden_link(forbidden, register, config)?,
+            Issue::MissingLinks(missing) => self.fix_missing_links(missing, register, config)?,
             _ => warning!("Fix not executed, because the issue fix is not yet implemented"),
         }
 
@@ -423,6 +424,35 @@ impl Repairer {
         // Unlink all packages which shouldn't be symlinked
         for package_name in forbidden {
             symlinker.unlink_package(register, &package_name)?;
+        }
+
+        Ok(())
+    }
+
+    /// Fixes the missing links issue.
+    fn fix_missing_links(&self, missing: Vec<PackageName>, register: &mut PackageRegister, config: &Config) -> Result<()> {
+        let symlinker = Symlinker::new(config);
+
+        // Re-link all packages which have missing symlinks
+        for package_name in &missing {
+            let Some(package) = register.get_package(package_name) else {
+                warning!("Could not find package {package_name} for fix, skipping");
+                continue;
+            };
+
+            let package_id = PackageId::new(package_name.clone(), package.active_version.clone());
+            let Some(package_version) = register.get_package_version(&package_id) else {
+                warning!("Could not find package {package_id} for fix, skipping");
+                continue;
+            };
+
+            let install_path = package_version.install_path.clone();
+            symlinker.unlink_package(register, package_name)?;
+            symlinker.create_symlinks(&install_path)?;
+
+            if let Some(package) = register.get_package_mut(package_name) {
+                package.symlinked = true;
+            };
         }
 
         Ok(())

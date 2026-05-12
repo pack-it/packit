@@ -49,7 +49,7 @@ pub enum Issue {
     ForbiddenLink(Vec<PackageName>),
 
     /// A list of packages which have missing symlinks.
-    MissingLinks(Vec<PackageId>),
+    MissingLinks(Vec<PackageName>),
 }
 
 impl Display for Issue {

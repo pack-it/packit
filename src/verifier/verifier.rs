@@ -207,7 +207,7 @@ impl Verifier {
                 Check::PackageForbiddenLink if self.check_forbidden_package_link(package_id, register, config)?.is_empty() => continue,
                 Check::PackageForbiddenLink => Issue::ForbiddenLink(vec![package_id.name.clone()]),
                 Check::PackageMissingLink if !self.check_missing_package_link(package_id, register, config)? => continue,
-                Check::PackageMissingLink => Issue::MissingLinks(vec![package_id.clone()]),
+                Check::PackageMissingLink => Issue::MissingLinks(vec![package_id.name.clone()]),
 
                 // Make sure that the check is not a package specific check
                 _ if Check::get_package_checks().contains(check) => return Err(VerifierError::UnimplementedCheckError),
@@ -590,7 +590,7 @@ impl Verifier {
         let mut missing = Vec::new();
         for package in register.iterate_all() {
             if self.check_missing_package_link(&package.package_id, register, config)? {
-                missing.push(package.package_id.clone());
+                missing.push(package.package_id.name.clone());
             }
         }
 
@@ -602,14 +602,15 @@ impl Verifier {
     }
 
     /// Checks for a given package if symlinks are missing.
+    /// Returns false if the given package is not the active package or if the package shouldn't be symlinked.
     /// Returns true if symlinks are missing, false otherwise.
     fn check_missing_package_link(&self, package_id: &PackageId, register: &PackageRegister, config: &Config) -> Result<bool> {
         let Some(package) = register.get_package(&package_id.name) else {
             return Ok(false);
         };
 
-        // Return early if the packages shouldn't be symlinked
-        if !package.symlinked {
+        // Return early if the package is not the active version or if the packages shouldn't be symlinked
+        if package.active_version != package_id.version || !package.symlinked {
             return Ok(false);
         }
 
