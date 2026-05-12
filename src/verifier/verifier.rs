@@ -4,7 +4,7 @@ use std::{collections::HashSet, fs, path::PathBuf, str::FromStr};
 use crate::{
     cli::display::logging::{debug, warning},
     config::{Config, Repository},
-    installer::types::{PackageId, PackageName, Version},
+    installer::types::{Dependency, PackageId, PackageName, Version},
     packager,
     platforms::{
         DEFAULT_PREFIX, Target,
@@ -14,7 +14,7 @@ use crate::{
         provider::{self, create_metadata_provider},
         types::Checksum,
     },
-    storage::package_register::PackageRegister,
+    storage::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
     utils::io::directory_is_empty,
     verifier::{
         Issue,
@@ -130,6 +130,7 @@ impl Verifier {
                 Check::Alterations => self.check_alterations(register, config)?,
                 Check::PackitGroup => self.check_packit_group(config)?,
                 Check::StrayDirectory => self.check_stray_directories(config)?,
+                Check::MissingDependencies => self.check_missing_dependencies(register, config)?,
                 Check::MissingDependents => self.check_missing_dependents(register),
                 Check::InvalidDependents => self.check_invalid_dependents(register),
                 Check::InvalidActive => self.check_invalid_active(register, config)?,
@@ -184,6 +185,10 @@ impl Verifier {
                 Check::PackageStorageConsistency => Issue::InconsistentStorage(vec![package_id.clone()]),
                 Check::PackageRegisterConsistency if self.register_package_is_consistent(package_id, register) => continue,
                 Check::PackageRegisterConsistency => Issue::InconsistentRegister(HashSet::from([package_id.clone()])),
+                Check::PackageMissingDependencies => match self.check_missing_package_dependencies(package_id, register, config)? {
+                    Some(issue) => issue,
+                    None => continue,
+                },
                 Check::PackageMissingDependents => match self.check_missing_package_dependents(package_id, register) {
                     Some(issue) => issue,
                     None => continue,
@@ -742,6 +747,86 @@ impl Verifier {
         }
 
         Some(Issue::MissingDependents(missing_dependents))
+    }
+
+    /// Checks for missing dependencies in all packages.
+    /// Returns an `Issue::MissingDependencies` with the missing dependencies, or `None` if no dependencies are missing.
+    fn check_missing_dependencies(&self, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
+        let mut missing = Vec::new();
+        for package in register.iterate_all() {
+            missing.extend(self.missing_dependencies_impl(package, config)?);
+        }
+
+        if missing.is_empty() {
+            return Ok(None);
+        }
+
+        Ok(Some(Issue::MissingDependencies(missing)))
+    }
+
+    /// Checks for missing dependencies for a single package.
+    /// Returns an `Issue::MissingDependencies` with the missing dependencies, or `None` if no dependencies are missing.
+    fn check_missing_package_dependencies(
+        &self,
+        package_id: &PackageId,
+        register: &PackageRegister,
+        config: &Config,
+    ) -> Result<Option<Issue>> {
+        let Some(package) = register.get_package_version(package_id) else {
+            return Ok(None);
+        };
+
+        let missing = self.missing_dependencies_impl(package, config)?;
+        if missing.is_empty() {
+            return Ok(None);
+        }
+
+        Ok(Some(Issue::MissingDependencies(missing)))
+    }
+
+    /// Checks if a given package misses dependencies in the register according to the repository metadata.
+    /// Returns a list of missing dependencies for the given package (can be empty).
+    fn missing_dependencies_impl(&self, package: &InstalledPackageVersion, config: &Config) -> Result<Vec<(PackageId, Dependency)>> {
+        let package_id = &package.package_id;
+        let mut missing = Vec::new();
+
+        let mut package_version_meta = None;
+        for repository_id in &config.repositories_rank {
+            let Some(repository) = config.repositories.get(repository_id) else {
+                continue;
+            };
+
+            // Continue if the repository doesn't match
+            if repository.path != package.source_repository_url {
+                continue;
+            }
+
+            let Some(provider) = create_metadata_provider(repository) else {
+                continue;
+            };
+
+            package_version_meta = Some(provider.read_package_version(&package_id.name, &package_id.version)?);
+        }
+
+        let Some(package_version_meta) = package_version_meta else {
+            return Ok(Vec::new());
+        };
+
+        // Check if each dependency is satisfied
+        for metadata_dependency in package_version_meta.dependencies {
+            let mut satisfied = false;
+            for dependency in &package.dependencies {
+                if metadata_dependency.satisfied(&dependency.name, &dependency.version) {
+                    satisfied = true;
+                }
+            }
+
+            if !satisfied {
+                missing.push((package_id.clone(), metadata_dependency));
+            }
+        }
+
+        Ok(missing)
     }
 
     /// Checks the completeness of the depedency trees from the packages.

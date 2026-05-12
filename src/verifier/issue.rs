@@ -2,7 +2,7 @@
 use colored::Colorize;
 use std::{collections::HashSet, fmt::Display, path::PathBuf};
 
-use crate::installer::types::{PackageId, PackageName};
+use crate::installer::types::{Dependency, PackageId, PackageName};
 
 /// Holds a single issue and the data regarding that issue.
 pub enum Issue {
@@ -17,6 +17,9 @@ pub enum Issue {
 
     /// A list of parents and their missing dependencies `<parent> : <missing>`.
     BrokenTree(Vec<(PackageId, PackageId)>),
+
+    /// A list of packages and their missing dependencies `<package> : <missing>`.
+    MissingDependencies(Vec<(PackageId, Dependency)>),
 
     /// A list of children and their missing dependents (parents) `<child> : <missing>`.
     MissingDependents(Vec<(PackageId, PackageId)>),
@@ -101,6 +104,20 @@ impl Display for Issue {
                         "  - {} missing {}",
                         parent.to_string().bold().blue(),
                         missing_package.to_string().bold().blue()
+                    );
+
+                    writeln!(f, "{}", item)?;
+                }
+            },
+            Issue::MissingDependencies(missing) => {
+                writeln!(f, "Missing dependencies")?;
+                writeln!(f, "The following dependencies are missing in the register:")?;
+
+                for (package, missing_dependency) in missing {
+                    let item = format!(
+                        "  - {} missing {}",
+                        package.to_string().bold().blue(),
+                        missing_dependency.to_string().bold().blue()
                     );
 
                     writeln!(f, "{}", item)?;
@@ -199,6 +216,9 @@ impl Issue {
             Issue::ForbiddenLink(_) => "To fix this issue we unlink the packages which have a forbidden link.",
             Issue::MissingLinks(_) => "To fix this issue we (temporarily) unlink and then link the package again.",
             Issue::BrokenTree(_) => "To fix this issue the missing packages will be installed.",
+            Issue::MissingDependencies(_) => {
+                "To fix this issue the missing dependencies will be added to the register. Using existing satisfying packages or the latest version otherwise."
+            },
             Issue::MissingDependents(_) => "To fix this issue the dependents will be added to the package from which they are missing.",
             Issue::InvalidDependents(_) => "To fix this issue we remove the invalid dependents from the register.",
             Issue::InconsistentStorage(_) => {

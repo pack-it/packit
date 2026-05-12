@@ -21,6 +21,7 @@ pub enum Check {
     InvalidActive,
     ForbiddenLink,
     MissingLink,
+    MissingDependencies,
 
     // Checks which are specific to a package
     PackageExistence,
@@ -33,6 +34,7 @@ pub enum Check {
     PackageInvalidActive,
     PackageForbiddenLink,
     PackageMissingLink,
+    PackageMissingDependencies,
 }
 
 impl Check {
@@ -53,38 +55,49 @@ impl Check {
 
             // General checks
             Self::PackitGroup => &[],
-            Self::InvalidActive => &[],
             Self::ForbiddenLink => &[],
             Self::MissingLink => &[Self::ForbiddenLink],
-            Self::StrayDirectory => &[Self::PackitGroup],
-            Self::StorageConsistency => &[Self::PackitGroup, Self::StrayDirectory],
-            Self::RegisterConsistency => &[Self::PackitGroup, Self::StrayDirectory],
-            Self::MissingDependents => &[Self::PackitGroup, Self::StorageConsistency, Self::RegisterConsistency],
-            Self::InvalidDependents => &[Self::PackitGroup, Self::StorageConsistency, Self::RegisterConsistency],
-            Self::DependencyTree => &[Self::PackitGroup, Self::StorageConsistency, Self::RegisterConsistency],
-            Self::Alterations => &[Self::PackitGroup, Self::StorageConsistency, Self::RegisterConsistency],
+            Self::InvalidActive => &[],
+            Self::StrayDirectory => &[],
+            Self::StorageConsistency => &[Self::StrayDirectory],
+            Self::RegisterConsistency => &[Self::StrayDirectory],
+            Self::MissingDependencies => &[Self::StorageConsistency, Self::RegisterConsistency],
+            Self::MissingDependents => &[Self::StorageConsistency, Self::RegisterConsistency, Self::MissingDependencies],
+            Self::InvalidDependents => &[Self::StorageConsistency, Self::RegisterConsistency, Self::MissingDependencies],
+            Self::DependencyTree => &[
+                Self::StorageConsistency,
+                Self::RegisterConsistency,
+                Self::MissingDependencies,
+                Self::MissingDependents,
+                Self::InvalidDependents,
+            ],
+            Self::Alterations => &[Self::StorageConsistency, Self::RegisterConsistency],
 
             // Package specific checks
             Self::PackageExistence => &[],
-            Self::PackageInvalidActive => &[],
-            Self::PackageForbiddenLink => &[Self::PackageExistence],
-            Self::PackageMissingLink => &[Self::PackageExistence, Self::PackageForbiddenLink],
+            Self::PackageForbiddenLink => &[],
+            Self::PackageMissingLink => &[Self::PackageForbiddenLink],
+            Self::PackageInvalidActive => &[Self::PackageExistence],
             Self::PackageStorageConsistency => &[Self::PackageExistence],
             Self::PackageRegisterConsistency => &[Self::PackageExistence],
+            Self::PackageMissingDependencies => &[Self::PackageExistence],
             Self::PackageMissingDependents => &[
                 Self::PackageExistence,
                 Self::PackageStorageConsistency,
                 Self::PackageRegisterConsistency,
+                Self::PackageMissingDependencies,
             ],
             Self::PackageInvalidDependents => &[
                 Self::PackageExistence,
                 Self::PackageStorageConsistency,
                 Self::PackageRegisterConsistency,
+                Self::PackageMissingDependencies,
             ],
             Self::PackageDependencyTree => &[
                 Self::PackageExistence,
                 Self::PackageStorageConsistency,
                 Self::PackageRegisterConsistency,
+                Self::PackageMissingDependencies,
             ],
             Self::PackageAlterations => &[
                 Self::PackageExistence,
@@ -119,6 +132,7 @@ impl Check {
             Self::InvalidActive,
             Self::ForbiddenLink,
             Self::MissingLink,
+            Self::MissingDependencies,
         ]
     }
 
@@ -135,6 +149,7 @@ impl Check {
             Self::PackageInvalidActive,
             Self::PackageForbiddenLink,
             Self::PackageMissingLink,
+            Self::PackageMissingDependencies,
         ]
     }
 
