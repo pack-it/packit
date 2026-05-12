@@ -11,7 +11,7 @@ use crate::{
     config::{Config, EditableConfig, Repository},
     installer::{
         Installer, InstallerOptions, Symlinker,
-        types::{PackageId, PackageName, Version},
+        types::{Dependency, PackageId, PackageName, Version},
     },
     platforms::{
         DEFAULT_PREFIX, Target,
@@ -57,6 +57,7 @@ impl Repairer {
             Issue::InconsistentStorage(missing) => self.fix_inconsistent_storage(missing, register, config, manager)?,
             Issue::InconsistentRegister(missing) => self.fix_inconsistent_register(missing, register, config, manager)?,
             Issue::StrayDirectories(strays) => self.fix_stray_directories(strays)?,
+            Issue::MissingDependencies(missing) => self.fix_missing_dependencies(missing, register, manager)?,
             Issue::MissingDependents(missing) => self.fix_missing_dependents(missing, register),
             Issue::InvalidDependents(invalid) => self.fix_invalid_dependents(invalid, register),
             Issue::InvalidActive(invalid) => self.fix_invalid_active(invalid, register, config)?,
@@ -359,6 +360,36 @@ impl Repairer {
                 true => fs::remove_dir_all(directory)?,
                 false => fs::remove_file(directory)?,
             }
+        }
+
+        Ok(())
+    }
+
+    /// Fixes missing dependencies by adding them to the register.
+    /// If an installed satisfying package can be found it's used, otherwise the latest version is used instead.
+    fn fix_missing_dependencies(
+        &self,
+        missing: Vec<(PackageId, Dependency)>,
+        register: &mut PackageRegister,
+        manager: &RepositoryManager,
+    ) -> Result<()> {
+        for (package_id, missing_dependency) in missing {
+            // Try to find an installed satisfying package, if not found use latest version
+            let package = match register.get_latest_satisfying_package(&missing_dependency) {
+                Some(package) => package.package_id.clone(),
+                None => {
+                    let (_, package_metadata) = manager.read_package(missing_dependency.get_name())?;
+                    let latest_version = package_metadata.get_latest_version(&Target::current())?;
+                    PackageId::new(missing_dependency.get_name().clone(), latest_version.clone())
+                },
+            };
+
+            // Set the dependency in the register
+            let Some(package_version) = register.get_package_version_mut(&package_id) else {
+                continue;
+            };
+
+            package_version.dependencies.insert(package);
         }
 
         Ok(())
