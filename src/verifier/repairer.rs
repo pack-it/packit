@@ -58,6 +58,7 @@ impl Repairer {
             Issue::InconsistentRegister(missing) => self.fix_inconsistent_register(missing, register, config, manager)?,
             Issue::StrayDirectories(strays) => self.fix_stray_directories(strays)?,
             Issue::MissingDependencies(missing) => self.fix_missing_dependencies(missing, register, manager)?,
+            Issue::InvalidDependencies(invalid) => self.fix_invalid_dependencies(invalid, register)?,
             Issue::MissingDependents(missing) => self.fix_missing_dependents(missing, register),
             Issue::InvalidDependents(invalid) => self.fix_invalid_dependents(invalid, register),
             Issue::InvalidActive(invalid) => self.fix_invalid_active(invalid, register, config)?,
@@ -390,6 +391,20 @@ impl Repairer {
             };
 
             package_version.dependencies.insert(package);
+        }
+
+        Ok(())
+    }
+
+    /// Fixes the invalid dependencies issue.
+    fn fix_invalid_dependencies(&self, invalid: Vec<(PackageId, PackageId)>, register: &mut PackageRegister) -> Result<()> {
+        for (package, invalid_dependency) in invalid {
+            // Assume the given package exists (continue otherwise)
+            let Some(package_version) = register.get_package_version_mut(&package) else {
+                continue;
+            };
+
+            package_version.dependencies.remove(&invalid_dependency);
         }
 
         Ok(())
