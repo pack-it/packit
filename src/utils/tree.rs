@@ -14,11 +14,11 @@ pub enum TreeError {
     #[error("Package id '{0}' cannot be found")]
     NotFound(PackageId),
 
-    #[error("Cannot create tree, because of an error reading the repository.")]
-    RepositoryError(#[from] RepositoryError),
-
     #[error("Cannot create tree, because necessary build attribute '{0}' was missing from the tree builder.")]
     MissingBuildAttributes(String),
+
+    #[error("Cannot create tree, because of an error reading the repository.")]
+    RepositoryError(#[from] RepositoryError),
 }
 
 pub type Result<T> = std::result::Result<T, TreeError>;

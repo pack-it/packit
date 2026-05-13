@@ -11,9 +11,6 @@ use crate::{
 /// The errors that occur during building.
 #[derive(Error, Debug)]
 pub enum BuilderError {
-    #[error("Build files download unsuccessful, with status code: {0}.")]
-    RequestUnsuccessful(reqwest::StatusCode),
-
     #[error("Dependency '{package_name}' of type '{dependency_type}' is not installed.")]
     MissingDependencyError {
         dependency_type: String,
@@ -46,6 +43,9 @@ pub enum BuilderError {
 
     #[error("Cannot request files for building")]
     RequestError(#[from] reqwest::Error),
+
+    #[error("Build files download unsuccessful, with status code: {0}.")]
+    RequestUnsuccessful(reqwest::StatusCode),
 
     #[error("Error while interacting with filesystem")]
     IOError(#[from] std::io::Error),

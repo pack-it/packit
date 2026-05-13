@@ -22,18 +22,6 @@ use crate::{
 /// The errors that occur during script handling.
 #[derive(Error, Debug)]
 pub enum ScriptError {
-    #[error("Cannot run script: {0}")]
-    RunError(std::io::Error),
-
-    #[error("Cannot transform path to absolute path: {0}")]
-    AbsolutePathError(std::io::Error),
-
-    #[error("Cannot save script to file: {0}")]
-    SaveError(std::io::Error),
-
-    #[error("Cannot create temp directory for script to run: {0}")]
-    TempCreationError(std::io::Error),
-
     #[error("Cannot parse PathBuf to string")]
     InvalidPathString,
 
@@ -45,6 +33,18 @@ pub enum ScriptError {
 
     #[error("Cannot fetch script from repository")]
     FetchScriptError(#[from] RepositoryError),
+
+    #[error("Cannot run script: {0}")]
+    RunError(std::io::Error),
+
+    #[error("Cannot transform path to absolute path: {0}")]
+    AbsolutePathError(std::io::Error),
+
+    #[error("Cannot save script to file: {0}")]
+    SaveError(std::io::Error),
+
+    #[error("Cannot create temp directory for script to run: {0}")]
+    TempCreationError(std::io::Error),
 }
 
 pub type Result<T> = core::result::Result<T, ScriptError>;

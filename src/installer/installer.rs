@@ -646,7 +646,7 @@ impl<'a> Installer<'a> {
         let provider = match provider::create_metadata_provider(repository) {
             Some(provider) => provider,
             None => {
-                error!(msg: "Unable to create repository provider to retrieve uninstall script");
+                error!(msg: "Unable to create repository provider, skipping install script execution. This may cause stray files");
                 return Ok(());
             },
         };
@@ -655,7 +655,10 @@ impl<'a> Installer<'a> {
         let package_version = match provider.read_package_version(&package_id.name, &package_id.version) {
             Ok(package_version) => package_version,
             Err(e) => {
-                error!(e, "Unable to read package version from source repository");
+                error!(
+                    e,
+                    "Unable to read package version from source repository, skipping install script execution. This may cause stray files"
+                );
                 return Ok(());
             },
         };

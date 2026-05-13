@@ -11,7 +11,11 @@ use crate::{
     cli::display::logging::warning,
     config::Repository,
     installer::types::{Dependency, OptionalPackageId, PackageId, PackageName},
-    register::{error::Result, installed_package::InstalledPackage, installed_package_version::InstalledPackageVersion},
+    register::{
+        error::{RegisterError, Result},
+        installed_package::InstalledPackage,
+        installed_package_version::InstalledPackageVersion,
+    },
     repositories::types::{PackageMeta, PackageVersionMeta},
     utils::constants::REGISTER_FILENAME,
 };
@@ -39,9 +43,9 @@ impl PackageRegister {
     ///
     /// This function will return an error if the file cannot be opened or if the content is invalid.
     pub fn from(path: &Path) -> Result<Self> {
-        // If the file does not exist, we return an empty storage
+        // If the file does not exist, return an error
         if !fs::exists(path)? {
-            return Ok(Self { packages: HashMap::new() });
+            return Err(RegisterError::RegisterDoesNotExist);
         }
 
         // Read data from file
@@ -49,7 +53,7 @@ impl PackageRegister {
 
         // If the file is empty, return an empty storage
         if file_content.trim().is_empty() {
-            return Ok(Self { packages: HashMap::new() });
+            return Err(RegisterError::RegisterDoesNotExist);
         }
 
         // Parse data and return
