@@ -27,6 +27,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Add the init command which initializes the Packit environment and files.
 - Add `--sorted` flag to the package command to sort packages into a prebuild directory structure.
 - Add `--all` flag to the package command to package all installed packages.
+- Bugfix in repairer fix for broken dependency trees. The missing dependency now gets the correct dependents and is set in the dependencies directory.
 
 ### Changes
 - The build system now includes a new `build-install` xtask to create a full Packit build in a `bin` directory structure.
