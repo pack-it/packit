@@ -20,6 +20,7 @@ use crate::{
     storage::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
     utils::{
         constants::{DEFAULT_METADATA_REPOSITORY_PATH, DEFAULT_METADATA_REPOSITORY_PROVIDER},
+        packit_version::packit_version,
         unwrap_or_exit::UnwrapOrExit,
     },
 };
@@ -76,10 +77,8 @@ impl HandleCommand for InitArgs {
             exit(2);
         }
 
-        let packit_version = env!("CARGO_PKG_VERSION");
-
         // Check if packit binary is at the correct location
-        let packit_package_path = prefix_directory.join("packages").join("packit").join(packit_version);
+        let packit_package_path = prefix_directory.join("packages").join("packit").join(packit_version!());
         let packit_binary = packit_package_path.join("bin").join("packit");
         if !packit_binary.exists() {
             error!(msg: "Packit cannot be initialized: expected packit binary at {}", packit_binary.display());
@@ -98,7 +97,7 @@ impl HandleCommand for InitArgs {
         // Create register containing packit
         let mut register = PackageRegister::new_empty();
         let package_name = PackageName::from_str("packit").expect("Expected 'packit' to be a valid package name");
-        let package_version = Version::from_str(packit_version).expect("Expected Packit version to be in the correct format");
+        let package_version = Version::from_str(packit_version!()).expect("Expected Packit version to be in the correct format");
         let package_id = PackageId::new(package_name, package_version);
 
         let installed_package_version = InstalledPackageVersion {

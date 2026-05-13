@@ -21,19 +21,23 @@ use clap::{Parser, Subcommand, builder::Styles};
 
 #[cfg(target_os = "windows")]
 use crate::cli::display::logging::debug;
-use crate::cli::{
-    commands::{
-        check::CheckArgs, config::ConfigArgs, fix::FixArgs, info::InfoArgs, init::InitArgs, install::InstallArgs, link::LinkArgs,
-        list::ListArgs, package::PackageArgs, search::SearchArgs, switch::SwitchArgs, uninstall::UninstallArgs, unlink::UnlinkArgs,
-        update::UpdateArgs, util::UtilArgs,
+use crate::{
+    cli::{
+        commands::{
+            check::CheckArgs, config::ConfigArgs, fix::FixArgs, info::InfoArgs, init::InitArgs, install::InstallArgs, link::LinkArgs,
+            list::ListArgs, package::PackageArgs, search::SearchArgs, switch::SwitchArgs, uninstall::UninstallArgs, unlink::UnlinkArgs,
+            update::UpdateArgs, util::UtilArgs,
+        },
+        display::logging::error,
     },
-    display::logging::error,
+    utils::packit_version::{packit_version, packit_version_name},
 };
 
 /// Represents the CLI interface with clap.
 #[derive(Parser, Debug)]
 #[command(name = "Packit", version, about)]
 #[command(long_about = "The universal package manager, designed to streamline the experience of installing packages on your system.")]
+#[command(long_version = concat!(packit_version!(), " (", packit_version_name!(), ")"))]
 pub struct Cli {
     #[command(subcommand)]
     command: Commands,

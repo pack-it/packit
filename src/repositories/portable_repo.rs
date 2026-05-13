@@ -19,9 +19,10 @@ use crate::{
         types::{IndexMeta, Licenses, PackageVersionMeta, RepositoryMeta},
     },
     storage::package_register::PackageRegister,
+    utils::packit_version::packit_version,
 };
 
-const PORTABLE_REPO_MAINTAINER: &str = concat!("Packit v", env!("CARGO_PKG_VERSION"));
+const PORTABLE_REPO_MAINTAINER: &str = concat!("Packit v", packit_version!());
 
 /// The errors that occur during portable repository creation.
 #[derive(Error, Debug)]
