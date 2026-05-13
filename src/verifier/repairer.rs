@@ -17,6 +17,7 @@ use crate::{
     platforms::{
         DEFAULT_PREFIX, Target,
         permissions::{does_packit_group_exist, set_packit_permissions},
+        symlink::{self, SymlinkError},
     },
     repositories::{
         manager::RepositoryManager,
@@ -195,16 +196,36 @@ impl Repairer {
         config: &Config,
         manager: &RepositoryManager,
     ) -> Result<()> {
-        for (_, missing_package) in missing {
-            // There could be duplicates in the missing packages, so skip when already seen
-            if register.get_package_version(&missing_package).is_some() {
-                continue;
+        for (package, missing_package) in missing {
+            let package_version = match register.get_package_version_mut(&missing_package) {
+                Some(package_version) => package_version,
+                None => {
+                    // Install the package
+                    let installer_options = InstallerOptions::default().skip_symlinking(true);
+                    let mut installer = Installer::new(config, register, manager, installer_options);
+                    installer.install(&missing_package.clone().into())?;
+
+                    // Assume installation worked
+                    let Some(package_version) = register.get_package_version_mut(&missing_package) else {
+                        continue;
+                    };
+
+                    package_version
+                },
+            };
+
+            // Insert the package which misses the dependency as dependent
+            package_version.dependents.insert(package.clone());
+
+            // Fix the dependencies directory
+            let dependencies_dir = config.prefix_directory.join("dependencies").join(package.to_string()).join(missing_package.name);
+            match symlink::remove_symlink(&dependencies_dir) {
+                Ok(_) => {},
+                Err(SymlinkError::NonSymlink) => {},
+                Err(e) => Err(e)?,
             }
 
-            // Install the package
-            let installer_options = InstallerOptions::default().skip_symlinking(true);
-            let mut installer = Installer::new(config, register, manager, installer_options);
-            installer.install(&missing_package.clone().into())?;
+            symlink::create_symlink(&package_version.install_path, &dependencies_dir)?;
         }
 
         Ok(())
