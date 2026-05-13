@@ -130,12 +130,12 @@ impl Verifier {
                 Check::Alterations => self.check_alterations(register, config)?,
                 Check::PackitGroup => self.check_packit_group(config)?,
                 Check::StrayDirectory => self.check_stray_directories(config)?,
-                Check::MissingDependencies => self.check_missing_dependencies(register, config)?,
-                Check::InvalidDependencies => self.check_invalid_dependencies(register, config)?,
+                Check::MissingDependencies => self.check_missing_dependencies(register)?,
+                Check::InvalidDependencies => self.check_invalid_dependencies(register)?,
                 Check::MissingDependents => self.check_missing_dependents(register),
                 Check::InvalidDependents => self.check_invalid_dependents(register),
                 Check::InvalidActive => self.check_invalid_active(register, config)?,
-                Check::ForbiddenLink => self.check_forbidden_link(register, config)?,
+                Check::ForbiddenLink => self.check_forbidden_link(register)?,
                 Check::MissingLink => self.check_missing_link(register, config)?,
 
                 // Make sure that the check is not a general check
@@ -186,11 +186,11 @@ impl Verifier {
                 Check::PackageStorageConsistency => Issue::InconsistentStorage(vec![package_id.clone()]),
                 Check::PackageRegisterConsistency if self.register_package_is_consistent(package_id, register) => continue,
                 Check::PackageRegisterConsistency => Issue::InconsistentRegister(HashSet::from([package_id.clone()])),
-                Check::PackageMissingDependencies => match self.check_missing_package_dependencies(package_id, register, config)? {
+                Check::PackageMissingDependencies => match self.check_missing_package_dependencies(package_id, register)? {
                     Some(issue) => issue,
                     None => continue,
                 },
-                Check::PackageInvalidDependencies => match self.check_invalid_package_dependencies(package_id, register, config)? {
+                Check::PackageInvalidDependencies => match self.check_invalid_package_dependencies(package_id, register)? {
                     Some(issue) => issue,
                     None => continue,
                 },
@@ -214,7 +214,7 @@ impl Verifier {
                 Check::PackageAlterations => Issue::AlteredPackage(vec![package_id.clone()]),
                 Check::PackageInvalidActive if self.check_invalid_package_active(&package_id.name, register, config)?.is_none() => continue,
                 Check::PackageInvalidActive => Issue::InvalidActive(vec![package_id.name.clone()]),
-                Check::PackageForbiddenLink if self.check_forbidden_package_link(package_id, register, config)?.is_empty() => continue,
+                Check::PackageForbiddenLink if self.check_forbidden_package_link(package_id, register)?.is_empty() => continue,
                 Check::PackageForbiddenLink => Issue::ForbiddenLink(vec![package_id.name.clone()]),
                 Check::PackageMissingLink if !self.check_missing_package_link(package_id, register, config)? => continue,
                 Check::PackageMissingLink => Issue::MissingLinks(vec![package_id.name.clone()]),
@@ -529,10 +529,10 @@ impl Verifier {
 
     /// Checks all packages for a forbidden link. Where a forbidden link is a package which is symlinked
     /// while it shouldn't be according to the repository metadata.
-    fn check_forbidden_link(&self, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
+    fn check_forbidden_link(&self, register: &PackageRegister) -> Result<Option<Issue>> {
         let mut forbidden = Vec::new();
         for package in register.iterate_all() {
-            forbidden.extend(self.check_forbidden_package_link(&package.package_id, register, config)?);
+            forbidden.extend(self.check_forbidden_package_link(&package.package_id, register)?);
         }
 
         if forbidden.is_empty() {
@@ -544,24 +544,23 @@ impl Verifier {
 
     /// Checks a given package for a forbidden link. Where a forbidden link is a package which is symlinked
     /// while it shouldn't be according to the repository metadata.
-    fn check_forbidden_package_link(
-        &self,
-        package_id: &PackageId,
-        register: &PackageRegister,
-        config: &Config,
-    ) -> Result<Vec<PackageName>> {
+    fn check_forbidden_package_link(&self, package_id: &PackageId, register: &PackageRegister) -> Result<Vec<PackageName>> {
         let Some(package_version) = register.get_package_version(package_id) else {
             return Ok(Vec::new());
         };
 
         // Check if this package is allowed to be symlinked
         // Assume the package version meta can be found (otherwise no issue is returned)
-        let mut link_allowed = true;
-        if let Some(package_version_meta) = self.get_package_version_meta(package_id, package_version, config)? {
-            if package_version_meta.skip_symlinking {
-                link_allowed = false;
-            }
-        }
+        let link_allowed = match self.get_package_version_meta(package_id, package_version)? {
+            Some(package_version) => {
+                let package_target = package_version.get_target(&package_version.get_best_target(&Target::current())?)?;
+                match package_target.skip_symlinking {
+                    Some(skip_symlinking) => !skip_symlinking,
+                    None => !package_version.skip_symlinking,
+                }
+            },
+            None => true,
+        };
 
         // Return early if symlinking is allowed according to the metadata
         if link_allowed {
@@ -741,10 +740,10 @@ impl Verifier {
 
     /// Checks for missing dependencies in all packages.
     /// Returns an `Issue::MissingDependencies` with the missing dependencies, or `None` if no dependencies are missing.
-    fn check_missing_dependencies(&self, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
+    fn check_missing_dependencies(&self, register: &PackageRegister) -> Result<Option<Issue>> {
         let mut missing = Vec::new();
         for package in register.iterate_all() {
-            missing.extend(self.missing_dependencies_impl(package, config)?);
+            missing.extend(self.missing_dependencies_impl(package)?);
         }
 
         if missing.is_empty() {
@@ -756,17 +755,12 @@ impl Verifier {
 
     /// Checks for missing dependencies for a single package.
     /// Returns an `Issue::MissingDependencies` with the missing dependencies, or `None` if no dependencies are missing.
-    fn check_missing_package_dependencies(
-        &self,
-        package_id: &PackageId,
-        register: &PackageRegister,
-        config: &Config,
-    ) -> Result<Option<Issue>> {
+    fn check_missing_package_dependencies(&self, package_id: &PackageId, register: &PackageRegister) -> Result<Option<Issue>> {
         let Some(package) = register.get_package_version(package_id) else {
             return Ok(None);
         };
 
-        let missing = self.missing_dependencies_impl(package, config)?;
+        let missing = self.missing_dependencies_impl(package)?;
         if missing.is_empty() {
             return Ok(None);
         }
@@ -776,12 +770,12 @@ impl Verifier {
 
     /// Checks if a given package misses dependencies in the register according to the repository metadata.
     /// Returns a list of missing dependencies for the given package (can be empty).
-    fn missing_dependencies_impl(&self, package: &InstalledPackageVersion, config: &Config) -> Result<Vec<(PackageId, Dependency)>> {
+    fn missing_dependencies_impl(&self, package: &InstalledPackageVersion) -> Result<Vec<(PackageId, Dependency)>> {
         let package_id = &package.package_id;
         let mut missing = Vec::new();
 
         // Assume the package version meta can be found (otherwise no issue is returned)
-        let Some(package_version_meta) = self.get_package_version_meta(package_id, package, config)? else {
+        let Some(package_version_meta) = self.get_package_version_meta(package_id, package)? else {
             return Ok(Vec::new());
         };
 
@@ -804,10 +798,10 @@ impl Verifier {
 
     /// Checks for invalid dependencies in all packages.
     /// Returns an `Issue::InvalidDependencies` with the invalid dependencies, or `None` if no dependencies are invalid.
-    fn check_invalid_dependencies(&self, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
+    fn check_invalid_dependencies(&self, register: &PackageRegister) -> Result<Option<Issue>> {
         let mut invalid = Vec::new();
         for package in register.iterate_all() {
-            invalid.extend(self.invalid_dependencies_impl(config, package)?);
+            invalid.extend(self.invalid_dependencies_impl(package)?);
         }
 
         if invalid.is_empty() {
@@ -819,17 +813,12 @@ impl Verifier {
 
     /// Checks for invalid dependencies for a single package.
     /// Returns an `Issue::InvalidDependencies` with the invalid dependencies, or `None` if no dependencies are invalid.
-    fn check_invalid_package_dependencies(
-        &self,
-        package_id: &PackageId,
-        register: &PackageRegister,
-        config: &Config,
-    ) -> Result<Option<Issue>> {
+    fn check_invalid_package_dependencies(&self, package_id: &PackageId, register: &PackageRegister) -> Result<Option<Issue>> {
         let Some(package) = register.get_package_version(package_id) else {
             return Ok(None);
         };
 
-        let invalid = self.invalid_dependencies_impl(config, package)?;
+        let invalid = self.invalid_dependencies_impl(package)?;
         if invalid.is_empty() {
             return Ok(None);
         }
@@ -839,12 +828,12 @@ impl Verifier {
 
     /// Checks if a given package has invalid dependencies in the register according to the repository metadata.
     /// Returns a list of invalid dependencies for the given package (can be empty).
-    fn invalid_dependencies_impl(&self, config: &Config, package: &InstalledPackageVersion) -> Result<Vec<(PackageId, PackageId)>> {
+    fn invalid_dependencies_impl(&self, package: &InstalledPackageVersion) -> Result<Vec<(PackageId, PackageId)>> {
         let package_id = &package.package_id;
         let mut invalid = Vec::new();
 
         // Assume the package version meta can be found (otherwise no issue is returned)
-        let Some(package_version_meta) = self.get_package_version_meta(package_id, package, config)? else {
+        let Some(package_version_meta) = self.get_package_version_meta(package_id, package)? else {
             return Ok(Vec::new());
         };
 
@@ -994,32 +983,15 @@ impl Verifier {
         Ok(Some(Issue::StrayDirectories(strays)))
     }
 
-    // TODO: Refactor this, this shouldn't implemented here
-    fn get_package_version_meta(
-        &self,
-        package_id: &PackageId,
-        package: &InstalledPackageVersion,
-        config: &Config,
-    ) -> Result<Option<PackageVersionMeta>> {
-        let mut package_version_meta = None;
-        for repository_id in &config.repositories_rank {
-            let Some(repository) = config.repositories.get(repository_id) else {
-                continue;
-            };
+    /// Gets the package version meta, or `None` if the provider cannot be found.
+    fn get_package_version_meta(&self, package_id: &PackageId, package: &InstalledPackageVersion) -> Result<Option<PackageVersionMeta>> {
+        // TODO: Refactor this, this shouldn't implemented here like this
+        let repository = Repository::new(&package.source_repository_url, &package.source_repository_provider);
+        let Some(provider) = create_metadata_provider(&repository) else {
+            return Ok(None);
+        };
 
-            // Continue if the repository doesn't match
-            if repository.path != package.source_repository_url {
-                continue;
-            }
-
-            let Some(provider) = create_metadata_provider(repository) else {
-                continue;
-            };
-
-            package_version_meta = Some(provider.read_package_version(&package_id.name, &package_id.version)?);
-        }
-
-        Ok(package_version_meta)
+        Ok(Some(provider.read_package_version(&package_id.name, &package_id.version)?))
     }
 
     /// Get the issues found states.
