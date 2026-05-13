@@ -297,7 +297,7 @@ impl Repairer {
             let revisions = package_version_meta.get_revision_count();
             let used_prebuild = match manager.get_prebuild_checksum(&repository_id, package_id, revisions, &Target::current())? {
                 Some(correct_checksum) => {
-                    let compressed = packager::compress(&install_path)?;
+                    let compressed = packager::compress(install_path)?;
                     let checksum = Checksum::from_bytes(&compressed);
                     correct_checksum == checksum
                 },
@@ -470,12 +470,12 @@ impl Repairer {
             };
 
             // Set the active to the latest installed version of the package
-            if let Some(version) = package.versions.keys().into_iter().max() {
+            if let Some(version) = package.versions.keys().max() {
                 package.active_version = version.clone();
             }
 
             let package_id = PackageId::new(package_name.clone(), package.active_version.clone());
-            let symlinked = package.symlinked.clone();
+            let symlinked = package.symlinked;
             symlinker.set_active(register, &package_id, symlinked)?;
         }
 

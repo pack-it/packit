@@ -215,6 +215,7 @@ impl PackageRegister {
 
     /// Gets mutable references to all installed versions of a certain package from the register storage.
     /// Returns a list containing all installed versions, which is empty if the package is not installed.
+    #[expect(unused)]
     pub fn get_all_package_versions_mut(&mut self, package_name: &PackageName) -> Vec<&mut InstalledPackageVersion> {
         match self.packages.get_mut(package_name) {
             Some(package) => package.get_versions_mut(),

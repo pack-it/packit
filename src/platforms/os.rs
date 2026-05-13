@@ -56,7 +56,7 @@ impl Os {
 
 /// Represents an OS version. In case of Linux this also includes the distro and distro version.
 #[derive(Clone, Debug, PartialEq)]
-#[allow(dead_code)]
+#[expect(dead_code)]
 pub enum OsVersion {
     MacOs {
         version: Version,

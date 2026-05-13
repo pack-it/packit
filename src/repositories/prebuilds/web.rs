@@ -53,7 +53,7 @@ impl PrebuildProvider for WebPrebuildProvider {
             },
         };
 
-        Ok((ArchiveExtension::from_path(&url.to_string()), bytes))
+        Ok((ArchiveExtension::from_path(url.as_ref()), bytes))
     }
 }
 

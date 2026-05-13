@@ -72,6 +72,7 @@ impl Display for TargetName {
 
 impl TargetName {
     /// Checks if the target name is a Unix target. Returns true if it is, false otherwise.
+    #[expect(unused)]
     pub fn is_unix(&self) -> bool {
         match self {
             TargetName::Architecture(architecture) => architecture.get_os().is_unix(),

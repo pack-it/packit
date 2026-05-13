@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{fs, path::PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use bytes::Bytes;
 use diffy::patch_set::FilePatch;
@@ -34,8 +37,8 @@ pub enum PatchError {
 pub type Result<T> = std::result::Result<T, PatchError>;
 
 // Applies the given patch to the given directory directory.
-pub fn apply_patch(patch: &Bytes, directory: &PathBuf) -> Result<()> {
-    let patches = PatchSet::parse_bytes(&patch, ParseOptions::gitdiff());
+pub fn apply_patch(patch: &Bytes, directory: &Path) -> Result<()> {
+    let patches = PatchSet::parse_bytes(patch, ParseOptions::gitdiff());
 
     for file_patch in patches {
         let file_patch = file_patch?;
@@ -54,7 +57,7 @@ pub fn apply_patch(patch: &Bytes, directory: &PathBuf) -> Result<()> {
 }
 
 // Handles the file operation to apply the different patch operations.
-fn handle_file_operation(operation: &FileOperation<[u8]>, patch: &FilePatch<[u8]>, directory: &PathBuf) -> Result<()> {
+fn handle_file_operation(operation: &FileOperation<[u8]>, patch: &FilePatch<[u8]>, directory: &Path) -> Result<()> {
     match operation {
         FileOperation::Create(path) => {
             let path = create_path(directory, path)?;
@@ -102,7 +105,7 @@ fn handle_file_operation(operation: &FileOperation<[u8]>, patch: &FilePatch<[u8]
 }
 
 // Creates a path for the patch by parsing the path from bytes and appending it to the given directory.
-fn create_path(directory: &PathBuf, patch_path: &[u8]) -> Result<PathBuf> {
+fn create_path(directory: &Path, patch_path: &[u8]) -> Result<PathBuf> {
     Ok(directory.join(io::parse_path_from_bytes(patch_path)?))
 }
 
@@ -114,12 +117,12 @@ fn apply_path(patch: &PatchKind<[u8]>, source: Option<&PathBuf>, destination: &P
     }
 
     let original = match source {
-        Some(source) => fs::read(&source)?,
+        Some(source) => fs::read(source)?,
         None => vec![],
     };
 
     let patched = match patch {
-        PatchKind::Text(patch) => diffy::apply_bytes(&original, &patch)?,
+        PatchKind::Text(patch) => diffy::apply_bytes(&original, patch)?,
         PatchKind::Binary(patch) => patch.apply(&original)?,
     };
 
@@ -127,7 +130,7 @@ fn apply_path(patch: &PatchKind<[u8]>, source: Option<&PathBuf>, destination: &P
         fs::create_dir_all(parent)?;
     }
 
-    fs::write(&destination, patched)?;
+    fs::write(destination, patched)?;
 
     Ok(())
 }

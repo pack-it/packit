@@ -205,7 +205,7 @@ impl<'a> Builder<'a> {
     }
 
     /// Downloads a file from the url, or one of the mirrors. Checks against a checksum and shows a spinner.
-    fn download_file(&self, url: &str, mirrors: &Vec<String>, checksum: &Checksum, download_description: &str) -> Result<Bytes> {
+    fn download_file(&self, url: &str, mirrors: &[String], checksum: &Checksum, download_description: &str) -> Result<Bytes> {
         // Show download spinner
         let spinner = Spinner::new();
         spinner.show(format!("Downloading '{download_description}' from {}", &url));

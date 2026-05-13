@@ -44,7 +44,7 @@ The Packit repository is licensed under the GNU General Public License v3.0. See
 ## Usage
 The general usage of Packit is: `pit <COMMAND>`.
 
-#### `pit install <PACKAGE-NAME>[@<VERSION>] [--build] [--build-all] [--keep-build] [--skip-symlinking] [--skip-active] [--verbose]`
+#### `pit install <PACKAGE-NAME>[@<VERSION>] ... [--build] [--build-all] [--keep-build] [--skip-symlinking] [--skip-active] [--verbose]`
 Installs the specified packages, if a version is given that version will be installed, if not the latest available version will be installed. Multiple packages can be specified by entering multiple names, split by a space.
 <br>
 If the `--build` option is given, the package is build from source, instead of installing a prebuild version.
@@ -54,7 +54,7 @@ If the `--skip-symlinking` option is enabled, the package is not symlinked into 
 If the `--skip-active` option is enabled, the package is not set to active and the current active version is kept. If there is no current active version, this flag is ignored and the package is set to active.
 If the `--verbose` option is given, extra verbose output is shown, like build output.
 
-#### `pit uninstall <PACKAGE-NAME>[@<VERSION>]`
+#### `pit uninstall <PACKAGE-NAME>[@<VERSION>] ...`
 Uninstalls the specified packages, if a version is given that version will be uninstalled, if not, you will be asked if you want to delete all versions of `<PACKAGE-NAME>` in case there are multiple versions installed. Multiple packages can be specified by entering multiple names, split by a space.
 
 #### `pit list`

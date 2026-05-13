@@ -25,7 +25,7 @@ impl HandleCommand for ListArgs {
         let register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
         let mut packages: Vec<&InstalledPackageVersion> = register.iterate_all().collect();
-        packages.sort_by(|a, b| a.package_id.to_string().cmp(&b.package_id.to_string()));
+        packages.sort_by_key(|a| a.package_id.to_string());
 
         if !self.updatables {
             display::print_grid(packages.iter().map(|p| &p.package_id).collect());

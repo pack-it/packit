@@ -68,7 +68,7 @@ impl PackageArgs {
     fn package(&self, package_id: &PackageId, destination: &PathBuf, config: &Config, register: &PackageRegister) {
         let package_version = match register.get_package_version(package_id) {
             Some(package_version) => package_version,
-            None => not_found::register_package_version(package_id, &register),
+            None => not_found::register_package_version(package_id, register),
         };
 
         // Automatically create the destination directory
@@ -78,7 +78,7 @@ impl PackageArgs {
         let spinner_message = format!("Packaging {package_id}");
         spinner.show(spinner_message.clone());
 
-        packager::package(&config, package_id, destination, package_version.revisions.len() as u64).unwrap_or_exit(1);
+        packager::package(config, package_id, destination, package_version.revisions.len() as u64).unwrap_or_exit(1);
 
         spinner.finish(format!("{spinner_message} successful"));
         println!("Successfully packaged {package_id} to {:?}", destination);

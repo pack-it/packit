@@ -25,7 +25,7 @@ where
     }
 
     // Calculate column and row (automatically rounds down to the nearest int), +1 for whitespace
-    let column_width = (widest.len() + 1) as usize;
+    let column_width = widest.len() + 1;
     let column_count = terminal_width / column_width;
     let row_count = items.len().div_ceil(column_count);
 

@@ -1,5 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{collections::HashSet, fs, path::PathBuf, str::FromStr};
+use std::{
+    collections::HashSet,
+    fs,
+    path::{Path, PathBuf},
+    str::FromStr,
+};
 
 use crate::{
     cli::display::logging::{debug, warning},
@@ -314,7 +319,7 @@ impl Verifier {
 
     /// Checks for alterations in all packages using a checksum which is compared to the checksum from the pre-build.
     /// Returns an alteration issue or None if no packages can be found that are altered.
-    #[expect(unused_variables)]
+    #[expect(unused_variables, unreachable_code)]
     fn check_alterations(&self, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
         // TODO: For now skip this check, because it will never work (yet)
         return Ok(None);
@@ -524,7 +529,7 @@ impl Verifier {
             return Ok(Some(package_name.clone()));
         }
 
-        return Ok(None);
+        Ok(None)
     }
 
     /// Checks all packages for a forbidden link. Where a forbidden link is a package which is symlinked
@@ -611,7 +616,7 @@ impl Verifier {
         let package_path = config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
         for directory_name in ["bin", "include", "lib", "share"] {
             let symlink_directory = config.prefix_directory.join(directory_name);
-            let directory = package_path.join(&directory_name);
+            let directory = package_path.join(directory_name);
 
             // Continue if the directory doesn't exist in the package
             if !fs::exists(&directory)? {
@@ -628,7 +633,7 @@ impl Verifier {
 
     /// Checks if a symlink can be found for the given directory.
     /// Returns true if a symlink cannot be found, false otherwise.
-    fn check_symlinks(&self, directory: &PathBuf, symlink_directory: &PathBuf) -> Result<bool> {
+    fn check_symlinks(&self, directory: &PathBuf, symlink_directory: &Path) -> Result<bool> {
         for file in fs::read_dir(directory)? {
             let file = file?;
             let file_path = file.path();
@@ -695,7 +700,7 @@ impl Verifier {
         for package in register.iterate_all() {
             for dependency in &package.dependencies {
                 // No issues for a package which cannot be found
-                let Some(dependency_version) = register.get_package_version(&dependency) else {
+                let Some(dependency_version) = register.get_package_version(dependency) else {
                     continue;
                 };
 
@@ -715,9 +720,7 @@ impl Verifier {
     /// Check for the given package if its dependencies have it as a dependent.
     fn check_missing_package_dependents(&self, package_id: &PackageId, register: &PackageRegister) -> Option<Issue> {
         let mut missing_dependents = Vec::new();
-        let Some(package_version) = register.get_package_version(package_id) else {
-            return None;
-        };
+        let package_version = register.get_package_version(package_id)?;
 
         for package in register.iterate_all() {
             // Make sure not to check itself

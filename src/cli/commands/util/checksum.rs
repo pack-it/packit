@@ -54,6 +54,6 @@ impl HandleCommand for ChecksumArgs {
         let checksum = Checksum::from_bytes(&bytes);
 
         spinner.finish("Downloading file successful".into());
-        println!("Found checksum {}", checksum.to_string());
+        println!("Found checksum {}", checksum);
     }
 }

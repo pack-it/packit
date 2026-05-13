@@ -124,7 +124,7 @@ impl<V, L: Eq> Node<V, L> {
     {
         let existing_childs = self.get_children_ids();
 
-        for child in expander(&self)? {
+        for child in expander(self)? {
             let (id, value, label) = populator(child)?;
 
             // Node already exists, skip adding
@@ -148,7 +148,7 @@ impl<V, L: Eq> Node<V, L> {
 
     /// The implementation of the tree display.
     fn display_impl(&self, f: &mut std::fmt::Formatter<'_>, node: &Node<V, L>, prefix: &str) -> std::fmt::Result {
-        write!(f, "{prefix}{}\n", node.id)?;
+        writeln!(f, "{prefix}{}", node.id)?;
 
         // Note that when the input prefix is "" then this prefix will also be ""
         let prefix = match prefix.ends_with(BRANCH) {

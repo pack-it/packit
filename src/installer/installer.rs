@@ -828,7 +828,7 @@ impl<'a> Installer<'a> {
         }
 
         // Get the installed package version and simultaneously check if any version of the package exists
-        Ok(installed_versions.get(0).ok_or(InstallerError::PackageNotFound {
+        Ok(installed_versions.first().ok_or(InstallerError::PackageNotFound {
             package_name: optional_id.name.to_string(),
             version: Some("any".to_string()),
         })?)
