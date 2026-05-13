@@ -10,14 +10,18 @@ use crate::{
     cli::display::{QuestionResponse, ask_user, ask_user_input, logging::warning},
     config::{Config, EditableConfig, Repository},
     installer::{
-        Installer, InstallerOptions,
-        types::{PackageId, Version},
+        Installer, InstallerOptions, Symlinker,
+        types::{Dependency, PackageId, PackageName, Version},
     },
+    packager,
     platforms::{
         DEFAULT_PREFIX, Target,
         permissions::{does_packit_group_exist, set_packit_permissions},
     },
-    repositories::{manager::RepositoryManager, types::PackageVersionMeta},
+    repositories::{
+        manager::RepositoryManager,
+        types::{Checksum, PackageVersionMeta},
+    },
     storage::package_register::PackageRegister,
     utils::constants::{DEFAULT_METADATA_REPOSITORY_NAME, REGISTER_FILENAME},
     verifier::{
@@ -56,6 +60,13 @@ impl Repairer {
             Issue::InconsistentStorage(missing) => self.fix_inconsistent_storage(missing, register, config, manager)?,
             Issue::InconsistentRegister(missing) => self.fix_inconsistent_register(missing, register, config, manager)?,
             Issue::StrayDirectories(strays) => self.fix_stray_directories(strays)?,
+            Issue::MissingDependencies(missing) => self.fix_missing_dependencies(missing, register, manager)?,
+            Issue::InvalidDependencies(invalid) => self.fix_invalid_dependencies(invalid, register)?,
+            Issue::MissingDependents(missing) => self.fix_missing_dependents(missing, register),
+            Issue::InvalidDependents(invalid) => self.fix_invalid_dependents(invalid, register),
+            Issue::InvalidActive(invalid) => self.fix_invalid_active(invalid, register, config)?,
+            Issue::ForbiddenLink(forbidden) => self.fix_forbidden_link(forbidden, register, config)?,
+            Issue::MissingLinks(missing) => self.fix_missing_links(missing, register, config)?,
             _ => warning!("Fix not executed, because the issue fix is not yet implemented"),
         }
 
@@ -242,7 +253,6 @@ impl Repairer {
     }
 
     /// Fixes an inconsistent register by gathering still existing data from the Packit directories.
-    /// TODO: Expand with a check with package checksums, to make sure that the found repository has the same checksum
     fn fix_inconsistent_register(
         &mut self,
         missing: HashSet<PackageId>,
@@ -260,6 +270,19 @@ impl Repairer {
                 continue;
             }
 
+            // Use checksum to check if a prebuild was used (use checksum to make sure it's the same prebuild)
+            let install_path = &package_directory.join(&package_id.name).join(package_id.version.to_string());
+            let (repository_id, package_version_meta) = manager.read_package_version(package_id, &Target::current())?;
+            let revisions = package_version_meta.get_revision_count();
+            let used_prebuild = match manager.get_prebuild_checksum(&repository_id, package_id, revisions, &Target::current())? {
+                Some(correct_checksum) => {
+                    let compressed = packager::compress(&install_path)?;
+                    let checksum = Checksum::from_bytes(&compressed);
+                    correct_checksum == checksum
+                },
+                None => false,
+            };
+
             // Figure out the active version
             let active_target = fs::read_link(active_directory.join(&package_id.name))?;
             let target_name = active_target.file_name().ok_or(VerifierError::InvalidSymlink)?;
@@ -273,17 +296,9 @@ impl Repairer {
 
             // Get information with the manager
             // Note that this information is valid, but necessarily the same as before the issue arised
-            let (_, package_meta) = manager.read_package(&package_id.name)?;
-            let (repository_id, package_version_meta) = manager.read_package_version(package_id, &Target::current())?;
+            let package_meta = manager.read_repo_package(&repository_id, &package_id.name)?;
             let dependencies = self.get_latest_satisfying_packages(&package_version_meta, &storage_packages);
             let source_repository = config.repositories.get(&repository_id).expect("Expected repository in config");
-            let install_path = &package_directory.join(&package_id.name).join(package_id.version.to_string());
-            let prebuild_url = manager.get_prebuild_url(
-                &repository_id,
-                package_id,
-                package_version_meta.revisions.len() as u64,
-                &Target::current(),
-            )?;
 
             // Make sure that all dependencies are registered as well
             let missing_dependencies = dependencies.iter().filter(|d| register.get_package_version(d).is_none()).cloned().collect();
@@ -297,7 +312,7 @@ impl Repairer {
                 install_path,
                 symlinked,
                 active,
-                prebuild_url.is_some(),
+                used_prebuild,
             )?;
         }
 
@@ -351,6 +366,137 @@ impl Repairer {
                 true => fs::remove_dir_all(directory)?,
                 false => fs::remove_file(directory)?,
             }
+        }
+
+        Ok(())
+    }
+
+    /// Fixes missing dependencies by adding them to the register.
+    /// If an installed satisfying package can be found it's used, otherwise the latest version is used instead.
+    fn fix_missing_dependencies(
+        &self,
+        missing: Vec<(PackageId, Dependency)>,
+        register: &mut PackageRegister,
+        manager: &RepositoryManager,
+    ) -> Result<()> {
+        for (package_id, missing_dependency) in missing {
+            // Try to find an installed satisfying package, if not found use latest version
+            let package = match register.get_latest_satisfying_package(&missing_dependency) {
+                Some(package) => package.package_id.clone(),
+                None => {
+                    let (_, package_metadata) = manager.read_package(missing_dependency.get_name())?;
+                    let latest_version = package_metadata.get_latest_version(&Target::current())?;
+                    PackageId::new(missing_dependency.get_name().clone(), latest_version.clone())
+                },
+            };
+
+            // Set the dependency in the register
+            let Some(package_version) = register.get_package_version_mut(&package_id) else {
+                continue;
+            };
+
+            package_version.dependencies.insert(package);
+        }
+
+        Ok(())
+    }
+
+    /// Fixes the invalid dependencies issue.
+    fn fix_invalid_dependencies(&self, invalid: Vec<(PackageId, PackageId)>, register: &mut PackageRegister) -> Result<()> {
+        for (package, invalid_dependency) in invalid {
+            // Assume the given package exists (continue otherwise)
+            let Some(package_version) = register.get_package_version_mut(&package) else {
+                continue;
+            };
+
+            package_version.dependencies.remove(&invalid_dependency);
+        }
+
+        Ok(())
+    }
+
+    /// Fixes the missing dependents issue.
+    fn fix_missing_dependents(&self, missing: Vec<(PackageId, PackageId)>, register: &mut PackageRegister) {
+        for (child, parent) in missing {
+            let Some(package_version) = register.get_package_version_mut(&child) else {
+                warning!("Could not fix missing dependents for {child}");
+                continue;
+            };
+
+            package_version.dependents.insert(parent);
+        }
+    }
+
+    /// Fixes the invalid dependents issue.
+    fn fix_invalid_dependents(&self, invalid: Vec<(PackageId, PackageId)>, register: &mut PackageRegister) {
+        for (child, parent) in invalid {
+            let Some(package_version) = register.get_package_version_mut(&child) else {
+                warning!("Could not fix invalid dependents for {child}");
+                continue;
+            };
+
+            package_version.dependents.remove(&parent);
+        }
+    }
+
+    /// Fixes the invalid active issue.
+    fn fix_invalid_active(&self, invalid: Vec<PackageName>, register: &mut PackageRegister, config: &Config) -> Result<()> {
+        let symlinker = Symlinker::new(config);
+        for package_name in invalid {
+            let Some(package) = register.get_package_mut(&package_name) else {
+                warning!("Could not fix invalid active for {package_name}");
+                continue;
+            };
+
+            // Set the active to the latest installed version of the package
+            if let Some(version) = package.versions.keys().into_iter().max() {
+                package.active_version = version.clone();
+            }
+
+            let package_id = PackageId::new(package_name.clone(), package.active_version.clone());
+            let symlinked = package.symlinked.clone();
+            symlinker.set_active(register, &package_id, symlinked)?;
+        }
+
+        Ok(())
+    }
+
+    /// Fixes the forbidden link issue.
+    fn fix_forbidden_link(&self, forbidden: Vec<PackageName>, register: &mut PackageRegister, config: &Config) -> Result<()> {
+        let symlinker = Symlinker::new(config);
+
+        // Unlink all packages which shouldn't be symlinked
+        for package_name in forbidden {
+            symlinker.unlink_package(register, &package_name)?;
+        }
+
+        Ok(())
+    }
+
+    /// Fixes the missing links issue.
+    fn fix_missing_links(&self, missing: Vec<PackageName>, register: &mut PackageRegister, config: &Config) -> Result<()> {
+        let symlinker = Symlinker::new(config);
+
+        // Re-link all packages which have missing symlinks
+        for package_name in &missing {
+            let Some(package) = register.get_package(package_name) else {
+                warning!("Could not find package {package_name} for fix, skipping");
+                continue;
+            };
+
+            let package_id = PackageId::new(package_name.clone(), package.active_version.clone());
+            let Some(package_version) = register.get_package_version(&package_id) else {
+                warning!("Could not find package {package_id} for fix, skipping");
+                continue;
+            };
+
+            let install_path = package_version.install_path.clone();
+            symlinker.unlink_package(register, package_name)?;
+            symlinker.create_symlinks(&install_path)?;
+
+            if let Some(package) = register.get_package_mut(package_name) {
+                package.symlinked = true;
+            };
         }
 
         Ok(())

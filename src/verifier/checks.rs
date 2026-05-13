@@ -16,6 +16,13 @@ pub enum Check {
     DependencyTree,
     Alterations,
     PackitGroup,
+    MissingDependents,
+    InvalidDependents,
+    InvalidActive,
+    ForbiddenLink,
+    MissingLink,
+    MissingDependencies,
+    InvalidDependencies,
 
     // Checks which are specific to a package
     PackageExistence,
@@ -23,6 +30,13 @@ pub enum Check {
     PackageRegisterConsistency,
     PackageDependencyTree,
     PackageAlterations,
+    PackageMissingDependents,
+    PackageInvalidDependents,
+    PackageInvalidActive,
+    PackageForbiddenLink,
+    PackageMissingLink,
+    PackageMissingDependencies,
+    PackageInvalidDependencies,
 }
 
 impl Check {
@@ -43,20 +57,73 @@ impl Check {
 
             // General checks
             Self::PackitGroup => &[],
-            Self::StrayDirectory => &[Self::PackitGroup],
-            Self::StorageConsistency => &[Self::PackitGroup, Self::StrayDirectory],
-            Self::RegisterConsistency => &[Self::PackitGroup, Self::StrayDirectory],
-            Self::DependencyTree => &[Self::PackitGroup, Self::StorageConsistency, Self::RegisterConsistency],
-            Self::Alterations => &[Self::PackitGroup, Self::StorageConsistency, Self::RegisterConsistency],
+            Self::ForbiddenLink => &[],
+            Self::MissingLink => &[Self::ForbiddenLink],
+            Self::InvalidActive => &[],
+            Self::StrayDirectory => &[],
+            Self::StorageConsistency => &[Self::StrayDirectory],
+            Self::RegisterConsistency => &[Self::StrayDirectory],
+            Self::MissingDependencies => &[Self::StorageConsistency, Self::RegisterConsistency],
+            Self::InvalidDependencies => &[Self::StorageConsistency, Self::RegisterConsistency],
+            Self::MissingDependents => &[
+                Self::StorageConsistency,
+                Self::RegisterConsistency,
+                Self::MissingDependencies,
+                Self::InvalidDependencies,
+            ],
+            Self::InvalidDependents => &[
+                Self::StorageConsistency,
+                Self::RegisterConsistency,
+                Self::MissingDependencies,
+                Self::InvalidDependencies,
+            ],
+            Self::DependencyTree => &[
+                Self::StorageConsistency,
+                Self::RegisterConsistency,
+                Self::MissingDependencies,
+                Self::InvalidDependencies,
+                Self::MissingDependents,
+                Self::InvalidDependents,
+            ],
+            Self::Alterations => &[Self::StorageConsistency, Self::RegisterConsistency],
 
             // Package specific checks
             Self::PackageExistence => &[],
+            Self::PackageForbiddenLink => &[],
+            Self::PackageMissingLink => &[Self::PackageForbiddenLink],
+            Self::PackageInvalidActive => &[Self::PackageExistence],
             Self::PackageStorageConsistency => &[Self::PackageExistence],
             Self::PackageRegisterConsistency => &[Self::PackageExistence],
+            Self::PackageMissingDependencies => &[
+                Self::PackageExistence,
+                Self::PackageStorageConsistency,
+                Self::PackageRegisterConsistency,
+            ],
+            Self::PackageInvalidDependencies => &[
+                Self::PackageExistence,
+                Self::PackageStorageConsistency,
+                Self::PackageRegisterConsistency,
+            ],
+            Self::PackageMissingDependents => &[
+                Self::PackageExistence,
+                Self::PackageStorageConsistency,
+                Self::PackageRegisterConsistency,
+                Self::PackageMissingDependencies,
+                Self::PackageInvalidDependencies,
+            ],
+            Self::PackageInvalidDependents => &[
+                Self::PackageExistence,
+                Self::PackageStorageConsistency,
+                Self::PackageRegisterConsistency,
+                Self::PackageMissingDependencies,
+                Self::PackageInvalidDependencies,
+            ],
             Self::PackageDependencyTree => &[
                 Self::PackageExistence,
                 Self::PackageStorageConsistency,
                 Self::PackageRegisterConsistency,
+                Self::PackageMissingDependencies,
+                Self::PackageInvalidDependencies,
             ],
             Self::PackageAlterations => &[
                 Self::PackageExistence,
@@ -86,6 +153,13 @@ impl Check {
             Self::Alterations,
             Self::PackitGroup,
             Self::StrayDirectory,
+            Self::MissingDependents,
+            Self::InvalidDependents,
+            Self::InvalidActive,
+            Self::ForbiddenLink,
+            Self::MissingLink,
+            Self::MissingDependencies,
+            Self::InvalidDependencies,
         ]
     }
 
@@ -97,6 +171,13 @@ impl Check {
             Self::PackageRegisterConsistency,
             Self::PackageDependencyTree,
             Self::PackageAlterations,
+            Self::PackageMissingDependents,
+            Self::PackageInvalidDependents,
+            Self::PackageInvalidActive,
+            Self::PackageForbiddenLink,
+            Self::PackageMissingLink,
+            Self::PackageMissingDependencies,
+            Self::PackageInvalidDependencies,
         ]
     }
 
@@ -143,10 +224,13 @@ mod tests {
         assert_eq!(
             Check::get_ordered_checks(&[Check::DependencyTree]),
             Vec::from([
-                &Check::PackitGroup,
                 &Check::StrayDirectory,
                 &Check::StorageConsistency,
                 &Check::RegisterConsistency,
+                &Check::MissingDependencies,
+                &Check::InvalidDependencies,
+                &Check::MissingDependents,
+                &Check::InvalidDependents,
                 &Check::DependencyTree,
             ])
         );

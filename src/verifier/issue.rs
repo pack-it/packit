@@ -2,7 +2,7 @@
 use colored::Colorize;
 use std::{collections::HashSet, fmt::Display, path::PathBuf};
 
-use crate::installer::types::PackageId;
+use crate::installer::types::{Dependency, PackageId, PackageName};
 
 /// Holds a single issue and the data regarding that issue.
 pub enum Issue {
@@ -17,6 +17,18 @@ pub enum Issue {
 
     /// A list of parents and their missing dependencies `<parent> : <missing>`.
     BrokenTree(Vec<(PackageId, PackageId)>),
+
+    /// A list of packages and their missing dependencies `<package> : <missing>`.
+    MissingDependencies(Vec<(PackageId, Dependency)>),
+
+    /// A list of packages and their invalid dependencies `<package> : <invalid>`.
+    InvalidDependencies(Vec<(PackageId, PackageId)>),
+
+    /// A list of children and their missing dependents (parents) `<child> : <missing>`.
+    MissingDependents(Vec<(PackageId, PackageId)>),
+
+    /// A list of packages which have invalid dependents `<child> : <invalid>`.
+    InvalidDependents(Vec<(PackageId, PackageId)>),
 
     /// A list of packages which are present in the Installed.toml, but not in the package directory.
     InconsistentStorage(Vec<PackageId>),
@@ -35,6 +47,15 @@ pub enum Issue {
 
     /// A list of stray directories.
     StrayDirectories(HashSet<PathBuf>),
+
+    /// A list of packages from which the active version is invalid.
+    InvalidActive(Vec<PackageName>),
+
+    /// A list of forbidden linked packages.
+    ForbiddenLink(Vec<PackageName>),
+
+    /// A list of packages which have missing symlinks.
+    MissingLinks(Vec<PackageName>),
 }
 
 impl Display for Issue {
@@ -56,6 +77,27 @@ impl Display for Issue {
             Issue::MissingRegister => {
                 writeln!(f, "Missing Installed.toml file")?;
             },
+            Issue::InvalidActive(invalid) => {
+                writeln!(f, "Invalid active version")?;
+                writeln!(f, "The following packages have an invalid active version:")?;
+                for package in invalid {
+                    writeln!(f, "  - {}", package.to_string().bold().blue())?;
+                }
+            },
+            Issue::ForbiddenLink(forbidden) => {
+                writeln!(f, "Forbidden symlinks")?;
+                writeln!(f, "The following packages have a forbidden symlink:")?;
+                for package in forbidden {
+                    writeln!(f, "  - {}", package.to_string().bold().blue())?;
+                }
+            },
+            Issue::MissingLinks(missing) => {
+                writeln!(f, "Missing symlinks")?;
+                writeln!(f, "The following packages have missing symlinks:")?;
+                for package in missing {
+                    writeln!(f, "  - {}", package.to_string().bold().blue())?;
+                }
+            },
             Issue::BrokenTree(missing) => {
                 writeln!(f, "Broken dependency tree")?;
                 writeln!(f, "The following dependencies are missing:")?;
@@ -65,6 +107,64 @@ impl Display for Issue {
                         "  - {} missing {}",
                         parent.to_string().bold().blue(),
                         missing_package.to_string().bold().blue()
+                    );
+
+                    writeln!(f, "{}", item)?;
+                }
+            },
+            Issue::MissingDependencies(missing) => {
+                writeln!(f, "Missing dependencies")?;
+                writeln!(f, "The following dependencies are missing in the register:")?;
+
+                for (package, missing_dependency) in missing {
+                    let item = format!(
+                        "  - {} missing {}",
+                        package.to_string().bold().blue(),
+                        missing_dependency.to_string().bold().blue()
+                    );
+
+                    writeln!(f, "{}", item)?;
+                }
+            },
+            Issue::InvalidDependencies(invalid) => {
+                writeln!(f, "Invalid dependencies")?;
+                let message = "The following dependencies are invalid:";
+                writeln!(f, "{message}")?;
+
+                for (package, invalid_dependency) in invalid {
+                    let item = format!(
+                        "  - {} incorrectly has {}",
+                        package.to_string().bold().blue(),
+                        invalid_dependency.to_string().bold().blue()
+                    );
+
+                    writeln!(f, "{}", item)?;
+                }
+            },
+            Issue::MissingDependents(missing) => {
+                writeln!(f, "Missing dependents")?;
+                writeln!(f, "The following dependents are missing in the register:")?;
+
+                for (package, missing_dependent) in missing {
+                    let item = format!(
+                        "  - {} missing {}",
+                        package.to_string().bold().blue(),
+                        missing_dependent.to_string().bold().blue()
+                    );
+
+                    writeln!(f, "{}", item)?;
+                }
+            },
+            Issue::InvalidDependents(invalid) => {
+                writeln!(f, "Invalid dependents")?;
+                let message = "The following dependents are invalid:";
+                writeln!(f, "{message}")?;
+
+                for (package, invalid_dependent) in invalid {
+                    let item = format!(
+                        "  - {} incorrectly has {}",
+                        package.to_string().bold().blue(),
+                        invalid_dependent.to_string().bold().blue()
                     );
 
                     writeln!(f, "{}", item)?;
@@ -130,11 +230,24 @@ impl Issue {
             Issue::MissingConfig => "To fix this issue we try to reconstruct the Config.toml with data still in the Packit directory.",
             Issue::MissingRegister => "To fix this issue we try to reconstruct the Installed.toml with data still in the Packit directory.",
             Issue::StrayDirectories(_) => "To fix this issue we remove the stray directories.",
+            Issue::InvalidActive(_) => "To fix this issue we set the active version to the latest installed version.",
+            Issue::ForbiddenLink(_) => "To fix this issue we unlink the packages which have a forbidden link.",
+            Issue::MissingLinks(_) => "To fix this issue we (temporarily) unlink and then link the package again.",
             Issue::BrokenTree(_) => "To fix this issue the missing packages will be installed.",
+            Issue::MissingDependencies(_) => {
+                "To fix this issue the missing dependencies will be added to the register. Using existing satisfying packages or the latest version otherwise."
+            },
+            Issue::InvalidDependencies(_) => {
+                "To fix this issue we remove the invalid dependencies from the package dependencies in the register."
+            },
+            Issue::MissingDependents(_) => "To fix this issue the dependents will be added to the package from which they are missing.",
+            Issue::InvalidDependents(_) => "To fix this issue we remove the invalid dependents from the register.",
             Issue::InconsistentStorage(_) => {
                 "To fix this issue the packages are temporarily removed from the register and then reinstalled."
             },
-            Issue::InconsistentRegister(_) => "To fix this issue the packages are temporarily removed from storage and then reinstalled.",
+            Issue::InconsistentRegister(_) => {
+                "To fix this issue we try to reconstruct the Installed.toml with data still in the Packit directory."
+            },
             Issue::AlteredPackage(_) | Issue::MissingPackitGroup | Issue::NotFound(_) => {
                 "There is no automatic fix for this issue available yet."
             },
