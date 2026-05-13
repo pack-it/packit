@@ -21,6 +21,9 @@ pub enum Issue {
     /// A list of packages and their missing dependencies `<package> : <missing>`.
     MissingDependencies(Vec<(PackageId, Dependency)>),
 
+    /// A list of packages and their invalid dependencies `<package> : <invalid>`.
+    InvalidDependencies(Vec<(PackageId, PackageId)>),
+
     /// A list of children and their missing dependents (parents) `<child> : <missing>`.
     MissingDependents(Vec<(PackageId, PackageId)>),
 
@@ -123,30 +126,45 @@ impl Display for Issue {
                     writeln!(f, "{}", item)?;
                 }
             },
+            Issue::InvalidDependencies(invalid) => {
+                writeln!(f, "Invalid dependencies")?;
+                let message = "The following dependencies are invalid:";
+                writeln!(f, "{message}")?;
+
+                for (package, invalid_dependency) in invalid {
+                    let item = format!(
+                        "  - {} incorrectly has {}",
+                        package.to_string().bold().blue(),
+                        invalid_dependency.to_string().bold().blue()
+                    );
+
+                    writeln!(f, "{}", item)?;
+                }
+            },
             Issue::MissingDependents(missing) => {
                 writeln!(f, "Missing dependents")?;
                 writeln!(f, "The following dependents are missing in the register:")?;
 
-                for (child, missing_dependent) in missing {
+                for (package, missing_dependent) in missing {
                     let item = format!(
                         "  - {} missing {}",
-                        child.to_string().bold().blue(),
+                        package.to_string().bold().blue(),
                         missing_dependent.to_string().bold().blue()
                     );
 
                     writeln!(f, "{}", item)?;
                 }
             },
-            Issue::InvalidDependents(missing) => {
+            Issue::InvalidDependents(invalid) => {
                 writeln!(f, "Invalid dependents")?;
                 let message = "The following dependents are invalid:";
                 writeln!(f, "{message}")?;
 
-                for (child, missing_dependent) in missing {
+                for (package, invalid_dependent) in invalid {
                     let item = format!(
                         "  - {} incorrectly has {}",
-                        child.to_string().bold().blue(),
-                        missing_dependent.to_string().bold().blue()
+                        package.to_string().bold().blue(),
+                        invalid_dependent.to_string().bold().blue()
                     );
 
                     writeln!(f, "{}", item)?;
@@ -218,6 +236,9 @@ impl Issue {
             Issue::BrokenTree(_) => "To fix this issue the missing packages will be installed.",
             Issue::MissingDependencies(_) => {
                 "To fix this issue the missing dependencies will be added to the register. Using existing satisfying packages or the latest version otherwise."
+            },
+            Issue::InvalidDependencies(_) => {
+                "To fix this issue we remove the invalid dependencies from the package dependencies in the register."
             },
             Issue::MissingDependents(_) => "To fix this issue the dependents will be added to the package from which they are missing.",
             Issue::InvalidDependents(_) => "To fix this issue we remove the invalid dependents from the register.",

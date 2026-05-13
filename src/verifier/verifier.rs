@@ -12,7 +12,7 @@ use crate::{
     },
     repositories::{
         provider::{self, create_metadata_provider},
-        types::Checksum,
+        types::{Checksum, PackageVersionMeta},
     },
     storage::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
     utils::io::directory_is_empty,
@@ -131,6 +131,7 @@ impl Verifier {
                 Check::PackitGroup => self.check_packit_group(config)?,
                 Check::StrayDirectory => self.check_stray_directories(config)?,
                 Check::MissingDependencies => self.check_missing_dependencies(register, config)?,
+                Check::InvalidDependencies => self.check_invalid_dependencies(register, config)?,
                 Check::MissingDependents => self.check_missing_dependents(register),
                 Check::InvalidDependents => self.check_invalid_dependents(register),
                 Check::InvalidActive => self.check_invalid_active(register, config)?,
@@ -186,6 +187,10 @@ impl Verifier {
                 Check::PackageRegisterConsistency if self.register_package_is_consistent(package_id, register) => continue,
                 Check::PackageRegisterConsistency => Issue::InconsistentRegister(HashSet::from([package_id.clone()])),
                 Check::PackageMissingDependencies => match self.check_missing_package_dependencies(package_id, register, config)? {
+                    Some(issue) => issue,
+                    None => continue,
+                },
+                Check::PackageInvalidDependencies => match self.check_invalid_package_dependencies(package_id, register, config)? {
                     Some(issue) => issue,
                     None => continue,
                 },
@@ -550,26 +555,11 @@ impl Verifier {
         };
 
         // Check if this package is allowed to be symlinked
-        // TODO: Refactor this, this shouldn't implemented here (also this assumes that everything is okay when repository cannot be found)
+        // Assume the package version meta can be found (otherwise no issue is returned)
         let mut link_allowed = true;
-        for repository_id in &config.repositories_rank {
-            let Some(repository) = config.repositories.get(repository_id) else {
-                continue;
-            };
-
-            // Continue if the repository doesn't match
-            if repository.path != package_version.source_repository_url {
-                continue;
-            }
-
-            let Some(provider) = create_metadata_provider(repository) else {
-                continue;
-            };
-
-            let package_version_meta = provider.read_package_version(&package_id.name, &package_id.version)?;
+        if let Some(package_version_meta) = self.get_package_version_meta(package_id, package_version, config)? {
             if package_version_meta.skip_symlinking {
                 link_allowed = false;
-                break;
             }
         }
 
@@ -790,25 +780,8 @@ impl Verifier {
         let package_id = &package.package_id;
         let mut missing = Vec::new();
 
-        let mut package_version_meta = None;
-        for repository_id in &config.repositories_rank {
-            let Some(repository) = config.repositories.get(repository_id) else {
-                continue;
-            };
-
-            // Continue if the repository doesn't match
-            if repository.path != package.source_repository_url {
-                continue;
-            }
-
-            let Some(provider) = create_metadata_provider(repository) else {
-                continue;
-            };
-
-            package_version_meta = Some(provider.read_package_version(&package_id.name, &package_id.version)?);
-        }
-
-        let Some(package_version_meta) = package_version_meta else {
+        // Assume the package version meta can be found (otherwise no issue is returned)
+        let Some(package_version_meta) = self.get_package_version_meta(package_id, package, config)? else {
             return Ok(Vec::new());
         };
 
@@ -827,6 +800,69 @@ impl Verifier {
         }
 
         Ok(missing)
+    }
+
+    /// Checks for invalid dependencies in all packages.
+    /// Returns an `Issue::InvalidDependencies` with the invalid dependencies, or `None` if no dependencies are invalid.
+    fn check_invalid_dependencies(&self, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
+        let mut invalid = Vec::new();
+        for package in register.iterate_all() {
+            invalid.extend(self.invalid_dependencies_impl(config, package)?);
+        }
+
+        if invalid.is_empty() {
+            return Ok(None);
+        }
+
+        Ok(Some(Issue::InvalidDependencies(invalid)))
+    }
+
+    /// Checks for invalid dependencies for a single package.
+    /// Returns an `Issue::InvalidDependencies` with the invalid dependencies, or `None` if no dependencies are invalid.
+    fn check_invalid_package_dependencies(
+        &self,
+        package_id: &PackageId,
+        register: &PackageRegister,
+        config: &Config,
+    ) -> Result<Option<Issue>> {
+        let Some(package) = register.get_package_version(package_id) else {
+            return Ok(None);
+        };
+
+        let invalid = self.invalid_dependencies_impl(config, package)?;
+        if invalid.is_empty() {
+            return Ok(None);
+        }
+
+        Ok(Some(Issue::InvalidDependencies(invalid)))
+    }
+
+    /// Checks if a given package has invalid dependencies in the register according to the repository metadata.
+    /// Returns a list of invalid dependencies for the given package (can be empty).
+    fn invalid_dependencies_impl(&self, config: &Config, package: &InstalledPackageVersion) -> Result<Vec<(PackageId, PackageId)>> {
+        let package_id = &package.package_id;
+        let mut invalid = Vec::new();
+
+        // Assume the package version meta can be found (otherwise no issue is returned)
+        let Some(package_version_meta) = self.get_package_version_meta(package_id, package, config)? else {
+            return Ok(Vec::new());
+        };
+
+        // Check if there is a package dependency which doesn't satisfy any of the metadata dependencies
+        for dependency in &package.dependencies {
+            let mut satisfied = false;
+            for metadata_dependency in &package_version_meta.dependencies {
+                if metadata_dependency.satisfied(&dependency.name, &dependency.version) {
+                    satisfied = true;
+                }
+            }
+
+            if !satisfied {
+                invalid.push((package_id.clone(), dependency.clone()));
+            }
+        }
+
+        Ok(invalid)
     }
 
     /// Checks the completeness of the depedency trees from the packages.
@@ -956,6 +992,34 @@ impl Verifier {
         }
 
         Ok(Some(Issue::StrayDirectories(strays)))
+    }
+
+    // TODO: Refactor this, this shouldn't implemented here
+    fn get_package_version_meta(
+        &self,
+        package_id: &PackageId,
+        package: &InstalledPackageVersion,
+        config: &Config,
+    ) -> Result<Option<PackageVersionMeta>> {
+        let mut package_version_meta = None;
+        for repository_id in &config.repositories_rank {
+            let Some(repository) = config.repositories.get(repository_id) else {
+                continue;
+            };
+
+            // Continue if the repository doesn't match
+            if repository.path != package.source_repository_url {
+                continue;
+            }
+
+            let Some(provider) = create_metadata_provider(repository) else {
+                continue;
+            };
+
+            package_version_meta = Some(provider.read_package_version(&package_id.name, &package_id.version)?);
+        }
+
+        Ok(package_version_meta)
     }
 
     /// Get the issues found states.
