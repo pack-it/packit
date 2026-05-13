@@ -231,29 +231,6 @@ impl Verifier {
         }
     }
 
-    /// Checks for alterations in all packages using a checksum which is compared to the checksum from the pre-build.
-    /// Returns an alteration issue or None if no packages can be found that are altered.
-    #[expect(unused_variables)]
-    fn check_alterations(&self, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
-        // TODO: For now skip this check, because it will never work (yet)
-        return Ok(None);
-        warning!("This is an experimental check, issues from this check could be inaccurate.");
-
-        // Check issue for all installed packages
-        let mut altered = Vec::new();
-        for package in register.iterate_all() {
-            if self.check_package_alterations(&package.package_id, register, config)? {
-                altered.push(package.package_id.clone());
-            }
-        }
-
-        if altered.is_empty() {
-            return Ok(None);
-        }
-
-        Ok(Some(Issue::AlteredPackage(altered)))
-    }
-
     /// Checks the permissions of the prefix directory and all its sub directories.
     /// If the config can be used it will use the prefix directory specified there,
     /// otherwise the default prefix directory is checked.
@@ -333,6 +310,29 @@ impl Verifier {
             Ok(_) => Ok(None),
             Err(_) => Ok(Some(Issue::MissingRegister)),
         }
+    }
+
+    /// Checks for alterations in all packages using a checksum which is compared to the checksum from the pre-build.
+    /// Returns an alteration issue or None if no packages can be found that are altered.
+    #[expect(unused_variables)]
+    fn check_alterations(&self, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
+        // TODO: For now skip this check, because it will never work (yet)
+        return Ok(None);
+        warning!("This is an experimental check, issues from this check could be inaccurate.");
+
+        // Check issue for all installed packages
+        let mut altered = Vec::new();
+        for package in register.iterate_all() {
+            if self.check_package_alterations(&package.package_id, register, config)? {
+                altered.push(package.package_id.clone());
+            }
+        }
+
+        if altered.is_empty() {
+            return Ok(None);
+        }
+
+        Ok(Some(Issue::AlteredPackage(altered)))
     }
 
     /// Checks for alterations in a single package using a checksum which is compared to the checksum from the pre-build.

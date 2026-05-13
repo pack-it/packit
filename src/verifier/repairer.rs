@@ -13,11 +13,15 @@ use crate::{
         Installer, InstallerOptions, Symlinker,
         types::{Dependency, PackageId, PackageName, Version},
     },
+    packager,
     platforms::{
         DEFAULT_PREFIX, Target,
         permissions::{does_packit_group_exist, set_packit_permissions},
     },
-    repositories::{manager::RepositoryManager, types::PackageVersionMeta},
+    repositories::{
+        manager::RepositoryManager,
+        types::{Checksum, PackageVersionMeta},
+    },
     storage::package_register::PackageRegister,
     utils::constants::{DEFAULT_METADATA_REPOSITORY_NAME, REGISTER_FILENAME},
     verifier::{
@@ -249,7 +253,6 @@ impl Repairer {
     }
 
     /// Fixes an inconsistent register by gathering still existing data from the Packit directories.
-    /// TODO: Expand with a check with package checksums, to make sure that the found repository has the same checksum
     fn fix_inconsistent_register(
         &mut self,
         missing: HashSet<PackageId>,
@@ -267,6 +270,19 @@ impl Repairer {
                 continue;
             }
 
+            // Use checksum to check if a prebuild was used (use checksum to make sure it's the same prebuild)
+            let install_path = &package_directory.join(&package_id.name).join(package_id.version.to_string());
+            let (repository_id, package_version_meta) = manager.read_package_version(package_id, &Target::current())?;
+            let revisions = package_version_meta.get_revision_count();
+            let used_prebuild = match manager.get_prebuild_checksum(&repository_id, package_id, revisions, &Target::current())? {
+                Some(correct_checksum) => {
+                    let compressed = packager::compress(&install_path)?;
+                    let checksum = Checksum::from_bytes(&compressed);
+                    correct_checksum == checksum
+                },
+                None => false,
+            };
+
             // Figure out the active version
             let active_target = fs::read_link(active_directory.join(&package_id.name))?;
             let target_name = active_target.file_name().ok_or(VerifierError::InvalidSymlink)?;
@@ -280,19 +296,9 @@ impl Repairer {
 
             // Get information with the manager
             // Note that this information is valid, but necessarily the same as before the issue arised
-            let (_, package_meta) = manager.read_package(&package_id.name)?;
-            let (repository_id, package_version_meta) = manager.read_package_version(package_id, &Target::current())?;
+            let package_meta = manager.read_repo_package(&repository_id, &package_id.name)?;
             let dependencies = self.get_latest_satisfying_packages(&package_version_meta, &storage_packages);
             let source_repository = config.repositories.get(&repository_id).expect("Expected repository in config");
-            let install_path = &package_directory.join(&package_id.name).join(package_id.version.to_string());
-            let prebuild_url = manager
-                .get_prebuild_url(
-                    &repository_id,
-                    package_id,
-                    package_version_meta.revisions.len() as u64,
-                    &Target::current(),
-                )
-                .unwrap_or(None);
 
             // Make sure that all dependencies are registered as well
             let missing_dependencies = dependencies.iter().filter(|d| register.get_package_version(d).is_none()).cloned().collect();
@@ -306,7 +312,7 @@ impl Repairer {
                 install_path,
                 symlinked,
                 active,
-                prebuild_url.is_some(),
+                used_prebuild,
             )?;
         }
 
