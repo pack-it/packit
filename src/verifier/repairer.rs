@@ -19,11 +19,11 @@ use crate::{
         permissions::{does_packit_group_exist, set_packit_permissions},
         symlink::{self, SymlinkError},
     },
+    register::package_register::PackageRegister,
     repositories::{
         manager::RepositoryManager,
         types::{Checksum, PackageVersionMeta},
     },
-    storage::package_register::PackageRegister,
     utils::constants::{DEFAULT_METADATA_REPOSITORY_NAME, REGISTER_FILENAME},
     verifier::{
         Issue,
@@ -244,7 +244,7 @@ impl Repairer {
             let (symlinked, active) = match register.get_package(&missing_package.name) {
                 Some(package) => (package.symlinked, package.active_version == missing_package.version),
                 None => {
-                    warning!("Inconsistent package cannot be found in Installed.toml anymore, eventhough it was found before.");
+                    warning!("Inconsistent package cannot be found in Register.toml anymore, eventhough it was found before.");
                     (false, false)
                 },
             };
@@ -269,7 +269,7 @@ impl Repairer {
         let missing_packages = get_storage_packages(&config)?;
         let manager = RepositoryManager::new(&config);
         self.fix_inconsistent_register(missing_packages, &mut register, &config, &manager)?;
-        register.save_to(&PackageRegister::get_default_path(&config.prefix_directory))?;
+        register.save_to(&PackageRegister::get_path(&config.prefix_directory))?;
         Ok(())
     }
 

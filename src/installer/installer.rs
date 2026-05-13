@@ -17,13 +17,13 @@ use crate::{
         unpack::unpack,
     },
     platforms::{DEFAULT_PREFIX, Target, permissions, symlink},
+    register::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
     repositories::{
         error::RepositoryError,
         manager::RepositoryManager,
         provider,
         types::{Checksum, PackageTarget},
     },
-    storage::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
     utils::{io, tree::TreeBuilder},
 };
 
@@ -274,7 +274,7 @@ impl<'a> Installer<'a> {
             false,
             use_prebuild,
         )?;
-        self.register.save_to(&PackageRegister::get_default_path(&self.config.prefix_directory))?;
+        self.register.save_to(&PackageRegister::get_path(&self.config.prefix_directory))?;
 
         // Download and run post install script if it exists
         let script_path = version_meta.get_postinstall_script_path(&install_meta.target_bounds)?;

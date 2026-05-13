@@ -2,12 +2,12 @@
 use crate::{
     installer::types::{Dependency, PackageId},
     platforms::Target,
+    register::package_register::PackageRegister,
     repositories::{
         error::RepositoryError,
         manager::RepositoryManager,
         types::{PackageMeta, PackageVersionMeta, TargetBounds},
     },
-    storage::package_register::PackageRegister,
     utils::tree::{self, Node},
 };
 

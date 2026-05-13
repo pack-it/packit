@@ -10,11 +10,11 @@ use crate::{
         DEFAULT_PREFIX, Target,
         permissions::{does_packit_group_exist, is_writable},
     },
+    register::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
     repositories::{
         provider::{self, create_metadata_provider},
         types::{Checksum, PackageVersionMeta},
     },
-    storage::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
     utils::io::directory_is_empty,
     verifier::{
         Issue,
@@ -290,11 +290,11 @@ impl Verifier {
         }
     }
 
-    /// Checks if the Installed.toml exists.
+    /// Checks if the Register.toml exists.
     /// Returns `None` if the register exists or an `Issue::MissingRegister` otherwise.
     fn check_register_existence(&self) -> Result<Option<Issue>> {
         let config = Config::from(&Config::get_default_path())?;
-        let register_directory = &PackageRegister::get_default_path(&config.prefix_directory);
+        let register_directory = &PackageRegister::get_path(&config.prefix_directory);
         if fs::exists(register_directory)? {
             return Ok(None);
         }
@@ -302,11 +302,11 @@ impl Verifier {
         Ok(Some(Issue::MissingRegister))
     }
 
-    /// Checks if the Installed.toml syntax is valid.
+    /// Checks if the Register.toml syntax is valid.
     /// Returns `None` if the register syntax is valid or an `Issue::MissingRegister` otherwise.
     fn check_register_syntax(&self) -> Result<Option<Issue>> {
         let config = Config::from(&Config::get_default_path())?;
-        match PackageRegister::from(&PackageRegister::get_default_path(&config.prefix_directory)) {
+        match PackageRegister::from(&PackageRegister::get_path(&config.prefix_directory)) {
             Ok(_) => Ok(None),
             Err(_) => Ok(Some(Issue::MissingRegister)),
         }

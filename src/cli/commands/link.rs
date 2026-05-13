@@ -9,8 +9,8 @@ use crate::{
     config::{Config, Repository},
     installer::{Symlinker, types::PackageName},
     platforms::Target,
+    register::package_register::PackageRegister,
     repositories::{provider, types::PackageVersionMeta},
-    storage::package_register::PackageRegister,
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
@@ -28,7 +28,7 @@ pub struct LinkArgs {
 impl HandleCommand for LinkArgs {
     fn handle(&self) {
         let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
-        let register_path = PackageRegister::get_default_path(&config.prefix_directory);
+        let register_path = PackageRegister::get_path(&config.prefix_directory);
         let mut register = PackageRegister::from(&register_path).unwrap_or_exit(1);
 
         // Get installed package

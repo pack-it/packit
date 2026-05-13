@@ -13,12 +13,12 @@ use crate::{
     installer::types::{Dependency, PackageId, PackageName},
     packager::{self, PackagerError},
     platforms::Target,
+    register::package_register::PackageRegister,
     repositories::{
         error::RepositoryError,
         manager::RepositoryManager,
         types::{IndexMeta, Licenses, PackageVersionMeta, RepositoryMeta},
     },
-    storage::package_register::PackageRegister,
     utils::packit_version::packit_version,
 };
 

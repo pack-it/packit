@@ -12,8 +12,8 @@ use crate::{
     config::Config,
     installer::types::PackageId,
     platforms::Target,
+    register::package_register::PackageRegister,
     repositories::{manager::RepositoryManager, portable_repo::PortableRepoCreator, types::Checksum},
-    storage::package_register::PackageRegister,
     utils::{requests, unwrap_or_exit::UnwrapOrExit},
 };
 
@@ -105,8 +105,8 @@ impl UtilArgs {
     ) {
         let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
         let manager = RepositoryManager::new(&config);
-        let register = PackageRegister::from(&PackageRegister::get_default_path(&config.prefix_directory))
-            .unwrap_or_exit_msg("Cannot load register", 1);
+        let register =
+            PackageRegister::from(&PackageRegister::get_path(&config.prefix_directory)).unwrap_or_exit_msg("Cannot load register", 1);
 
         let spinner = Spinner::new();
         spinner.show("Generating portable repository".into());

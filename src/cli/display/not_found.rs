@@ -5,8 +5,8 @@ use crate::{
     cli::display::logging::error,
     config::Config,
     installer::types::{PackageId, PackageName, Version},
+    register::package_register::PackageRegister,
     repositories::manager::RepositoryManager,
-    storage::package_register::PackageRegister,
     utils::{fuzzy, unwrap_or_exit::UnwrapOrExit},
 };
 

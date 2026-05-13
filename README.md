@@ -164,8 +164,8 @@ On Unix systems we use `/opt/packit`, on Windows we use `C:\Program Files\packit
 #### Package install files
 All installed packages will go in `<prefix>/packages/<PACKAGE-NAME>/<PACKAGE-VERSION>/`.
 
-#### Installed.toml
-The `Installed.toml` file is located inside the prefix and stores information about all installed packages. This file is managed by Packit and should not be changed directly.
+#### Register.toml
+The `Register.toml` file is located inside the prefix and stores information about all installed packages. This file is managed by Packit and should not be changed directly.
 
 #### Active packages
 The currently active version of a package will be symlinked in `<prefix>/active/<PACKAGE-NAME>`. This will link to `<prefix>/packages/<PACKAGE-NAME>/<ACTIVE-PACKAGE-VERSION>`

@@ -10,8 +10,8 @@ use crate::{
     },
     packager::PackagerError,
     platforms::{permissions::error::PermissionError, symlink::SymlinkError},
+    register::error::RegisterError,
     repositories::error::RepositoryError,
-    storage::error::RegisterError,
 };
 
 /// The errors that occur during verification.

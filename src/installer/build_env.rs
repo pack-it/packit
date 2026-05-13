@@ -3,7 +3,7 @@ use std::{collections::HashMap, path::PathBuf};
 
 use crate::{
     cli::display::logging::warning,
-    storage::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
+    register::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
     utils::env::Environment,
 };
 

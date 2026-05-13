@@ -6,7 +6,7 @@ use std::{
 
 use thiserror::Error;
 
-use crate::{installer::types::PackageId, repositories::error::RepositoryError, storage::package_register::PackageRegister};
+use crate::{installer::types::PackageId, register::package_register::PackageRegister, repositories::error::RepositoryError};
 
 /// The errors that occur while doing tree operations.
 #[derive(Error, Debug)]

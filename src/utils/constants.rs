@@ -4,7 +4,7 @@
  */
 use crate::repositories::metadata::WEB_METADATA_PROVIDER_ID;
 
-pub const REGISTER_FILENAME: &str = "Installed.toml";
+pub const REGISTER_FILENAME: &str = "Register.toml";
 pub const CONFIG_FILENAME: &str = "Config.toml";
 
 pub const DEFAULT_METADATA_REPOSITORY_NAME: &str = "core";

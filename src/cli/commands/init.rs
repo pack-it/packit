@@ -16,8 +16,8 @@ use crate::{
         types::{PackageId, PackageName, Version},
     },
     platforms::{DEFAULT_CONFIG_DIR, DEFAULT_PREFIX, permissions},
+    register::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
     repositories::types::Licenses,
-    storage::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
     utils::{
         constants::{DEFAULT_METADATA_REPOSITORY_PATH, DEFAULT_METADATA_REPOSITORY_PROVIDER},
         packit_version::packit_version,
@@ -72,7 +72,7 @@ impl HandleCommand for InitArgs {
         }
 
         // Check if register already exists
-        if PackageRegister::get_default_path(&prefix_directory).exists() {
+        if PackageRegister::get_path(&prefix_directory).exists() {
             error!(msg: "Packit is already initialized: register already exists");
             exit(2);
         }
@@ -125,7 +125,7 @@ impl HandleCommand for InitArgs {
 
         // Save register
         register
-            .save_to(&PackageRegister::get_default_path(&prefix_directory))
+            .save_to(&PackageRegister::get_path(&prefix_directory))
             .unwrap_or_exit_msg("Packit cannot be initialized: error while saving register", 1);
 
         // Create symlinks in prefix directory

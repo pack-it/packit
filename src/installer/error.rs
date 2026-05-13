@@ -10,8 +10,8 @@ use crate::{
         unpack::UnpackError,
     },
     platforms::{permissions::error::PermissionError, symlink::SymlinkError},
+    register::error::RegisterError,
     repositories::error::RepositoryError,
-    storage::error::RegisterError,
     utils::tree::TreeError,
 };
 

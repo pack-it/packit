@@ -6,8 +6,8 @@ mod config;
 mod installer;
 mod packager;
 mod platforms;
+mod register;
 mod repositories;
-mod storage;
 mod utils;
 mod verifier;
 

@@ -20,7 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     - The check and fix command now accept multiple package parameters.
     - The inconsistent register fix doesn't require a re-install anymore.
     - Add check after fix (re-run check to make sure the fix worked).
-    - Add checks and fixes for: stray directories, empty directories, package existence, correct permissions, missing Config.toml and missing Installed.toml.
+    - Add checks and fixes for: stray directories, empty directories, package existence, correct permissions, missing Config.toml and missing Register.toml.
     - Add checks for all register fields
 - Skip uninstall option when update is not possible because of dependents which need the older version.
 - Add portable repositories, a generated repository containing only specific packages for use on airgapped systems.
@@ -31,6 +31,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changes
 - The build system now includes a new `build-install` xtask to create a full Packit build in a `bin` directory structure.
+- The register file is renamed from `Installed.toml` to `Register.toml`. (BREAKING)
 
 ### Removed
 - The repositories command, this command is now integrated in the new config command.

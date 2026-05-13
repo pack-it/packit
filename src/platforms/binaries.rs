@@ -13,7 +13,7 @@ use crate::{
     cli::display::logging::{self, debug, error},
     config::Config,
     installer::types::PackageId,
-    storage::installed_package_version::InstalledPackageVersion,
+    register::installed_package_version::InstalledPackageVersion,
 };
 
 /// The errors that occur during binary operations.

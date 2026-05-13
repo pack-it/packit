@@ -11,8 +11,8 @@ use crate::{
     cli::display::logging::warning,
     config::Repository,
     installer::types::{Dependency, OptionalPackageId, PackageId, PackageName},
+    register::{error::Result, installed_package::InstalledPackage, installed_package_version::InstalledPackageVersion},
     repositories::types::{PackageMeta, PackageVersionMeta},
-    storage::{error::Result, installed_package::InstalledPackage, installed_package_version::InstalledPackageVersion},
     utils::constants::REGISTER_FILENAME,
 };
 
@@ -82,7 +82,7 @@ impl PackageRegister {
     }
 
     /// Gets the default path of the Packit installed packages file.
-    pub fn get_default_path(prefix_directory: &PathBuf) -> PathBuf {
+    pub fn get_path(prefix_directory: &PathBuf) -> PathBuf {
         Path::new(prefix_directory).join(REGISTER_FILENAME)
     }
 

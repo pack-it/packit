@@ -19,12 +19,12 @@ use crate::{
         unpack::{ArchiveExtension, UnpackError, unpack},
     },
     platforms::binaries::{BinaryPatcher, BinaryPatcherError},
+    register::package_register::PackageRegister,
     repositories::{
         error::RepositoryError,
         manager::RepositoryManager,
         types::{Checksum, Patch},
     },
-    storage::package_register::PackageRegister,
     utils::{
         patches::{self, PatchError},
         requests,
