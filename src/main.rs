@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::cli::commands::Cli;
 
+mod builder;
 mod cli;
 mod config;
 mod installer;

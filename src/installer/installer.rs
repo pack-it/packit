@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::{
+    builder::Builder,
     cli::display::{
         QuestionResponse, Spinner, ask_user,
         logging::{debug, error, warning},
@@ -7,7 +8,6 @@ use crate::{
     config::{Config, Repository},
     installer::{
         InstallLabel,
-        builder::Builder,
         error::{InstallerError, Result},
         install_tree::{InstallMeta, InstallNode, InstallType},
         options::InstallerOptions,

@@ -10,12 +10,10 @@ use tempfile::{NamedTempFile, TempDir};
 use thiserror::Error;
 
 use crate::{
+    builder::BuildEnv,
     cli::display::logging::warning,
     config::Config,
-    installer::{
-        build_env::BuildEnv,
-        types::{PackageId, PackageName},
-    },
+    installer::types::{PackageId, PackageName},
     platforms::{Os, TargetArchitecture},
     repositories::{error::RepositoryError, manager::RepositoryManager},
     utils::env::Environment,

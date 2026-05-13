@@ -5,79 +5,28 @@ use std::{
     path::{Path, PathBuf},
 };
 use tempfile::TempDir;
-use thiserror::Error;
 use url::Url;
 
 use crate::{
+    builder::{
+        BinaryPatcher, BuildEnv,
+        error::{BuilderError, Result},
+    },
     cli::display::Spinner,
     config::Config,
     installer::{
-        build_env::BuildEnv,
         install_tree::InstallMeta,
         scripts::{self, ScriptData, ScriptError},
         types::PackageId,
-        unpack::{ArchiveExtension, UnpackError, unpack},
+        unpack::{ArchiveExtension, unpack},
     },
-    platforms::binaries::{BinaryPatcher, BinaryPatcherError},
     register::package_register::PackageRegister,
     repositories::{
-        error::RepositoryError,
         manager::RepositoryManager,
         types::{Checksum, Patch},
     },
-    utils::{
-        patches::{self, PatchError},
-        requests,
-    },
+    utils::{patches, requests},
 };
-
-/// The errors that occur during building.
-#[derive(Error, Debug)]
-pub enum BuilderError {
-    #[error("Build files download unsuccessful, with status code: {0}.")]
-    RequestUnsuccessful(reqwest::StatusCode),
-
-    #[error("Dependency '{package_name}' of type '{dependency_type}' is not installed.")]
-    MissingDependencyError {
-        dependency_type: String,
-        package_name: String,
-    },
-
-    #[error("Checksum does not match")]
-    ChecksumError,
-
-    #[error("The source url has an empty path")]
-    EmptyUrlPath,
-
-    #[error("The required patch was not found in the repository")]
-    RepositoryPatchNotFound,
-
-    #[error("Cannot unpack response")]
-    UnpackError(#[from] UnpackError),
-
-    #[error("Cannot execute build script")]
-    ScriptError(#[from] ScriptError),
-
-    #[error("Cannot find a repository for building")]
-    RepositoryError(#[from] RepositoryError),
-
-    #[error("Cannot patch binaries")]
-    PatchBinaryError(#[from] BinaryPatcherError),
-
-    #[error("Cannot apply patch file")]
-    ApplyPatchError(#[from] PatchError),
-
-    #[error("Cannot request files for building")]
-    RequestError(#[from] reqwest::Error),
-
-    #[error("Error while interacting with filesystem")]
-    IOError(#[from] std::io::Error),
-
-    #[error("Cannot parse url of source")]
-    UrlParseError(#[from] url::ParseError),
-}
-
-pub type Result<T> = core::result::Result<T, BuilderError>;
 
 /// The builder of Packit, managing the building of packages.
 pub struct Builder<'a> {

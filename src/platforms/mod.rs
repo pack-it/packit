@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: GPL-3.0-only
-pub mod binaries;
 mod defaults;
 mod os;
 pub mod permissions;
