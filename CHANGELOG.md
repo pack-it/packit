@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     - The inconsistent register fix doesn't require a re-install anymore.
     - Add check after fix (re-run check to make sure the fix worked).
     - Add checks and fixes for: stray directories, empty directories, package existence, correct permissions, missing Config.toml and missing Installed.toml.
+    - Add checks for all register fields
 - Skip uninstall option when update is not possible because of dependents which need the older version.
 - Add portable repositories, a generated repository containing only specific packages for use on airgapped systems.
 - Add the init command which initializes the Packit environment and files.
