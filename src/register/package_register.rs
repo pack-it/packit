@@ -103,7 +103,7 @@ impl PackageRegister {
         active: bool,
         used_prebuild: bool,
     ) -> Result<()> {
-        let (source_prebuild_repository_url, source_prebuild_repository_provider) = match used_prebuild {
+        let (prebuilds_repository_url, prebuilds_repository_provider) = match used_prebuild {
             true => (
                 source_repository.prebuilds_url.clone(),
                 source_repository.prebuilds_provider.clone(),
@@ -114,10 +114,10 @@ impl PackageRegister {
         let installed_package_version = InstalledPackageVersion {
             package_id: PackageId::new(package.name.clone(), package_version.version.clone()),
             license: package_version.license.clone(),
-            source_repository_url: source_repository.path.clone(),
-            source_repository_provider: source_repository.provider.clone(),
-            source_prebuild_repository_url,
-            source_prebuild_repository_provider,
+            metadata_repository_url: source_repository.path.clone(),
+            metadata_repository_provider: source_repository.provider.clone(),
+            prebuilds_repository_url,
+            prebuilds_repository_provider,
             dependencies: dependency_ids,
             dependents: HashSet::new(),
             install_path: install_path.into(),
@@ -332,10 +332,10 @@ pub mod tests {
         InstalledPackageVersion {
             package_id,
             license: Licenses::Unknown,
-            source_repository_provider: "-".to_string(),
-            source_repository_url: "-".to_string(),
-            source_prebuild_repository_url: None,
-            source_prebuild_repository_provider: None,
+            metadata_repository_provider: "-".to_string(),
+            metadata_repository_url: "-".to_string(),
+            prebuilds_repository_url: None,
+            prebuilds_repository_provider: None,
             dependencies,
             dependents,
             install_path: "-".into(),

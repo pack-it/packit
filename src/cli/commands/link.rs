@@ -55,7 +55,10 @@ impl HandleCommand for LinkArgs {
 
         // Check if we are allowed to symlink when not forcing
         if !self.force {
-            let repository = Repository::new(&package_version.source_repository_url, &package_version.source_repository_provider);
+            let repository = Repository::new(
+                &package_version.metadata_repository_url,
+                &package_version.metadata_repository_provider,
+            );
 
             let provider = provider::create_metadata_provider(&repository).unwrap_or_exit_msg(
                 "Cannot create provider for repository, try --force if you're sure you want to link.",

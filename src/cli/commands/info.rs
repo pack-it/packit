@@ -140,8 +140,8 @@ impl InfoArgs {
         }
         println!();
 
-        println!("Source repository provider: {}", package_version.source_repository_provider);
-        println!("Source repository url: {}", package_version.source_repository_url);
+        println!("Metadata repository provider: {}", package_version.metadata_repository_provider);
+        println!("Metadata repository url: {}", package_version.metadata_repository_url);
 
         print!("Revisions: ");
         if package_version.revisions.is_empty() {

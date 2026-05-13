@@ -151,10 +151,10 @@ impl Repairer {
         let mut seen_repositories = HashMap::new();
         for package in register.iterate_all() {
             let repository = Repository {
-                path: package.source_repository_url.clone(),
-                provider: package.source_repository_provider.clone(),
-                prebuilds_url: package.source_prebuild_repository_url.clone(),
-                prebuilds_provider: package.source_prebuild_repository_provider.clone(),
+                path: package.metadata_repository_url.clone(),
+                provider: package.metadata_repository_provider.clone(),
+                prebuilds_url: package.prebuilds_repository_url.clone(),
+                prebuilds_provider: package.prebuilds_repository_provider.clone(),
             };
 
             match seen_repositories.get_mut(&repository) {

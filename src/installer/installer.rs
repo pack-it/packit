@@ -521,7 +521,10 @@ impl<'a> Installer<'a> {
 
         // Load source repository
         let repository = match installed_package.get_package_version(&package_id.version) {
-            Some(package_version) => Repository::new(&package_version.source_repository_url, &package_version.source_repository_provider),
+            Some(package_version) => Repository::new(
+                &package_version.metadata_repository_url,
+                &package_version.metadata_repository_provider,
+            ),
             None => {
                 return Err(InstallerError::UnreachableError {
                     msg: "Package version cannot be found eventhough it was found before".to_string(),
@@ -613,7 +616,10 @@ impl<'a> Installer<'a> {
         // Run uninstall scripts for all versions
         for package_version in &installed_versions {
             // Load source repository
-            let repository = Repository::new(&package_version.source_repository_url, &package_version.source_repository_provider);
+            let repository = Repository::new(
+                &package_version.metadata_repository_url,
+                &package_version.metadata_repository_provider,
+            );
 
             // Remove the dependency symlinks
             let dependency_directory_path = self.config.prefix_directory.join("dependencies").join(package_version.package_id.to_string());

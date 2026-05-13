@@ -15,14 +15,14 @@ pub struct InstalledPackageVersion {
 
     #[serde(default = "Repository::default_repository_provider")]
     #[serde(skip_serializing_if = "is_repository_provider_default")]
-    pub source_repository_provider: String,
-    pub source_repository_url: String,
+    pub metadata_repository_provider: String,
+    pub metadata_repository_url: String,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub source_prebuild_repository_url: Option<String>,
+    pub prebuilds_repository_url: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub source_prebuild_repository_provider: Option<String>,
+    pub prebuilds_repository_provider: Option<String>,
 
     #[serde(default)]
     #[serde(skip_serializing_if = "HashSet::is_empty")]

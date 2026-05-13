@@ -32,6 +32,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changes
 - The build system now includes a new `build-install` xtask to create a full Packit build in a `bin` directory structure.
 - The register file is renamed from `Installed.toml` to `Register.toml`. (BREAKING)
+- Renamed the source repository fields in the register: (BREAKING) <br>
+`source_repository_url` -> `metadata_repository_url` <br>
+`source_repository_provider` -> `metadata_repository_provider` <br>
+`source_prebuild_repository_url` -> `prebuilds_repository_url` <br>
+`source_prebuild_repository_provider` -> `prebuilds_repository_provider`
 
 ### Removed
 - The repositories command, this command is now integrated in the new config command.

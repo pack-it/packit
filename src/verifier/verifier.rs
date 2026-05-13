@@ -353,11 +353,14 @@ impl Verifier {
             return Ok(false);
         };
 
-        let mut prebuilds_url = package_version.source_prebuild_repository_url.clone();
-        let mut prebuilds_provider = package_version.source_prebuild_repository_provider.clone();
+        let mut prebuilds_url = package_version.prebuilds_repository_url.clone();
+        let mut prebuilds_provider = package_version.prebuilds_repository_provider.clone();
 
         if prebuilds_url.is_none() {
-            let repository = Repository::new(&package_version.source_repository_url, &package_version.source_repository_provider);
+            let repository = Repository::new(
+                &package_version.metadata_repository_url,
+                &package_version.metadata_repository_provider,
+            );
 
             let Some(provider) = provider::create_metadata_provider(&repository) else {
                 warning!("Cannot create metadata provider for '{package_id}', skipping check");
@@ -989,7 +992,7 @@ impl Verifier {
     /// Gets the package version meta, or `None` if the provider cannot be found.
     fn get_package_version_meta(&self, package_id: &PackageId, package: &InstalledPackageVersion) -> Result<Option<PackageVersionMeta>> {
         // TODO: Refactor this, this shouldn't implemented here like this
-        let repository = Repository::new(&package.source_repository_url, &package.source_repository_provider);
+        let repository = Repository::new(&package.metadata_repository_url, &package.metadata_repository_provider);
         let Some(provider) = create_metadata_provider(&repository) else {
             return Ok(None);
         };
