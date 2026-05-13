@@ -246,15 +246,12 @@ impl EditableConfig {
     }
 
     // Removes a repository with the given id from the config.
-    // TODO: Implement this for the config command (making sure that we handle packages which currently use this repo)
     pub fn remove_repository(&mut self, id: &str) {
-        if let Some(repositories) = self.document.get_mut("repositories").and_then(|r| r.as_table_mut()) {
-            repositories.remove(id);
-        }
+        let repositories = self.document["repositories"].as_table_like_mut().expect("Expected repositories to be a table!");
+        repositories.remove(id);
 
-        if let Some(repositories) = self.document.get_mut("repositories_rank").and_then(|r| r.as_array_mut()) {
-            repositories.retain(|v| v.as_str() != Some(id));
-        }
+        let repositories_rank = self.document["repositories_rank"].as_array_mut().expect("Expected repositories_rank to be an array!");
+        repositories_rank.retain(|v| v.as_str() != Some(id));
 
         self.config.repositories.remove(id);
         self.config.repositories_rank.retain(|v| v != id);

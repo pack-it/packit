@@ -63,6 +63,12 @@ pub enum RepositoriesArgs {
         /// The optional provider of the new repository, `web` is used as default
         provider: Option<String>,
     },
+
+    /// Removes a repository from the config
+    Remove {
+        /// The id of the repository to remove
+        id: String,
+    },
 }
 
 impl HandleCommand for ConfigArgs {
@@ -77,6 +83,7 @@ impl HandleCommand for ConfigArgs {
             ConfigArgs::Repositories(RepositoriesArgs::List) => self.handle_list_repositories(config),
             ConfigArgs::Repositories(RepositoriesArgs::SetRank { new_rank }) => self.handle_set_repositories_rank(config, new_rank),
             ConfigArgs::Repositories(RepositoriesArgs::Add { id, url, provider }) => self.handle_add_repository(config, id, url, provider),
+            ConfigArgs::Repositories(RepositoriesArgs::Remove { id }) => self.handle_remove_repository(config, id),
         }
     }
 }
@@ -196,6 +203,12 @@ impl ConfigArgs {
 
     /// Handles the config repositories add command.
     fn handle_add_repository(&self, mut config: EditableConfig, id: &str, url: &str, provider: &Option<String>) {
+        // Check if the config already contains a repository with this id
+        if config.get_config().repositories.contains_key(id) {
+            error!(msg: "A repository {id} with this id already exists.");
+            exit(1);
+        }
+
         let provider = match provider {
             Some(provider) => provider,
             None => DEFAULT_METADATA_PROVIDER_ID,
@@ -209,5 +222,26 @@ impl ConfigArgs {
         config.save_to(&Config::get_default_path()).unwrap_or_exit_msg("Cannot save config file", 1);
 
         println!("Succesfully added repository {id} to the config!");
+    }
+
+    /// Handles the config repositories remove command.
+    fn handle_remove_repository(&self, mut config: EditableConfig, id: &str) {
+        // Check if the config even contains this repository
+        if !config.get_config().repositories.contains_key(id) {
+            error!(msg: "Repository {id} does not exist.");
+            exit(1);
+        }
+
+        // Check if the config only contains this repository
+        if config.get_config().repositories.len() == 1 {
+            error!(msg: "Repository {id} is the only repository in the config, please add another one before removing this one.");
+            exit(1);
+        }
+
+        config.remove_repository(id);
+
+        config.save_to(&Config::get_default_path()).unwrap_or_exit_msg("Cannot save config file", 1);
+
+        println!("Succesfully removed repository {id} from the config!");
     }
 }
