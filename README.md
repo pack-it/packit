@@ -36,6 +36,11 @@ You can also build Packit from source locally, by simply using Cargo. Please not
 
 If you only need the `packit` binary itself, you could build it directly using `cargo build`, or `cargo build --release` for a release build. This will result in the `packit` binary (`packit.exe` on Windows) which will be located at `target/debug/packit` or at `target/release/packit` for a release build.
 
+To install and initialize your locally built version of Packit, you need to:
+1. Move the build destination directory (`target/build`) to `<prefix>/packages/packit/<version>`.
+2. Run `<prefix>/packages/packit/<version>/packit init`. If you used another prefix than the [default prefix](#prefix), you need to specify your prefix in the `--prefix` flag to this command.
+3. Add `<prefix>/bin` to your PATH. The `pit` command should now be available and working. You can test this using `pit list`, this should only show Packit as installed package.
+
 
 ## License
 The Packit repository is licensed under the GNU General Public License v3.0. See [LICENSE](LICENSE) for the full license.
