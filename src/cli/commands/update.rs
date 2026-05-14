@@ -23,10 +23,10 @@ use crate::{
 /// If multiple versions of the same package are installed, the <VERSION> option is required.
 #[derive(Args, Debug)]
 pub struct UpdateArgs {
-    /// The name of the package to update, with an optional version specified with NAME@VERSION.
+    /// The name of the package to update, with an optional version specified with NAME@VERSION
     optional_id: OptionalPackageId,
 
-    /// The version to update to. This can only be a higher version than the current version.
+    /// The version to update to. This can only be a higher version than the current version
     new_version: Option<Version>,
 }
 

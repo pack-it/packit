@@ -20,7 +20,7 @@ use crate::{
 /// versions installed. Multiple packages can be specified by entering multiple names, split by a space.
 #[derive(Args, Debug)]
 pub struct UninstallArgs {
-    /// The names of the packages to install, with an optional version specified with `<name>[@version]`.
+    /// The names of the packages to install, with an optional version specified with `<name>[@version]`
     #[arg(required = true)]
     pub packages: Vec<OptionalPackageId>,
 }

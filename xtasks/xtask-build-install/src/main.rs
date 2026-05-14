@@ -13,6 +13,10 @@ pub struct TaskCommand {
     /// The destination to install to
     #[arg(long)]
     destination: Option<PathBuf>,
+
+    /// True if the files at the destination should be removed before building
+    #[arg(short, long, default_value = "false")]
+    overwrite: bool,
 }
 
 #[cfg(unix)]
@@ -37,6 +41,15 @@ fn main() {
             exit(1);
         },
     };
+
+    // Remove destination when overwrite is specified
+    if command.overwrite && destination.exists() {
+        if let Err(e) = fs::remove_dir_all(&destination) {
+            eprintln!("Failed to remove destination directory");
+            eprintln!("Error: {e}");
+            exit(1);
+        }
+    }
 
     // Create destination
     if let Err(e) = fs::create_dir_all(&destination) {
