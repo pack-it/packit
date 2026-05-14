@@ -9,7 +9,7 @@ use crate::{
         types::{PackageId, PackageName},
     },
     platforms::symlink,
-    storage::package_register::PackageRegister,
+    register::package_register::PackageRegister,
     utils::io,
 };
 
@@ -91,7 +91,7 @@ impl<'a> Symlinker<'a> {
         }
 
         // Save package storage
-        register.save_to(&PackageRegister::get_default_path(&self.config.prefix_directory))?;
+        register.save_to(&PackageRegister::get_path(&self.config.prefix_directory))?;
 
         Ok(())
     }
@@ -139,7 +139,7 @@ impl<'a> Symlinker<'a> {
         };
 
         // Save package register
-        register.save_to(&PackageRegister::get_default_path(&self.config.prefix_directory))?;
+        register.save_to(&PackageRegister::get_path(&self.config.prefix_directory))?;
 
         Ok(())
     }

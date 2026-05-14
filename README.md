@@ -36,6 +36,11 @@ You can also build Packit from source locally, by simply using Cargo. Please not
 
 If you only need the `packit` binary itself, you could build it directly using `cargo build`, or `cargo build --release` for a release build. This will result in the `packit` binary (`packit.exe` on Windows) which will be located at `target/debug/packit` or at `target/release/packit` for a release build.
 
+To install and initialize your locally built version of Packit, you need to:
+1. Move the build destination directory (`target/build`) to `<prefix>/packages/packit/<version>`.
+2. Run `<prefix>/packages/packit/<version>/packit init`. If you used another prefix than the [default prefix](#prefix), you need to specify your prefix in the `--prefix` flag to this command.
+3. Add `<prefix>/bin` to your PATH. The `pit` command should now be available and working. You can test this using `pit list`, this should only show Packit as installed package.
+
 
 ## License
 The Packit repository is licensed under the GNU General Public License v3.0. See [LICENSE](LICENSE) for the full license.
@@ -44,7 +49,7 @@ The Packit repository is licensed under the GNU General Public License v3.0. See
 ## Usage
 The general usage of Packit is: `pit <COMMAND>`.
 
-#### `pit install <PACKAGE-NAME>[@<VERSION>] [--build] [--build-all] [--keep-build] [--skip-symlinking] [--skip-active] [--verbose]`
+#### `pit install <PACKAGE-NAME>[@<VERSION>] ... [--build] [--build-all] [--keep-build] [--skip-symlinking] [--skip-active] [--verbose]`
 Installs the specified packages, if a version is given that version will be installed, if not the latest available version will be installed. Multiple packages can be specified by entering multiple names, split by a space.
 <br>
 If the `--build` option is given, the package is build from source, instead of installing a prebuild version.
@@ -54,7 +59,7 @@ If the `--skip-symlinking` option is enabled, the package is not symlinked into 
 If the `--skip-active` option is enabled, the package is not set to active and the current active version is kept. If there is no current active version, this flag is ignored and the package is set to active.
 If the `--verbose` option is given, extra verbose output is shown, like build output.
 
-#### `pit uninstall <PACKAGE-NAME>[@<VERSION>]`
+#### `pit uninstall <PACKAGE-NAME>[@<VERSION>] ...`
 Uninstalls the specified packages, if a version is given that version will be uninstalled, if not, you will be asked if you want to delete all versions of `<PACKAGE-NAME>` in case there are multiple versions installed. Multiple packages can be specified by entering multiple names, split by a space.
 
 #### `pit list`
@@ -164,8 +169,8 @@ On Unix systems we use `/opt/packit`, on Windows we use `C:\Program Files\packit
 #### Package install files
 All installed packages will go in `<prefix>/packages/<PACKAGE-NAME>/<PACKAGE-VERSION>/`.
 
-#### Installed.toml
-The `Installed.toml` file is located inside the prefix and stores information about all installed packages. This file is managed by Packit and should not be changed directly.
+#### Register.toml
+The `Register.toml` file is located inside the prefix and stores information about all installed packages. This file is managed by Packit and should not be changed directly.
 
 #### Active packages
 The currently active version of a package will be symlinked in `<prefix>/active/<PACKAGE-NAME>`. This will link to `<prefix>/packages/<PACKAGE-NAME>/<ACTIVE-PACKAGE-VERSION>`

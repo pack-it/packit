@@ -20,7 +20,7 @@ pub fn repository_search(
     let mut best_word = None;
     let mut best_distance = None;
     for repository_id in &config.repositories_rank {
-        let repository_index = manager.read_index_metadata(&repository_id)?;
+        let repository_index = manager.read_index_metadata(repository_id)?;
 
         let fuzzy_matches = fuzzy_search(repository_index.supported_packages.iter(), package_name.as_str());
         for (distance, fuzzy_match) in fuzzy_matches {
@@ -98,7 +98,7 @@ where
 fn calculate_distance(first_word: &str, second_word: &str) -> u64 {
     let first_word_char = first_word.as_bytes();
     let second_word_char = second_word.as_bytes();
-    let mut distance_matrix = vec![vec![0 as u64; second_word.len() + 1]; first_word.len() + 1];
+    let mut distance_matrix = vec![vec![0_u64; second_word.len() + 1]; first_word.len() + 1];
 
     for i in 0..first_word.len() + 1 {
         distance_matrix[i][0] = i as u64;

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{installer::types::Version, storage::installed_package_version::InstalledPackageVersion};
+use crate::{installer::types::Version, register::installed_package_version::InstalledPackageVersion};
 
 /// Represents a package that is installed on the system, holding package specific info
 /// and a mapping from the installed versions to package versions.

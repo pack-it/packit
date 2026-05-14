@@ -10,8 +10,8 @@ use crate::{
     },
     packager::PackagerError,
     platforms::{permissions::error::PermissionError, symlink::SymlinkError},
+    register::error::RegisterError,
     repositories::error::RepositoryError,
-    storage::error::RegisterError,
 };
 
 /// The errors that occur during verification.
@@ -28,9 +28,6 @@ pub enum VerifierError {
 
     #[error("Cannot continue with checks, missing check implementation")]
     UnimplementedCheckError,
-
-    #[error("Cannot perform check or fix, because of an error while interacting with the filesystem")]
-    IOError(#[from] std::io::Error),
 
     #[error("Could not display issues")]
     DisplayError(#[from] DisplayError),
@@ -61,6 +58,9 @@ pub enum VerifierError {
 
     #[error("Could not use repository manager for check or fix")]
     RepositoryError(#[from] RepositoryError),
+
+    #[error("Cannot perform check or fix, because of an error while interacting with the filesystem")]
+    IOError(#[from] std::io::Error),
 }
 
 pub(super) type Result<T> = std::result::Result<T, VerifierError>;

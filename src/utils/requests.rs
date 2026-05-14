@@ -4,7 +4,9 @@ use reqwest::{
     blocking::{Client, Response},
 };
 
-const USER_AGENT: &str = concat!("Packit/", env!("CARGO_PKG_VERSION"));
+use crate::utils::packit_version::packit_version;
+
+const USER_AGENT: &str = concat!("Packit/", packit_version!());
 
 /// Sends a `GET` request to the provided url using reqwest.
 pub fn get<T: IntoUrl>(url: T) -> reqwest::Result<Response> {

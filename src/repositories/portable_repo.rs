@@ -2,7 +2,7 @@
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     fs,
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
 use serde::Serialize;
@@ -13,15 +13,16 @@ use crate::{
     installer::types::{Dependency, PackageId, PackageName},
     packager::{self, PackagerError},
     platforms::Target,
+    register::package_register::PackageRegister,
     repositories::{
         error::RepositoryError,
         manager::RepositoryManager,
         types::{IndexMeta, Licenses, PackageVersionMeta, RepositoryMeta},
     },
-    storage::package_register::PackageRegister,
+    utils::packit_version::packit_version,
 };
 
-const PORTABLE_REPO_MAINTAINER: &str = concat!("Packit v", env!("CARGO_PKG_VERSION"));
+const PORTABLE_REPO_MAINTAINER: &str = concat!("Packit v", packit_version!());
 
 /// The errors that occur during portable repository creation.
 #[derive(Error, Debug)]
@@ -111,7 +112,7 @@ impl<'a> PortableRepoCreator<'a> {
                 let prebuild_url = self.repository_manager.get_prebuild_url(
                     &repository_id,
                     &package_id,
-                    package_version.get_revision_count() as u64,
+                    package_version.get_revision_count(),
                     &self.target,
                 )?;
 
@@ -216,7 +217,7 @@ impl<'a> PortableRepoCreator<'a> {
     }
 
     /// Downloads all files of the given package. Note that this does not download version specific files.
-    fn download_package_files(&self, package_name: &PackageName, repository_id: &str, destination: &PathBuf) -> Result<()> {
+    fn download_package_files(&self, package_name: &PackageName, repository_id: &str, destination: &Path) -> Result<()> {
         let package_path = destination.join("packages").join(package_name);
 
         // Download package.toml
@@ -232,7 +233,7 @@ impl<'a> PortableRepoCreator<'a> {
         package_id: &PackageId,
         repository_id: &str,
         package_version: &PackageVersionMeta,
-        destination: &PathBuf,
+        destination: &Path,
     ) -> Result<()> {
         let package_path = destination.join("packages").join(&package_id.name);
 
@@ -261,7 +262,7 @@ impl<'a> PortableRepoCreator<'a> {
 
         // Download external test files
         for file_path in package_version.get_external_test_files(&target_bounds)? {
-            self.download_file(&package_id.name, repository_id, &file_path, &package_path, false)?;
+            self.download_file(&package_id.name, repository_id, file_path, &package_path, false)?;
         }
 
         Ok(())
@@ -273,7 +274,7 @@ impl<'a> PortableRepoCreator<'a> {
         package_id: &PackageId,
         repository_id: &str,
         package_version: &PackageVersionMeta,
-        destination: &PathBuf,
+        destination: &Path,
     ) -> Result<()> {
         let prefix = package_id.name.chars().next().ok_or(PortableRepoError::EmptyPackageName)?.to_string();
         let target = self.target.architecture.to_string();
@@ -286,7 +287,7 @@ impl<'a> PortableRepoCreator<'a> {
             Ok(Some(checksum)) => checksum,
             // Only try to package locally if the current target is the target we generate a portable repo for
             Ok(None) if self.target == Target::current() => {
-                packager::package(&self.config, &package_id, &destination, revision)?;
+                packager::package(self.config, package_id, &destination, revision)?;
                 return Ok(());
             },
             Ok(None) => {
@@ -317,7 +318,7 @@ impl<'a> PortableRepoCreator<'a> {
         package_name: &PackageName,
         repository_id: &str,
         file_path: &str,
-        package_path: &PathBuf,
+        package_path: &Path,
         allow_missing: bool,
     ) -> Result<()> {
         let destination = package_path.join(PathBuf::from(file_path));
@@ -328,7 +329,7 @@ impl<'a> PortableRepoCreator<'a> {
         }
 
         // Read the file from the repository
-        let contents = self.repository_manager.read_file(repository_id, &package_name, file_path)?;
+        let contents = self.repository_manager.read_file(repository_id, package_name, file_path)?;
 
         // Unwrap the contents or return
         let contents = match contents {
@@ -344,7 +345,7 @@ impl<'a> PortableRepoCreator<'a> {
 
         // Create parent directories
         if let Some(parent) = destination.parent() {
-            fs::create_dir_all(&parent)?;
+            fs::create_dir_all(parent)?;
         }
 
         // Write file
@@ -358,7 +359,7 @@ impl<'a> PortableRepoCreator<'a> {
     fn write_metadata<M: Serialize>(&self, metadata: M, destination: PathBuf, pretty: bool) -> Result<()> {
         // Create parent directories
         if let Some(parent) = destination.parent() {
-            fs::create_dir_all(&parent)?;
+            fs::create_dir_all(parent)?;
         }
 
         // Write metadata

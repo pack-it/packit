@@ -10,8 +10,8 @@ use crate::{
         display::logging::{error, warning},
     },
     config::{Config, EditableConfig, Repository},
+    register::package_register::PackageRegister,
     repositories::{manager::RepositoryManager, metadata::DEFAULT_METADATA_PROVIDER_ID},
-    storage::package_register::PackageRegister,
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
@@ -101,7 +101,7 @@ impl ConfigArgs {
             return;
         }
 
-        let register_dir = PackageRegister::get_default_path(&config.get_config().prefix_directory);
+        let register_dir = PackageRegister::get_path(&config.get_config().prefix_directory);
         let register = PackageRegister::from(&register_dir).unwrap_or_exit_msg("Cannot read package register", 1);
 
         // Check if there are installed packages
@@ -124,7 +124,7 @@ impl ConfigArgs {
             return;
         }
 
-        let register_dir = PackageRegister::get_default_path(&config.get_config().prefix_directory);
+        let register_dir = PackageRegister::get_path(&config.get_config().prefix_directory);
         let register = PackageRegister::from(&register_dir).unwrap_or_exit_msg("Cannot read package register", 1);
 
         // Check if there are installed packages
@@ -173,7 +173,7 @@ impl ConfigArgs {
             println!("{}", metadata.description.green());
             println!("License: {}", metadata.license);
             println!("Maintainers: {}", metadata.maintainers.join(", "));
-            println!("Repository provider: {}, path: {}", repository.provider, repository.path);
+            println!("Repository provider: {}, url: {}", repository.provider, repository.url);
         }
     }
 

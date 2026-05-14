@@ -19,11 +19,11 @@ use crate::{
         permissions::{does_packit_group_exist, set_packit_permissions},
         symlink::{self, SymlinkError},
     },
+    register::package_register::PackageRegister,
     repositories::{
         manager::RepositoryManager,
         types::{Checksum, PackageVersionMeta},
     },
-    storage::package_register::PackageRegister,
     utils::constants::{DEFAULT_METADATA_REPOSITORY_NAME, REGISTER_FILENAME},
     verifier::{
         Issue,
@@ -151,10 +151,10 @@ impl Repairer {
         let mut seen_repositories = HashMap::new();
         for package in register.iterate_all() {
             let repository = Repository {
-                path: package.source_repository_url.clone(),
-                provider: package.source_repository_provider.clone(),
-                prebuilds_url: package.source_prebuild_repository_url.clone(),
-                prebuilds_provider: package.source_prebuild_repository_provider.clone(),
+                url: package.metadata_repository_url.clone(),
+                provider: package.metadata_repository_provider.clone(),
+                prebuilds_url: package.prebuilds_repository_url.clone(),
+                prebuilds_provider: package.prebuilds_repository_provider.clone(),
             };
 
             match seen_repositories.get_mut(&repository) {
@@ -244,7 +244,7 @@ impl Repairer {
             let (symlinked, active) = match register.get_package(&missing_package.name) {
                 Some(package) => (package.symlinked, package.active_version == missing_package.version),
                 None => {
-                    warning!("Inconsistent package cannot be found in Installed.toml anymore, eventhough it was found before.");
+                    warning!("Inconsistent package cannot be found in Register.toml anymore, eventhough it was found before.");
                     (false, false)
                 },
             };
@@ -269,7 +269,7 @@ impl Repairer {
         let missing_packages = get_storage_packages(&config)?;
         let manager = RepositoryManager::new(&config);
         self.fix_inconsistent_register(missing_packages, &mut register, &config, &manager)?;
-        register.save_to(&PackageRegister::get_default_path(&config.prefix_directory))?;
+        register.save_to(&PackageRegister::get_path(&config.prefix_directory))?;
         Ok(())
     }
 
@@ -297,7 +297,7 @@ impl Repairer {
             let revisions = package_version_meta.get_revision_count();
             let used_prebuild = match manager.get_prebuild_checksum(&repository_id, package_id, revisions, &Target::current())? {
                 Some(correct_checksum) => {
-                    let compressed = packager::compress(&install_path)?;
+                    let compressed = packager::compress(install_path)?;
                     let checksum = Checksum::from_bytes(&compressed);
                     correct_checksum == checksum
                 },
@@ -470,12 +470,12 @@ impl Repairer {
             };
 
             // Set the active to the latest installed version of the package
-            if let Some(version) = package.versions.keys().into_iter().max() {
+            if let Some(version) = package.versions.keys().max() {
                 package.active_version = version.clone();
             }
 
             let package_id = PackageId::new(package_name.clone(), package.active_version.clone());
-            let symlinked = package.symlinked.clone();
+            let symlinked = package.symlinked;
             symlinker.set_active(register, &package_id, symlinked)?;
         }
 

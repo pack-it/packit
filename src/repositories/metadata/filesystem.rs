@@ -78,7 +78,7 @@ impl FileSystemMetadataProvider {
         }
 
         Some(Self {
-            path: PathBuf::from(repository.path.clone()),
+            path: PathBuf::from(repository.url.clone()),
         })
     }
 }

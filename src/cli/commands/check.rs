@@ -2,7 +2,7 @@
 use clap::Args;
 
 use crate::{
-    cli::commands::HandleCommand, config::Config, installer::types::PackageId, storage::package_register::PackageRegister,
+    cli::commands::HandleCommand, config::Config, installer::types::PackageId, register::package_register::PackageRegister,
     utils::unwrap_or_exit::UnwrapOrExit, verifier::Verifier,
 };
 
@@ -40,7 +40,7 @@ impl CheckArgs {
         }
 
         let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
-        let register_dir = PackageRegister::get_default_path(&config.prefix_directory);
+        let register_dir = PackageRegister::get_path(&config.prefix_directory);
         let register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
         while let Some(issue) = verifier.next_issue(&register, &config).unwrap_or_exit(1) {
@@ -59,7 +59,7 @@ impl CheckArgs {
     fn check_packages(&self) {
         let mut verifier = Verifier::new();
         let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
-        let register_dir = PackageRegister::get_default_path(&config.prefix_directory);
+        let register_dir = PackageRegister::get_path(&config.prefix_directory);
         let register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
         for package_id in &self.packages {

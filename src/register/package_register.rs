@@ -11,8 +11,12 @@ use crate::{
     cli::display::logging::warning,
     config::Repository,
     installer::types::{Dependency, OptionalPackageId, PackageId, PackageName},
+    register::{
+        error::{RegisterError, Result},
+        installed_package::InstalledPackage,
+        installed_package_version::InstalledPackageVersion,
+    },
     repositories::types::{PackageMeta, PackageVersionMeta},
-    storage::{error::Result, installed_package::InstalledPackage, installed_package_version::InstalledPackageVersion},
     utils::constants::REGISTER_FILENAME,
 };
 
@@ -39,17 +43,17 @@ impl PackageRegister {
     ///
     /// This function will return an error if the file cannot be opened or if the content is invalid.
     pub fn from(path: &Path) -> Result<Self> {
-        // If the file does not exist, we return an empty storage
+        // If the file does not exist, return an error
         if !fs::exists(path)? {
-            return Ok(Self { packages: HashMap::new() });
+            return Err(RegisterError::RegisterDoesNotExist);
         }
 
         // Read data from file
         let file_content = fs::read_to_string(path)?;
 
-        // If the file is empty, return an empty storage
+        // If the file is empty, return an error
         if file_content.trim().is_empty() {
-            return Ok(Self { packages: HashMap::new() });
+            return Err(RegisterError::RegisterDoesNotExist);
         }
 
         // Parse data and return
@@ -82,7 +86,7 @@ impl PackageRegister {
     }
 
     /// Gets the default path of the Packit installed packages file.
-    pub fn get_default_path(prefix_directory: &PathBuf) -> PathBuf {
+    pub fn get_path(prefix_directory: &PathBuf) -> PathBuf {
         Path::new(prefix_directory).join(REGISTER_FILENAME)
     }
 
@@ -99,7 +103,7 @@ impl PackageRegister {
         active: bool,
         used_prebuild: bool,
     ) -> Result<()> {
-        let (source_prebuild_repository_url, source_prebuild_repository_provider) = match used_prebuild {
+        let (prebuilds_repository_url, prebuilds_repository_provider) = match used_prebuild {
             true => (
                 source_repository.prebuilds_url.clone(),
                 source_repository.prebuilds_provider.clone(),
@@ -110,10 +114,10 @@ impl PackageRegister {
         let installed_package_version = InstalledPackageVersion {
             package_id: PackageId::new(package.name.clone(), package_version.version.clone()),
             license: package_version.license.clone(),
-            source_repository_url: source_repository.path.clone(),
-            source_repository_provider: source_repository.provider.clone(),
-            source_prebuild_repository_url,
-            source_prebuild_repository_provider,
+            metadata_repository_url: source_repository.url.clone(),
+            metadata_repository_provider: source_repository.provider.clone(),
+            prebuilds_repository_url,
+            prebuilds_repository_provider,
             dependencies: dependency_ids,
             dependents: HashSet::new(),
             install_path: install_path.into(),
@@ -215,6 +219,7 @@ impl PackageRegister {
 
     /// Gets mutable references to all installed versions of a certain package from the register storage.
     /// Returns a list containing all installed versions, which is empty if the package is not installed.
+    #[expect(unused)]
     pub fn get_all_package_versions_mut(&mut self, package_name: &PackageName) -> Vec<&mut InstalledPackageVersion> {
         match self.packages.get_mut(package_name) {
             Some(package) => package.get_versions_mut(),
@@ -327,10 +332,10 @@ pub mod tests {
         InstalledPackageVersion {
             package_id,
             license: Licenses::Unknown,
-            source_repository_provider: "-".to_string(),
-            source_repository_url: "-".to_string(),
-            source_prebuild_repository_url: None,
-            source_prebuild_repository_provider: None,
+            metadata_repository_provider: "-".to_string(),
+            metadata_repository_url: "-".to_string(),
+            prebuilds_repository_url: None,
+            prebuilds_repository_provider: None,
             dependencies,
             dependents,
             install_path: "-".into(),

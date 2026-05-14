@@ -6,6 +6,12 @@ use crate::installer::types::PackageIdError;
 /// The errors that occur when reading or saving the register file.
 #[derive(Error, Debug)]
 pub enum RegisterError {
+    #[error("The Register.toml file does not exist or is empty")]
+    RegisterDoesNotExist,
+
+    #[error("Cannot add package with invalid package id")]
+    PackageIdError(#[from] PackageIdError),
+
     #[error("Cannot read or write installed packages file")]
     IOError(#[from] std::io::Error),
 
@@ -14,9 +20,6 @@ pub enum RegisterError {
 
     #[error("Cannot serialize installed packages")]
     SerializeError(#[from] toml::ser::Error),
-
-    #[error("Cannot add package with invalid package id")]
-    PackageIdError(#[from] PackageIdError),
 }
 
 pub(super) type Result<T> = std::result::Result<T, RegisterError>;

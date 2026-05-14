@@ -6,7 +6,7 @@ use std::{
 
 use thiserror::Error;
 
-use crate::{installer::types::PackageId, repositories::error::RepositoryError, storage::package_register::PackageRegister};
+use crate::{installer::types::PackageId, register::package_register::PackageRegister, repositories::error::RepositoryError};
 
 /// The errors that occur while doing tree operations.
 #[derive(Error, Debug)]
@@ -14,11 +14,11 @@ pub enum TreeError {
     #[error("Package id '{0}' cannot be found")]
     NotFound(PackageId),
 
-    #[error("Cannot create tree, because of an error reading the repository.")]
-    RepositoryError(#[from] RepositoryError),
-
     #[error("Cannot create tree, because necessary build attribute '{0}' was missing from the tree builder.")]
     MissingBuildAttributes(String),
+
+    #[error("Cannot create tree, because of an error reading the repository.")]
+    RepositoryError(#[from] RepositoryError),
 }
 
 pub type Result<T> = std::result::Result<T, TreeError>;
@@ -124,7 +124,7 @@ impl<V, L: Eq> Node<V, L> {
     {
         let existing_childs = self.get_children_ids();
 
-        for child in expander(&self)? {
+        for child in expander(self)? {
             let (id, value, label) = populator(child)?;
 
             // Node already exists, skip adding
@@ -148,7 +148,7 @@ impl<V, L: Eq> Node<V, L> {
 
     /// The implementation of the tree display.
     fn display_impl(&self, f: &mut std::fmt::Formatter<'_>, node: &Node<V, L>, prefix: &str) -> std::fmt::Result {
-        write!(f, "{prefix}{}\n", node.id)?;
+        writeln!(f, "{prefix}{}", node.id)?;
 
         // Note that when the input prefix is "" then this prefix will also be ""
         let prefix = match prefix.ends_with(BRANCH) {

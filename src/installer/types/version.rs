@@ -159,7 +159,7 @@ impl FromStr for Version {
 impl From<&[u32]> for Version {
     fn from(value: &[u32]) -> Self {
         Self {
-            numbers: value.iter().map(|v| VersionNumber::from(v.clone())).collect(),
+            numbers: value.iter().map(|v| VersionNumber::from(*v)).collect(),
         }
     }
 }
@@ -168,7 +168,7 @@ impl From<&[u32]> for Version {
 impl<const N: usize> From<&[u32; N]> for Version {
     fn from(value: &[u32; N]) -> Self {
         Self {
-            numbers: value.iter().map(|v| VersionNumber::from(v.clone())).collect(),
+            numbers: value.iter().map(|v| VersionNumber::from(*v)).collect(),
         }
     }
 }

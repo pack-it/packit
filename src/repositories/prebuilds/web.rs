@@ -53,7 +53,7 @@ impl PrebuildProvider for WebPrebuildProvider {
             },
         };
 
-        Ok((ArchiveExtension::from_path(&url.to_string()), bytes))
+        Ok((ArchiveExtension::from_path(url.as_ref()), bytes))
     }
 }
 
@@ -74,9 +74,10 @@ impl WebPrebuildProvider {
         let prefix = package_id.name.get_prefix().to_string();
         let target = target.architecture.to_string();
         let package_name = &package_id.name;
+        let package_version = &package_id.version.to_string();
         let file_name = format!("{package_id}-{revision}-{target}.{extension}");
 
-        let path = format!("packages/{target}/{prefix}/{package_name}/{file_name}");
+        let path = format!("packages/{prefix}/{package_name}/{package_version}/{file_name}");
         let url = self.url.join(&path)?;
 
         let response = requests::get(url.clone())?;

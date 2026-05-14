@@ -5,8 +5,8 @@ use crate::{
     cli::display::logging::error,
     config::Config,
     installer::types::{PackageId, PackageName, Version},
+    register::package_register::PackageRegister,
     repositories::manager::RepositoryManager,
-    storage::package_register::PackageRegister,
     utils::{fuzzy, unwrap_or_exit::UnwrapOrExit},
 };
 
@@ -57,7 +57,7 @@ pub fn register_package(package_name: &PackageName, register: &PackageRegister) 
 pub fn repository_package(package_name: &PackageName, manager: &RepositoryManager, config: &Config) -> ! {
     error!(msg: "Package '{package_name}' cannot be found.");
 
-    let fuzzy_match = fuzzy::repository_search(config, &manager, package_name).unwrap_or_exit(1);
+    let fuzzy_match = fuzzy::repository_search(config, manager, package_name).unwrap_or_exit(1);
     if let Some(fuzzy_match) = fuzzy_match {
         println!("Did you mean: '{fuzzy_match}'?");
     }
@@ -83,7 +83,7 @@ pub fn repository_package_version(package_id: &PackageId, manager: &RepositoryMa
     error!(msg: "Package '{}' cannot be found.", package_id);
     repository_version(&package_id.name, manager);
 
-    let fuzzy_match = fuzzy::repository_search(config, &manager, &package_id.name).unwrap_or_exit(1);
+    let fuzzy_match = fuzzy::repository_search(config, manager, &package_id.name).unwrap_or_exit(1);
     if let Some(fuzzy_match) = fuzzy_match {
         println!("Did you mean: '{fuzzy_match}'?");
     }

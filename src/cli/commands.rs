@@ -7,7 +7,6 @@ mod init;
 mod install;
 mod link;
 mod list;
-mod package;
 mod search;
 mod switch;
 mod uninstall;
@@ -21,19 +20,23 @@ use clap::{Parser, Subcommand, builder::Styles};
 
 #[cfg(target_os = "windows")]
 use crate::cli::display::logging::debug;
-use crate::cli::{
-    commands::{
-        check::CheckArgs, config::ConfigArgs, fix::FixArgs, info::InfoArgs, init::InitArgs, install::InstallArgs, link::LinkArgs,
-        list::ListArgs, package::PackageArgs, search::SearchArgs, switch::SwitchArgs, uninstall::UninstallArgs, unlink::UnlinkArgs,
-        update::UpdateArgs, util::UtilArgs,
+use crate::{
+    cli::{
+        commands::{
+            check::CheckArgs, config::ConfigArgs, fix::FixArgs, info::InfoArgs, init::InitArgs, install::InstallArgs, link::LinkArgs,
+            list::ListArgs, search::SearchArgs, switch::SwitchArgs, uninstall::UninstallArgs, unlink::UnlinkArgs, update::UpdateArgs,
+            util::UtilArgs,
+        },
+        display::logging::error,
     },
-    display::logging::error,
+    utils::packit_version::{packit_version, packit_version_name},
 };
 
 /// Represents the CLI interface with clap.
 #[derive(Parser, Debug)]
 #[command(name = "Packit", version, about)]
 #[command(long_about = "The universal package manager, designed to streamline the experience of installing packages on your system.")]
+#[command(long_version = concat!(packit_version!(), " (", packit_version_name!(), ")"))]
 pub struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -67,9 +70,6 @@ enum Commands {
 
     /// Check the installation and fix issues
     Fix(FixArgs),
-
-    /// Package a package version
-    Package(PackageArgs),
 
     /// Get info from a specific package
     Info(InfoArgs),
@@ -128,26 +128,22 @@ impl Cli {
 
     /// Reads and handles the command.
     pub fn handle_command(&self) {
-        // Handle commands with user specified arguments
-        let args: &dyn HandleCommand = match &self.command {
-            Commands::Install(args) => args,
-            Commands::Uninstall(args) => args,
-            Commands::List(args) => args,
-            Commands::Search(args) => args,
-            Commands::Switch(args) => args,
-            Commands::Link(args) => args,
-            Commands::Unlink(args) => args,
-            Commands::Check(args) => args,
-            Commands::Fix(args) => args,
-            Commands::Package(args) => args,
-            Commands::Info(args) => args,
-            Commands::Update(args) => args,
-            Commands::Init(args) => args,
-            Commands::Util(args) => args,
-            Commands::Config(args) => args,
-        };
-
-        args.handle();
+        match &self.command {
+            Commands::Install(args) => args.handle(),
+            Commands::Uninstall(args) => args.handle(),
+            Commands::List(args) => args.handle(),
+            Commands::Search(args) => args.handle(),
+            Commands::Switch(args) => args.handle(),
+            Commands::Link(args) => args.handle(),
+            Commands::Unlink(args) => args.handle(),
+            Commands::Check(args) => args.handle(),
+            Commands::Fix(args) => args.handle(),
+            Commands::Info(args) => args.handle(),
+            Commands::Update(args) => args.handle(),
+            Commands::Init(args) => args.handle(),
+            Commands::Util(args) => args.handle(),
+            Commands::Config(args) => args.handle(),
+        }
     }
 }
 

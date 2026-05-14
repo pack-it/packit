@@ -2,16 +2,16 @@
 use thiserror::Error;
 
 use crate::{
+    builder::error::BuilderError,
     cli::display::error::DisplayError,
     installer::{
-        builder::BuilderError,
         scripts::ScriptError,
         types::{PackageId, PackageIdError, Version},
         unpack::UnpackError,
     },
     platforms::{permissions::error::PermissionError, symlink::SymlinkError},
+    register::error::RegisterError,
     repositories::error::RepositoryError,
-    storage::error::RegisterError,
     utils::tree::TreeError,
 };
 

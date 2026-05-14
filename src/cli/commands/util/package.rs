@@ -11,7 +11,7 @@ use crate::{
     config::Config,
     installer::types::PackageId,
     packager,
-    storage::package_register::PackageRegister,
+    register::package_register::PackageRegister,
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
@@ -24,9 +24,9 @@ pub struct PackageArgs {
     /// The ids of the packages to package
     pub packages: Vec<PackageId>,
 
-    /// True to sort the package into a prebuild directory
+    /// True to structure the package into a prebuild directory
     #[arg(short, long, default_value = "false")]
-    pub sorted: bool,
+    pub structured: bool,
 
     /// True to package all installed packages
     #[arg(short, long, default_value = "false")]
@@ -36,7 +36,7 @@ pub struct PackageArgs {
 impl HandleCommand for PackageArgs {
     fn handle(&self) {
         let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
-        let register_dir = PackageRegister::get_default_path(&config.prefix_directory);
+        let register_dir = PackageRegister::get_path(&config.prefix_directory);
         let register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
         let packages: Vec<&PackageId> = match self.all {
@@ -51,7 +51,7 @@ impl HandleCommand for PackageArgs {
 
         for package_id in &packages {
             // Get the correct install directory
-            let destination = match self.sorted {
+            let destination = match self.structured {
                 true => {
                     let prefix = package_id.name.get_prefix().to_string();
                     &self.destination.join("packages").join(prefix).join(&package_id.name).join(package_id.version.to_string())
@@ -68,7 +68,7 @@ impl PackageArgs {
     fn package(&self, package_id: &PackageId, destination: &PathBuf, config: &Config, register: &PackageRegister) {
         let package_version = match register.get_package_version(package_id) {
             Some(package_version) => package_version,
-            None => not_found::register_package_version(package_id, &register),
+            None => not_found::register_package_version(package_id, register),
         };
 
         // Automatically create the destination directory
@@ -78,7 +78,7 @@ impl PackageArgs {
         let spinner_message = format!("Packaging {package_id}");
         spinner.show(spinner_message.clone());
 
-        packager::package(&config, package_id, destination, package_version.revisions.len() as u64).unwrap_or_exit(1);
+        packager::package(config, package_id, destination, package_version.revisions.len() as u64).unwrap_or_exit(1);
 
         spinner.finish(format!("{spinner_message} successful"));
         println!("Successfully packaged {package_id} to {:?}", destination);

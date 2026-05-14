@@ -16,10 +16,11 @@ use crate::{
         types::{PackageId, PackageName, Version},
     },
     platforms::{DEFAULT_CONFIG_DIR, DEFAULT_PREFIX, permissions},
+    register::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
     repositories::types::Licenses,
-    storage::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
     utils::{
-        constants::{DEFAULT_METADATA_REPOSITORY_PATH, DEFAULT_METADATA_REPOSITORY_PROVIDER},
+        constants::{DEFAULT_METADATA_REPOSITORY_PROVIDER, DEFAULT_METADATA_REPOSITORY_URL},
+        packit_version::packit_version,
         unwrap_or_exit::UnwrapOrExit,
     },
 };
@@ -71,15 +72,13 @@ impl HandleCommand for InitArgs {
         }
 
         // Check if register already exists
-        if PackageRegister::get_default_path(&prefix_directory).exists() {
+        if PackageRegister::get_path(&prefix_directory).exists() {
             error!(msg: "Packit is already initialized: register already exists");
             exit(2);
         }
 
-        let packit_version = env!("CARGO_PKG_VERSION");
-
         // Check if packit binary is at the correct location
-        let packit_package_path = prefix_directory.join("packages").join("packit").join(packit_version);
+        let packit_package_path = prefix_directory.join("packages").join("packit").join(packit_version!());
         let packit_binary = packit_package_path.join("bin").join("packit");
         if !packit_binary.exists() {
             error!(msg: "Packit cannot be initialized: expected packit binary at {}", packit_binary.display());
@@ -98,16 +97,16 @@ impl HandleCommand for InitArgs {
         // Create register containing packit
         let mut register = PackageRegister::new_empty();
         let package_name = PackageName::from_str("packit").expect("Expected 'packit' to be a valid package name");
-        let package_version = Version::from_str(packit_version).expect("Expected Packit version to be in the correct format");
+        let package_version = Version::from_str(packit_version!()).expect("Expected Packit version to be in the correct format");
         let package_id = PackageId::new(package_name, package_version);
 
         let installed_package_version = InstalledPackageVersion {
             package_id: package_id.clone(),
             license: Licenses::Single("GPL-3.0-only".into()),
-            source_repository_provider: DEFAULT_METADATA_REPOSITORY_PROVIDER.into(),
-            source_repository_url: DEFAULT_METADATA_REPOSITORY_PATH.into(),
-            source_prebuild_repository_url: None,
-            source_prebuild_repository_provider: None,
+            metadata_repository_provider: DEFAULT_METADATA_REPOSITORY_PROVIDER.into(),
+            metadata_repository_url: DEFAULT_METADATA_REPOSITORY_URL.into(),
+            prebuilds_repository_url: None,
+            prebuilds_repository_provider: None,
             dependencies: HashSet::new(),
             dependents: HashSet::new(),
             install_path: packit_package_path,
@@ -126,7 +125,7 @@ impl HandleCommand for InitArgs {
 
         // Save register
         register
-            .save_to(&PackageRegister::get_default_path(&prefix_directory))
+            .save_to(&PackageRegister::get_path(&prefix_directory))
             .unwrap_or_exit_msg("Packit cannot be initialized: error while saving register", 1);
 
         // Create symlinks in prefix directory

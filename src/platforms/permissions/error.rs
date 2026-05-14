@@ -8,11 +8,11 @@ pub enum PermissionError {
     #[error("Group does not exist")]
     GroupDoesNotExist,
 
-    #[error("Error while fetching permissions")]
-    IOError(#[from] std::io::Error),
-
     #[error("Error during platform specific operations")]
     PlatformError(#[from] PlatformError),
+
+    #[error("Error while fetching permissions")]
+    IOError(#[from] std::io::Error),
 }
 
 pub type Result<T> = core::result::Result<T, PermissionError>;

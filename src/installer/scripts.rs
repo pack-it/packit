@@ -10,12 +10,10 @@ use tempfile::{NamedTempFile, TempDir};
 use thiserror::Error;
 
 use crate::{
+    builder::BuildEnv,
     cli::display::logging::warning,
     config::Config,
-    installer::{
-        build_env::BuildEnv,
-        types::{PackageId, PackageName},
-    },
+    installer::types::{PackageId, PackageName},
     platforms::{Os, TargetArchitecture},
     repositories::{error::RepositoryError, manager::RepositoryManager},
     utils::env::Environment,
@@ -24,6 +22,15 @@ use crate::{
 /// The errors that occur during script handling.
 #[derive(Error, Debug)]
 pub enum ScriptError {
+    #[error("Cannot parse PathBuf to string")]
+    InvalidPathString,
+
+    #[error("Cannot find script '{0}'")]
+    ScriptNotFound(String),
+
+    #[error("Script executed with status code {0}")]
+    ScriptFailed(i32),
+
     #[error("Cannot run script: {0}")]
     RunError(std::io::Error),
 
@@ -35,15 +42,6 @@ pub enum ScriptError {
 
     #[error("Cannot create temp directory for script to run: {0}")]
     TempCreationError(std::io::Error),
-
-    #[error("Cannot parse PathBuf to string")]
-    InvalidPathString,
-
-    #[error("Cannot find script '{0}'")]
-    ScriptNotFound(String),
-
-    #[error("Script executed with status code {0}")]
-    ScriptFailed(i32),
 
     #[error("Cannot fetch script from repository")]
     FetchScriptError(#[from] RepositoryError),

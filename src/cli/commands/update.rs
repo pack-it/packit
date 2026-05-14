@@ -14,8 +14,8 @@ use crate::{
         types::{OptionalPackageId, Version},
     },
     platforms::Target,
+    register::package_register::PackageRegister,
     repositories::manager::RepositoryManager,
-    storage::package_register::PackageRegister,
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
@@ -34,7 +34,7 @@ impl HandleCommand for UpdateArgs {
     fn handle(&self) {
         let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
         let manager = RepositoryManager::new(&config);
-        let register_dir = PackageRegister::get_default_path(&config.prefix_directory);
+        let register_dir = PackageRegister::get_path(&config.prefix_directory);
         let mut register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
         match self.optional_id.versioned() {

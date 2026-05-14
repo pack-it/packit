@@ -12,7 +12,7 @@ pub enum Issue {
     /// The Packit Config.toml is missing.
     MissingConfig,
 
-    /// The Packit Installed.toml is missing.
+    /// The Packit Register.toml is missing.
     MissingRegister,
 
     /// A list of parents and their missing dependencies `<parent> : <missing>`.
@@ -30,10 +30,10 @@ pub enum Issue {
     /// A list of packages which have invalid dependents `<child> : <invalid>`.
     InvalidDependents(Vec<(PackageId, PackageId)>),
 
-    /// A list of packages which are present in the Installed.toml, but not in the package directory.
+    /// A list of packages which are present in the Register.toml, but not in the package directory.
     InconsistentStorage(Vec<PackageId>),
 
-    /// A list of packages which are present in the package directory, but not in the Installed.toml.
+    /// A list of packages which are present in the package directory, but not in the Register.toml.
     InconsistentRegister(HashSet<PackageId>),
 
     /// A list of packages which are changed (when they shouldn't be).
@@ -75,7 +75,7 @@ impl Display for Issue {
                 writeln!(f, "Missing Config.toml file")?;
             },
             Issue::MissingRegister => {
-                writeln!(f, "Missing Installed.toml file")?;
+                writeln!(f, "Missing Register.toml file")?;
             },
             Issue::InvalidActive(invalid) => {
                 writeln!(f, "Invalid active version")?;
@@ -172,7 +172,7 @@ impl Display for Issue {
             },
             Issue::InconsistentStorage(package_ids) => {
                 writeln!(f, "Inconsistent storage")?;
-                let issue_explanation = "The following packages were found in Installed.toml, but not in the Packit package directory:";
+                let issue_explanation = "The following packages were found in Register.toml, but not in the Packit package directory:";
                 writeln!(f, "{issue_explanation}")?;
 
                 for package in package_ids {
@@ -204,8 +204,6 @@ impl Display for Issue {
             Issue::NotFound(package_id) => {
                 writeln!(f, "Package existence")?;
                 writeln!(f, "{} cannot be found anywhere in Packit.", package_id.to_string().bold().blue())?
-
-                // TODO: Somehow show result of fuzzy search here
             },
             Issue::StrayDirectories(directories) => {
                 writeln!(f, "Stray directories")?;
@@ -228,7 +226,7 @@ impl Issue {
         match &self {
             Issue::IncorrectPermissions(_) => "To fix this issue we set the permissions again.",
             Issue::MissingConfig => "To fix this issue we try to reconstruct the Config.toml with data still in the Packit directory.",
-            Issue::MissingRegister => "To fix this issue we try to reconstruct the Installed.toml with data still in the Packit directory.",
+            Issue::MissingRegister => "To fix this issue we try to reconstruct the Register.toml with data still in the Packit directory.",
             Issue::StrayDirectories(_) => "To fix this issue we remove the stray directories.",
             Issue::InvalidActive(_) => "To fix this issue we set the active version to the latest installed version.",
             Issue::ForbiddenLink(_) => "To fix this issue we unlink the packages which have a forbidden link.",
@@ -246,7 +244,7 @@ impl Issue {
                 "To fix this issue the packages are temporarily removed from the register and then reinstalled."
             },
             Issue::InconsistentRegister(_) => {
-                "To fix this issue we try to reconstruct the Installed.toml with data still in the Packit directory."
+                "To fix this issue we try to reconstruct the Register.toml with data still in the Packit directory."
             },
             Issue::AlteredPackage(_) | Issue::MissingPackitGroup | Issue::NotFound(_) => {
                 "There is no automatic fix for this issue available yet."
