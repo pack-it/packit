@@ -285,10 +285,15 @@ impl Verifier {
         Ok(Some(Issue::MissingConfig))
     }
 
-    /// Checks if the Config.toml syntax is valid.
+    /// Checks if the `Config.toml` syntax is valid.
     /// Returns `None` if the config syntax is valid or an `Issue::MissingConfig` otherwise.
     /// Could return an IO error.
     fn check_config_syntax(&self) -> Result<Option<Issue>> {
+        // Don't return a config syntax issue if the `Config.toml` doesn't exist
+        if !fs::exists(Config::get_default_path())? {
+            return Ok(None);
+        }
+
         match Config::from(&Config::get_default_path()) {
             Ok(_) => Ok(None),
             Err(_) => Ok(Some(Issue::MissingConfig)),
@@ -311,7 +316,14 @@ impl Verifier {
     /// Returns `None` if the register syntax is valid or an `Issue::MissingRegister` otherwise.
     fn check_register_syntax(&self) -> Result<Option<Issue>> {
         let config = Config::from(&Config::get_default_path())?;
-        match PackageRegister::from(&PackageRegister::get_path(&config.prefix_directory)) {
+        let register_directory = &PackageRegister::get_path(&config.prefix_directory);
+
+        // Don't return a register syntax issue if the `Register.toml` doesn't exist
+        if !fs::exists(register_directory)? {
+            return Ok(None);
+        }
+
+        match PackageRegister::from(register_directory) {
             Ok(_) => Ok(None),
             Err(_) => Ok(Some(Issue::MissingRegister)),
         }

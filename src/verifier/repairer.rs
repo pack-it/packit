@@ -102,13 +102,25 @@ impl Repairer {
 
         default_config.set_prefix_directory(prefix_path.clone());
 
-        // Try to recover the repositories, repository names cannot be recovered
-        let register_dir = prefix_path.join(REGISTER_FILENAME);
-        if fs::exists(&register_dir)? {
-            if let Ok(register) = PackageRegister::from(&register_dir) {
+        // Try to recover the repositories, note that repository names cannot be recovered
+        self.set_config_repositories(&prefix_path, &mut default_config)?;
+
+        // Set multi-user to true if the packit group exists
+        default_config.set_multiuser(does_packit_group_exist()?);
+
+        self.confirm_config_construction(&mut default_config)
+    }
+
+    /// Sets the repositories field, if they can be found with the `get_used_repositories`.
+    fn set_config_repositories(&self, prefix_path: &PathBuf, default_config: &mut EditableConfig) -> Result<()> {
+        let register_dir = PackageRegister::get_path(prefix_path);
+        if let Ok(register) = PackageRegister::from(&register_dir) {
+            let used_repositories = self.get_used_repositories(&register);
+            if !used_repositories.is_empty() {
                 default_config.remove_repository(DEFAULT_METADATA_REPOSITORY_NAME);
+
                 let mut new_rank = Vec::new();
-                for (i, repository) in self.get_used_repositories(&register).into_iter().enumerate() {
+                for (i, repository) in used_repositories.into_iter().enumerate() {
                     // Create a unique name for each repository (we can't infer this from anything)
                     let name = format!("repository_{}", i);
                     default_config.set_repository(&name, repository);
@@ -116,18 +128,17 @@ impl Repairer {
                 }
 
                 default_config.set_repositories_rank(new_rank);
+
+                return Ok(());
             }
-        } else {
-            println!(
-                "Could not open or parse '{REGISTER_FILENAME}' from '{}', using the default repositories instead",
-                prefix_path.display()
-            );
         }
 
-        // Set multi-user to true if the packit group exists
-        default_config.set_multiuser(does_packit_group_exist()?);
+        println!(
+            "Could not use '{REGISTER_FILENAME}' to reconstruct repositories from '{}', using the default repositories instead",
+            prefix_path.display()
+        );
 
-        self.confirm_config_construction(&mut default_config)
+        Ok(())
     }
 
     /// Saves the reconstructed Config.toml to the default config path if the user confirms it.
