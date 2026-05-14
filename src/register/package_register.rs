@@ -51,7 +51,7 @@ impl PackageRegister {
         // Read data from file
         let file_content = fs::read_to_string(path)?;
 
-        // If the file is empty, return an empty storage
+        // If the file is empty, return an error
         if file_content.trim().is_empty() {
             return Err(RegisterError::RegisterDoesNotExist);
         }

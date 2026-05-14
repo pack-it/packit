@@ -26,6 +26,9 @@ pub enum BuilderError {
     #[error("The required patch was not found in the repository")]
     RepositoryPatchNotFound,
 
+    #[error("Build files download unsuccessful, with status code: {0}.")]
+    RequestUnsuccessful(reqwest::StatusCode),
+
     #[error("Cannot unpack response")]
     UnpackError(#[from] UnpackError),
 
@@ -43,9 +46,6 @@ pub enum BuilderError {
 
     #[error("Cannot request files for building")]
     RequestError(#[from] reqwest::Error),
-
-    #[error("Build files download unsuccessful, with status code: {0}.")]
-    RequestUnsuccessful(reqwest::StatusCode),
 
     #[error("Error while interacting with filesystem")]
     IOError(#[from] std::io::Error),

@@ -13,7 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Support for leading zeros in version numbers.
 - The web prebuild provider for web prebuild support.
 - The `--updatables` flag on the list command, to list packages which can be updated.
-- Regex search to the search command, to search packages based on a given regex pattern.
+- Support for Regex search in the search command, to search packages based on a given regex pattern.
 - Support for applying patches to the source code of packages.
 - Verifier and Repairer features
     - The check and fix command now accept multiple package parameters.

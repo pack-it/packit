@@ -7,7 +7,6 @@ mod init;
 mod install;
 mod link;
 mod list;
-mod package;
 mod search;
 mod switch;
 mod uninstall;
@@ -25,8 +24,8 @@ use crate::{
     cli::{
         commands::{
             check::CheckArgs, config::ConfigArgs, fix::FixArgs, info::InfoArgs, init::InitArgs, install::InstallArgs, link::LinkArgs,
-            list::ListArgs, package::PackageArgs, search::SearchArgs, switch::SwitchArgs, uninstall::UninstallArgs, unlink::UnlinkArgs,
-            update::UpdateArgs, util::UtilArgs,
+            list::ListArgs, search::SearchArgs, switch::SwitchArgs, uninstall::UninstallArgs, unlink::UnlinkArgs, update::UpdateArgs,
+            util::UtilArgs,
         },
         display::logging::error,
     },
@@ -71,9 +70,6 @@ enum Commands {
 
     /// Check the installation and fix issues
     Fix(FixArgs),
-
-    /// Package a package version
-    Package(PackageArgs),
 
     /// Get info from a specific package
     Info(InfoArgs),
@@ -143,7 +139,6 @@ impl Cli {
             Commands::Unlink(args) => args,
             Commands::Check(args) => args,
             Commands::Fix(args) => args,
-            Commands::Package(args) => args,
             Commands::Info(args) => args,
             Commands::Update(args) => args,
             Commands::Init(args) => args,

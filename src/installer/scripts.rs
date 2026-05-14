@@ -31,9 +31,6 @@ pub enum ScriptError {
     #[error("Script executed with status code {0}")]
     ScriptFailed(i32),
 
-    #[error("Cannot fetch script from repository")]
-    FetchScriptError(#[from] RepositoryError),
-
     #[error("Cannot run script: {0}")]
     RunError(std::io::Error),
 
@@ -45,6 +42,9 @@ pub enum ScriptError {
 
     #[error("Cannot create temp directory for script to run: {0}")]
     TempCreationError(std::io::Error),
+
+    #[error("Cannot fetch script from repository")]
+    FetchScriptError(#[from] RepositoryError),
 }
 
 pub type Result<T> = core::result::Result<T, ScriptError>;

@@ -91,7 +91,7 @@ impl<'a> Installer<'a> {
         }
 
         // Ask user to build all packages if the prefix directory is not the default prefix
-        if self.config.prefix_directory != PathBuf::from(DEFAULT_PREFIX) {
+        if self.config.prefix_directory != *DEFAULT_PREFIX {
             let question = "You're not using the default prefix, would you like to build all packages from source instead?";
             if ask_user(question, QuestionResponse::Yes)?.is_no_or_invalid() {
                 return Err(InstallerError::InstallationCanceled {
@@ -519,7 +519,7 @@ impl<'a> Installer<'a> {
             },
         };
 
-        // Load source repository
+        // Load metadata repository
         let repository = match installed_package.get_package_version(&package_id.version) {
             Some(package_version) => Repository::new(
                 &package_version.metadata_repository_url,
@@ -615,7 +615,7 @@ impl<'a> Installer<'a> {
 
         // Run uninstall scripts for all versions
         for package_version in &installed_versions {
-            // Load source repository
+            // Create repository
             let repository = Repository::new(
                 &package_version.metadata_repository_url,
                 &package_version.metadata_repository_provider,
@@ -648,23 +648,23 @@ impl<'a> Installer<'a> {
     /// Downloads and runs the uninstall script of a given package.
     /// Could return an `InstallerError`.
     fn run_uninstall_script(&self, repository: &Repository, package_id: &PackageId, install_directory: &PathBuf) -> Result<()> {
-        // Create repository provider for source repository
+        // Create metadata repository provider for source repository
         let provider = match provider::create_metadata_provider(repository) {
             Some(provider) => provider,
             None => {
-                error!(msg: "Unable to create repository provider, skipping install script execution. This may cause stray files");
+                warning!("Unable to create repository provider, skipping uninstall script execution. This may cause stray files");
                 return Ok(());
             },
         };
 
-        // Load package version from source repository
+        // Load package version from metadata repository
         let package_version = match provider.read_package_version(&package_id.name, &package_id.version) {
             Ok(package_version) => package_version,
             Err(e) => {
-                error!(
-                    e,
-                    "Unable to read package version from source repository, skipping install script execution. This may cause stray files"
+                warning!(
+                    "Unable to read package version from metadata repository, skipping uninstall script execution. This may cause stray files"
                 );
+                warning!("{e}");
                 return Ok(());
             },
         };
