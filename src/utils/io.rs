@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{ffi::OsStr, fs, path::Path, str::Utf8Error};
+use std::{fs, path::Path, str::Utf8Error};
 
 #[cfg(unix)]
-use std::os::unix::ffi::OsStrExt;
+use std::{ffi::OsStr, os::unix::ffi::OsStrExt};
 
 use crate::{cli::display::logging::warning, platforms::symlink};
 
