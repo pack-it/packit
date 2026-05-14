@@ -33,7 +33,7 @@ pub fn create_folder_symlinks(original_dir: &Path, link_dir: &Path) -> symlink::
 
         // Check if file already exists
         if fs::exists(&link_path)? {
-            warning!("Symlink {:?} already exists in {:?}", file.file_name(), link_dir);
+            warning!("Symlink {} already exists in {}", file.file_name().display(), link_dir.display());
             continue;
         }
 

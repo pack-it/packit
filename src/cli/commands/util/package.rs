@@ -81,6 +81,6 @@ impl PackageArgs {
         packager::package(config, package_id, destination, package_version.revisions.len() as u64).unwrap_or_exit(1);
 
         spinner.finish(format!("{spinner_message} successful"));
-        println!("Successfully packaged {package_id} to {:?}", destination);
+        println!("Successfully packaged {package_id} to {}", destination.display());
     }
 }
