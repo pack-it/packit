@@ -21,6 +21,7 @@ use crate::{
     },
     register::package_register::PackageRegister,
     repositories::{
+        error::RepositoryError,
         manager::RepositoryManager,
         types::{Checksum, PackageVersionMeta},
     },
@@ -306,13 +307,15 @@ impl Repairer {
             let install_path = &package_directory.join(&package_id.name).join(package_id.version.to_string());
             let (repository_id, package_version_meta) = manager.read_package_version(package_id, &Target::current())?;
             let revisions = package_version_meta.get_revision_count();
-            let used_prebuild = match manager.get_prebuild_checksum(&repository_id, package_id, revisions, &Target::current())? {
-                Some(correct_checksum) => {
+            let used_prebuild = match manager.get_prebuild_checksum(&repository_id, package_id, revisions, &Target::current()) {
+                Ok(Some(correct_checksum)) => {
                     let compressed = packager::compress(install_path)?;
                     let checksum = Checksum::from_bytes(&compressed);
                     correct_checksum == checksum
                 },
-                None => false,
+                Ok(None) => false,
+                Err(RepositoryError::RepositoryNotFoundError { .. }) => false,
+                Err(e) => Err(e)?,
             };
 
             // Figure out the active version
@@ -347,6 +350,8 @@ impl Repairer {
                 used_prebuild,
             )?;
         }
+
+        dbg!("END");
 
         Ok(())
     }
