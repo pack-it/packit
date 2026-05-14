@@ -24,6 +24,7 @@ pub struct SearchArgs {
     /// The query to search with (can be an `OptionalPackageId` or regex string)
     query: String,
 
+    /// True if the query should be interpreted as regex
     #[arg(long, default_value = "false")]
     regex: bool,
 }

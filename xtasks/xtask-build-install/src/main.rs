@@ -14,6 +14,7 @@ pub struct TaskCommand {
     #[arg(long)]
     destination: Option<PathBuf>,
 
+    /// True if the files at the destination should be removed before building
     #[arg(short, long, default_value = "false")]
     overwrite: bool,
 }

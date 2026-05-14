@@ -19,7 +19,7 @@ use crate::{
 /// Fixes all issues found by the check command. The user will be asked if they want to fix an issue for each issue type.
 #[derive(Args, Debug)]
 pub struct FixArgs {
-    /// A list of packages to fix. Could be empty, then all packages are fixed.
+    /// A list of packages to fix. Could be empty, then all packages are fixed
     pub packages: Vec<PackageId>,
 }
 
