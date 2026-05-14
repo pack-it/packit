@@ -25,7 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Skip uninstall option when update is not possible because of dependents which need the older version.
 - Add portable repositories, a generated repository containing only specific packages for use on airgapped systems.
 - Add the init command which initializes the Packit environment and files.
-- Add `--sorted` flag to the package command to sort packages into a prebuild directory structure.
+- Add `--structured` flag to the package command to structure packages into a prebuild directory structure.
 - Add `--all` flag to the package command to package all installed packages.
 - Bugfix in repairer fix for broken dependency trees. The missing dependency now gets the correct dependents and is set in the dependencies directory.
 

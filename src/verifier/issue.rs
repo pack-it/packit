@@ -204,8 +204,6 @@ impl Display for Issue {
             Issue::NotFound(package_id) => {
                 writeln!(f, "Package existence")?;
                 writeln!(f, "{} cannot be found anywhere in Packit.", package_id.to_string().bold().blue())?
-
-                // TODO: Somehow show result of fuzzy search here
             },
             Issue::StrayDirectories(directories) => {
                 writeln!(f, "Stray directories")?;

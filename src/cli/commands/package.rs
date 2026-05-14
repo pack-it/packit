@@ -24,9 +24,9 @@ pub struct PackageArgs {
     /// The ids of the packages to package
     pub packages: Vec<PackageId>,
 
-    /// True to sort the package into a prebuild directory
+    /// True to structure the package into a prebuild directory
     #[arg(short, long, default_value = "false")]
-    pub sorted: bool,
+    pub structured: bool,
 
     /// True to package all installed packages
     #[arg(short, long, default_value = "false")]
@@ -51,7 +51,7 @@ impl HandleCommand for PackageArgs {
 
         for package_id in &packages {
             // Get the correct install directory
-            let destination = match self.sorted {
+            let destination = match self.structured {
                 true => {
                     let prefix = package_id.name.get_prefix().to_string();
                     &self.destination.join("packages").join(prefix).join(&package_id.name).join(package_id.version.to_string())
