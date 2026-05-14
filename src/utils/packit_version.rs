@@ -8,7 +8,7 @@ pub(crate) use packit_version;
 
 macro_rules! packit_version_name {
     () => {
-        "The Big Bang"
+        "The Fuzzy Traveling Handyman"
     };
 }
 pub(crate) use packit_version_name;
