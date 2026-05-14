@@ -231,6 +231,11 @@ impl EditableConfig {
 
     /// Sets the repository with the given id.
     pub fn set_repository(&mut self, id: &str, repository: Repository) {
+        // Ensure repositories is a table, not an inline table
+        if !self.document.contains_table("repositories") {
+            self.document["repositories"] = toml_edit::Table::new().into();
+        }
+
         let mut new_value = toml_edit::Table::new();
         new_value["url"] = (&repository.url).into();
         new_value["provider"] = (&repository.provider).into();

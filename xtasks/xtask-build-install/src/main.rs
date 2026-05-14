@@ -15,6 +15,12 @@ pub struct TaskCommand {
     destination: Option<PathBuf>,
 }
 
+#[cfg(unix)]
+const BINARY_EXTENSION: &str = "";
+
+#[cfg(windows)]
+const BINARY_EXTENSION: &str = ".exe";
+
 fn main() {
     let command = TaskCommand::parse();
 
@@ -78,17 +84,20 @@ fn copy_binary_to_destination(destination: &PathBuf) {
         exit(1);
     }
 
-    let binary_path = get_target_path().join("release").join("packit");
+    let packit_binary_name = format!("packit{BINARY_EXTENSION}");
+    let pit_binary_name = format!("pit{BINARY_EXTENSION}");
+
+    let binary_path = get_target_path().join("release").join(&packit_binary_name);
 
     // Copy packit binary to bin directory
-    if let Err(e) = fs::copy(binary_path, bin_directory.join("packit")) {
+    if let Err(e) = fs::copy(binary_path, bin_directory.join(&packit_binary_name)) {
         eprintln!("Failed to copy binary to bin directory");
         eprintln!("Error: {e}");
         exit(1);
     }
 
     // Create symlink for pit to packit
-    if let Err(e) = create_file_symlink("packit", bin_directory.join("pit")) {
+    if let Err(e) = create_file_symlink(&packit_binary_name, bin_directory.join(&pit_binary_name)) {
         eprintln!("Failed to create pit symlink in bin directory");
         eprintln!("Error: {e}");
         exit(1);

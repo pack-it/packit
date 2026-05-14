@@ -136,7 +136,7 @@ All available fields in the config are listed below. The [`pit config`](#pit-con
 
 | Field                | Explanation                                                              |
 |----------------------|--------------------------------------------------------------------------|
-| `path`               | Defines the path to the repository.                                      |
+| `url`                | Defines the url to the repository.                                      |
 | `provider`           | Defines the provider of the repository, defaults to `web`.               |
 | `prebuilds_url`      | Defines the url of the prebuilds repository for this package repository. |
 | `prebuilds_provider` | Defines the provider of the prebuilds repository, defaults to `fs`.      |
@@ -153,7 +153,7 @@ repositories_rank = ["core"]
 
 [repositories.core]
 provider = "web"
-path = "https://raw.githubusercontent.com/pack-it/core/main/"
+url = "https://raw.githubusercontent.com/pack-it/core/main/"
 ```
 
 
