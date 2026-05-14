@@ -26,7 +26,7 @@ curl --proto "=https" -sSfL %PREBUILD_URL% --output packit@%VERSION%-%REVISION%-
 if not ERRORLEVEL 1 (
     tar -xf packit@%VERSION%-%REVISION%-%CURRENT_OS%.tar.gz
     del packit@%VERSION%-%REVISION%-%CURRENT_OS%.tar.gz
-    move packit@%VERSION%-%REVISION%-%CURRENT_OS% $VERSION
+    ren packit@%VERSION%-%REVISION%-%CURRENT_OS% %VERSION%
 
     echo Downloaded prebuild
 ) else (
@@ -105,7 +105,9 @@ if not ERRORLEVEL 1 (
     )
 )
 
-mkdir "%CONFIG_DIR%"
+if not exist "%CONFIG_DIR%" (
+    mkdir "%CONFIG_DIR%"
+)
 
 "%PREFIX_DIR%/packages/packit/%VERSION%/bin/packit.exe" init
 
