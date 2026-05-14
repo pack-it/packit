@@ -35,6 +35,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 `source_repository_provider` -> `metadata_repository_provider` <br>
 `source_prebuild_repository_url` -> `prebuilds_repository_url` <br>
 `source_prebuild_repository_provider` -> `prebuilds_repository_provider`
+- Renamed the `path` repository field in the config to `url`. (BREAKING)
 - The list command now has grid printing.
 
 ### Removed

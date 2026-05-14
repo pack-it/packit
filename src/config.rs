@@ -15,7 +15,7 @@ use crate::{
     platforms::{DEFAULT_CONFIG_DIR, DEFAULT_PREFIX},
     repositories::metadata::DEFAULT_METADATA_PROVIDER_ID,
     utils::constants::{
-        CONFIG_FILENAME, DEFAULT_METADATA_REPOSITORY_NAME, DEFAULT_METADATA_REPOSITORY_PATH, DEFAULT_METADATA_REPOSITORY_PROVIDER,
+        CONFIG_FILENAME, DEFAULT_METADATA_REPOSITORY_NAME, DEFAULT_METADATA_REPOSITORY_PROVIDER, DEFAULT_METADATA_REPOSITORY_URL,
     },
 };
 
@@ -46,8 +46,8 @@ pub struct Config {
 /// Represents a repository, containing connection information.
 #[derive(Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Repository {
-    /// The path to the repository
-    pub path: String,
+    /// The url of the repository
+    pub url: String,
 
     /// The repository provider, defaults to the packit repository format
     #[serde(default = "Repository::default_repository_provider")]
@@ -61,10 +61,10 @@ pub struct Repository {
 }
 
 impl Repository {
-    /// Creates a new repository with the specified path and provider
-    pub fn new(path: &str, provider: &str) -> Self {
+    /// Creates a new repository with the specified url and provider
+    pub fn new(url: &str, provider: &str) -> Self {
         Self {
-            path: path.to_string(),
+            url: url.to_string(),
             provider: provider.to_string(),
             prebuilds_url: None,
             prebuilds_provider: None,
@@ -110,9 +110,9 @@ impl Config {
             warning!("Repositories rank contains undefined repository, ignoring undefined repository...");
         }
 
-        // Remove trailing slashes from repository paths
+        // Remove trailing slashes from repository urls
         for repository in config.repositories.values_mut() {
-            repository.path = repository.path.trim_end_matches("/").into();
+            repository.url = repository.url.trim_end_matches("/").into();
 
             if let Some(prebuilds_url) = &repository.prebuilds_url {
                 repository.prebuilds_url = Some(prebuilds_url.trim_end_matches("/").into());
@@ -147,7 +147,7 @@ impl Config {
         println!("Repositories rank: {}", self.repositories_rank.join(", "));
         for (name, repo) in &self.repositories {
             println!("{name}");
-            println!("\tPath: {}", repo.path);
+            println!("\tUrl: {}", repo.url);
             println!("\tProvider: {}", repo.provider);
             println!(
                 "\tPrebuilds provider: {}",
@@ -162,7 +162,7 @@ impl Default for EditableConfig {
     /// Creates a default `EditableConfig`.
     fn default() -> Self {
         let default_repository = Repository {
-            path: DEFAULT_METADATA_REPOSITORY_PATH.to_string(),
+            url: DEFAULT_METADATA_REPOSITORY_URL.to_string(),
             provider: DEFAULT_METADATA_REPOSITORY_PROVIDER.to_string(),
             prebuilds_url: None,
             prebuilds_provider: None,
@@ -232,7 +232,7 @@ impl EditableConfig {
     /// Sets the repository with the given id.
     pub fn set_repository(&mut self, id: &str, repository: Repository) {
         let mut new_value = toml_edit::Table::new();
-        new_value["path"] = (&repository.path).into();
+        new_value["url"] = (&repository.url).into();
         new_value["provider"] = (&repository.provider).into();
         if let Some(prebuilds_url) = &repository.prebuilds_url {
             new_value["prebuilds_url"] = prebuilds_url.into();

@@ -114,7 +114,7 @@ impl PackageRegister {
         let installed_package_version = InstalledPackageVersion {
             package_id: PackageId::new(package.name.clone(), package_version.version.clone()),
             license: package_version.license.clone(),
-            metadata_repository_url: source_repository.path.clone(),
+            metadata_repository_url: source_repository.url.clone(),
             metadata_repository_provider: source_repository.provider.clone(),
             prebuilds_repository_url,
             prebuilds_repository_provider,

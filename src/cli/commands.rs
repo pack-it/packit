@@ -128,25 +128,22 @@ impl Cli {
 
     /// Reads and handles the command.
     pub fn handle_command(&self) {
-        // Handle commands with user specified arguments
-        let args: &dyn HandleCommand = match &self.command {
-            Commands::Install(args) => args,
-            Commands::Uninstall(args) => args,
-            Commands::List(args) => args,
-            Commands::Search(args) => args,
-            Commands::Switch(args) => args,
-            Commands::Link(args) => args,
-            Commands::Unlink(args) => args,
-            Commands::Check(args) => args,
-            Commands::Fix(args) => args,
-            Commands::Info(args) => args,
-            Commands::Update(args) => args,
-            Commands::Init(args) => args,
-            Commands::Util(args) => args,
-            Commands::Config(args) => args,
-        };
-
-        args.handle();
+        match &self.command {
+            Commands::Install(args) => args.handle(),
+            Commands::Uninstall(args) => args.handle(),
+            Commands::List(args) => args.handle(),
+            Commands::Search(args) => args.handle(),
+            Commands::Switch(args) => args.handle(),
+            Commands::Link(args) => args.handle(),
+            Commands::Unlink(args) => args.handle(),
+            Commands::Check(args) => args.handle(),
+            Commands::Fix(args) => args.handle(),
+            Commands::Info(args) => args.handle(),
+            Commands::Update(args) => args.handle(),
+            Commands::Init(args) => args.handle(),
+            Commands::Util(args) => args.handle(),
+            Commands::Config(args) => args.handle(),
+        }
     }
 }
 

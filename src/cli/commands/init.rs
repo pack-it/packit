@@ -19,7 +19,7 @@ use crate::{
     register::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
     repositories::types::Licenses,
     utils::{
-        constants::{DEFAULT_METADATA_REPOSITORY_PATH, DEFAULT_METADATA_REPOSITORY_PROVIDER},
+        constants::{DEFAULT_METADATA_REPOSITORY_PROVIDER, DEFAULT_METADATA_REPOSITORY_URL},
         packit_version::packit_version,
         unwrap_or_exit::UnwrapOrExit,
     },
@@ -104,7 +104,7 @@ impl HandleCommand for InitArgs {
             package_id: package_id.clone(),
             license: Licenses::Single("GPL-3.0-only".into()),
             metadata_repository_provider: DEFAULT_METADATA_REPOSITORY_PROVIDER.into(),
-            metadata_repository_url: DEFAULT_METADATA_REPOSITORY_PATH.into(),
+            metadata_repository_url: DEFAULT_METADATA_REPOSITORY_URL.into(),
             prebuilds_repository_url: None,
             prebuilds_repository_provider: None,
             dependencies: HashSet::new(),

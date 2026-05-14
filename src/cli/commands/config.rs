@@ -173,7 +173,7 @@ impl ConfigArgs {
             println!("{}", metadata.description.green());
             println!("License: {}", metadata.license);
             println!("Maintainers: {}", metadata.maintainers.join(", "));
-            println!("Repository provider: {}, path: {}", repository.provider, repository.path);
+            println!("Repository provider: {}, url: {}", repository.provider, repository.url);
         }
     }
 

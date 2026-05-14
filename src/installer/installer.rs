@@ -91,7 +91,7 @@ impl<'a> Installer<'a> {
         }
 
         // Ask user to build all packages if the prefix directory is not the default prefix
-        if self.config.prefix_directory != *DEFAULT_PREFIX {
+        if self.config.prefix_directory != Path::new(DEFAULT_PREFIX) {
             let question = "You're not using the default prefix, would you like to build all packages from source instead?";
             if ask_user(question, QuestionResponse::Yes)?.is_no_or_invalid() {
                 return Err(InstallerError::InstallationCanceled {

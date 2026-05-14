@@ -75,7 +75,7 @@ impl WebMetadataProvider {
         }
 
         Some(Self {
-            url: repository.path.clone(),
+            url: repository.url.clone(),
         })
     }
 }
