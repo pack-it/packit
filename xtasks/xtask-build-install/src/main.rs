@@ -43,7 +43,7 @@ fn main() {
     };
 
     // Remove destination when overwrite is specified
-    if command.overwrite {
+    if command.overwrite && destination.exists() {
         if let Err(e) = fs::remove_dir_all(&destination) {
             eprintln!("Failed to remove destination directory");
             eprintln!("Error: {e}");
