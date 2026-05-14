@@ -33,6 +33,12 @@ pub struct InitArgs {
     prefix: Option<PathBuf>,
 }
 
+#[cfg(unix)]
+const PACKIT_BINARY_NAME: &str = "packit";
+
+#[cfg(windows)]
+const PACKIT_BINARY_NAME: &str = "packit.exe";
+
 impl HandleCommand for InitArgs {
     fn handle(&self) {
         // Check if config directory exists
@@ -79,7 +85,7 @@ impl HandleCommand for InitArgs {
 
         // Check if packit binary is at the correct location
         let packit_package_path = prefix_directory.join("packages").join("packit").join(packit_version!());
-        let packit_binary = packit_package_path.join("bin").join("packit");
+        let packit_binary = packit_package_path.join("bin").join(PACKIT_BINARY_NAME);
         if !packit_binary.exists() {
             error!(msg: "Packit cannot be initialized: expected packit binary at {}", packit_binary.display());
             exit(1);
