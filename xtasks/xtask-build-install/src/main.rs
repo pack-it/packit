@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -117,7 +118,7 @@ fn copy_binary_to_destination(destination: &PathBuf) {
     }
 }
 
-/// Gets the path to the proejct root directory.
+/// Gets the path to the project root directory.
 fn get_project_root_path() -> PathBuf {
     Path::new(std::env!("CARGO_MANIFEST_DIR"))
         .ancestors()
