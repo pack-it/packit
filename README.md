@@ -89,8 +89,8 @@ Links the specified package into the /bin, /lib, /share, etc. directories. If th
 #### `pit unlink <PACKAGE-NAME>`
 Unlinks the specified package, causing the package to be unavailable from the `PATH` environment variable.
 
-#### `pit package <DESTINATION> <PACKAGE-NAME>@<VERSION> ... [--sorted] [--all]`
-Packages the specified package(s) into a prebuild and stores it in the destination directory, together with a checksum of the prebuild. When `--sorted` is used the packages will be sorted into a prebuild directory structure. `--all` will package all installed packages.
+#### `pit util package <DESTINATION> <PACKAGE-NAME>@<VERSION> ... [--structured] [--all]`
+Packages the specified package(s) into a prebuild and stores it in the destination directory, together with a checksum of the prebuild. When `--structured` is used the packages will be put into a prebuild directory structure. `--all` will package all installed packages.
 
 #### `pit util checksum <URL>`
 Calculates the checksum of the file at the given url.
@@ -136,7 +136,7 @@ All available fields in the config are listed below. The [`pit config`](#pit-con
 
 | Field                | Explanation                                                              |
 |----------------------|--------------------------------------------------------------------------|
-| `url`                | Defines the url to the repository.                                      |
+| `url`                | Defines the url to the repository.                                       |
 | `provider`           | Defines the provider of the repository, defaults to `web`.               |
 | `prebuilds_url`      | Defines the url of the prebuilds repository for this package repository. |
 | `prebuilds_provider` | Defines the provider of the prebuilds repository, defaults to `fs`.      |
