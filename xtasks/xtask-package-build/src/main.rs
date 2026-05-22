@@ -54,7 +54,7 @@ fn main() {
     let package_file_name = format!("{package_name}.tar.gz");
     let archive_destination = destination.join(&package_file_name);
     if !command.overwrite && archive_destination.exists() {
-        eprintln!("The package already exists, please remove it first or specifiy the -o option");
+        eprintln!("The package already exists, please remove it first or specify the --overwrite option");
         exit(1);
     }
 
