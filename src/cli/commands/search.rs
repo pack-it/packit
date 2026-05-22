@@ -75,7 +75,7 @@ impl SearchArgs {
 
         let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
         let manager = RepositoryManager::new(&config);
-        let (repository_id, package) = match manager.read_package(&optional_id.name) {
+        let (repository_id, package, package_version) = match manager.read_package_and_version(&optional_id, &Target::current()) {
             Ok(package) => package,
             Err(RepositoryError::PackageNotFoundError { .. }) => not_found::repository_package(&optional_id.name, &manager, &config),
             Err(e) => {
@@ -99,15 +99,6 @@ impl SearchArgs {
 
         // Create a package id
         let package_id = optional_id.versioned_or_cloned(latest_version);
-
-        // Get package version info for its target
-        let package_version = match manager.read_repo_package_version(&repository_id, &package_id) {
-            Ok(package_version) => package_version,
-            Err(e) => {
-                error!(e, "Cannot read '{package_id}' from repository {repository_id}");
-                return;
-            },
-        };
 
         let target_bounds = package_version
             .get_best_target(&Target::current())

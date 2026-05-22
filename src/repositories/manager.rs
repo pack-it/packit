@@ -7,7 +7,7 @@ use crate::{
     cli::display::logging::{debug, error, warning},
     config::Config,
     installer::{
-        types::{PackageId, PackageName},
+        types::{OptionalPackageId, PackageId, PackageName},
         unpack::ArchiveExtension,
     },
     platforms::Target,
@@ -63,6 +63,36 @@ impl<'a> RepositoryManager<'a> {
             config,
             metadata_providers,
             prebuild_providers,
+        }
+    }
+
+    /// Reads package and package version metadata of the given package. When the package is only a name, the latest version is read.
+    /// Returns the repository id, package metadata and package version metadata.
+    /// Returns a `PackageNotFoundError` if the package canot be found.
+    pub fn read_package_and_version(
+        &self,
+        package: &OptionalPackageId,
+        target: &Target,
+    ) -> Result<(String, PackageMeta, PackageVersionMeta)> {
+        match package.versioned() {
+            Some(package_id) => {
+                // Read package version metadata first, then the according package
+                let (repository_id, version_metadata) = self.read_package_version(&package_id, target)?;
+                let package_metadata = self.read_repo_package(&repository_id, &package_id.name)?;
+
+                Ok((repository_id, package_metadata, version_metadata))
+            },
+            None => {
+                // Read package metadata first
+                let (repository_id, package_metadata) = self.read_package(&package.name)?;
+
+                // Read latest version package version metadata
+                let latest_version = package_metadata.get_latest_version(target)?;
+                let package_id = PackageId::new(package.name.clone(), latest_version.clone());
+                let version_metadata = self.read_repo_package_version(&repository_id, &package_id)?;
+
+                Ok((repository_id, package_metadata, version_metadata))
+            },
         }
     }
 
