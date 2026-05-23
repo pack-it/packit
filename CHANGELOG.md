@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased](https://github.com/pack-it/packit/compare/0.0.2...HEAD)
 
+### Changes
+- The build system now includes a new `package-build` xtask to create a full Packit prebuild for the release.
+
 
 ## [v0.0.2](https://github.com/pack-it/packit/compare/0.0.1...0.0.2) - 2026-05-14
 

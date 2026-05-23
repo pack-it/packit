@@ -1,0 +1,12 @@
+[package]
+name = "xtask-package-build"
+description = "Utility to package the build of Packit."
+version = "0.0.0"
+publish = false
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+clap = { version = "4.6.0", features = ["derive"] }
+tar = "0.4.45"
+flate2 = "1.1.9"
