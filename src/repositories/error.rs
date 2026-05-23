@@ -11,7 +11,7 @@ pub enum RepositoryError {
         repository_id: String,
     },
 
-    #[error("Cannot find package '{package_name}' with version '{}' in any repository", version.clone().unwrap_or("any".into()))]
+    #[error("Cannot find package '{package_name}' with version '{}' in any repository", version.as_deref().unwrap_or("any"))]
     PackageNotFoundError {
         package_name: String,
         version: Option<String>,

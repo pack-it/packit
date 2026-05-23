@@ -56,8 +56,6 @@ impl<'a> Symlinker<'a> {
         let global_active_path = Path::new(&self.config.prefix_directory).join("active");
         let active_path = global_active_path.join(&package_version.package_id.name);
 
-        let package_install_path = package_version.install_path.clone();
-
         let package_directory = self.config.prefix_directory.join("packages").join(&package_id.name);
 
         // Symlink directories bin, include, lib and share
@@ -69,11 +67,11 @@ impl<'a> Symlinker<'a> {
 
         // Create active symlink
         fs::create_dir_all(global_active_path)?;
-        symlink::create_symlink(&package_install_path, &active_path)?;
+        symlink::create_symlink(&package_version.install_path, &active_path)?;
 
         // Only create new symlinks if we should symlink
         if should_symlink {
-            self.create_symlinks(Path::new(&package_install_path))?;
+            self.create_symlinks(Path::new(&package_version.install_path))?;
         }
 
         // Updates the active version and sets its symlinked state
@@ -115,14 +113,12 @@ impl<'a> Symlinker<'a> {
             version: Some(package.active_version.to_string()),
         })?;
 
-        let install_path = package_version.install_path.clone();
-
         // Remove all symlinks except for those in the active directory
         for entry in fs::read_dir(&self.config.prefix_directory)? {
             let entry = entry?;
 
             if entry.file_type()?.is_dir() && entry.file_name() != "active" {
-                io::remove_symlinks(&entry.path(), &install_path)?;
+                io::remove_symlinks(&entry.path(), &package_version.install_path)?;
             }
         }
 
