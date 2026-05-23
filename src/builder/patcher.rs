@@ -50,15 +50,15 @@ impl<'a> BinaryPatcher<'a> {
     }
 
     /// Patches all binaries in the given directory.
-    pub fn patch_binaries_in(&self, path: &PathBuf, package: &PackageId, dependencies: Vec<&InstalledPackageVersion>) -> Result<()> {
-        let metadata = fs::metadata(path)?;
+    pub fn patch_binaries_in(&self, path: PathBuf, package: &PackageId, dependencies: Vec<&InstalledPackageVersion>) -> Result<()> {
+        let metadata = fs::metadata(&path)?;
 
         // If the given path is a file, patch the file directly
         if metadata.is_file() {
             return self.patch_binary(path, package, &dependencies);
         }
 
-        let mut queue = VecDeque::from([path.clone()]);
+        let mut queue = VecDeque::from([path]);
         while let Some(item) = queue.pop_front() {
             for entry in fs::read_dir(item)? {
                 let entry = entry?;
@@ -72,7 +72,7 @@ impl<'a> BinaryPatcher<'a> {
 
                 // If the entry is a file, try to patch it
                 if metadata.is_file() {
-                    match self.patch_binary(&entry.path(), package, &dependencies) {
+                    match self.patch_binary(entry.path(), package, &dependencies) {
                         Ok(_)
                         | Err(BinaryPatcherError::CannotParseBinary { .. })
                         | Err(BinaryPatcherError::UnsupportedBinaryType { .. }) => (),
@@ -86,8 +86,8 @@ impl<'a> BinaryPatcher<'a> {
     }
 
     /// Patches the binary at the given path. Currently supports ELF and MachO binaries.
-    fn patch_binary(&self, path: &PathBuf, package: &PackageId, dependencies: &Vec<&InstalledPackageVersion>) -> Result<()> {
-        match Binary::parse(path) {
+    fn patch_binary(&self, path: PathBuf, package: &PackageId, dependencies: &Vec<&InstalledPackageVersion>) -> Result<()> {
+        match Binary::parse(&path) {
             Some(Binary::ELF(binary)) => {
                 debug!("Patching ELF binary at '{}'", path.display());
                 self.patch_elf(binary, path, package, dependencies)?;
@@ -102,18 +102,18 @@ impl<'a> BinaryPatcher<'a> {
             },
             Some(Binary::COFF(_)) => {
                 return Err(BinaryPatcherError::UnsupportedBinaryType {
-                    path: path.clone(),
+                    path,
                     bin_type: "COFF".into(),
                 });
             },
-            None => return Err(BinaryPatcherError::CannotParseBinary { path: path.clone() }),
+            None => return Err(BinaryPatcherError::CannotParseBinary { path }),
         }
 
         Ok(())
     }
 
     /// Patches the given MachO binary.
-    fn patch_macho(&self, binary: macho::FatBinary, path: &PathBuf, package: &PackageId) -> Result<()> {
+    fn patch_macho(&self, binary: macho::FatBinary, path: PathBuf, package: &PackageId) -> Result<()> {
         for mut binary in binary.iter() {
             let mut changed = false;
 
@@ -161,7 +161,7 @@ impl<'a> BinaryPatcher<'a> {
                 debug!("Changed binary {}, writing changes", path.display());
 
                 let config = macho::builder::Config { linkedit: true };
-                binary.write_with_config(path, config);
+                binary.write_with_config(&path, config);
 
                 // Sign binary
                 let path = path.to_str().ok_or(BinaryPatcherError::OsStringConversionError)?;
@@ -192,7 +192,7 @@ impl<'a> BinaryPatcher<'a> {
     fn patch_elf(
         &self,
         mut binary: elf::Binary,
-        path: &PathBuf,
+        path: PathBuf,
         package: &PackageId,
         dependencies: &Vec<&InstalledPackageVersion>,
     ) -> Result<()> {

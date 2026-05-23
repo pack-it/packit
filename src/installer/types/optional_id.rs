@@ -65,10 +65,10 @@ impl OptionalPackageId {
     }
 
     /// Returns a `PackageId` with the current version, or the given version if the `OptionalPackageId` does not contain a version.
-    pub fn versioned_or(&self, version: Version) -> PackageId {
+    pub fn versioned_or(&self, version: &Version) -> PackageId {
         let version = match &self.version {
             Some(version) => version.clone(),
-            None => version,
+            None => version.clone(),
         };
 
         PackageId::new(self.name.clone(), version)

@@ -98,7 +98,7 @@ impl SearchArgs {
         };
 
         // Create a package id
-        let package_id = optional_id.versioned_or(latest_version.clone());
+        let package_id = optional_id.versioned_or(latest_version);
 
         // Get package version info for its target
         let package_version = match manager.read_repo_package_version(&repository_id, &package_id) {

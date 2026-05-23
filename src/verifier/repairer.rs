@@ -226,9 +226,6 @@ impl Repairer {
                 },
             };
 
-            // Insert the package which misses the dependency as dependent
-            package_version.dependents.insert(package.clone());
-
             // Fix the dependencies directory
             let dependencies_dir = config.prefix_directory.join("dependencies").join(package.to_string()).join(missing_package.name);
             match symlink::remove_symlink(&dependencies_dir) {
@@ -236,6 +233,9 @@ impl Repairer {
                 Err(SymlinkError::NonSymlink) => {},
                 Err(e) => Err(e)?,
             }
+
+            // Insert the package which misses the dependency as dependent
+            package_version.dependents.insert(package);
 
             symlink::create_symlink(&package_version.install_path, &dependencies_dir)?;
         }

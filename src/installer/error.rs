@@ -24,7 +24,7 @@ pub enum InstallerError {
     #[error("Prebuild checksum does not match")]
     ChecksumError,
 
-    #[error("Package '{package_name}' with version '{}' is not installed.", version.clone().unwrap_or("any".to_string()))]
+    #[error("Package '{package_name}' with version '{}' is not installed.", version.as_deref().unwrap_or("any"))]
     PackageNotFound {
         package_name: String,
         version: Option<String>,

@@ -94,10 +94,8 @@ impl HandleCommand for LinkArgs {
             }
         }
 
-        let install_path = package_version.install_path.clone();
-
         // Create symlinks
-        Symlinker::new(&config).create_symlinks(&install_path).unwrap_or_exit_msg("Unable to link package", 1);
+        Symlinker::new(&config).create_symlinks(&package_version.install_path).unwrap_or_exit_msg("Unable to link package", 1);
 
         let package = register
             .get_package_mut(&self.package_name)

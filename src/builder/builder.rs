@@ -125,8 +125,8 @@ impl<'a> Builder<'a> {
 
             // Construct apply directory for this patch
             let apply_directory = match &patch.apply_in {
-                Some(apply_in) => apply_directory.join(PathBuf::from(apply_in)),
-                None => apply_directory.clone(),
+                Some(apply_in) => &apply_directory.join(PathBuf::from(apply_in)),
+                None => &apply_directory,
             };
 
             // Apply patch
@@ -171,7 +171,7 @@ impl<'a> Builder<'a> {
         }
 
         // Patch binaries
-        BinaryPatcher::new(self.config).patch_binaries_in(&destination_dir.as_ref().to_path_buf(), &package_id, installed_dependencies)?;
+        BinaryPatcher::new(self.config).patch_binaries_in(destination_dir.as_ref().to_path_buf(), &package_id, installed_dependencies)?;
 
         Ok(())
     }
