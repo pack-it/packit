@@ -72,7 +72,7 @@ impl<'a> Installer<'a> {
         let latest_version = package_metadata.get_latest_version(&Target::current())?;
 
         // Create a package id of the current package
-        let package_id = optional_id.versioned_or(latest_version);
+        let package_id = optional_id.versioned_or_cloned(latest_version);
 
         // If the version isn't specified check if a package with this package name is already installed (otherwise a user can get two different version installed without knowing)
         if optional_id.version.is_none() {
