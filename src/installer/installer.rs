@@ -68,21 +68,24 @@ impl<'a> Installer<'a> {
             return Err(InstallerError::PermissionsError);
         }
 
-        let (repository_id, package_metadata) = self.repository_manager.read_package(&optional_id.name)?;
-        let latest_version = package_metadata.get_latest_version(&Target::current())?;
+        // Read package and version metadata
+        let (repository_id, package_metadata, version_metadata) =
+            self.repository_manager.read_package_and_version(&optional_id, &Target::current())?;
 
         // Create a package id of the current package
-        let package_id = optional_id.versioned_or_cloned(latest_version);
+        let version = &version_metadata.version;
+        let package_id = optional_id.versioned_or(version.clone());
+
+        // Check if this package version is already installed
+        if self.register.get_package_version(&package_id).is_some() {
+            return Err(InstallerError::AlreadyInstalledError { package_id });
+        }
 
         // If the version isn't specified check if a package with this package name is already installed (otherwise a user can get two different version installed without knowing)
         if optional_id.version.is_none() {
-            if let Some(package) = self.register.get_package(&optional_id.name) {
-                if package.get_package_version(latest_version).is_some() {
-                    return Err(InstallerError::AlreadyInstalledError { package_id });
-                }
-
+            if self.register.get_package(&optional_id.name).is_some() {
                 let question = format!(
-                    "The package '{optional_id}' is already installed, but a newer version '{latest_version}' is available. Do you wish to install the latest version as well?"
+                    "The package '{optional_id}' is already installed, but a newer version '{version}' is available. Do you wish to install the latest version as well?"
                 );
                 if ask_user(&question, QuestionResponse::No)?.is_no_or_invalid() {
                     return Err(InstallerError::InstallationCanceled {
@@ -104,16 +107,8 @@ impl<'a> Installer<'a> {
             self.options.install_type = InstallType::BuildAll;
         }
 
-        // Check if this package version is already installed
-        if self.register.get_package_version(&package_id).is_some() {
-            return Err(InstallerError::AlreadyInstalledError { package_id });
-        }
-
-        // Get package version info
-        let version_metadata = self.repository_manager.read_repo_package_version(&repository_id, &package_id)?;
+        // Create flattened dependency sequence
         let target_bounds = version_metadata.get_best_target(&Target::current())?;
-
-        // Create flattend dependency sequence
         let root_meta = InstallMeta {
             package_metadata,
             version_metadata,
