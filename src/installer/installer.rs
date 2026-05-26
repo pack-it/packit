@@ -74,7 +74,7 @@ impl<'a> Installer<'a> {
 
         // Create a package id of the current package
         let version = &version_metadata.version;
-        let package_id = optional_id.versioned_or(version.clone());
+        let package_id = optional_id.versioned_or_cloned(version);
 
         // Check if this package version is already installed
         if self.register.get_package_version(&package_id).is_some() {
@@ -82,16 +82,14 @@ impl<'a> Installer<'a> {
         }
 
         // If the version isn't specified check if a package with this package name is already installed (otherwise a user can get two different version installed without knowing)
-        if optional_id.version.is_none() {
-            if self.register.get_package(&optional_id.name).is_some() {
-                let question = format!(
-                    "The package '{optional_id}' is already installed, but a newer version '{version}' is available. Do you wish to install the latest version as well?"
-                );
-                if ask_user(&question, QuestionResponse::No)?.is_no_or_invalid() {
-                    return Err(InstallerError::InstallationCanceled {
-                        reason: "A version of this package was already installed".to_string(),
-                    });
-                }
+        if optional_id.version.is_none() && self.register.get_package(&optional_id.name).is_some() {
+            let question = format!(
+                "The package '{optional_id}' is already installed, but a newer version '{version}' is available. Do you wish to install the latest version as well?"
+            );
+            if ask_user(&question, QuestionResponse::No)?.is_no_or_invalid() {
+                return Err(InstallerError::InstallationCanceled {
+                    reason: "A version of this package was already installed".to_string(),
+                });
             }
         }
 

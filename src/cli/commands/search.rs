@@ -98,7 +98,7 @@ impl SearchArgs {
         };
 
         // Create a package id
-        let package_id = optional_id.versioned_or(package_version.version.clone());
+        let package_id = optional_id.versioned_or_cloned(&package_version.version);
 
         let target_bounds = package_version
             .get_best_target(&Target::current())

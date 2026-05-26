@@ -9,6 +9,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changes
 - The build system now includes a new `package-build` xtask to create a full Packit prebuild for the release.
 
+### Fixed
+- Fix package not found issue when multiple repositories have the same package but different versions.
+
 
 ## [v0.0.2](https://github.com/pack-it/packit/compare/0.0.1...0.0.2) - 2026-05-14
 
