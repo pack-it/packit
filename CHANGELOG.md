@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changes
 - The build system now includes a new `package-build` xtask to create a full Packit prebuild for the release.
+- The list command now uses column order grid printing instead of row order.
 
 ### Fixed
 - Fix package not found issue when multiple repositories have the same package but different versions.
