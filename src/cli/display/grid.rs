@@ -32,10 +32,12 @@ where
     // Print the items in the grid
     for i in 0..row_count {
         for j in 0..column_count {
-            if let Some(item) = items.get(i * column_count + j) {
+            if let Some(item) = items.get(j * row_count + i) {
                 let current_length = item.to_string().len();
                 let padding = " ".repeat(column_width - current_length);
                 print!("{item}{padding}");
+            } else {
+                print!("{}", " ".repeat(column_width))
             }
         }
 
