@@ -307,7 +307,7 @@ impl<'a> Installer<'a> {
             let mut skip_test = false;
             for file in external_files {
                 let file_content =
-                    self.repository_manager.read_file(&install_meta.repository_id, &install_meta.package_metadata.name, file)?;
+                    self.repository_manager.read_file_bytes(&install_meta.repository_id, &install_meta.package_metadata.name, file)?;
 
                 match file_content {
                     Some(content) => read_files.push((file, content)),
