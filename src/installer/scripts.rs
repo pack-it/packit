@@ -6,6 +6,7 @@ use std::{
     process::{Command, Stdio},
 };
 
+use bytes::Bytes;
 use tempfile::{NamedTempFile, TempDir};
 use thiserror::Error;
 
@@ -101,7 +102,7 @@ pub fn run_post_script(script_data: &ScriptData) -> Result<()> {
 /// Runs the given test script, in a newly created temp directory.
 /// It also writes the specified external test files to the temp directory.
 /// Note that the script should be a `.sh` script on Linux and macOS and a `.bat` on Windows.
-pub fn run_test_script(script_data: &ScriptData, external_files: &Vec<(&String, String)>) -> Result<()> {
+pub fn run_test_script(script_data: &ScriptData, external_files: &Vec<(&String, Bytes)>) -> Result<()> {
     let temp_dir = TempDir::new().map_err(ScriptError::TempCreationError)?;
 
     // Install external files into the temp directory
