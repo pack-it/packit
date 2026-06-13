@@ -12,7 +12,7 @@ use crate::{
     installer::types::{OptionalPackageId, PackageId},
     register::{installed_package::InstalledPackage, package_register::PackageRegister},
     utils::{
-        tree::{EmptyNode, TreeError},
+        tree::{EmptyTree, TreeError},
         unwrap_or_exit::UnwrapOrExit,
     },
 };
@@ -51,7 +51,7 @@ impl HandleCommand for InfoArgs {
                 exit(1);
             };
 
-            let tree = match EmptyNode::build_simple_tree(package_id.clone(), &register) {
+            let tree = match EmptyTree::new_emtpy(package_id.clone(), &register) {
                 Ok(tree) => tree,
                 Err(TreeError::NotFound(..)) => not_found::register_package_version(&package_id, &register),
                 Err(e) => Err(e).unwrap_or_exit(1),
