@@ -23,6 +23,7 @@ pub enum InstallType {
     Prebuild,
     Build,
     BuildAll,
+    Installed,
 }
 
 /// Represents the label for the install tree.
@@ -44,6 +45,8 @@ impl InstallLabel {
         &self.install_type
     }
 
+    /// Returns true if it is a build dependency
+    /// TODO: Change naming to is_build_dependency
     pub fn is_dependency(&self) -> bool {
         self.is_dependency
     }
@@ -79,19 +82,38 @@ pub type InstallNode = Node<Option<InstallMeta>, InstallLabel>;
 impl InstallTree {
     pub fn create_tree(
         package_id: PackageId,
-        install_meta: InstallMeta,
-        install_label: InstallLabel,
+        root_meta: InstallMeta,
+        root_label: InstallLabel,
         register: &PackageRegister,
         manager: &RepositoryManager,
     ) -> Result<Self> {
-        let root_label = InstallTree::check_prebuild(manager, &install_meta, &package_id, install_label)?;
-        let root = Node::new(package_id, Some(install_meta), root_label);
+        let root_label = InstallTree::check_prebuild(manager, &root_meta, &package_id, root_label)?;
+        let root = Node::new(package_id, Some(root_meta), root_label);
         let mut tree = Tree::new(root);
 
         let mut package_queue = VecDeque::from([0 as usize]);
         while let Some(node_index) = package_queue.pop_front() {
             let node = tree.get_node_by_index_mut(node_index).expect("Expected node to exist");
-            let dependencies = InstallTree::expander(node)?;
+
+            // Expand with register if the node value is None and has the Installed label type (meaning that the package is already installed)
+            let install_meta = match node.get_value() {
+                Some(install_meta) => install_meta,
+                None if node.get_label().install_type == InstallType::Installed => {
+                    let dependencies =
+                        &register.get_package_version(node.get_package_id()).expect("Expected package version to exist").dependencies;
+                    for dependency in dependencies {
+                        let new_node = Node::new(dependency.clone(), None, InstallLabel::new(InstallType::Installed, false));
+                        let new_index = tree.add_node(node_index, new_node);
+                        package_queue.push_back(new_index);
+                    }
+
+                    continue;
+                },
+                None => continue, // TODO: Error
+            };
+
+            let dependencies = InstallTree::expander(node, install_meta)?;
+
             for (dependency, label) in dependencies {
                 let (dependency_id, meta, dependency_label) = InstallTree::populator(register, manager, &dependency, label)?;
                 let new_node = Node::new(dependency_id, meta, dependency_label);
@@ -106,19 +128,13 @@ impl InstallTree {
     /// Expands a tree based on metadata and also takes into account already installed packages.
     /// The children install types are based on the parent install type and determine how the tree
     /// is further expanded (with or without build dependencies).
-    fn expander(parent: &InstallNode) -> Result<Vec<(Dependency, InstallLabel)>> {
-        // Return early if the node value is None (meaning that the package is already installed)
-        // TODO: Introduce an extra type (Installed) for already installed packages, this section of the tree should be expanded with help of the regsiter (because requests are more expansive)
-        let install_meta = match parent.get_value() {
-            Some(install_meta) => install_meta,
-            None => return Ok(Vec::new()),
-        };
-
+    fn expander(parent: &InstallNode, install_meta: &InstallMeta) -> Result<Vec<(Dependency, InstallLabel)>> {
         // Determine the (build) dependency types of the children based on the parent
         let install_type = match *parent.get_label().get_type() {
             InstallType::Prebuild => InstallType::Prebuild,
             InstallType::Build => InstallType::Prebuild,
             InstallType::BuildAll => InstallType::BuildAll,
+            _ => unreachable!("Installed type should be unreachable"), // TODO: Error
         };
 
         let target = install_meta.version_metadata.get_target(&install_meta.target_bounds)?;
@@ -155,10 +171,10 @@ impl InstallTree {
         dependency: &Dependency,
         label: InstallLabel,
     ) -> Result<(PackageId, Option<InstallMeta>, InstallLabel)> {
-        // If the package is already satisfied don't expand the dependency tree further
-        // TODO Expand with register and installed label type
+        // Return early with empty value if the package is already satisfied
         if let Some(package) = register.get_latest_satisfying_package(dependency) {
-            return Ok((package.package_id.clone(), None, label));
+            let adjusted_label = InstallLabel::new(InstallType::Installed, label.is_dependency());
+            return Ok((package.package_id.clone(), None, adjusted_label));
         }
 
         // Use the latest version if the dependency is not yet satisfied
@@ -199,12 +215,7 @@ impl InstallTree {
             });
         }
 
-        // Create an adjusted label
-        let adjusted_label = InstallLabel {
-            install_type: InstallType::Build,
-            is_dependency: label.is_dependency(),
-        };
-
-        Ok(adjusted_label)
+        // Return an adjusted label
+        Ok(InstallLabel::new(InstallType::Build, label.is_dependency()))
     }
 }

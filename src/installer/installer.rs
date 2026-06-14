@@ -156,7 +156,8 @@ impl<'a> Installer<'a> {
         // Get the value or return early if there is no value (package is already satisfied)
         let node_value = match node.get_value() {
             Some(value) => value,
-            None => return Ok(()),
+            None if *node.get_label().get_type() == InstallType::Installed => return Ok(()),
+            None => return Ok(()), // TODO: Error
         };
 
         let dependencies = tree.get_children_ids_filtered(node, InstallLabel::is_dependency);
