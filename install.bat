@@ -109,7 +109,7 @@ if not exist "%CONFIG_DIR%" (
     mkdir "%CONFIG_DIR%"
 )
 
-"%PREFIX_DIR%/packages/packit/%VERSION%/bin/packit.exe" init
+"%PREFIX_DIR%\packages\packit\%VERSION%\bin\packit.exe" init
 
 REM Make sure that packit words
 "%PREFIX_DIR%\bin\pit.exe" --version 2>nul >nul
