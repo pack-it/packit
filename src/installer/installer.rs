@@ -9,7 +9,7 @@ use crate::{
     installer::{
         InstallLabel,
         error::{InstallerError, Result},
-        install_tree::{InstallMeta, InstallTree, InstallType},
+        install_tree::{DependencyResolver, InstallMeta, InstallTree, InstallType},
         options::InstallerOptions,
         scripts::{self, ScriptData},
         symlinker::Symlinker,
@@ -117,12 +117,12 @@ impl<'a> Installer<'a> {
 
         // Create the install tree based on the install type
         println!("Building dependency tree for {package_id}");
-        let mut dependency_tree =
-            InstallTree::create_tree(package_id.clone(), root_meta, install_label, self.register, self.repository_manager)?;
+        let mut resolver = DependencyResolver::new(self.register, self.repository_manager);
+        let dependency_tree = resolver.create_tree(package_id.clone(), root_meta, install_label)?;
 
         println!("Installing the following packages:");
         println!("{dependency_tree}");
-        self.install_nodes(&0, &mut dependency_tree)?;
+        self.install_nodes(&0, &dependency_tree)?;
 
         // TODO: This check doesn't work when the tree is expanded after the users intial command
         if !self.options.keep_build && self.options.install_type != InstallType::Prebuild {

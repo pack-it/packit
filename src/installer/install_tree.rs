@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::{
@@ -78,16 +78,28 @@ impl InstallMeta {
 pub type InstallTree = Tree<Option<InstallMeta>, InstallLabel>;
 pub type InstallNode = Node<Option<InstallMeta>, InstallLabel>;
 
-// TODO: Rename to resolver?
-impl InstallTree {
-    pub fn create_tree(
-        package_id: PackageId,
-        root_meta: InstallMeta,
-        root_label: InstallLabel,
-        register: &PackageRegister,
-        manager: &RepositoryManager,
-    ) -> Result<Self> {
-        let root_label = InstallTree::check_prebuild(manager, &root_meta, &package_id, root_label)?;
+// TODO: Maybe InstallTreeBuilder
+pub struct DependencyResolver<'a> {
+    register: &'a PackageRegister,
+    repository_manager: &'a RepositoryManager<'a>,
+    asked_packages: HashSet<PackageId>,
+}
+
+impl<'a> DependencyResolver<'a> {
+    pub fn new(register: &'a PackageRegister, manager: &'a RepositoryManager) -> Self {
+        Self {
+            register,
+            repository_manager: manager,
+            asked_packages: HashSet::new(),
+        }
+    }
+
+    pub fn create_tree(&mut self, package_id: PackageId, root_meta: InstallMeta, root_label: InstallLabel) -> Result<InstallTree> {
+        let root_label = match self.check_prebuild(&root_meta, &package_id, &root_label)? {
+            Some(adjusted_label) => adjusted_label,
+            None => root_label,
+        };
+
         let root = Node::new(package_id, Some(root_meta), root_label);
         let mut tree = Tree::new(root);
 
@@ -100,7 +112,7 @@ impl InstallTree {
                 Some(install_meta) => install_meta,
                 None if node.get_label().install_type == InstallType::Installed => {
                     let dependencies =
-                        &register.get_package_version(node.get_package_id()).expect("Expected package version to exist").dependencies;
+                        &self.register.get_package_version(node.get_package_id()).expect("Expected package version to exist").dependencies;
                     for dependency in dependencies {
                         let new_node = Node::new(dependency.clone(), None, InstallLabel::new(InstallType::Installed, false));
                         let new_index = tree.add_node(node_index, new_node);
@@ -112,10 +124,8 @@ impl InstallTree {
                 None => continue, // TODO: Error
             };
 
-            let dependencies = InstallTree::expander(node, install_meta)?;
-
-            for (dependency, label) in dependencies {
-                let (dependency_id, meta, dependency_label) = InstallTree::populator(register, manager, &dependency, label)?;
+            for (dependency, label) in DependencyResolver::expander(node, install_meta)? {
+                let (dependency_id, meta, dependency_label) = self.populator(&dependency, label)?;
                 let new_node = Node::new(dependency_id, meta, dependency_label);
                 let new_index = tree.add_node(node_index, new_node);
                 package_queue.push_back(new_index);
@@ -137,6 +147,7 @@ impl InstallTree {
             _ => unreachable!("Installed type should be unreachable"), // TODO: Error
         };
 
+        // TODO: Remove clone
         let target = install_meta.version_metadata.get_target(&install_meta.target_bounds)?;
         let dependencies = install_meta
             .version_metadata
@@ -164,45 +175,41 @@ impl InstallTree {
     }
 
     /// Populates the tree with metadata info. If a package is already installed it is added
-    /// to the tree without a value and children.
-    fn populator(
-        register: &PackageRegister,
-        manager: &RepositoryManager,
-        dependency: &Dependency,
-        label: InstallLabel,
-    ) -> Result<(PackageId, Option<InstallMeta>, InstallLabel)> {
+    /// to the tree without a value and with LabelType::Installed.
+    fn populator(&mut self, dependency: &Dependency, label: InstallLabel) -> Result<(PackageId, Option<InstallMeta>, InstallLabel)> {
         // Return early with empty value if the package is already satisfied
-        if let Some(package) = register.get_latest_satisfying_package(dependency) {
+        if let Some(package) = self.register.get_latest_satisfying_package(dependency) {
             let adjusted_label = InstallLabel::new(InstallType::Installed, label.is_dependency());
             return Ok((package.package_id.clone(), None, adjusted_label));
         }
 
         // Use the latest version if the dependency is not yet satisfied
-        let (repository_id, package_metadata) = manager.read_package(dependency.get_name())?;
+        let (repository_id, package_metadata) = self.repository_manager.read_package(dependency.get_name())?;
         let version = package_metadata.get_latest_dependency_version(dependency, &Target::current())?;
         let dependency_id = PackageId::new(dependency.get_name().clone(), version.clone());
-        let version_metadata = manager.read_repo_package_version(&repository_id, &dependency_id)?;
+        let version_metadata = self.repository_manager.read_repo_package_version(&repository_id, &dependency_id)?;
         let install_meta = InstallMeta::new(package_metadata, version_metadata, repository_id)?;
 
-        // Don't check for prebuild if the package should be build
-        if matches!(label.get_type(), InstallType::Build | InstallType::BuildAll) {
-            return Ok((dependency_id, Some(install_meta), label));
-        }
+        let label = match self.check_prebuild(&install_meta, &dependency_id, &label)? {
+            Some(adjusted_label) => adjusted_label,
+            None => label,
+        };
 
-        let label = InstallTree::check_prebuild(manager, &install_meta, &dependency_id, label)?;
         Ok((dependency_id, Some(install_meta), label))
     }
 
-    fn check_prebuild(
-        manager: &RepositoryManager,
-        install_meta: &InstallMeta,
-        package_id: &PackageId,
-        label: InstallLabel,
-    ) -> Result<InstallLabel> {
+    fn check_prebuild(&mut self, install_meta: &InstallMeta, package_id: &PackageId, label: &InstallLabel) -> Result<Option<InstallLabel>> {
+        // Don't check for prebuild if the package should not use a prebuild or if it was already asked
+        if !matches!(label.get_type(), InstallType::Prebuild) || self.asked_packages.contains(&package_id) {
+            return Ok(None);
+        }
+
+        self.asked_packages.insert(package_id.clone());
+
         // Check if a prebuild for the package is available
         let revision = install_meta.version_metadata.get_revision_count();
-        match manager.get_prebuild_url(&install_meta.repository_id, &package_id, revision, &Target::current()) {
-            Ok(Some(_)) => return Ok(label),
+        match self.repository_manager.get_prebuild_url(&install_meta.repository_id, &package_id, revision, &Target::current()) {
+            Ok(Some(_)) => return Ok(None),
             Ok(None) | Err(RepositoryError::RepositoryNotFoundError { .. }) => (),
             Err(e) => error!(e),
         }
@@ -216,6 +223,6 @@ impl InstallTree {
         }
 
         // Return an adjusted label
-        Ok(InstallLabel::new(InstallType::Build, label.is_dependency()))
+        Ok(Some(InstallLabel::new(InstallType::Build, label.is_dependency())))
     }
 }
