@@ -13,7 +13,7 @@ if ERRORLEVEL 1 (
     )
 
     REM Rerun the script with elevated permissions (this will first prompt the user)
-    powershell -Command "Start-Process '%~f0' -Verb RunAs"
+    powershell -Command "Start-Process cmd -Verb RunAs -ArgumentList '/k \"%~f0\"'"
 
     exit /b
 )
