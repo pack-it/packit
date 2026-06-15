@@ -9,7 +9,7 @@ use crate::{
     installer::{
         InstallLabel,
         error::{InstallerError, Result},
-        install_tree::{DependencyResolver, InstallMeta, InstallTree, InstallType},
+        install_tree::{InstallMeta, InstallTree, InstallTreeBuilder, InstallType},
         options::InstallerOptions,
         scripts::{self, ScriptData},
         symlinker::Symlinker,
@@ -117,19 +117,15 @@ impl<'a> Installer<'a> {
 
         // Create the install tree based on the install type
         println!("Building dependency tree for {package_id}");
-        let mut resolver = DependencyResolver::new(self.register, self.repository_manager);
-        let dependency_tree = resolver.create_tree(package_id.clone(), root_meta, install_label)?;
+        let mut tree_builder = InstallTreeBuilder::new(self.register, self.repository_manager);
+        let dependency_tree = tree_builder.create_tree(package_id.clone(), root_meta, install_label)?;
 
         println!("Installing the following packages:");
         println!("{dependency_tree}");
         self.install_nodes(&0, &dependency_tree)?;
 
-        // TODO: This check doesn't work when the tree is expanded after the users intial command
-        if !self.options.keep_build && self.options.install_type != InstallType::Prebuild {
-            if !dependency_tree.get_children_ids_filtered(dependency_tree.get_root(), |c| !c.is_dependency()).is_empty() {
-                println!("Removing build dependencies");
-            }
-
+        if !self.options.keep_build {
+            println!("Removing build dependencies (if there are any");
             self.remove_build_dependencies(&0, &dependency_tree)?;
         }
 
@@ -157,7 +153,11 @@ impl<'a> Installer<'a> {
         let node_value = match node.get_value() {
             Some(value) => value,
             None if *node.get_label().get_type() == InstallType::Installed => return Ok(()),
-            None => return Ok(()), // TODO: Error
+            None => {
+                return Err(InstallerError::UnreachableError {
+                    msg: "Node value is None without InstallType::Installed".to_string(),
+                });
+            },
         };
 
         let dependencies = tree.get_children_ids_filtered(node, InstallLabel::is_dependency);

@@ -45,8 +45,8 @@ impl InstallLabel {
         &self.install_type
     }
 
-    /// Returns true if it is a build dependency
-    /// TODO: Change naming to is_build_dependency
+    /// Returns true if it is a normal dependency (not a build dependency).
+    /// If it is a dependency of a build dependency this also returns true.
     pub fn is_dependency(&self) -> bool {
         self.is_dependency
     }
@@ -78,14 +78,13 @@ impl InstallMeta {
 pub type InstallTree = Tree<Option<InstallMeta>, InstallLabel>;
 pub type InstallNode = Node<Option<InstallMeta>, InstallLabel>;
 
-// TODO: Maybe InstallTreeBuilder
-pub struct DependencyResolver<'a> {
+pub struct InstallTreeBuilder<'a> {
     register: &'a PackageRegister,
     repository_manager: &'a RepositoryManager<'a>,
     asked_packages: HashSet<PackageId>,
 }
 
-impl<'a> DependencyResolver<'a> {
+impl<'a> InstallTreeBuilder<'a> {
     pub fn new(register: &'a PackageRegister, manager: &'a RepositoryManager) -> Self {
         Self {
             register,
@@ -115,19 +114,23 @@ impl<'a> DependencyResolver<'a> {
                         &self.register.get_package_version(node.get_package_id()).expect("Expected package version to exist").dependencies;
                     for dependency in dependencies {
                         let new_node = Node::new(dependency.clone(), None, InstallLabel::new(InstallType::Installed, false));
-                        let new_index = tree.add_node(node_index, new_node);
+                        let new_index = tree.add_node(node_index, new_node)?;
                         package_queue.push_back(new_index);
                     }
 
                     continue;
                 },
-                None => continue, // TODO: Error
+                None => {
+                    return Err(InstallerError::UnreachableError {
+                        msg: "Node value is None without InstallType::Installed".to_string(),
+                    });
+                },
             };
 
-            for (dependency, label) in DependencyResolver::expander(node, install_meta)? {
+            for (dependency, label) in InstallTreeBuilder::expander(node, install_meta)? {
                 let (dependency_id, meta, dependency_label) = self.populator(&dependency, label)?;
                 let new_node = Node::new(dependency_id, meta, dependency_label);
-                let new_index = tree.add_node(node_index, new_node);
+                let new_index = tree.add_node(node_index, new_node)?;
                 package_queue.push_back(new_index);
             }
         }
@@ -144,7 +147,11 @@ impl<'a> DependencyResolver<'a> {
             InstallType::Prebuild => InstallType::Prebuild,
             InstallType::Build => InstallType::Prebuild,
             InstallType::BuildAll => InstallType::BuildAll,
-            _ => unreachable!("Installed type should be unreachable"), // TODO: Error
+            _ => {
+                return Err(InstallerError::UnreachableError {
+                    msg: "InstallType::Installed should be unreachable".to_string(),
+                });
+            },
         };
 
         // TODO: Remove clone
@@ -210,7 +217,7 @@ impl<'a> DependencyResolver<'a> {
         let revision = install_meta.version_metadata.get_revision_count();
         match self.repository_manager.get_prebuild_url(&install_meta.repository_id, &package_id, revision, &Target::current()) {
             Ok(Some(_)) => return Ok(None),
-            Ok(None) | Err(RepositoryError::RepositoryNotFoundError { .. }) => (),
+            Ok(None) | Err(RepositoryError::RepositoryNotFoundError { .. }) => {},
             Err(e) => error!(e),
         }
 

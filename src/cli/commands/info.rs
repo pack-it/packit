@@ -51,7 +51,7 @@ impl HandleCommand for InfoArgs {
                 exit(1);
             };
 
-            let tree = match EmptyTree::new_emtpy(package_id.clone(), &register) {
+            let tree = match EmptyTree::new_empty(package_id.clone(), &register) {
                 Ok(tree) => tree,
                 Err(TreeError::NotFound(..)) => not_found::register_package_version(&package_id, &register),
                 Err(e) => Err(e).unwrap_or_exit(1),

@@ -20,6 +20,9 @@ pub enum TreeError {
     #[error("Package id '{0}' cannot be found")]
     NotFound(PackageId),
 
+    #[error("Parent with node id '{0}' cannot be found")]
+    NonExistentParent(usize),
+
     #[error("Cannot create tree, because of an error reading the repository.")]
     RepositoryError(#[from] RepositoryError),
 }
@@ -46,12 +49,16 @@ impl<V, L: Eq> Tree<V, L> {
         Self { nodes: vec![root] }
     }
 
-    pub fn add_node(&mut self, parent_index: usize, node: Node<V, L>) -> usize {
+    pub fn add_node(&mut self, parent_index: usize, node: Node<V, L>) -> Result<usize> {
         self.nodes.push(node);
         let index = self.nodes.len() - 1;
-        let parent = self.nodes.get_mut(parent_index).expect("TODO");
+        let parent = match self.nodes.get_mut(parent_index) {
+            Some(parent) => parent,
+            None => return Err(TreeError::NonExistentParent(parent_index)),
+        };
+
         parent.children.push(index);
-        index
+        Ok(index)
     }
 
     pub fn get_root(&self) -> &Node<V, L> {
@@ -81,7 +88,7 @@ impl<V, L: Eq> Tree<V, L> {
     {
         node.get_children()
             .iter()
-            .map(|c| self.get_node_by_index(*c).expect("TODO"))
+            .map(|c| self.get_node_by_index(*c).expect("Expected node to exist"))
             .filter(|c| filter(&c.label))
             .map(|c| c.package_id.clone())
             .collect()
@@ -149,7 +156,7 @@ pub type EmptyTree = Tree<(), ()>;
 // An empty node implementation, without any values or labels.
 impl EmptyTree {
     /// Builds a simple tree based on the installed packages.
-    pub fn new_emtpy(package_id: PackageId, register: &PackageRegister) -> Result<EmptyTree> {
+    pub fn new_empty(package_id: PackageId, register: &PackageRegister) -> Result<EmptyTree> {
         let root = Node::new(package_id, (), ());
         let mut tree = Tree::new(root);
 
@@ -163,7 +170,7 @@ impl EmptyTree {
 
             for dependency in dependencies {
                 let new_node = Node::new(dependency.clone(), (), ());
-                let new_index = tree.add_node(node_index, new_node);
+                let new_index = tree.add_node(node_index, new_node)?;
                 package_queue.push_back(new_index);
             }
         }
