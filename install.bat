@@ -1,6 +1,23 @@
 @echo off
 setlocal enabledelayedexpansion
 
+REM Check for administrator privileges 
+fltmc >nul 2>&1
+if ERRORLEVEL 1 (
+    echo The Packit install requires administrator privileges.
+    choice /M "Do you wish to continue as administrator?"
+
+    if ERRORLEVEL 2 (
+        echo Packit installed cancelled
+        exit /b 1
+    )
+
+    REM Rerun the script with elevated permissions (this will first prompt the user)
+    powershell -Command "Start-Process '%~f0' -Verb RunAs"
+
+    exit /b
+)
+
 set "VERSION=0.0.2"
 set "REVISION=0"
 if "%PROCESSOR_ARCHITECTURE%"=="ARM64" (
