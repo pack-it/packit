@@ -312,6 +312,11 @@ impl PackageRegister {
         self.packages.keys()
     }
 
+    /// Returns an iterator, which iterates over all package names and values.
+    pub fn iterate_packages(&self) -> impl Iterator<Item = (&PackageName, &InstalledPackage)> {
+        self.packages.iter()
+    }
+
     /// Returns an iterator, which iterates over all active packages.
     pub fn iterate_active_packages(&self) -> impl Iterator<Item = PackageId> {
         self.packages.iter().map(|(name, p)| PackageId::new(name.clone(), p.active_version.clone()))

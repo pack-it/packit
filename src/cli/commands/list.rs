@@ -4,6 +4,7 @@ use clap::Args;
 use crate::{
     cli::{commands::HandleCommand, display},
     config::Config,
+    installer::types::PackageId,
     platforms::Target,
     register::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
     repositories::manager::RepositoryManager,
@@ -28,11 +29,8 @@ impl HandleCommand for ListArgs {
         let register_dir = PackageRegister::get_path(&config.prefix_directory);
         let register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
-        let mut packages: Vec<&InstalledPackageVersion> = register.iterate_all().collect();
-        packages.sort_by_key(|a| a.package_id.to_string());
-
         if self.updatables {
-            self.updatables_list(packages, &config);
+            self.updatables_list(&config, &register);
 
             return;
         }
@@ -43,24 +41,30 @@ impl HandleCommand for ListArgs {
             return;
         }
 
+        let mut packages: Vec<&InstalledPackageVersion> = register.iterate_all().collect();
+        packages.sort_by_key(|a| a.package_id.to_string());
         display::print_grid(packages.iter().map(|p| &p.package_id).collect());
     }
 }
 
 impl ListArgs {
     /// Lists all updatable packages.
-    fn updatables_list(&self, packages: Vec<&InstalledPackageVersion>, config: &Config) {
+    fn updatables_list(&self, config: &Config, register: &PackageRegister) {
         let manager = RepositoryManager::new(config);
         let mut updatables = Vec::new();
-        for package in packages {
-            let (_, package_meta) = manager.read_package(&package.package_id.name).unwrap_or_exit(1);
-            let latest_version = package_meta.get_latest_version(&Target::current()).unwrap_or_exit(1);
+        for (package_name, package) in register.iterate_packages() {
+            let (_, package_meta) = manager.read_package(&package_name).unwrap_or_exit(1);
+            let latest_available_version = package_meta.get_latest_version(&Target::current()).unwrap_or_exit(1);
 
-            if *latest_version == package.package_id.version {
+            // Get the latest installed version
+            let latest_installed_version = package.versions.keys().max().expect("Expected a latest installed version");
+
+            // Check if the latest version exists
+            if latest_available_version == latest_installed_version {
                 continue;
             }
 
-            updatables.push(&package.package_id);
+            updatables.push(PackageId::new(package_name.clone(), latest_installed_version.clone()));
         }
 
         if updatables.is_empty() {
