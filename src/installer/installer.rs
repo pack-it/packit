@@ -120,8 +120,6 @@ impl<'a> Installer<'a> {
         let mut tree_builder = InstallTreeBuilder::new(self.register, self.repository_manager);
         let dependency_tree = tree_builder.create_tree(package_id.clone(), root_meta, install_label)?;
 
-        println!("Installing the following packages:");
-        println!("{dependency_tree}");
         self.install_nodes(&0, &dependency_tree)?;
 
         if !self.options.keep_build {

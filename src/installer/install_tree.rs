@@ -1,6 +1,8 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use std::collections::{HashSet, VecDeque};
 
-// SPDX-License-Identifier: GPL-3.0-only
+use console::Term;
+
 use crate::{
     cli::display::{QuestionResponse, ask_user, logging::error},
     installer::{
@@ -82,6 +84,7 @@ pub struct InstallTreeBuilder<'a> {
     register: &'a PackageRegister,
     repository_manager: &'a RepositoryManager<'a>,
     asked_packages: HashSet<PackageId>,
+    terminal: Term,
 }
 
 impl<'a> InstallTreeBuilder<'a> {
@@ -90,10 +93,12 @@ impl<'a> InstallTreeBuilder<'a> {
             register,
             repository_manager: manager,
             asked_packages: HashSet::new(),
+            terminal: Term::stdout(),
         }
     }
 
     pub fn create_tree(&mut self, package_id: PackageId, root_meta: InstallMeta, root_label: InstallLabel) -> Result<InstallTree> {
+        let mut tree_display_string = "".to_string();
         let root_label = match self.check_prebuild(&root_meta, &package_id, &root_label)? {
             Some(adjusted_label) => adjusted_label,
             None => root_label,
@@ -101,6 +106,7 @@ impl<'a> InstallTreeBuilder<'a> {
 
         let root = Node::new(package_id, Some(root_meta), root_label);
         let mut tree = Tree::new(root);
+        tree_display_string = self.update_tree_display(&tree_display_string, &tree)?;
 
         let mut package_queue = VecDeque::from([0 as usize]);
         while let Some(node_index) = package_queue.pop_front() {
@@ -115,6 +121,7 @@ impl<'a> InstallTreeBuilder<'a> {
                     for dependency in dependencies {
                         let new_node = Node::new(dependency.clone(), None, InstallLabel::new(InstallType::Installed, false));
                         let new_index = tree.add_node(node_index, new_node)?;
+                        tree_display_string = self.update_tree_display(&tree_display_string, &tree)?;
                         package_queue.push_back(new_index);
                     }
 
@@ -131,6 +138,7 @@ impl<'a> InstallTreeBuilder<'a> {
                 let (dependency_id, meta, dependency_label) = self.populator(&dependency, label)?;
                 let new_node = Node::new(dependency_id, meta, dependency_label);
                 let new_index = tree.add_node(node_index, new_node)?;
+                tree_display_string = self.update_tree_display(&tree_display_string, &tree)?;
                 package_queue.push_back(new_index);
             }
         }
@@ -229,7 +237,22 @@ impl<'a> InstallTreeBuilder<'a> {
             });
         }
 
+        // Remove the question
+        // TODO: Temporary, doesn't work with parallel tree build
+        self.terminal.clear_last_lines(1)?;
+
         // Return an adjusted label
         Ok(Some(InstallLabel::new(InstallType::Build, label.is_dependency())))
+    }
+
+    /// Updates the tree structure shown in the terminal.
+    fn update_tree_display(&self, tree_string: &str, tree: &InstallTree) -> Result<String> {
+        // Remove previous display content
+        let number_of_lines = tree_string.lines().count();
+        self.terminal.clear_last_lines(number_of_lines)?;
+
+        print!("{tree}");
+
+        Ok(tree.to_string())
     }
 }
