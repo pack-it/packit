@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{fs, path::Path, str::Utf8Error};
+use std::{
+    fs,
+    path::{self, Path, PathBuf},
+    str::Utf8Error,
+};
 
 #[cfg(unix)]
 use std::{ffi::OsStr, os::unix::ffi::OsStrExt};
@@ -99,4 +103,33 @@ pub fn directory_is_empty(directory: &Path) -> Result<bool, std::io::Error> {
     }
 
     Ok(true)
+}
+
+/// Normalizes a path by resolving current and parent dir operators.
+pub fn normalize_path(path: &Path) -> PathBuf {
+    let mut components = Vec::new();
+
+    for component in path.components() {
+        match &component {
+            std::path::Component::ParentDir => {
+                if let Some(path::Component::Normal(_)) = components.last() {
+                    components.pop();
+                    continue;
+                }
+
+                components.push(component);
+            },
+            std::path::Component::CurDir => (),
+            std::path::Component::Prefix(_) | std::path::Component::RootDir | std::path::Component::Normal(_) => {
+                components.push(component);
+            },
+        }
+    }
+
+    let mut path = PathBuf::new();
+    for component in components {
+        path.push(component.as_os_str());
+    }
+
+    path
 }
