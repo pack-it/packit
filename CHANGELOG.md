@@ -9,14 +9,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 - Support for loading non-text external test files.
 - The `--active` flag for the list command, to list all active packages.
+- Support for context (using our [`contextdiff-parser`](https://github.com/pack-it/contextdiff-parser)) and unified diff formats for patches.
 
 ### Changes
 - The build system now includes a new `package-build` xtask to create a full Packit prebuild for the release.
 - The list command now uses column order grid printing instead of row order.
+- The patch apply process now uses a more advanced file path resolver, which ensures better patch compatibility.
 
 ### Fixed
 - Fix package not found issue when multiple repositories have the same package but different versions.
 - Fix `--updatables` flag listing older installed package versions when a newer up-to-date version is installed.
+- Fix checksum check for patch files that are downloaded from the metadata repository.
 
 
 ## [v0.0.2](https://github.com/pack-it/packit/compare/0.0.1...0.0.2) - 2026-05-14

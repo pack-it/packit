@@ -130,7 +130,7 @@ impl<'a> Builder<'a> {
             };
 
             // Apply patch
-            patches::apply_patch(&patch_bytes, &apply_directory)?;
+            patches::apply_patch(patch_bytes, &apply_directory)?;
 
             println!("Applied patch '{id}' to '{package_id}'");
         }
@@ -195,6 +195,14 @@ impl<'a> Builder<'a> {
             .repository_manager
             .read_file_bytes(repository_id, &package_id.name, &patch.url)?
             .ok_or(BuilderError::RepositoryPatchNotFound)?;
+
+        // Calculate the checksum
+        let calculated_checksum = Checksum::from_bytes(&file);
+
+        // Check equality of checksum
+        if patch.checksum != calculated_checksum {
+            return Err(BuilderError::ChecksumError);
+        }
 
         // Finish download spinner
         spinner.finish(format!(
