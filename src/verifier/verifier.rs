@@ -32,8 +32,7 @@ use crate::{
 /// Verifier that scans the Packit environment for issues.
 pub struct Verifier {
     current_intial_check: usize,
-    current_general_check: usize,
-    current_package_check: usize,
+    current_check: usize,
     issues_found: bool,
 }
 
@@ -42,8 +41,7 @@ impl Verifier {
     pub fn new() -> Self {
         Self {
             current_intial_check: 0,
-            current_general_check: 0,
-            current_package_check: 0,
+            current_check: 0,
             issues_found: false,
         }
     }
@@ -108,7 +106,7 @@ impl Verifier {
             Ok(issue) => Ok(issue),
             Err(e) if self.issues_found => {
                 debug!(err: e, "An error occured when issues were already found, skipping remaining issues.");
-                self.current_general_check = Check::get_checks().len();
+                self.current_check = Check::get_checks().len();
                 Ok(None)
             },
             Err(e) => Err(e),
@@ -120,13 +118,13 @@ impl Verifier {
     fn next_issue_impl(&mut self, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
         loop {
             let ordered_checks = Check::get_ordered_checks(Check::get_checks());
-            let check = match ordered_checks.get(self.current_general_check) {
+            let check = match ordered_checks.get(self.current_check) {
                 Some(check) => check,
                 None => return Ok(None),
             };
 
             // Increase current issue
-            self.current_general_check += 1;
+            self.current_check += 1;
 
             let issue = match check {
                 Check::StorageConsistency => self.check_storage_consistency(register, config)?,
@@ -164,7 +162,7 @@ impl Verifier {
             Ok(issue) => Ok(issue),
             Err(e) if self.issues_found => {
                 debug!(err: e, "An error occured when issues were already found, skipping remaining issues.");
-                self.current_package_check = Check::get_checks().len();
+                self.current_check = Check::get_checks().len();
                 Ok(None)
             },
             Err(e) => Err(e),
@@ -176,13 +174,13 @@ impl Verifier {
     fn next_package_issue_impl(&mut self, package_id: &PackageId, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
         loop {
             let ordered_checks = Check::get_ordered_checks(Check::get_checks());
-            let check = match ordered_checks.get(self.current_package_check) {
+            let check = match ordered_checks.get(self.current_check) {
                 Some(check) => check,
                 None => return Ok(None),
             };
 
             // Increase current issue
-            self.current_package_check += 1;
+            self.current_check += 1;
 
             let issue = match check {
                 Check::PackitGroup => match self.check_packit_group(config)? {
@@ -434,18 +432,6 @@ impl Verifier {
         let checksum = Checksum::from_bytes(&compressed);
 
         Ok(checksum != correct_checksum)
-    }
-
-    /// Checks if a package exists in the register or in storage.
-    /// Returns true if the package exists, false if not.
-    /// Could return an IO error.
-    fn check_package_existence(&self, package_id: &PackageId, register: &PackageRegister, config: &Config) -> Result<bool> {
-        let installed_directory = config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
-        if register.get_package_version(package_id).is_none() && !fs::exists(installed_directory)? {
-            return Ok(false);
-        }
-
-        Ok(true)
     }
 
     /// Checks if all packages in the register also exist in the package storage in the prefix directory.
@@ -1033,24 +1019,14 @@ impl Verifier {
         self.current_intial_check
     }
 
-    /// Reverses the general checks counter by 1. Except if the current is 0.
-    /// Returns the new value of current_general_check.
-    pub fn reverse_general_check(&mut self) -> usize {
-        if self.current_general_check > 0 {
-            self.current_general_check -= 1;
+    /// Reverses the checks counter by 1. Except if the current is 0.
+    /// Returns the new value of `current_check`.
+    pub fn reverse_check(&mut self) -> usize {
+        if self.current_check > 0 {
+            self.current_check -= 1;
         }
 
-        self.current_general_check
-    }
-
-    /// Reverses the package checks counter by 1. Except if the current is 0.
-    /// Returns the new value of current_package_check.
-    pub fn reverse_package_check(&mut self) -> usize {
-        if self.current_package_check > 0 {
-            self.current_package_check -= 1;
-        }
-
-        self.current_package_check
+        self.current_check
     }
 
     /// Gets the current initial check index.
@@ -1058,13 +1034,8 @@ impl Verifier {
         self.current_intial_check
     }
 
-    /// Gets the current general check index.
-    pub fn get_general_check_index(&self) -> usize {
-        self.current_general_check
-    }
-
-    /// Gets the current package check index.
-    pub fn get_package_check_index(&self) -> usize {
-        self.current_package_check
+    /// Gets the current check index.
+    pub fn get_check_index(&self) -> usize {
+        self.current_check
     }
 }

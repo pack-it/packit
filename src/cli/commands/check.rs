@@ -1,9 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-only
+use std::fs;
+
 use clap::Args;
 
 use crate::{
-    cli::commands::HandleCommand, config::Config, installer::types::PackageId, register::package_register::PackageRegister,
-    utils::unwrap_or_exit::UnwrapOrExit, verifier::Verifier,
+    cli::{commands::HandleCommand, display::not_found},
+    config::Config,
+    installer::types::PackageId,
+    register::package_register::PackageRegister,
+    utils::unwrap_or_exit::UnwrapOrExit,
+    verifier::Verifier,
 };
 
 /// Checks for any inconsistencies or mistakes in the installed packages or in the Packit files itself.
@@ -18,16 +24,7 @@ const NO_ISSUE_FOUND_MESSAGE: &str = "No issues were found";
 
 impl HandleCommand for CheckArgs {
     fn handle(&self) {
-        match self.packages.is_empty() {
-            true => self.check_all(),
-            false => self.check_packages(),
-        }
-    }
-}
-
-impl CheckArgs {
-    /// Checks all packages.
-    fn check_all(&self) {
+        // Always do initial checks first
         let mut verifier = Verifier::new();
         while let Some(issue) = verifier.next_initial_issue().unwrap_or_exit(1) {
             println!("{issue}")
@@ -43,6 +40,16 @@ impl CheckArgs {
         let register_dir = PackageRegister::get_path(&config.prefix_directory);
         let register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
+        match self.packages.is_empty() {
+            true => self.check_all(&mut verifier, &register, &config),
+            false => self.check_specified(&mut verifier, &register, &config),
+        }
+    }
+}
+
+impl CheckArgs {
+    /// Checks all packages.
+    fn check_all(&self, verifier: &mut Verifier, register: &PackageRegister, config: &Config) {
         while let Some(issue) = verifier.next_issue(&register, &config).unwrap_or_exit(1) {
             println!("{issue}")
         }
@@ -56,13 +63,13 @@ impl CheckArgs {
     }
 
     /// Checks the packages specified by the user.
-    fn check_packages(&self) {
-        let mut verifier = Verifier::new();
-        let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
-        let register_dir = PackageRegister::get_path(&config.prefix_directory);
-        let register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
-
+    fn check_specified(&self, verifier: &mut Verifier, register: &PackageRegister, config: &Config) {
         for package_id in &self.packages {
+            let installed_directory = config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
+            if register.get_package_version(package_id).is_none() && !fs::exists(installed_directory).unwrap_or_exit(1) {
+                not_found::register_package_version(package_id, register);
+            }
+
             while let Some(issue) = verifier.next_package_issue(package_id, &register, &config).unwrap_or_exit(1) {
                 println!("{issue}")
             }
