@@ -23,6 +23,9 @@ pub enum TreeError {
     #[error("Parent with node id '{0}' cannot be found")]
     NonExistentParent(usize),
 
+    #[error("'{0}' has itself as a dependency, creating a cycle in the tree")]
+    CycleError(PackageId),
+
     #[error("Cannot create tree, because of an error reading the repository.")]
     RepositoryError(#[from] RepositoryError),
 }
@@ -41,6 +44,7 @@ pub struct Node<V, L: Eq> {
     package_id: PackageId,
     value: V,
     children: Vec<usize>,
+    parent_index: usize,
     label: L,
 }
 
@@ -49,7 +53,17 @@ impl<V, L: Eq> Tree<V, L> {
         Self { nodes: vec![root] }
     }
 
-    pub fn add_node(&mut self, parent_index: usize, node: Node<V, L>) -> Result<usize> {
+    /// Adds a node to the tree under the given parent index.
+    /// Returns the index of the node added to the nodes list.
+    /// Returns a `TreeError::CycleError` if the new node creates a cycle in the tree.
+    /// Returns a `TreeError::NonExistentParent` if the given parent index doesn't exist.
+    pub fn add_node(&mut self, parent_index: usize, mut node: Node<V, L>) -> Result<usize> {
+        // Check for cycles before adding the node to the tree
+        if self.is_cyclic(&parent_index, node.get_package_id())? {
+            return Err(TreeError::CycleError(node.get_package_id().clone()));
+        }
+
+        node.parent_index = parent_index;
         self.nodes.push(node);
         let index = self.nodes.len() - 1;
         let parent = match self.nodes.get_mut(parent_index) {
@@ -61,6 +75,8 @@ impl<V, L: Eq> Tree<V, L> {
         Ok(index)
     }
 
+    /// Gets the root of the tree.
+    #[expect(unused)]
     pub fn get_root(&self) -> &Node<V, L> {
         self.nodes.get(0).expect("Expected root to exist")
     }
@@ -71,8 +87,8 @@ impl<V, L: Eq> Tree<V, L> {
     }
 
     /// Gets a node based on its index.
-    pub fn get_node_by_index(&self, index: usize) -> Option<&Node<V, L>> {
-        self.nodes.get(index)
+    pub fn get_node_by_index(&self, index: &usize) -> Option<&Node<V, L>> {
+        self.nodes.get(*index)
     }
 
     /// Gets a node mutably based on its index.
@@ -88,15 +104,35 @@ impl<V, L: Eq> Tree<V, L> {
     {
         node.get_children()
             .iter()
-            .map(|c| self.get_node_by_index(*c).expect("Expected node to exist"))
+            .map(|c| self.get_node_by_index(c).expect("Expected node to exist"))
             .filter(|c| filter(&c.label))
             .map(|c| c.package_id.clone())
             .collect()
     }
 
+    /// Checks if a given package id will create a cycle in the tree.
+    /// Returns true is a cycle will be formed, false if not.
+    /// Returns `TreeError::NonExistentParent` if the given parent_index doesn't exist.
+    fn is_cyclic(&self, parent_index: &usize, package_id: &PackageId) -> Result<bool> {
+        let mut current_parent = parent_index;
+        while *current_parent != 0 {
+            let Some(parent_node) = self.get_node_by_index(current_parent) else {
+                return Err(TreeError::NonExistentParent(*current_parent));
+            };
+
+            if parent_node.get_package_id() == package_id {
+                return Ok(true);
+            }
+
+            current_parent = parent_node.get_parent();
+        }
+
+        Ok(false)
+    }
+
     /// The implementation of the tree display.
     fn display_impl(&self, f: &mut std::fmt::Formatter<'_>, node_index: &usize, prefix: &str) -> std::fmt::Result {
-        let node = self.get_node_by_index(*node_index).expect("Expected node to exist");
+        let node = self.get_node_by_index(node_index).expect("Expected node to exist");
         writeln!(f, "{prefix}{}", node.package_id)?;
 
         // Note that when the input prefix is "" then this prefix will also be ""
@@ -120,11 +156,14 @@ impl<V, L: Eq> Tree<V, L> {
 
 // Generic node implementation.
 impl<V, L: Eq> Node<V, L> {
+    /// Creates a new `Node`. Note that the parent_index is 0 by default. The root will have itself as parent
+    /// and when adding a node to a `Tree` the parent index will need to be adjusted.
     pub fn new(package_id: PackageId, value: V, label: L) -> Self {
         Self {
             package_id,
             value,
             children: Vec::new(),
+            parent_index: 0,
             label,
         }
     }
@@ -137,6 +176,11 @@ impl<V, L: Eq> Node<V, L> {
     /// Gets the value of the node.
     pub fn get_value(&self) -> &V {
         &self.value
+    }
+
+    /// Gets the parent index of the node.
+    pub fn get_parent(&self) -> &usize {
+        &self.parent_index
     }
 
     /// Gets the child nodes as reference.

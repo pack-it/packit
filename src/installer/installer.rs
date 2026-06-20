@@ -367,7 +367,7 @@ impl<'a> Installer<'a> {
     /// Removes the build dependencies recursively. There are early returns to make sure that the
     /// package is not removed if it was already installed, is not installed anymore or is a dependency.
     fn remove_build_dependencies(&mut self, node_index: &usize, tree: &InstallTree) -> Result<()> {
-        let node = tree.get_node_by_index(*node_index).expect("Expected node to exist");
+        let node = tree.get_node_by_index(node_index).expect("Expected node to exist");
 
         // Return early if the node value is None (meaning that the package was already installed)
         if node.get_value().is_none() {
