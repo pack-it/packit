@@ -120,7 +120,7 @@ impl<'a> Installer<'a> {
         let mut tree_builder = InstallTreeBuilder::new(self.register, self.repository_manager);
         let dependency_tree = tree_builder.create_tree(package_id.clone(), root_meta, install_label)?;
 
-        self.install_nodes(&0, &dependency_tree)?;
+        self.install_nodes(&dependency_tree)?;
 
         if !self.options.keep_build {
             println!("Removing build dependencies (if there are any");
@@ -130,43 +130,36 @@ impl<'a> Installer<'a> {
         Ok(package_id)
     }
 
-    /// Installs all packages recursively. For each package the install type is considered.
+    // TODO: Implement parallelization
+    /// Installs all packages based on the given install tree. For each package the install type is considered.
     /// Returns an `InstallerError::InstallationCanceled` if the installation has been canceled (by the user).
-    /// TODO: For parallelization this will become non recursive, so tree would be passed anyway
-    fn install_nodes(&mut self, node_index: &usize, tree: &InstallTree) -> Result<()> {
-        let node = tree.get_node_by_index(*node_index).expect("Expected node to exist");
+    fn install_nodes(&mut self, tree: &InstallTree) -> Result<()> {
+        // Note that by way of construction of the tree iterating in reverse will always install bottom up
+        for node in tree.get_nodes().iter().rev() {
+            // Continue if the package has already been installed (maybe by another earlier node from another branch)
+            if self.register.get_package_version(node.get_package_id()).is_some() {
+                continue;
+            }
 
-        // Install childs first
-        // TODO: Implement parallelization here
-        for child in node.get_children() {
-            self.install_nodes(child, tree)?;
+            // Get the value or continue if there is no value (package is already satisfied)
+            let node_value = match node.get_value() {
+                Some(value) => value,
+                None if *node.get_label().get_type() == InstallType::Installed => continue,
+                None => {
+                    return Err(InstallerError::UnreachableError {
+                        msg: "Node value is None without InstallType::Installed".to_string(),
+                    });
+                },
+            };
+
+            let dependencies = tree.get_children_ids_filtered(node, InstallLabel::is_dependency);
+            match node.get_label().get_type() {
+                InstallType::Build | InstallType::BuildAll => self.install_package(node_value, dependencies, false)?,
+                _ => self.install_package(node_value, dependencies, true)?,
+            }
         }
 
-        // Return early if the package has already been installed (maybe by another earlier node from another branch)
-        if self.register.get_package_version(node.get_package_id()).is_some() {
-            return Ok(());
-        }
-
-        // Get the value or return early if there is no value (package is already satisfied)
-        let node_value = match node.get_value() {
-            Some(value) => value,
-            None if *node.get_label().get_type() == InstallType::Installed => return Ok(()),
-            None => {
-                return Err(InstallerError::UnreachableError {
-                    msg: "Node value is None without InstallType::Installed".to_string(),
-                });
-            },
-        };
-
-        let dependencies = tree.get_children_ids_filtered(node, InstallLabel::is_dependency);
-
-        // Check if the current package should be build from source
-        if matches!(node.get_label().get_type(), InstallType::Build | InstallType::BuildAll) {
-            // Install the current node without prebuild
-            return self.install_package(node_value, dependencies, false);
-        }
-
-        Ok(self.install_package(node_value, dependencies, true)?)
+        Ok(())
     }
 
     /// Downloads and installs a package. This is done with a build from the source code or with pre-builds.
