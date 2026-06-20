@@ -424,6 +424,7 @@ checksum = "3d52eff69cd5e647efe296129160853a42795992097e8af39800e1060caeea9b"
 [[package]]
 name = "contextdiff-parser"
 version = "0.0.1"
+source = "git+https://github.com/pack-it/contextdiff-parser.git#106ca54e79651e8709e87435bc0a9e41a45ba4d8"
 dependencies = [
  "chrono",
  "thiserror 2.0.18",

@@ -54,7 +54,7 @@ pub enum PatchFormat {
     Unknown,
 }
 
-// Applies the given patch to the given directory directory.
+/// Applies the given patch to the given directory directory.
 pub fn apply_patch(patch: Bytes, directory: &Path) -> Result<()> {
     // Detect the format of the patch
     let patch_format = detect_patch_format(&patch)?;
@@ -94,7 +94,7 @@ pub fn apply_patch(patch: Bytes, directory: &Path) -> Result<()> {
     Ok(())
 }
 
-// Handles the file operation to apply the different patch operations.
+/// Handles the file operation to apply the different patch operations.
 fn handle_file_operation(operation: &FileOperation<[u8]>, patch: &FilePatch<[u8]>, directory: &Path) -> Result<()> {
     match operation {
         FileOperation::Create(path) => {
@@ -112,7 +112,12 @@ fn handle_file_operation(operation: &FileOperation<[u8]>, patch: &FilePatch<[u8]
         FileOperation::Modify { original, modified } => {
             let source = create_path(directory, original)?;
             let destination = create_path(directory, modified)?;
-            debug!("Modifying file '{}' to '{}'", source.display(), destination.display());
+            let (source, destination) = resolve_paths(&source, &destination);
+            if source == destination {
+                debug!("Modifying file '{}'", source.display());
+            } else {
+                debug!("Modifying file '{}' to '{}'", source.display(), destination.display());
+            }
 
             apply_path(patch.patch(), Some(&source), &destination)?;
 
@@ -124,6 +129,7 @@ fn handle_file_operation(operation: &FileOperation<[u8]>, patch: &FilePatch<[u8]
         FileOperation::Rename { from, to } => {
             let source = create_path(directory, from)?;
             let destination = create_path(directory, to)?;
+            let (source, destination) = resolve_paths(&source, &destination);
             debug!("Renaming file '{}' to '{}'", source.display(), destination.display());
 
             if let Some(parent) = destination.parent() {
@@ -135,6 +141,7 @@ fn handle_file_operation(operation: &FileOperation<[u8]>, patch: &FilePatch<[u8]
         FileOperation::Copy { from, to } => {
             let source = create_path(directory, from)?;
             let destination = create_path(directory, to)?;
+            let (source, destination) = resolve_paths(&source, &destination);
             debug!("Copying file '{}' to '{}'", source.display(), destination.display());
 
             if let Some(parent) = destination.parent() {
@@ -148,14 +155,34 @@ fn handle_file_operation(operation: &FileOperation<[u8]>, patch: &FilePatch<[u8]
     Ok(())
 }
 
-// Creates a path for the patch by parsing the path from bytes and appending it to the given directory.
+/// Creates a path for the patch by parsing the path from bytes and appending it to the given directory.
 fn create_path(directory: &Path, patch_path: &[u8]) -> Result<PathBuf> {
     let path = directory.join(io::parse_path_from_bytes(patch_path)?);
     Ok(io::normalize_path(&path))
 }
 
-// Applies a text or binary patch to a file. The source argument can be none, to use no original file
-fn apply_path(patch: &PatchKind<[u8]>, source: Option<&PathBuf>, destination: &PathBuf) -> Result<()> {
+/// Resolves the source and destination paths to a full pair with an existing source.
+fn resolve_paths<'a>(source: &'a Path, destination: &'a Path) -> (&'a Path, &'a Path) {
+    // If the source does not exist and the destination does exist, check if we can assume same file
+    if !source.exists() && destination.exists() {
+        if let Some(source_file) = source.file_name()
+            && let Some(destination_file) = destination.file_name()
+            && source_file == destination_file
+        {
+            debug!("Detected non-existing source file, but destination with same filename exists, using destination as source");
+            debug!("Non-existant source file: {}", source.display());
+
+            // If the source does not exist, but the destination does and the file names are the same,
+            // assume the source and destination are the same file.
+            return (destination, destination);
+        }
+    }
+
+    (source, destination)
+}
+
+/// Applies a text or binary patch to a file. The source argument can be none, to use no original file
+fn apply_path(patch: &PatchKind<[u8]>, source: Option<&Path>, destination: &Path) -> Result<()> {
     if matches!(patch, PatchKind::Binary(BinaryPatch::Marker)) {
         warning!("Patch has a binary patch marker, but does not contain any data");
         return Ok(());
