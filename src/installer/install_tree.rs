@@ -83,6 +83,7 @@ pub type InstallNode = Node<Option<InstallMeta>, InstallLabel>;
 pub struct InstallTreeBuilder<'a> {
     register: &'a PackageRegister,
     repository_manager: &'a RepositoryManager<'a>,
+    checked_packages: HashSet<PackageId>,
     asked_packages: HashSet<PackageId>,
     terminal: Term,
 }
@@ -92,6 +93,7 @@ impl<'a> InstallTreeBuilder<'a> {
         Self {
             register,
             repository_manager: manager,
+            checked_packages: HashSet::new(),
             asked_packages: HashSet::new(),
             terminal: Term::stdout(),
         }
@@ -215,11 +217,20 @@ impl<'a> InstallTreeBuilder<'a> {
 
     fn check_prebuild(&mut self, install_meta: &InstallMeta, package_id: &PackageId, label: &InstallLabel) -> Result<Option<InstallLabel>> {
         // Don't check for prebuild if the package should not use a prebuild or if it was already asked
-        if !matches!(label.get_type(), InstallType::Prebuild) || self.asked_packages.contains(&package_id) {
+        if !matches!(label.get_type(), InstallType::Prebuild) {
             return Ok(None);
         }
 
-        self.asked_packages.insert(package_id.clone());
+        // Note that if we have asked before and the program is still running we can assume the user agreed to do a build
+        if self.asked_packages.contains(package_id) {
+            return Ok(Some(InstallLabel::new(InstallType::Build, label.is_dependency())));
+        }
+
+        if self.checked_packages.contains(package_id) {
+            return Ok(None);
+        }
+
+        self.checked_packages.insert(package_id.clone());
 
         // Check if a prebuild for the package is available
         let revision = install_meta.version_metadata.get_revision_count();
@@ -237,8 +248,9 @@ impl<'a> InstallTreeBuilder<'a> {
             });
         }
 
+        self.asked_packages.insert(package_id.clone());
+
         // Remove the question
-        // TODO: Temporary, doesn't work with parallel tree build
         self.terminal.clear_last_lines(1)?;
 
         // Return an adjusted label
