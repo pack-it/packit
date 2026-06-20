@@ -108,7 +108,7 @@ impl Verifier {
             Ok(issue) => Ok(issue),
             Err(e) if self.issues_found => {
                 debug!(err: e, "An error occured when issues were already found, skipping remaining issues.");
-                self.current_general_check = Check::get_general_checks().len();
+                self.current_general_check = Check::get_checks().len();
                 Ok(None)
             },
             Err(e) => Err(e),
@@ -119,7 +119,7 @@ impl Verifier {
     /// Returns None if there are no issues to return.
     fn next_issue_impl(&mut self, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
         loop {
-            let ordered_checks = Check::get_ordered_checks(Check::get_general_checks());
+            let ordered_checks = Check::get_ordered_checks(Check::get_checks());
             let check = match ordered_checks.get(self.current_general_check) {
                 Some(check) => check,
                 None => return Ok(None),
@@ -144,7 +144,7 @@ impl Verifier {
                 Check::MissingLink => self.check_missing_link(register, config)?,
 
                 // Make sure that the check is not a general check
-                _ if Check::get_general_checks().contains(check) => return Err(VerifierError::UnimplementedCheckError),
+                _ if Check::get_checks().contains(check) => return Err(VerifierError::UnimplementedCheckError),
 
                 // Continue if the check is package specific or is an initial check
                 _ => continue,
@@ -164,7 +164,7 @@ impl Verifier {
             Ok(issue) => Ok(issue),
             Err(e) if self.issues_found => {
                 debug!(err: e, "An error occured when issues were already found, skipping remaining issues.");
-                self.current_package_check = Check::get_package_checks().len();
+                self.current_package_check = Check::get_checks().len();
                 Ok(None)
             },
             Err(e) => Err(e),
@@ -175,7 +175,7 @@ impl Verifier {
     /// Returns None if there are no more issues to return.
     fn next_package_issue_impl(&mut self, package_id: &PackageId, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
         loop {
-            let ordered_checks = Check::get_ordered_checks(Check::get_package_checks());
+            let ordered_checks = Check::get_ordered_checks(Check::get_checks());
             let check = match ordered_checks.get(self.current_package_check) {
                 Some(check) => check,
                 None => return Ok(None),
@@ -185,25 +185,31 @@ impl Verifier {
             self.current_package_check += 1;
 
             let issue = match check {
-                Check::PackageExistence if self.check_package_existence(package_id, register, config)? => continue,
-                Check::PackageExistence => Issue::NotFound(package_id.clone()),
-                Check::PackageStorageConsistency if self.package_storage_is_consistent(package_id, config)? => continue,
-                Check::PackageStorageConsistency => Issue::InconsistentStorage(vec![package_id.clone()]),
-                Check::PackageRegisterConsistency if self.register_package_is_consistent(package_id, register) => continue,
-                Check::PackageRegisterConsistency => Issue::InconsistentRegister(HashSet::from([package_id.clone()])),
-                Check::PackageMissingDependencies => match self.check_missing_package_dependencies(package_id, register)? {
+                Check::PackitGroup => match self.check_packit_group(config)? {
                     Some(issue) => issue,
                     None => continue,
                 },
-                Check::PackageInvalidDependencies => match self.check_invalid_package_dependencies(package_id, register)? {
+                Check::StrayDirectory => match self.check_stray_directories(config)? {
                     Some(issue) => issue,
                     None => continue,
                 },
-                Check::PackageMissingDependents => match self.check_missing_package_dependents(package_id, register) {
+                Check::StorageConsistency if self.package_storage_is_consistent(package_id, config)? => continue,
+                Check::StorageConsistency => Issue::InconsistentStorage(vec![package_id.clone()]),
+                Check::RegisterConsistency if self.register_package_is_consistent(package_id, register) => continue,
+                Check::RegisterConsistency => Issue::InconsistentRegister(HashSet::from([package_id.clone()])),
+                Check::MissingDependencies => match self.check_missing_package_dependencies(package_id, register)? {
                     Some(issue) => issue,
                     None => continue,
                 },
-                Check::PackageInvalidDependents => {
+                Check::InvalidDependencies => match self.check_invalid_package_dependencies(package_id, register)? {
+                    Some(issue) => issue,
+                    None => continue,
+                },
+                Check::MissingDependents => match self.check_missing_package_dependents(package_id, register) {
+                    Some(issue) => issue,
+                    None => continue,
+                },
+                Check::InvalidDependents => {
                     let invalid = self.check_invalid_package_dependents(package_id, register);
                     if invalid.is_empty() {
                         continue;
@@ -211,21 +217,21 @@ impl Verifier {
 
                     Issue::InvalidDependents(invalid)
                 },
-                Check::PackageDependencyTree => match self.check_package_dependency_tree(package_id, register) {
+                Check::DependencyTree => match self.check_package_dependency_tree(package_id, register) {
                     Some(issue) => issue,
                     None => continue,
                 },
-                Check::PackageAlterations if !self.check_package_alterations(package_id, register, config)? => continue,
-                Check::PackageAlterations => Issue::AlteredPackage(vec![package_id.clone()]),
-                Check::PackageInvalidActive if self.check_invalid_package_active(&package_id.name, register, config)?.is_none() => continue,
-                Check::PackageInvalidActive => Issue::InvalidActive(vec![package_id.name.clone()]),
-                Check::PackageForbiddenLink if self.check_forbidden_package_link(package_id, register)?.is_empty() => continue,
-                Check::PackageForbiddenLink => Issue::ForbiddenLink(vec![package_id.name.clone()]),
-                Check::PackageMissingLink if !self.check_missing_package_link(package_id, register, config)? => continue,
-                Check::PackageMissingLink => Issue::MissingLinks(vec![package_id.name.clone()]),
+                Check::Alterations if !self.check_package_alterations(package_id, register, config)? => continue,
+                Check::Alterations => Issue::AlteredPackage(vec![package_id.clone()]),
+                Check::InvalidActive if self.check_invalid_package_active(&package_id.name, register, config)?.is_none() => continue,
+                Check::InvalidActive => Issue::InvalidActive(vec![package_id.name.clone()]),
+                Check::ForbiddenLink if self.check_forbidden_package_link(package_id, register)?.is_empty() => continue,
+                Check::ForbiddenLink => Issue::ForbiddenLink(vec![package_id.name.clone()]),
+                Check::MissingLink if !self.check_missing_package_link(package_id, register, config)? => continue,
+                Check::MissingLink => Issue::MissingLinks(vec![package_id.name.clone()]),
 
                 // Make sure that the check is not a package specific check
-                _ if Check::get_package_checks().contains(check) => return Err(VerifierError::UnimplementedCheckError),
+                _ if Check::get_checks().contains(check) => return Err(VerifierError::UnimplementedCheckError),
 
                 // Continue if the check is not package specific
                 _ => continue,

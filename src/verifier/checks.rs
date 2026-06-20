@@ -23,20 +23,6 @@ pub enum Check {
     MissingLink,
     MissingDependencies,
     InvalidDependencies,
-
-    // Checks which are specific to a package
-    PackageExistence,
-    PackageStorageConsistency,
-    PackageRegisterConsistency,
-    PackageDependencyTree,
-    PackageAlterations,
-    PackageMissingDependents,
-    PackageInvalidDependents,
-    PackageInvalidActive,
-    PackageForbiddenLink,
-    PackageMissingLink,
-    PackageMissingDependencies,
-    PackageInvalidDependencies,
 }
 
 impl Check {
@@ -57,10 +43,12 @@ impl Check {
 
             // General checks
             Self::PackitGroup => &[],
+            Self::StrayDirectory => &[],
+
+            // Package checks
             Self::ForbiddenLink => &[],
             Self::MissingLink => &[Self::ForbiddenLink],
             Self::InvalidActive => &[],
-            Self::StrayDirectory => &[],
             Self::StorageConsistency => &[Self::StrayDirectory],
             Self::RegisterConsistency => &[Self::StrayDirectory],
             Self::MissingDependencies => &[Self::StorageConsistency, Self::RegisterConsistency],
@@ -86,50 +74,6 @@ impl Check {
                 Self::InvalidDependents,
             ],
             Self::Alterations => &[Self::StorageConsistency, Self::RegisterConsistency],
-
-            // Package specific checks
-            Self::PackageExistence => &[],
-            Self::PackageForbiddenLink => &[],
-            Self::PackageMissingLink => &[Self::PackageForbiddenLink],
-            Self::PackageInvalidActive => &[Self::PackageExistence],
-            Self::PackageStorageConsistency => &[Self::PackageExistence],
-            Self::PackageRegisterConsistency => &[Self::PackageExistence],
-            Self::PackageMissingDependencies => &[
-                Self::PackageExistence,
-                Self::PackageStorageConsistency,
-                Self::PackageRegisterConsistency,
-            ],
-            Self::PackageInvalidDependencies => &[
-                Self::PackageExistence,
-                Self::PackageStorageConsistency,
-                Self::PackageRegisterConsistency,
-            ],
-            Self::PackageMissingDependents => &[
-                Self::PackageExistence,
-                Self::PackageStorageConsistency,
-                Self::PackageRegisterConsistency,
-                Self::PackageMissingDependencies,
-                Self::PackageInvalidDependencies,
-            ],
-            Self::PackageInvalidDependents => &[
-                Self::PackageExistence,
-                Self::PackageStorageConsistency,
-                Self::PackageRegisterConsistency,
-                Self::PackageMissingDependencies,
-                Self::PackageInvalidDependencies,
-            ],
-            Self::PackageDependencyTree => &[
-                Self::PackageExistence,
-                Self::PackageStorageConsistency,
-                Self::PackageRegisterConsistency,
-                Self::PackageMissingDependencies,
-                Self::PackageInvalidDependencies,
-            ],
-            Self::PackageAlterations => &[
-                Self::PackageExistence,
-                Self::PackageStorageConsistency,
-                Self::PackageRegisterConsistency,
-            ],
         }
     }
 
@@ -144,8 +88,8 @@ impl Check {
         ]
     }
 
-    /// Gets all general checks.
-    pub const fn get_general_checks<'a>() -> &'a [Self] {
+    /// Gets the normal checks.
+    pub const fn get_checks<'a>() -> &'a [Self] {
         &[
             Self::StorageConsistency,
             Self::RegisterConsistency,
@@ -160,24 +104,6 @@ impl Check {
             Self::MissingLink,
             Self::MissingDependencies,
             Self::InvalidDependencies,
-        ]
-    }
-
-    /// Gets all package specific checks.
-    pub const fn get_package_checks<'a>() -> &'a [Self] {
-        &[
-            Self::PackageExistence,
-            Self::PackageStorageConsistency,
-            Self::PackageRegisterConsistency,
-            Self::PackageDependencyTree,
-            Self::PackageAlterations,
-            Self::PackageMissingDependents,
-            Self::PackageInvalidDependents,
-            Self::PackageInvalidActive,
-            Self::PackageForbiddenLink,
-            Self::PackageMissingLink,
-            Self::PackageMissingDependencies,
-            Self::PackageInvalidDependencies,
         ]
     }
 
@@ -212,16 +138,6 @@ mod tests {
         assert_eq!(Check::get_ordered_checks(&[Check::Permissions]), Vec::from([&Check::Permissions]));
 
         assert_eq!(
-            Check::get_ordered_checks(&[Check::PackageAlterations, Check::PackageRegisterConsistency]),
-            Vec::from([
-                &Check::PackageExistence,
-                &Check::PackageStorageConsistency,
-                &Check::PackageRegisterConsistency,
-                &Check::PackageAlterations
-            ])
-        );
-
-        assert_eq!(
             Check::get_ordered_checks(&[Check::DependencyTree]),
             Vec::from([
                 &Check::StrayDirectory,
@@ -239,8 +155,7 @@ mod tests {
     #[test]
     fn check_cycles() {
         let mut all_checks = Check::get_initial_checks().to_vec();
-        all_checks.extend(Check::get_general_checks().to_vec());
-        all_checks.extend(Check::get_package_checks().to_vec());
+        all_checks.extend(Check::get_checks().to_vec());
 
         for check in all_checks {
             check_cylces_impl(&check.clone(), &mut HashSet::from([check]));

@@ -42,9 +42,6 @@ pub enum Issue {
     /// The 'packit' group is missing.
     MissingPackitGroup,
 
-    /// The given package cannot be found anywhere. This issue only applies when a package is specified by the user.
-    NotFound(PackageId),
-
     /// A list of stray directories.
     StrayDirectories(HashSet<PathBuf>),
 
@@ -201,10 +198,6 @@ impl Display for Issue {
                 writeln!(f, "Packit group missing")?;
                 writeln!(f, "The 'packit' group is missing while multiuser mode is turned on.")?;
             },
-            Issue::NotFound(package_id) => {
-                writeln!(f, "Package existence")?;
-                writeln!(f, "{} cannot be found anywhere in Packit.", package_id.to_string().bold().blue())?
-            },
             Issue::StrayDirectories(directories) => {
                 writeln!(f, "Stray directories")?;
                 let issue_explanation = "The following stray directories were found inside of prefix/packages:";
@@ -246,9 +239,7 @@ impl Issue {
             Issue::InconsistentRegister(_) => {
                 "To fix this issue we try to reconstruct the Register.toml with data still in the Packit directory."
             },
-            Issue::AlteredPackage(_) | Issue::MissingPackitGroup | Issue::NotFound(_) => {
-                "There is no automatic fix for this issue available yet."
-            },
+            Issue::AlteredPackage(_) | Issue::MissingPackitGroup => "There is no automatic fix for this issue available yet.",
         }
     }
 }
