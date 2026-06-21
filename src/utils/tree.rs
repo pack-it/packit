@@ -63,13 +63,15 @@ impl<V, L: Eq> Tree<V, L> {
             return Err(TreeError::CycleError(node.get_package_id().clone()));
         }
 
-        node.parent_index = parent_index;
-        self.nodes.push(node);
-        let index = self.nodes.len() - 1;
+        // Get the parent and check if it exists
         let parent = match self.nodes.get_mut(parent_index) {
             Some(parent) => parent,
             None => return Err(TreeError::NonExistentParent(parent_index)),
         };
+
+        node.parent_index = parent_index;
+        self.nodes.push(node);
+        let index = self.nodes.len() - 1;
 
         parent.children.push(index);
         Ok(index)
@@ -87,8 +89,8 @@ impl<V, L: Eq> Tree<V, L> {
     }
 
     /// Gets a node based on its index.
-    pub fn get_node_by_index(&self, index: &usize) -> Option<&Node<V, L>> {
-        self.nodes.get(*index)
+    pub fn get_node_by_index(&self, index: usize) -> Option<&Node<V, L>> {
+        self.nodes.get(index)
     }
 
     /// Gets a node mutably based on its index.
@@ -111,7 +113,7 @@ impl<V, L: Eq> Tree<V, L> {
     }
 
     /// Checks if a given package id will create a cycle in the tree.
-    /// Returns true is a cycle will be formed, false if not.
+    /// Returns true if a cycle will be formed, false if not.
     /// Returns `TreeError::NonExistentParent` if the given parent_index doesn't exist.
     fn is_cyclic(&self, parent_index: &usize, package_id: &PackageId) -> Result<bool> {
         let mut current_parent = parent_index;
@@ -131,7 +133,7 @@ impl<V, L: Eq> Tree<V, L> {
     }
 
     /// The implementation of the tree display.
-    fn display_impl(&self, f: &mut std::fmt::Formatter<'_>, node_index: &usize, prefix: &str) -> std::fmt::Result {
+    fn display_impl(&self, f: &mut std::fmt::Formatter<'_>, node_index: usize, prefix: &str) -> std::fmt::Result {
         let node = self.get_node_by_index(node_index).expect("Expected node to exist");
         writeln!(f, "{prefix}{}", node.package_id)?;
 

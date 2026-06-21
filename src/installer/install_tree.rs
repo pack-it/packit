@@ -89,10 +89,10 @@ pub struct InstallTreeBuilder<'a> {
 }
 
 impl<'a> InstallTreeBuilder<'a> {
-    pub fn new(register: &'a PackageRegister, manager: &'a RepositoryManager) -> Self {
+    pub fn new(register: &'a PackageRegister, repository_manager: &'a RepositoryManager) -> Self {
         Self {
             register,
-            repository_manager: manager,
+            repository_manager,
             checked_packages: HashSet::new(),
             asked_packages: HashSet::new(),
             terminal: Term::stdout(),
@@ -118,6 +118,7 @@ impl<'a> InstallTreeBuilder<'a> {
             let install_meta = match node.get_value() {
                 Some(install_meta) => install_meta,
                 None if node.get_label().install_type == InstallType::Installed => {
+                    // Note that we expect the package to exist because the node has the `InstallType::Installed` label type
                     let dependencies =
                         &self.register.get_package_version(node.get_package_id()).expect("Expected package version to exist").dependencies;
                     for dependency in dependencies {
@@ -136,7 +137,7 @@ impl<'a> InstallTreeBuilder<'a> {
                 },
             };
 
-            for (dependency, label) in InstallTreeBuilder::expander(node, install_meta)? {
+            for (dependency, label) in self.expander(node, install_meta)? {
                 let (dependency_id, meta, dependency_label) = self.populator(&dependency, label)?;
                 let new_node = Node::new(dependency_id, meta, dependency_label);
                 let new_index = tree.add_node(node_index, new_node)?;
@@ -164,7 +165,6 @@ impl<'a> InstallTreeBuilder<'a> {
             },
         };
 
-        // TODO: Remove clone
         let target = install_meta.version_metadata.get_target(&install_meta.target_bounds)?;
         let dependencies = install_meta
             .version_metadata
@@ -216,7 +216,7 @@ impl<'a> InstallTreeBuilder<'a> {
     }
 
     fn check_prebuild(&mut self, install_meta: &InstallMeta, package_id: &PackageId, label: &InstallLabel) -> Result<Option<InstallLabel>> {
-        // Don't check for prebuild if the package should not use a prebuild or if it was already asked
+        // Don't check for prebuild if the package should not use a prebuild
         if !matches!(label.get_type(), InstallType::Prebuild) {
             return Ok(None);
         }
