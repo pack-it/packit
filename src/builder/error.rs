@@ -5,7 +5,7 @@ use crate::{
     builder::BinaryPatcherError,
     installer::{scripts::ScriptError, unpack::UnpackError},
     repositories::error::RepositoryError,
-    utils::patches::PatchError,
+    utils::{ioerror, patches::PatchError},
 };
 
 /// The errors that occur during building.
@@ -48,7 +48,7 @@ pub enum BuilderError {
     RequestError(#[from] reqwest::Error),
 
     #[error("Error while interacting with filesystem")]
-    IOError(#[from] std::io::Error),
+    IOError(#[from] ioerror::IOError),
 
     #[error("Cannot parse url of source")]
     UrlParseError(#[from] url::ParseError),

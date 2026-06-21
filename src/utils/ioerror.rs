@@ -8,6 +8,14 @@ pub enum IOError {
     #[error("{0}")]
     Standard(std::io::Error),
 
+    #[error("Failed to {operation}")]
+    Operation {
+        operation: String,
+
+        #[source]
+        source: std::io::Error,
+    },
+
     #[error("Failed to {operation} {}", path.display())]
     WithPath {
         operation: String,
@@ -22,7 +30,10 @@ pub trait IOResultExt<T> {
     /// Wraps the std::io::Error directly, without context.
     fn err_std(self) -> Result<T, IOError>;
 
-    /// Wraps the std::io::Error directly, with operation and path context.
+    /// Wraps the std::io::Error directly, with an operation.
+    fn err_operation(self, operation: &str) -> Result<T, IOError>;
+
+    /// Wraps the std::io::Error directly, with an operation and path context.
     fn err_with_path(self, operation: &str, path: impl Into<PathBuf>) -> Result<T, IOError>;
 }
 
@@ -31,6 +42,16 @@ impl<T> IOResultExt<T> for std::io::Result<T> {
         match self {
             Ok(ok) => Ok(ok),
             Err(e) => Err(IOError::Standard(e)),
+        }
+    }
+
+    fn err_operation(self, operation: &str) -> Result<T, IOError> {
+        match self {
+            Ok(ok) => Ok(ok),
+            Err(e) => Err(IOError::Operation {
+                operation: operation.into(),
+                source: e,
+            }),
         }
     }
 
