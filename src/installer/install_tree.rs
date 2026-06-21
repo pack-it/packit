@@ -152,7 +152,7 @@ impl<'a> InstallTreeBuilder<'a> {
     /// Expands a tree based on metadata and also takes into account already installed packages.
     /// The children install types are based on the parent install type and determine how the tree
     /// is further expanded (with or without build dependencies).
-    fn expander(parent: &InstallNode, install_meta: &InstallMeta) -> Result<Vec<(Dependency, InstallLabel)>> {
+    fn expander(&self, parent: &InstallNode, install_meta: &InstallMeta) -> Result<Vec<(Dependency, InstallLabel)>> {
         // Determine the (build) dependency types of the children based on the parent
         let install_type = match *parent.get_label().get_type() {
             InstallType::Prebuild => InstallType::Prebuild,

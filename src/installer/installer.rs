@@ -124,7 +124,7 @@ impl<'a> Installer<'a> {
 
         if !self.options.keep_build {
             println!("Removing build dependencies (if there are any");
-            self.remove_build_dependencies(&0, &dependency_tree)?;
+            self.remove_build_dependencies(0, &dependency_tree)?;
         }
 
         Ok(package_id)
@@ -366,7 +366,7 @@ impl<'a> Installer<'a> {
 
     /// Removes the build dependencies recursively. There are early returns to make sure that the
     /// package is not removed if it was already installed, is not installed anymore or is a dependency.
-    fn remove_build_dependencies(&mut self, node_index: &usize, tree: &InstallTree) -> Result<()> {
+    fn remove_build_dependencies(&mut self, node_index: usize, tree: &InstallTree) -> Result<()> {
         let node = tree.get_node_by_index(node_index).expect("Expected node to exist");
 
         // Return early if the node value is None (meaning that the package was already installed)
@@ -381,13 +381,13 @@ impl<'a> Installer<'a> {
         }
 
         // Don't remove the package if it's the root
-        if *node_index != 0 {
+        if node_index != 0 {
             println!("Remove build dependency {}", node.get_package_id());
             self.uninstall(optional_id)?;
         }
 
         for child in node.get_children() {
-            self.remove_build_dependencies(child, tree)?;
+            self.remove_build_dependencies(*child, tree)?;
         }
 
         Ok(())

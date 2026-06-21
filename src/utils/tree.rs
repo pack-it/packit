@@ -59,20 +59,20 @@ impl<V, L: Eq> Tree<V, L> {
     /// Returns a `TreeError::NonExistentParent` if the given parent index doesn't exist.
     pub fn add_node(&mut self, parent_index: usize, mut node: Node<V, L>) -> Result<usize> {
         // Check for cycles before adding the node to the tree
-        if self.is_cyclic(&parent_index, node.get_package_id())? {
+        if self.is_cyclic(parent_index, node.get_package_id())? {
             return Err(TreeError::CycleError(node.get_package_id().clone()));
         }
 
-        // Get the parent and check if it exists
-        let parent = match self.nodes.get_mut(parent_index) {
-            Some(parent) => parent,
-            None => return Err(TreeError::NonExistentParent(parent_index)),
-        };
+        // Check if parent node exists
+        if self.nodes.get(parent_index).is_none() {
+            return Err(TreeError::NonExistentParent(parent_index));
+        }
 
         node.parent_index = parent_index;
         self.nodes.push(node);
         let index = self.nodes.len() - 1;
 
+        let parent = self.nodes.get_mut(parent_index).expect("Expected parent to exist");
         parent.children.push(index);
         Ok(index)
     }
@@ -106,7 +106,7 @@ impl<V, L: Eq> Tree<V, L> {
     {
         node.get_children()
             .iter()
-            .map(|c| self.get_node_by_index(c).expect("Expected node to exist"))
+            .map(|c| self.get_node_by_index(*c).expect("Expected node to exist"))
             .filter(|c| filter(&c.label))
             .map(|c| c.package_id.clone())
             .collect()
@@ -115,11 +115,11 @@ impl<V, L: Eq> Tree<V, L> {
     /// Checks if a given package id will create a cycle in the tree.
     /// Returns true if a cycle will be formed, false if not.
     /// Returns `TreeError::NonExistentParent` if the given parent_index doesn't exist.
-    fn is_cyclic(&self, parent_index: &usize, package_id: &PackageId) -> Result<bool> {
+    fn is_cyclic(&self, parent_index: usize, package_id: &PackageId) -> Result<bool> {
         let mut current_parent = parent_index;
-        while *current_parent != 0 {
+        while current_parent != 0 {
             let Some(parent_node) = self.get_node_by_index(current_parent) else {
-                return Err(TreeError::NonExistentParent(*current_parent));
+                return Err(TreeError::NonExistentParent(current_parent));
             };
 
             if parent_node.get_package_id() == package_id {
@@ -149,7 +149,7 @@ impl<V, L: Eq> Tree<V, L> {
                 false => BRANCH,
             };
 
-            self.display_impl(f, child, format!("{prefix}{branch_section}").as_str())?;
+            self.display_impl(f, *child, format!("{prefix}{branch_section}").as_str())?;
         }
 
         Ok(())
@@ -181,8 +181,8 @@ impl<V, L: Eq> Node<V, L> {
     }
 
     /// Gets the parent index of the node.
-    pub fn get_parent(&self) -> &usize {
-        &self.parent_index
+    pub fn get_parent(&self) -> usize {
+        self.parent_index
     }
 
     /// Gets the child nodes as reference.
@@ -228,7 +228,7 @@ impl EmptyTree {
 // Display trait for nice display of a tree.
 impl<V, L: Eq> Display for Tree<V, L> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.display_impl(f, &0, "")?;
+        self.display_impl(f, 0, "")?;
         Ok(())
     }
 }
