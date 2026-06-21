@@ -15,6 +15,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The build system now includes a new `package-build` xtask to create a full Packit prebuild for the release.
 - The list command now uses column order grid printing instead of row order.
 - The patch apply process now uses a more advanced file path resolver, which ensures better patch compatibility.
+- The install tree is now fully expanded before installation, making it clearer what will be installed.
+- Trees now perform a check for cycles, throwing an error if they detect one.
 
 ### Fixed
 - Fix package not found issue when multiple repositories have the same package but different versions.
