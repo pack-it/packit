@@ -8,7 +8,10 @@ use std::{
 use crate::{
     cli::display::logging::{debug, warning},
     config::{Config, Repository},
-    installer::types::{Dependency, PackageId, PackageName},
+    installer::{
+        self,
+        types::{Dependency, PackageId, PackageName},
+    },
     integrity::{Issue, error::Result, utils::get_storage_packages},
     packager,
     platforms::Target,
@@ -296,7 +299,7 @@ fn check_missing_package_link(package_id: &PackageId, register: &PackageRegister
     }
 
     let package_path = config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
-    for directory_name in ["bin", "include", "lib", "share"] {
+    for directory_name in installer::SYMLINK_DIRECTORIES {
         let symlink_directory = config.prefix_directory.join(directory_name);
         let directory = package_path.join(directory_name);
 

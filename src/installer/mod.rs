@@ -15,4 +15,5 @@ pub use self::installer::Installer;
 
 pub use self::options::InstallerOptions;
 
+pub use self::symlinker::SYMLINK_DIRECTORIES;
 pub use self::symlinker::Symlinker;
