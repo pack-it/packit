@@ -12,6 +12,7 @@ use crate::{
     platforms::{permissions::error::PermissionError, symlink::SymlinkError},
     register::error::RegisterError,
     repositories::error::RepositoryError,
+    utils::ioerror,
 };
 
 /// The errors that occur during verification.
@@ -60,7 +61,7 @@ pub enum VerifierError {
     RepositoryError(#[from] RepositoryError),
 
     #[error("Cannot perform check or fix, because of an error while interacting with the filesystem")]
-    IOError(#[from] std::io::Error),
+    IOError(#[from] ioerror::IOError),
 }
 
 pub(super) type Result<T> = std::result::Result<T, VerifierError>;

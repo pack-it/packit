@@ -12,7 +12,7 @@ use crate::{
     platforms::{permissions::error::PermissionError, symlink::SymlinkError},
     register::error::RegisterError,
     repositories::error::RepositoryError,
-    utils::tree::TreeError,
+    utils::{ioerror, tree::TreeError},
 };
 
 /// The errors that occur during installation.
@@ -95,7 +95,7 @@ pub enum InstallerError {
     PermissionError(#[from] PermissionError),
 
     #[error("Error while interacting with filesystem")]
-    IOError(#[from] std::io::Error),
+    IOError(#[from] ioerror::IOError),
 }
 
 pub(super) type Result<T> = std::result::Result<T, InstallerError>;

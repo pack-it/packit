@@ -16,7 +16,10 @@ use crate::{
         manager::RepositoryManager,
         types::{PackageMeta, PackageVersionMeta, TargetBounds},
     },
-    utils::tree::{Node, Tree},
+    utils::{
+        ioerror::IOResultExt,
+        tree::{Node, Tree},
+    },
 };
 
 /// Represents the different types of installing a package.
@@ -251,7 +254,7 @@ impl<'a> InstallTreeBuilder<'a> {
         self.asked_packages.insert(package_id.clone());
 
         // Remove the question
-        self.terminal.clear_last_lines(1)?;
+        self.terminal.clear_last_lines(1).err_operation("clear terminal lines")?;
 
         // Return an adjusted label
         Ok(Some(InstallLabel::new(InstallType::Build, label.is_dependency())))
@@ -261,7 +264,7 @@ impl<'a> InstallTreeBuilder<'a> {
     fn update_tree_display(&self, tree_string: &str, tree: &InstallTree) -> Result<String> {
         // Remove previous display content
         let number_of_lines = tree_string.lines().count();
-        self.terminal.clear_last_lines(number_of_lines)?;
+        self.terminal.clear_last_lines(number_of_lines).err_operation("clear terminal lines")?;
 
         print!("{tree}");
 

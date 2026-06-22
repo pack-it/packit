@@ -32,17 +32,17 @@ pub enum ScriptError {
     #[error("Script executed with status code {0}")]
     ScriptFailed(i32),
 
-    #[error("Cannot run script: {0}")]
-    RunError(std::io::Error),
+    #[error("Cannot run script")]
+    RunError(#[source] std::io::Error),
 
-    #[error("Cannot transform path to absolute path: {0}")]
-    AbsolutePathError(std::io::Error),
+    #[error("Cannot transform path to absolute path")]
+    AbsolutePathError(#[source] std::io::Error),
 
-    #[error("Cannot save script to file: {0}")]
-    SaveError(std::io::Error),
+    #[error("Cannot save script or test file to file")]
+    SaveError(#[source] std::io::Error),
 
-    #[error("Cannot create temp directory for script to run: {0}")]
-    TempCreationError(std::io::Error),
+    #[error("Cannot create temp directory for script to run")]
+    TempCreationError(#[source] std::io::Error),
 
     #[error("Cannot fetch script from repository")]
     FetchScriptError(#[from] RepositoryError),

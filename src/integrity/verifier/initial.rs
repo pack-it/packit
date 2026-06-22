@@ -6,6 +6,7 @@ use crate::{
     integrity::{Issue, error::Result},
     platforms::{DEFAULT_PREFIX, permissions::is_writable},
     register::package_register::PackageRegister,
+    utils::ioerror::IOResultExt,
 };
 
 /// Checks the permissions of the prefix directory and all its sub directories.
@@ -38,8 +39,8 @@ fn check_permissions_impl(directory: &PathBuf) -> Result<Vec<PathBuf>> {
     }
 
     // Recurse
-    for sub_directory in fs::read_dir(directory)? {
-        let sub_directory = sub_directory?;
+    for sub_directory in fs::read_dir(directory).err_with_path("read", directory)? {
+        let sub_directory = sub_directory.err_with_path("iterate", directory)?;
         unwritable.extend(check_permissions_impl(&sub_directory.path())?);
     }
 
@@ -50,7 +51,7 @@ fn check_permissions_impl(directory: &PathBuf) -> Result<Vec<PathBuf>> {
 /// Returns `None` if the config exists or an `Issue::MissingConfig` otherwise.
 /// Could return an IO error.
 pub fn check_config_existence() -> Result<Option<Issue>> {
-    if fs::exists(Config::get_default_path())? {
+    if fs::exists(Config::get_default_path()).err_with_path("check existance of", Config::get_default_path())? {
         return Ok(None);
     }
 
@@ -62,7 +63,7 @@ pub fn check_config_existence() -> Result<Option<Issue>> {
 /// Could return an IO error.
 pub fn check_config_syntax() -> Result<Option<Issue>> {
     // Don't return a config syntax issue if the `Config.toml` doesn't exist
-    if !fs::exists(Config::get_default_path())? {
+    if !fs::exists(Config::get_default_path()).err_with_path("check existance of", Config::get_default_path())? {
         return Ok(None);
     }
 
@@ -77,7 +78,7 @@ pub fn check_config_syntax() -> Result<Option<Issue>> {
 pub fn check_register_existence() -> Result<Option<Issue>> {
     let config = Config::from(&Config::get_default_path())?;
     let register_directory = &PackageRegister::get_path(&config.prefix_directory);
-    if fs::exists(register_directory)? {
+    if fs::exists(register_directory).err_with_path("check existance of", register_directory)? {
         return Ok(None);
     }
 
@@ -91,7 +92,7 @@ pub fn check_register_syntax() -> Result<Option<Issue>> {
     let register_directory = &PackageRegister::get_path(&config.prefix_directory);
 
     // Don't return a register syntax issue if the `Register.toml` doesn't exist
-    if !fs::exists(register_directory)? {
+    if !fs::exists(register_directory).err_with_path("check existance of", register_directory)? {
         return Ok(None);
     }
 

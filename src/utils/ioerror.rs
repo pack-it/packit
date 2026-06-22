@@ -6,7 +6,7 @@ use thiserror::Error;
 /// Small std::io::Error wrapper with better messages
 #[derive(Error, Debug)]
 pub enum IOError {
-    #[error("{0}")]
+    #[error(transparent)]
     Standard(std::io::Error),
 
     #[error("Failed to {operation}")]

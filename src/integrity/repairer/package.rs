@@ -23,6 +23,7 @@ use crate::{
         manager::RepositoryManager,
         types::{Checksum, PackageVersionMeta},
     },
+    utils::ioerror::IOResultExt,
 };
 
 /// Fixes broken dependency trees by installing the missing packages.
@@ -129,7 +130,8 @@ pub fn fix_inconsistent_register(
         };
 
         // Figure out the active version
-        let active_target = fs::read_link(active_directory.join(&package_id.name))?;
+        let active_link_path = active_directory.join(&package_id.name);
+        let active_target = fs::read_link(&active_link_path).err_with_path("read link", active_link_path)?;
         let target_name = active_target.file_name().ok_or(VerifierError::InvalidSymlink)?;
         let version = Version::from_str(target_name.to_str().ok_or(VerifierError::InvalidUnicodeError)?)?;
 

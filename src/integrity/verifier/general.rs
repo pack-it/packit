@@ -6,7 +6,7 @@ use crate::{
     installer::types::{PackageName, Version},
     integrity::{Issue, error::Result},
     platforms::permissions::does_packit_group_exist,
-    utils::io::directory_is_empty,
+    utils::{io::directory_is_empty, ioerror::IOResultExt},
 };
 
 /// Checks if the packit group exists if multiuser mode is enabled in the config.
@@ -26,8 +26,8 @@ pub fn check_packit_group(config: &Config) -> Result<Option<Issue>> {
 pub fn check_stray_directories(config: &Config) -> Result<Option<Issue>> {
     let package_directory = config.prefix_directory.join("packages");
     let mut strays = HashSet::new();
-    for directory in fs::read_dir(package_directory)? {
-        let directory = directory?;
+    for directory in fs::read_dir(&package_directory).err_with_path("read", &package_directory)? {
+        let directory = directory.err_with_path("iterate", &package_directory)?;
         if !directory.path().is_dir() {
             strays.insert(directory.path());
             continue;
@@ -52,8 +52,8 @@ pub fn check_stray_directories(config: &Config) -> Result<Option<Issue>> {
             continue;
         }
 
-        for version_directory in fs::read_dir(directory.path())? {
-            let version_directory = version_directory?;
+        for version_directory in fs::read_dir(directory.path()).err_with_path("read", directory.path())? {
+            let version_directory = version_directory.err_with_path("iterate", directory.path())?;
             if !version_directory.path().is_dir() {
                 strays.insert(version_directory.path());
                 continue;

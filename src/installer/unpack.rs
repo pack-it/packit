@@ -7,7 +7,11 @@ use thiserror::Error;
 use xz2::read::XzDecoder;
 use zip::ZipArchive;
 
-use crate::{cli::display::ReaderWithProgress, installer::types::PackageName};
+use crate::{
+    cli::display::ReaderWithProgress,
+    installer::types::PackageName,
+    utils::ioerror::{self, IOResultExt},
+};
 
 /// The errors that occur during unpacking.
 #[derive(Error, Debug)]
@@ -16,7 +20,7 @@ pub enum UnpackError {
     ExtensionNotSupported,
 
     #[error("Error while interacting with filesystem")]
-    IOError(#[from] std::io::Error),
+    IOError(#[from] ioerror::IOError),
 
     #[error("Error while unpacking")]
     ZipError(#[from] zip::result::ZipError),
@@ -79,7 +83,7 @@ fn unpack_gz<P: AsRef<Path>>(reader: ReaderWithProgress<Cursor<Bytes>>, destinat
     let tar = GzDecoder::new(reader);
     let mut archive = Archive::new(tar);
     archive.set_preserve_mtime(keep_timestamp);
-    archive.unpack(destination_directory)?;
+    archive.unpack(&destination_directory).err_with_path("unpack gz to", destination_directory.as_ref())?;
 
     Ok(())
 }
@@ -90,7 +94,7 @@ fn unpack_xz<P: AsRef<Path>>(reader: ReaderWithProgress<Cursor<Bytes>>, destinat
     let tar = XzDecoder::new(reader);
     let mut archive = Archive::new(tar);
     archive.set_preserve_mtime(keep_timestamp);
-    archive.unpack(destination_directory)?;
+    archive.unpack(&destination_directory).err_with_path("unpack xz to", destination_directory.as_ref())?;
 
     Ok(())
 }
