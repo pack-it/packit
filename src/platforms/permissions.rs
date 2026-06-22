@@ -14,18 +14,19 @@ pub mod windows;
 #[cfg(target_os = "windows")]
 pub use self::windows as platform;
 
-use crate::platforms::permissions::error::Result;
+use crate::{platforms::permissions::error::Result, utils::ioerror::IOResultExt};
+
 use std::{fs, path::PathBuf};
 
 pub const PACKIT_GROUP_NAME: &str = "packit";
 
 /// Checks if a path is writable by the current user. Returns true if it is, false otherwise.
 pub fn is_writable(path: &PathBuf) -> Result<bool> {
-    if !fs::exists(path)? {
+    if !fs::exists(path).err_with_path("check existance of", path)? {
         return Ok(false);
     }
 
-    let metadata = fs::metadata(path)?;
+    let metadata = fs::metadata(path).err_with_path("read metadata of", path)?;
     let permissions = metadata.permissions();
 
     // Check if path is read only

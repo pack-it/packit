@@ -17,6 +17,7 @@ use crate::{
         PACKIT_GROUP_NAME,
         error::{PermissionError, Result},
     },
+    utils::ioerror::IOResultExt,
 };
 
 #[derive(Error, Debug)]
@@ -66,7 +67,7 @@ pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool, recurse: bool)
         false => None,
     };
 
-    let metadata = fs::metadata(path)?;
+    let metadata = fs::metadata(&path).err_with_path("read metadata of", path)?;
     set_file_permissions(path, metadata.permissions(), group_id, recurse)
 }
 
@@ -90,17 +91,18 @@ fn set_file_permissions(path: &PathBuf, mut old_permissions: Permissions, group_
         old_permissions.set_mode(0o755);
     }
 
-    fs::set_permissions(path, old_permissions)?;
+    fs::set_permissions(&path, old_permissions).err_with_path("set permissions of", path)?;
 
     if !recurse || !path.is_dir() {
         return Ok(());
     }
 
-    let dir = fs::read_dir(path)?;
+    let dir = fs::read_dir(path).err_with_path("read", path)?;
     for entry in dir {
-        let entry = entry?;
+        let entry = entry.err_with_path("iterate", path)?;
 
-        set_file_permissions(&entry.path(), entry.metadata()?.permissions(), group_id, recurse)?;
+        let metadata = entry.metadata().err_with_path("read metadata of", entry.path())?;
+        set_file_permissions(&entry.path(), metadata.permissions(), group_id, recurse)?;
     }
 
     Ok(())
@@ -111,12 +113,12 @@ fn set_file_permissions(path: &PathBuf, mut old_permissions: Permissions, group_
 pub fn set_ownership(path: &PathBuf, uid: Option<u32>, gid: Option<u32>) -> Result<()> {
     // If the path is a symlink, set symlink ownership
     if path.is_symlink() {
-        unix::fs::lchown(path, uid, gid)?;
+        unix::fs::lchown(path, uid, gid).err_with_path("change ownership of", path)?;
         return Ok(());
     }
 
     // Set file ownership
-    unix::fs::chown(path, uid, gid)?;
+    unix::fs::chown(path, uid, gid).err_with_path("change ownership of", path)?;
 
     Ok(())
 }

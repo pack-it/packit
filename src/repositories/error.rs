@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use thiserror::Error;
 
-use crate::installer::types::PackageId;
+use crate::{installer::types::PackageId, utils::ioerror};
 
 /// The errors that occur when requesting metadata from a repository.
 #[derive(Error, Debug)]
@@ -38,8 +38,8 @@ pub enum RepositoryError {
     #[error("Request returned an unsuccessful status code '{0}'.")]
     UnsuccessfulRequest(reqwest::StatusCode),
 
-    #[error("Cannot read repository file from disk")]
-    ReadError(#[from] std::io::Error),
+    #[error("Error while interacting with filesystem")]
+    IOError(#[from] ioerror::IOError),
 
     #[error("Cannot request repository file from external repository")]
     RequestError(#[from] reqwest::Error),

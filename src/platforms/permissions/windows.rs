@@ -13,6 +13,7 @@ use crate::{
         PACKIT_GROUP_NAME,
         error::{PermissionError, Result},
     },
+    utils::ioerror::IOResultExt,
 };
 
 use thiserror::Error;
@@ -323,8 +324,8 @@ fn set_ownership(path: &PathBuf, sid: PSID, recurse: bool) -> Result<()> {
     }
 
     // Recurse the directory
-    for entry in fs::read_dir(&path)? {
-        let entry = entry?;
+    for entry in fs::read_dir(&path).err_with_path("read", path)? {
+        let entry = entry.err_with_path("iterate", path)?;
 
         set_ownership(&entry.path(), sid, recurse)?;
     }
