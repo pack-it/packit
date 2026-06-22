@@ -10,10 +10,10 @@ use crate::{
     },
     config::Config,
     installer::types::PackageId,
+    integrity::{Repairer, Verifier},
     register::package_register::PackageRegister,
     repositories::manager::RepositoryManager,
     utils::unwrap_or_exit::UnwrapOrExit,
-    verifier::{Repairer, Verifier},
 };
 
 /// Fixes all issues found by the check command. The user will be asked if they want to fix an issue for each issue type.

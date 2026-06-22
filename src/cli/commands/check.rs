@@ -7,9 +7,9 @@ use crate::{
     cli::{commands::HandleCommand, display::not_found},
     config::Config,
     installer::types::PackageId,
+    integrity::Verifier,
     register::package_register::PackageRegister,
     utils::unwrap_or_exit::UnwrapOrExit,
-    verifier::Verifier,
 };
 
 /// Checks for any inconsistencies or mistakes in the installed packages or in the Packit files itself.
