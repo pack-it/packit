@@ -5,17 +5,18 @@ pub enum Check {
     // Initial checks (which verify methods that the verifier uses internally)
     Permissions,
     ConfigExistence,
-    ConfigSyntax, // Separate from ConfigExistence, because in the future we implement a different fix (reconstruct from Config.toml)
+    ConfigSyntax, // TODO: Separate from ConfigExistence, because in the future we implement a different fix (reconstruct from Config.toml)
     RegisterExistence,
-    RegisterSyntax, // Separate from RegisterExistence, same reason as for ConfigSyntax
+    RegisterSyntax, // TODO: Separate from RegisterExistence, same reason as for ConfigSyntax
 
-    // General package checks
+    // General checks
     StrayDirectory,
+    PackitGroup,
+
     StorageConsistency,
     RegisterConsistency,
     DependencyTree,
     Alterations,
-    PackitGroup,
     MissingDependents,
     InvalidDependents,
     InvalidActive,

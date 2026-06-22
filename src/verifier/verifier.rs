@@ -94,7 +94,7 @@ impl Verifier {
         }
     }
 
-    /// Gets the next general issue if it exists.
+    /// Gets the next normal issue if it exists.
     /// If an error occurs during the check it's only returned if no previous issues were found.
     pub fn next_issue(&mut self, packages: &Vec<PackageId>, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
         // Make sure the initial checks have been run before doing general checks
@@ -113,8 +113,8 @@ impl Verifier {
         }
     }
 
-    /// Gets the next general issue.
-    /// Returns None if there are no issues to return.
+    /// Gets the next normal issue.
+    /// Returns `None` if there are no issues to return.
     fn next_issue_impl(&mut self, packages: &Vec<PackageId>, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
         loop {
             let ordered_checks = Check::get_ordered_checks(Check::get_checks());
@@ -129,7 +129,7 @@ impl Verifier {
             let issue = match check {
                 Check::PackitGroup => self.check_packit_group(config)?,
                 Check::StrayDirectory => self.check_stray_directories(config)?,
-                Check::RegisterConsistency => self.check_register_consistency(register, config)?, // TODO: Check
+                Check::RegisterConsistency => self.check_register_consistency(register, config)?,
                 Check::StorageConsistency => self.check_storage_consistency(packages, config)?,
                 Check::DependencyTree => self.check_dependency_tree(packages, register),
                 Check::Alterations => self.check_alterations(packages, register, config)?,
@@ -248,15 +248,14 @@ impl Verifier {
         }
     }
 
-    /// Checks for alterations in all packages using a checksum which is compared to the checksum from the pre-build.
-    /// Returns an alteration issue or None if no packages can be found that are altered.
+    /// Checks for alterations in the given packages using a checksum which is compared to the checksum from the prebuild.
+    /// Returns an alteration issue or `None` if no packages can be found that are altered.
     #[expect(unused_variables, unreachable_code)]
     fn check_alterations(&self, packages: &Vec<PackageId>, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
         // TODO: For now skip this check, because it will never work (yet)
         return Ok(None);
         warning!("This is an experimental check, issues from this check could be inaccurate.");
 
-        // Check issue for all installed packages
         let mut altered = Vec::new();
         for package_id in packages {
             if self.check_package_alterations(package_id, register, config)? {
@@ -271,7 +270,7 @@ impl Verifier {
         Ok(Some(Issue::AlteredPackage(altered)))
     }
 
-    /// Checks for alterations in a single package using a checksum which is compared to the checksum from the pre-build.
+    /// Checks for alterations in a single package using a checksum which is compared to the checksum from the prebuild.
     /// Returns true if the package was altered, false if not.
     #[expect(unused_variables, unreachable_code)]
     fn check_package_alterations(&self, package_id: &PackageId, register: &PackageRegister, config: &Config) -> Result<bool> {
@@ -349,7 +348,7 @@ impl Verifier {
         Ok(checksum != correct_checksum)
     }
 
-    /// Checks if all packages in the register also exist in the package storage in the prefix directory.
+    /// Checks if the given packages in the register also exist in the package storage in the prefix directory.
     /// Returns a storage consistency issue or None if there are no packages missing from storage.
     fn check_storage_consistency(&self, packages: &Vec<PackageId>, config: &Config) -> Result<Option<Issue>> {
         let mut missing = Vec::new();
@@ -379,7 +378,7 @@ impl Verifier {
         Ok(false)
     }
 
-    /// Checks if all packages in storage also exist in the register.
+    /// Checks if the given packages in storage also exist in the register.
     /// Returns a register consistency issue or None if there are packages missing from the register.
     fn check_register_consistency(&self, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
         let storage_packages = get_storage_packages(config)?;
@@ -398,7 +397,7 @@ impl Verifier {
         Ok(Some(Issue::InconsistentRegister(missing)))
     }
 
-    /// Checks for all packages if the package active is valid.
+    /// Checks for the given packages if the package active is valid.
     fn check_invalid_active(&self, packages: &HashSet<PackageName>, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
         let mut invalid_active = Vec::new();
         for package_name in packages {
@@ -442,12 +441,14 @@ impl Verifier {
         Ok(None)
     }
 
-    /// Checks all packages for a forbidden link. Where a forbidden link is a package which is symlinked
+    /// Checks the given packages for a forbidden link. Where a forbidden link is a package which is symlinked
     /// while it shouldn't be according to the repository metadata.
     fn check_forbidden_link(&self, packages: &Vec<PackageId>, register: &PackageRegister) -> Result<Option<Issue>> {
         let mut forbidden = Vec::new();
         for package_id in packages {
-            forbidden.extend(self.check_forbidden_package_link(package_id, register)?);
+            if let Some(package) = self.check_forbidden_package_link(package_id, register)? {
+                forbidden.push(package);
+            }
         }
 
         if forbidden.is_empty() {
@@ -459,9 +460,9 @@ impl Verifier {
 
     /// Checks a given package for a forbidden link. Where a forbidden link is a package which is symlinked
     /// while it shouldn't be according to the repository metadata.
-    fn check_forbidden_package_link(&self, package_id: &PackageId, register: &PackageRegister) -> Result<Vec<PackageName>> {
+    fn check_forbidden_package_link(&self, package_id: &PackageId, register: &PackageRegister) -> Result<Option<PackageName>> {
         let Some(package_version) = register.get_package_version(package_id) else {
-            return Ok(Vec::new());
+            return Ok(None);
         };
 
         // Check if this package is allowed to be symlinked
@@ -479,21 +480,21 @@ impl Verifier {
 
         // Return early if symlinking is allowed according to the metadata
         if link_allowed {
-            return Ok(Vec::new());
+            return Ok(None);
         }
 
         let Some(package) = register.get_package(&package_id.name) else {
-            return Ok(Vec::new());
+            return Ok(None);
         };
 
         if !package.symlinked {
-            return Ok(Vec::new());
+            return Ok(None);
         }
 
-        Ok(vec![package_id.name.clone()])
+        Ok(Some(package_id.name.clone()))
     }
 
-    /// Checks for all packages if symlinks are missing.
+    /// Checks for the given packages if symlinks are missing.
     /// Returns an `Issue::MissingLinks` if symlinks are missing, None otherwise.
     fn check_missing_link(&self, packages: &Vec<PackageId>, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
         let mut missing = Vec::new();
@@ -566,7 +567,7 @@ impl Verifier {
         Ok(false)
     }
 
-    /// Checks for all packages if they have invalid dependents. Where an invalid dependent is a package which doesn't
+    /// Checks for the given packages if they have invalid dependents. Where an invalid dependent is a package which doesn't
     /// exist or a package which doesn't have the given package as a dependency.
     /// Returns a `Vec<(PackageId, PackageId)>`, with format `<child> : <dependent>`.
     fn check_invalid_dependents(&self, packages: &Vec<PackageId>, register: &PackageRegister) -> Option<Issue> {
@@ -604,7 +605,7 @@ impl Verifier {
         invalid_dependents
     }
 
-    /// Checks for all packages if they miss any of their dependents.
+    /// Checks for the given packages if they miss any of their dependents.
     fn check_missing_dependents(&self, packages: &Vec<PackageId>, register: &PackageRegister) -> Option<Issue> {
         let mut missing_dependents = Vec::new();
         for package_id in packages {
@@ -645,7 +646,11 @@ impl Verifier {
     fn check_missing_dependencies(&self, packages: &Vec<PackageId>, register: &PackageRegister) -> Result<Option<Issue>> {
         let mut missing = Vec::new();
         for package_id in packages {
-            missing.extend(self.check_missing_package_dependencies(package_id, register)?);
+            let Some(package) = register.get_package_version(package_id) else {
+                continue;
+            };
+
+            missing.extend(self.missing_dependencies_impl(package)?);
         }
 
         if missing.is_empty() {
@@ -655,24 +660,8 @@ impl Verifier {
         Ok(Some(Issue::MissingDependencies(missing)))
     }
 
-    /// Checks for missing dependencies for a single package.
-    /// Returns an `Issue::MissingDependencies` with the missing dependencies, or `None` if no dependencies are missing.
-    /// TODO: Unnecessary function
-    fn check_missing_package_dependencies(
-        &self,
-        package_id: &PackageId,
-        register: &PackageRegister,
-    ) -> Result<Vec<(PackageId, Dependency)>> {
-        let Some(package) = register.get_package_version(package_id) else {
-            return Ok(Vec::new());
-        };
-
-        self.missing_dependencies_impl(package)
-    }
-
     /// Checks if a given package misses dependencies in the register according to the repository metadata.
     /// Returns a list of missing dependencies for the given package (can be empty).
-    /// TODO: Pass a mutable reference to missing (also in some other places)
     fn missing_dependencies_impl(&self, package: &InstalledPackageVersion) -> Result<Vec<(PackageId, Dependency)>> {
         let package_id = &package.package_id;
         let mut missing = Vec::new();
@@ -699,12 +688,16 @@ impl Verifier {
         Ok(missing)
     }
 
-    /// Checks for invalid dependencies in all packages.
+    /// Checks for invalid dependencies in the given packages.
     /// Returns an `Issue::InvalidDependencies` with the invalid dependencies, or `None` if no dependencies are invalid.
     fn check_invalid_dependencies(&self, packages: &Vec<PackageId>, register: &PackageRegister) -> Result<Option<Issue>> {
         let mut invalid = Vec::new();
         for package_id in packages {
-            invalid.extend(self.check_invalid_package_dependencies(package_id, register)?);
+            let Some(package) = register.get_package_version(package_id) else {
+                continue;
+            };
+
+            invalid.extend(self.invalid_dependencies_impl(package)?);
         }
 
         if invalid.is_empty() {
@@ -714,24 +707,8 @@ impl Verifier {
         Ok(Some(Issue::InvalidDependencies(invalid)))
     }
 
-    /// Checks for invalid dependencies for a single package.
-    /// Returns an `Issue::InvalidDependencies` with the invalid dependencies, or `None` if no dependencies are invalid.
-    /// TODO: Unnecessary function
-    fn check_invalid_package_dependencies(
-        &self,
-        package_id: &PackageId,
-        register: &PackageRegister,
-    ) -> Result<Vec<(PackageId, PackageId)>> {
-        let Some(package) = register.get_package_version(package_id) else {
-            return Ok(Vec::new());
-        };
-
-        self.invalid_dependencies_impl(package)
-    }
-
     /// Checks if a given package has invalid dependencies in the register according to the repository metadata.
     /// Returns a list of invalid dependencies for the given package (can be empty).
-    /// TODO: Pass invalid as mutable ref
     fn invalid_dependencies_impl(&self, package: &InstalledPackageVersion) -> Result<Vec<(PackageId, PackageId)>> {
         let package_id = &package.package_id;
         let mut invalid = Vec::new();
@@ -758,31 +735,24 @@ impl Verifier {
         Ok(invalid)
     }
 
-    /// Checks the completeness of the depedency trees from the packages.
-    /// Returns a dependency tree issue or None if there are no packages missing from the dependency trees.
+    /// Checks the completeness of the depedency trees from the given packages.
+    /// Returns a dependency tree issue or `None` if there are no packages missing from the dependency trees.
     fn check_dependency_tree(&self, packages: &Vec<PackageId>, register: &PackageRegister) -> Option<Issue> {
-        let mut all_missing = Vec::new();
+        let mut missing = Vec::new();
         for package_id in packages {
-            all_missing.extend(self.check_package_dependency_tree(package_id, register));
+            missing.extend(self.check_package_dependency_tree(package_id, register));
         }
 
-        if all_missing.is_empty() {
+        if missing.is_empty() {
             return None;
         }
 
-        Some(Issue::BrokenTree(all_missing))
-    }
-
-    /// Wraps around the `check_package_dependency_tree_impl` method to convert it into an `Option<Issue>`.
-    /// Returns an `Issue::BrokenTree` if missing packages are found, None if not packages are missing.
-    /// TODO: Unnecessary function
-    fn check_package_dependency_tree(&self, package_id: &PackageId, register: &PackageRegister) -> Vec<(PackageId, PackageId)> {
-        self.check_package_dependency_tree_impl(package_id, register)
+        Some(Issue::BrokenTree(missing))
     }
 
     /// Checks the completeness of the dependency tree from a specific package.
     /// Returns a list of missing packages, can be empty if there are no packages missing from the tree.
-    fn check_package_dependency_tree_impl(&self, package_id: &PackageId, register: &PackageRegister) -> Vec<(PackageId, PackageId)> {
+    fn check_package_dependency_tree(&self, package_id: &PackageId, register: &PackageRegister) -> Vec<(PackageId, PackageId)> {
         let package = match register.get_package_version(package_id) {
             Some(package) => package,
             None => {
@@ -799,14 +769,14 @@ impl Verifier {
             }
 
             // Recursively check if all the dependencies are installed
-            missing.extend(self.check_package_dependency_tree_impl(dependency, register));
+            missing.extend(self.check_package_dependency_tree(dependency, register));
         }
 
         missing
     }
 
     /// Checks if the packit group exists if multiuser mode is enabled in the config.
-    /// Returns the issue if the group does not exist, None otherwise.
+    /// Returns the issue if the group does not exist, `None` otherwise.
     fn check_packit_group(&self, config: &Config) -> Result<Option<Issue>> {
         // We don't need the packit group if multiuser mode is not enabled
         if config.multiuser && !does_packit_group_exist()? {
@@ -816,9 +786,9 @@ impl Verifier {
         Ok(None)
     }
 
-    /// Checks for directories which shouldn't be in the prefix/packages directory.
+    /// Checks for directories which shouldn't be in the `prefix/packages directory`.
     /// This wil be any directory which is empty or doesn't have `<package-name>/<version>`.
-    /// Returns None if no stray directories are found, `Issue::StrayDirectories` otherwise.
+    /// Returns `None` if no stray directories are found, `Issue::StrayDirectories` otherwise.
     fn check_stray_directories(&self, config: &Config) -> Result<Option<Issue>> {
         let package_directory = config.prefix_directory.join("packages");
         let mut strays = HashSet::new();
