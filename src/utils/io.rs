@@ -19,7 +19,7 @@ use crate::{
 pub fn create_folder_symlinks(original_dir: &Path, link_dir: &Path) -> symlink::Result<()> {
     // Create destination if it does not exist
     if !link_dir.exists() {
-        fs::create_dir_all(link_dir).err_with_path("create", link_dir)?;
+        fs::create_dir_all(link_dir).err_with_path("create dirs", link_dir)?;
     }
 
     // Skip symlinking if source does not exist

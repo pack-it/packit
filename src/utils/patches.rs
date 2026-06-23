@@ -136,7 +136,7 @@ fn handle_file_operation(operation: &FileOperation<[u8]>, patch: &FilePatch<[u8]
             debug!("Renaming file '{}' to '{}'", source.display(), destination.display());
 
             if let Some(parent) = destination.parent() {
-                fs::create_dir_all(parent).err_with_path("create", parent)?;
+                fs::create_dir_all(parent).err_with_path("create dirs", parent)?;
             }
 
             fs::rename(&source, &destination).err_with_path("rename", source)?;
@@ -148,7 +148,7 @@ fn handle_file_operation(operation: &FileOperation<[u8]>, patch: &FilePatch<[u8]
             debug!("Copying file '{}' to '{}'", source.display(), destination.display());
 
             if let Some(parent) = destination.parent() {
-                fs::create_dir_all(parent).err_with_path("create", parent)?;
+                fs::create_dir_all(parent).err_with_path("create dirs", parent)?;
             }
 
             fs::copy(&source, &destination).err_with_path("copy", source)?;
@@ -202,7 +202,7 @@ fn apply_path(patch: &PatchKind<[u8]>, source: Option<&Path>, destination: &Path
     };
 
     if let Some(parent) = destination.parent() {
-        fs::create_dir_all(parent).err_with_path("create", parent)?;
+        fs::create_dir_all(parent).err_with_path("create dirs", parent)?;
     }
 
     fs::write(destination, patched).err_with_path("write", destination)?;

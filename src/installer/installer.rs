@@ -178,7 +178,7 @@ impl<'a> Installer<'a> {
 
         // Create install directory if it does not exist
         if !fs::exists(&install_directory).err_with_path("check existence of", &install_directory)? {
-            fs::create_dir_all(&install_directory).err_with_path("create", &install_directory)?;
+            fs::create_dir_all(&install_directory).err_with_path("create dirs", &install_directory)?;
         }
 
         let version_meta = &install_meta.version_metadata;
@@ -352,7 +352,7 @@ impl<'a> Installer<'a> {
 
         // Create package dependencies directory
         let dependency_directory_path = self.config.prefix_directory.join("dependencies").join(current_package.to_string());
-        fs::create_dir_all(&dependency_directory_path).err_with_path("create", &dependency_directory_path)?;
+        fs::create_dir_all(&dependency_directory_path).err_with_path("create dirs", &dependency_directory_path)?;
 
         // Create symlinks to all dependencies
         for dependency in dependencies {

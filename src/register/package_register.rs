@@ -76,7 +76,7 @@ impl PackageRegister {
 
         // Create parent directories
         if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent).err_with_path("create", parent)?;
+            fs::create_dir_all(parent).err_with_path("create dirs", parent)?;
         }
 
         // Write data to file

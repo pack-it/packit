@@ -283,7 +283,7 @@ impl<'a> PortableRepoCreator<'a> {
         let prefix = package_id.name.chars().next().ok_or(PortableRepoError::EmptyPackageName)?.to_string();
         let target = self.target.architecture.to_string();
         let destination = destination.join("prebuilds").join(&target).join(&prefix).join(&package_id.name);
-        fs::create_dir_all(&destination).err_with_path("create", &destination)?;
+        fs::create_dir_all(&destination).err_with_path("create dirs", &destination)?;
 
         // Get checksum
         let revision = package_version.get_revision_count();
@@ -349,7 +349,7 @@ impl<'a> PortableRepoCreator<'a> {
 
         // Create parent directories
         if let Some(parent) = destination.parent() {
-            fs::create_dir_all(parent).err_with_path("create", parent)?;
+            fs::create_dir_all(parent).err_with_path("create dirs", parent)?;
         }
 
         // Write file
@@ -363,7 +363,7 @@ impl<'a> PortableRepoCreator<'a> {
     fn write_metadata<M: Serialize>(&self, metadata: M, destination: PathBuf, pretty: bool) -> Result<()> {
         // Create parent directories
         if let Some(parent) = destination.parent() {
-            fs::create_dir_all(parent).err_with_path("create", parent)?;
+            fs::create_dir_all(parent).err_with_path("create dirs", parent)?;
         }
 
         // Write metadata

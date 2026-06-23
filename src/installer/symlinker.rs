@@ -66,7 +66,7 @@ impl<'a> Symlinker<'a> {
         }
 
         // Create active symlink
-        fs::create_dir_all(&global_active_path).err_with_path("create", &global_active_path)?;
+        fs::create_dir_all(&global_active_path).err_with_path("create dirs", &global_active_path)?;
         symlink::create_symlink(&package_version.install_path, &active_path)?;
 
         // Only create new symlinks if we should symlink
