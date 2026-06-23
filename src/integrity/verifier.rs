@@ -66,7 +66,7 @@ impl Verifier {
                 Check::RegisterExistence => initial::check_register_existence()?,
                 Check::RegisterSyntax => initial::check_register_syntax()?,
 
-                // Return `VerifierError::UnimplementedCheck` if the current check is not an initial check (meaning it's not implemented).
+                // Return `VerifierError::UnimplementedCheck` if the current check is an initial check (meaning it's not implemented).
                 _ if Check::get_initial_checks().contains(check) => return Err(VerifierError::UnimplementedCheck),
 
                 // Continue if the check is not an initial check
@@ -129,7 +129,7 @@ impl Verifier {
                 Check::ForbiddenLink => package::check_forbidden_link(packages, register)?,
                 Check::MissingLink => package::check_missing_link(packages, register, config)?,
 
-                // Return `VerifierError::UnimplementedCheck` if the current check is not a general check (meaning it's not implemented).
+                // Return `VerifierError::UnimplementedCheck` if the current check is a general check (meaning it's not implemented).
                 _ if Check::get_checks().contains(check) => return Err(VerifierError::UnimplementedCheck),
 
                 // Continue if the check is an initial check
