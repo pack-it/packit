@@ -56,10 +56,9 @@ impl<'a> Into<Environment> for BuildEnv<'a> {
             env.strip_var(*var);
         }
 
-        // Add M4 variable if m4 is a dependency
-        if self.build_dependencies.iter().any(|x| *x.package_id.name == "m4") {
-            let m4_path = self.prefix_directory.join("bin").join("m4");
-            match m4_path.to_str() {
+        // Add M4 variable if m4 is a build dependency
+        if let Some(m4) = self.build_dependencies.iter().find(|x| *x.package_id.name == "m4") {
+            match m4.install_path.to_str() {
                 Some(path) => env.insert_var("M4", path),
                 None => warning!("Cannot add M4 var to build env: cannot convert PathBuf to string"),
             };

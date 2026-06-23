@@ -17,14 +17,14 @@ use crate::{
 /// Recursively creates symlinks from a link directory to the original directory.
 /// Note that there is an early return when the original doesn't exist. Non-existant link directories are created.
 pub fn create_folder_symlinks(original_dir: &Path, link_dir: &Path) -> symlink::Result<()> {
-    // Create destination if it does not exist
-    if !link_dir.exists() {
-        fs::create_dir_all(link_dir).err_with_path("create dirs", link_dir)?;
-    }
-
     // Skip symlinking if source does not exist
     if !original_dir.exists() {
         return Ok(());
+    }
+
+    // Create destination if it does not exist
+    if !link_dir.exists() {
+        fs::create_dir_all(link_dir).err_with_path("create dirs", link_dir)?;
     }
 
     // Symlink files

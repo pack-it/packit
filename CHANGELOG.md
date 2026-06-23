@@ -20,11 +20,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Update all dependencies, remove unnecessary dependency features and ensure all dependencies support MSRV 1.85.
 - When packages are specified for the `check` and `fix` commands, only those are checked when doing a package related check. Initial and general checks are now done as well in the case.
 - Improve IOError messages by including information about the operation that failed.
+- The `gnubin` directory of a package is now also symlinked into `<prefix>/gnubin`.
 
 ### Fixed
 - Fix package not found issue when multiple repositories have the same package but different versions.
 - Fix `--updatables` flag listing older installed package versions when a newer up-to-date version is installed.
 - Fix checksum check for patch files that are downloaded from the metadata repository.
+- Fix empty directories (`lib`, `share`) in the prefix, by not creating them anymore.
 
 
 ## [v0.0.2](https://github.com/pack-it/packit/compare/0.0.1...0.0.2) - 2026-05-14

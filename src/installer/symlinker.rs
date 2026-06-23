@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{fs, path::Path};
+use std::{fs, iter, path::Path};
 
 use crate::{
     cli::display::logging::warning,
@@ -13,6 +13,9 @@ use crate::{
     utils::{io, ioerror::IOResultExt},
 };
 
+/// All directories of a package that should be symlinked.
+pub const SYMLINK_DIRECTORIES: &[&str] = &["bin", "include", "lib", "share", "gnubin"];
+
 /// Manages symlink operations for installing, uninstalling and changing active and symlink states of packages.
 pub struct Symlinker<'a> {
     config: &'a Config,
@@ -24,14 +27,14 @@ impl<'a> Symlinker<'a> {
         Self { config }
     }
 
-    /// Creates symlinks from Packit's "bin", "include", "lib" and "share" folders to
-    /// the "bin", "include", "lib" and "share" folders in a given package directory.
+    /// Creates symlinks from Packit's "bin", "include", "lib", "share", etc. directories to
+    /// the "bin", "include", "lib", "share", etc. directories in a given package directory.
     /// Could return an IO error.
     pub fn create_symlinks(&self, package_directory: &Path) -> Result<()> {
         let prefix_dir = Path::new(&self.config.prefix_directory);
 
-        // Symlink directories bin, include, lib and share
-        for dir_name in ["bin", "include", "lib", "share"] {
+        // Symlink package directories bin, include, lib, share, etc.
+        for dir_name in SYMLINK_DIRECTORIES {
             let package_dir_path = package_directory.join(dir_name);
             let prefix_dir_path = prefix_dir.join(dir_name);
 
@@ -58,8 +61,8 @@ impl<'a> Symlinker<'a> {
 
         let package_directory = self.config.prefix_directory.join("packages").join(&package_id.name);
 
-        // Symlink directories bin, include, lib and share
-        for dir_name in ["bin", "include", "lib", "share", "active"] {
+        // Remove symlinks for all package symlinked directories
+        for dir_name in SYMLINK_DIRECTORIES.iter().chain(iter::once(&"active")) {
             let prefix_dir_path = self.config.prefix_directory.join(dir_name);
 
             io::remove_symlinks(&prefix_dir_path, &package_directory)?;
