@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use serde::{Deserialize, Serialize};
 
-use crate::repositories::types::Licenses;
+use crate::{installer::types::Version, repositories::types::Licenses};
 
 /// Represents the repository metadata, containing repository information.
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct RepositoryMeta {
     pub name: String,
     pub description: String,
     pub maintainers: Vec<String>,
+    pub required_packit_version: Option<Version>,
 
     #[serde(skip_serializing_if = "Licenses::is_unknown", default)]
     pub license: Licenses,

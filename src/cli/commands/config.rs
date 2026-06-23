@@ -157,6 +157,20 @@ impl ConfigArgs {
                 println!();
             }
 
+            // Check if the repository is unsupported
+            if let Some(metadata) = manager.get_unsupported_repositories().get(repository_id) {
+                println!("{}: {} ({repository_id})", "NOT SUPPORTED".bold().red(), metadata.name.bold().red());
+                println!("{}", metadata.description.red());
+                println!("License: {}", metadata.license);
+                println!("Maintainers: {}", metadata.maintainers.join(", "));
+                println!("Repository provider: {}, url: {}", repository.provider, repository.url);
+
+                if let Some(required_packit_version) = &metadata.required_packit_version {
+                    println!("Required Packit Version: {}", required_packit_version.to_string().red());
+                }
+                continue;
+            }
+
             // Read metadata of repository
             let metadata = match manager.read_repository_metadata(repository_id) {
                 Ok(metadata) => metadata,
@@ -174,6 +188,10 @@ impl ConfigArgs {
             println!("License: {}", metadata.license);
             println!("Maintainers: {}", metadata.maintainers.join(", "));
             println!("Repository provider: {}, url: {}", repository.provider, repository.url);
+
+            if let Some(required_packit_version) = metadata.required_packit_version {
+                println!("Required Packit Version: {required_packit_version}");
+            }
         }
     }
 

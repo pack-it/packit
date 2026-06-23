@@ -11,6 +11,11 @@ pub enum RepositoryError {
         repository_id: String,
     },
 
+    #[error("Repository '{repository_id}' not supported")]
+    RepositoryNotSupported {
+        repository_id: String,
+    },
+
     #[error("Cannot find package '{package_name}' with version '{}' in any repository", version.as_deref().unwrap_or("any"))]
     PackageNotFoundError {
         package_name: String,

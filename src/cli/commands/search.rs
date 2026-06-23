@@ -49,6 +49,11 @@ impl SearchArgs {
         let regex = Regex::new(&self.query).unwrap_or_exit_msg("Invalid regex pattern", 1);
         let mut matches = HashSet::new();
         for repository_id in &config.repositories_rank {
+            // Skip unsupported repositories
+            if manager.get_unsupported_repositories().contains_key(repository_id) {
+                continue;
+            }
+
             let index_meta = manager.read_index_metadata(repository_id).unwrap_or_exit(1);
             for package in index_meta.supported_packages {
                 if regex.is_match(&package) {

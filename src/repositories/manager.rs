@@ -16,11 +16,13 @@ use crate::{
         provider::{self, MetadataProvider, PrebuildProvider},
         types::{Checksum, IndexMeta, PackageMeta, PackageVersionMeta, RepositoryMeta},
     },
+    utils::packit_version::current_packit_version,
 };
 
 /// Manages all requests to the repositories.
 pub struct RepositoryManager<'a> {
     config: &'a Config,
+    unsupported_repositories: HashMap<String, RepositoryMeta>,
     metadata_providers: HashMap<String, Box<dyn MetadataProvider>>,
     prebuild_providers: HashMap<String, Box<dyn PrebuildProvider>>,
 }
@@ -28,6 +30,7 @@ pub struct RepositoryManager<'a> {
 impl<'a> RepositoryManager<'a> {
     /// Creates a new RepositoryManager.
     pub fn new(config: &'a Config) -> Self {
+        let mut unsupported_repositories = HashMap::new();
         let mut metadata_providers = HashMap::new();
         let mut prebuild_providers = HashMap::new();
 
@@ -46,6 +49,16 @@ impl<'a> RepositoryManager<'a> {
                 },
             };
 
+            if let Some(repository_meta) = &repository_meta {
+                if let Some(required_packit_version) = &repository_meta.required_packit_version {
+                    if *required_packit_version > current_packit_version() {
+                        unsupported_repositories.insert(id.to_string(), repository_meta.clone());
+                        warning!("Repository '{id}' requires Packit version {required_packit_version} or higher, ignoring repository...");
+                        continue;
+                    }
+                }
+            }
+
             metadata_providers.insert(id.clone(), provider);
 
             if let Some(repository_meta) = repository_meta {
@@ -61,6 +74,7 @@ impl<'a> RepositoryManager<'a> {
 
         Self {
             config,
+            unsupported_repositories,
             metadata_providers,
             prebuild_providers,
         }
@@ -112,6 +126,11 @@ impl<'a> RepositoryManager<'a> {
     /// Returns the id of the repository and the package metadata.
     pub fn read_package(&self, package: &PackageName) -> Result<(String, PackageMeta)> {
         for repository_id in &self.config.repositories_rank {
+            // Skip unsupported repositories
+            if self.unsupported_repositories.contains_key(repository_id) {
+                continue;
+            }
+
             let provider = match self.metadata_providers.get(repository_id) {
                 Some(provider) => provider,
                 None => {
@@ -153,6 +172,11 @@ impl<'a> RepositoryManager<'a> {
     /// Returns the id of the repository and the package version metadata.
     pub fn read_package_version(&self, package_id: &PackageId, target: &Target) -> Result<(String, PackageVersionMeta)> {
         for repository_id in &self.config.repositories_rank {
+            // Skip unsupported repositories
+            if self.unsupported_repositories.contains_key(repository_id) {
+                continue;
+            }
+
             let provider = match self.metadata_providers.get(repository_id) {
                 Some(provider) => provider,
                 None => {
@@ -248,9 +272,21 @@ impl<'a> RepositoryManager<'a> {
         self.get_prebuid_provider(repository_id)?.read_prebuild(package, revision, target)
     }
 
+    /// Gets the list of repositories that are not supported by this Packit version.
+    pub fn get_unsupported_repositories(&self) -> &HashMap<String, RepositoryMeta> {
+        &self.unsupported_repositories
+    }
+
     /// A helper method to het the metadata provider.
     /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     fn get_metadata_provider(&self, repository_id: &str) -> Result<&Box<dyn MetadataProvider>> {
+        // Check if repository is unsupported
+        if self.unsupported_repositories.contains_key(repository_id) {
+            return Err(RepositoryError::RepositoryNotSupported {
+                repository_id: repository_id.into(),
+            });
+        }
+
         match self.metadata_providers.get(repository_id) {
             Some(provider) => Ok(provider),
             None => Err(RepositoryError::RepositoryNotFoundError {
@@ -262,6 +298,13 @@ impl<'a> RepositoryManager<'a> {
     /// A helper method to het the prebuild provider.
     /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     fn get_prebuid_provider(&self, repository_id: &str) -> Result<&Box<dyn PrebuildProvider>> {
+        // Check if repository is unsupported
+        if self.unsupported_repositories.contains_key(repository_id) {
+            return Err(RepositoryError::RepositoryNotSupported {
+                repository_id: repository_id.into(),
+            });
+        }
+
         match self.prebuild_providers.get(repository_id) {
             Some(provider) => Ok(provider),
             None => Err(RepositoryError::RepositoryNotFoundError {

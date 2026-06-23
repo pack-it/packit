@@ -20,6 +20,11 @@ pub fn repository_search(
     let mut best_word = None;
     let mut best_distance = None;
     for repository_id in &config.repositories_rank {
+        // Skip unsupported repositories
+        if manager.get_unsupported_repositories().contains_key(repository_id) {
+            continue;
+        }
+
         let repository_index = manager.read_index_metadata(repository_id)?;
 
         let fuzzy_matches = fuzzy_search(repository_index.supported_packages.iter(), package_name.as_str());
