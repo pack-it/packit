@@ -8,14 +8,18 @@ use std::{
 #[cfg(unix)]
 use std::{ffi::OsStr, os::unix::ffi::OsStrExt};
 
-use crate::{cli::display::logging::warning, platforms::symlink};
+use crate::{
+    cli::display::logging::warning,
+    platforms::symlink,
+    utils::ioerror::{self, IOResultExt},
+};
 
 /// Recursively creates symlinks from a link directory to the original directory.
 /// Note that there is an early return when the original doesn't exist. Non-existant link directories are created.
 pub fn create_folder_symlinks(original_dir: &Path, link_dir: &Path) -> symlink::Result<()> {
     // Create destination if it does not exist
     if !link_dir.exists() {
-        fs::create_dir_all(link_dir)?;
+        fs::create_dir_all(link_dir).err_with_path("create dirs", link_dir)?;
     }
 
     // Skip symlinking if source does not exist
@@ -24,19 +28,19 @@ pub fn create_folder_symlinks(original_dir: &Path, link_dir: &Path) -> symlink::
     }
 
     // Symlink files
-    for file in fs::read_dir(original_dir)? {
-        let file = file?;
+    for file in fs::read_dir(original_dir).err_with_path("read", original_dir)? {
+        let file = file.err_with_path("iterate", original_dir)?;
 
         let link_path = link_dir.join(file.file_name());
 
         // Create the symlinks for the subdirectory
-        if file.file_type()?.is_dir() {
+        if file.file_type().err_with_path("get file type of", file.path())?.is_dir() {
             create_folder_symlinks(&file.path(), &link_path)?;
             continue;
         }
 
         // Check if file already exists
-        if fs::exists(&link_path)? {
+        if fs::exists(&link_path).err_with_path("check existance of", &link_path)? {
             warning!("Symlink {} already exists in {}", file.file_name().display(), link_dir.display());
             continue;
         }
@@ -54,20 +58,20 @@ pub fn remove_symlinks(search_dir: &Path, destination_dir: &Path) -> symlink::Re
         return Ok(());
     }
 
-    for file in fs::read_dir(search_dir)? {
-        let file = file?;
-        let file_type = file.file_type()?;
+    for file in fs::read_dir(search_dir).err_with_path("read", search_dir)? {
+        let file = file.err_with_path("iterate", search_dir)?;
+        let file_type = file.file_type().err_with_path("get file type of", file.path())?;
 
         if file_type.is_dir() {
             remove_symlinks(&file.path(), destination_dir)?;
 
             // Remove the directory if it is empty after removing symlinks
-            if fs::read_dir(file.path())?.next().is_none() {
-                fs::remove_dir(file.path())?;
+            if fs::read_dir(file.path()).err_with_path("read", file.path())?.next().is_none() {
+                fs::remove_dir(file.path()).err_with_path("remove", file.path())?;
             }
         }
 
-        if file_type.is_symlink() && fs::read_link(file.path())?.starts_with(destination_dir) {
+        if file_type.is_symlink() && fs::read_link(file.path()).err_with_path("read link", file.path())?.starts_with(destination_dir) {
             symlink::remove_symlink(&file.path())?
         }
     }
@@ -89,9 +93,9 @@ pub fn parse_path_from_bytes(bytes: &[u8]) -> Result<&Path, Utf8Error> {
 
 /// Checks recursively if a directory is empty (contains nothing but empty directories).
 /// Returns true if empty, false if not.
-pub fn directory_is_empty(directory: &Path) -> Result<bool, std::io::Error> {
-    for package in directory.read_dir()? {
-        let package = package?;
+pub fn directory_is_empty(directory: &Path) -> Result<bool, ioerror::IOError> {
+    for package in directory.read_dir().err_with_path("read", directory)? {
+        let package = package.err_with_path("iterate", directory)?;
 
         if !package.path().is_dir() {
             return Ok(false);

@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::io::{self, Write};
 
-use crate::cli::display::{error::DisplayError, logging::warning};
+use crate::{
+    cli::display::{
+        error::{DisplayError, Result},
+        logging::warning,
+    },
+    utils::ioerror::IOResultExt,
+};
 
 /// Represents the response of the prompt.
 pub enum QuestionResponse {
@@ -28,7 +34,7 @@ impl QuestionResponse {
 }
 
 /// Prompts the user with a yes or no question.
-pub fn ask_user(question: &str, default: QuestionResponse) -> Result<QuestionResponse, DisplayError> {
+pub fn ask_user(question: &str, default: QuestionResponse) -> Result<QuestionResponse> {
     // Make default bold
     match default {
         QuestionResponse::Yes => print!("{question} [Y/n]: "),
@@ -37,10 +43,7 @@ pub fn ask_user(question: &str, default: QuestionResponse) -> Result<QuestionRes
     }
 
     // Get user input
-    io::stdout().flush()?;
-    let mut input = String::new();
-    io::stdin().read_line(&mut input)?;
-    let input = input.trim().to_lowercase();
+    let input = read_line()?.to_lowercase();
 
     // Return default on empty input
     if input.is_empty() {
@@ -60,18 +63,23 @@ pub fn ask_user(question: &str, default: QuestionResponse) -> Result<QuestionRes
 }
 
 /// Prompts the user to give input. The user can skip by pressing enter.
-pub fn ask_user_input(question: &str) -> Result<Option<String>, DisplayError> {
+pub fn ask_user_input(question: &str) -> Result<Option<String>> {
     print!("{question} [press enter to skip]: ");
 
     // Get user input
-    io::stdout().flush()?;
-    let mut input = String::new();
-    io::stdin().read_line(&mut input)?;
-    let input = input.trim();
-
+    let input = read_line()?;
     if input.is_empty() {
         return Ok(None);
     }
 
     Ok(Some(input.to_string()))
+}
+
+/// Reads a line from stdin
+fn read_line() -> Result<String> {
+    io::stdout().flush().err_operation("flush stdout").map_err(DisplayError::IOError)?;
+    let mut input = String::new();
+    io::stdin().read_line(&mut input).err_operation("read stdin").map_err(DisplayError::IOError)?;
+
+    Ok(input.trim().to_string())
 }

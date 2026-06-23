@@ -23,7 +23,7 @@ use crate::{
         provider,
         types::{Checksum, PackageTarget},
     },
-    utils::io,
+    utils::{io, ioerror::IOResultExt},
 };
 
 use std::{
@@ -177,8 +177,8 @@ impl<'a> Installer<'a> {
         }
 
         // Create install directory if it does not exist
-        if !fs::exists(&install_directory)? {
-            fs::create_dir_all(&install_directory)?;
+        if !fs::exists(&install_directory).err_with_path("check existence of", &install_directory)? {
+            fs::create_dir_all(&install_directory).err_with_path("create dirs", &install_directory)?;
         }
 
         let version_meta = &install_meta.version_metadata;
@@ -352,7 +352,7 @@ impl<'a> Installer<'a> {
 
         // Create package dependencies directory
         let dependency_directory_path = self.config.prefix_directory.join("dependencies").join(current_package.to_string());
-        fs::create_dir_all(&dependency_directory_path)?;
+        fs::create_dir_all(&dependency_directory_path).err_with_path("create dirs", &dependency_directory_path)?;
 
         // Create symlinks to all dependencies
         for dependency in dependencies {
@@ -498,8 +498,8 @@ impl<'a> Installer<'a> {
 
         // Remove the dependency symlinks if they exist
         let dependency_directory_path = self.config.prefix_directory.join("dependencies").join(package_id.to_string());
-        if fs::exists(&dependency_directory_path)? {
-            fs::remove_dir_all(dependency_directory_path)?;
+        if fs::exists(&dependency_directory_path).err_with_path("check existence of", &dependency_directory_path)? {
+            fs::remove_dir_all(&dependency_directory_path).err_with_path("remove", &dependency_directory_path)?;
         }
 
         // Check if the package was symlinked
@@ -523,7 +523,7 @@ impl<'a> Installer<'a> {
         if let Some(directory) = directory.to_str() {
             debug!("Removing the package directory: {directory}");
         }
-        fs::remove_dir_all(directory)?;
+        fs::remove_dir_all(&directory).err_with_path("remove", &directory)?;
 
         // Remove package from the register
         debug!("Removing {package_id} from the package register");
@@ -584,8 +584,8 @@ impl<'a> Installer<'a> {
 
             // Remove the dependency symlinks
             let dependency_directory_path = self.config.prefix_directory.join("dependencies").join(package_version.package_id.to_string());
-            if fs::exists(&dependency_directory_path)? {
-                fs::remove_dir_all(dependency_directory_path)?;
+            if fs::exists(&dependency_directory_path).err_with_path("check existence of", &dependency_directory_path)? {
+                fs::remove_dir_all(&dependency_directory_path).err_with_path("remove", &dependency_directory_path)?;
             }
 
             // Run uninstall script
@@ -595,7 +595,7 @@ impl<'a> Installer<'a> {
         if let Some(directory) = directory.to_str() {
             debug!("Removing the package directory: {directory}");
         }
-        fs::remove_dir_all(directory)?;
+        fs::remove_dir_all(&directory).err_with_path("remove", &directory)?;
 
         let uninstalled = installed_versions.iter().map(|p| p.package_id.clone()).collect();
 

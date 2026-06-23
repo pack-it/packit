@@ -19,7 +19,10 @@ use crate::{
         manager::RepositoryManager,
         types::{IndexMeta, Licenses, PackageVersionMeta, RepositoryMeta},
     },
-    utils::packit_version::packit_version,
+    utils::{
+        ioerror::{self, IOResultExt},
+        packit_version::packit_version,
+    },
 };
 
 const PORTABLE_REPO_MAINTAINER: &str = concat!("Packit v", packit_version!());
@@ -59,7 +62,7 @@ pub enum PortableRepoError {
     SerializeError(#[from] toml::ser::Error),
 
     #[error("Error while interacting with filesystem")]
-    IOError(#[from] std::io::Error),
+    IOError(#[from] ioerror::IOError),
 }
 
 pub type Result<T> = std::result::Result<T, PortableRepoError>;
@@ -97,7 +100,8 @@ impl<'a> PortableRepoCreator<'a> {
     /// Creates a portable repo, containing all given included packages at the given destination.
     pub fn create_portable_repo(&self, included_packages: HashSet<PackageId>, destination: &PathBuf) -> Result<()> {
         // Check if destination is empty
-        if destination.exists() && (destination.is_file() || fs::read_dir(destination)?.next().is_some()) {
+        if destination.exists() && (destination.is_file() || fs::read_dir(destination).err_with_path("read", destination)?.next().is_some())
+        {
             return Err(PortableRepoError::DestinationNotEmpty);
         }
 
@@ -279,7 +283,7 @@ impl<'a> PortableRepoCreator<'a> {
         let prefix = package_id.name.chars().next().ok_or(PortableRepoError::EmptyPackageName)?.to_string();
         let target = self.target.architecture.to_string();
         let destination = destination.join("prebuilds").join(&target).join(&prefix).join(&package_id.name);
-        fs::create_dir_all(&destination)?;
+        fs::create_dir_all(&destination).err_with_path("create dirs", &destination)?;
 
         // Get checksum
         let revision = package_version.get_revision_count();
@@ -305,8 +309,8 @@ impl<'a> PortableRepoCreator<'a> {
         let prebuild_path = destination.join(prebuild_name);
         let checksum_name = format!("{package_id}-{revision}-{target}.sha256");
         let checksum_path = destination.join(checksum_name);
-        fs::write(prebuild_path, &prebuild)?;
-        fs::write(checksum_path, checksum.to_string().as_bytes())?;
+        fs::write(&prebuild_path, &prebuild).err_with_path("write", prebuild_path)?;
+        fs::write(&checksum_path, checksum.to_string().as_bytes()).err_with_path("write", checksum_path)?;
 
         Ok(())
     }
@@ -345,11 +349,11 @@ impl<'a> PortableRepoCreator<'a> {
 
         // Create parent directories
         if let Some(parent) = destination.parent() {
-            fs::create_dir_all(parent)?;
+            fs::create_dir_all(parent).err_with_path("create dirs", parent)?;
         }
 
         // Write file
-        fs::write(destination, contents)?;
+        fs::write(&destination, contents).err_with_path("write", destination)?;
 
         Ok(())
     }
@@ -359,7 +363,7 @@ impl<'a> PortableRepoCreator<'a> {
     fn write_metadata<M: Serialize>(&self, metadata: M, destination: PathBuf, pretty: bool) -> Result<()> {
         // Create parent directories
         if let Some(parent) = destination.parent() {
-            fs::create_dir_all(parent)?;
+            fs::create_dir_all(parent).err_with_path("create dirs", parent)?;
         }
 
         // Write metadata
@@ -367,7 +371,7 @@ impl<'a> PortableRepoCreator<'a> {
             true => toml::ser::to_string_pretty(&metadata)?,
             false => toml::ser::to_string(&metadata)?,
         };
-        fs::write(destination, meta_str)?;
+        fs::write(&destination, meta_str).err_with_path("write", destination)?;
 
         Ok(())
     }

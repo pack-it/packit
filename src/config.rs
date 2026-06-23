@@ -14,8 +14,11 @@ use crate::{
     cli::display::logging::warning,
     platforms::{DEFAULT_CONFIG_DIR, DEFAULT_PREFIX},
     repositories::metadata::DEFAULT_METADATA_PROVIDER_ID,
-    utils::constants::{
-        CONFIG_FILENAME, DEFAULT_METADATA_REPOSITORY_NAME, DEFAULT_METADATA_REPOSITORY_PROVIDER, DEFAULT_METADATA_REPOSITORY_URL,
+    utils::{
+        constants::{
+            CONFIG_FILENAME, DEFAULT_METADATA_REPOSITORY_NAME, DEFAULT_METADATA_REPOSITORY_PROVIDER, DEFAULT_METADATA_REPOSITORY_URL,
+        },
+        ioerror::{self, IOResultExt},
     },
 };
 
@@ -81,7 +84,7 @@ impl Repository {
 #[derive(Error, Debug)]
 pub enum ConfigError {
     #[error("Cannot read config file contents")]
-    ReadError(#[from] std::io::Error),
+    ReadError(#[from] ioerror::IOError),
 
     #[error("Cannot parse config file")]
     ParseError(#[from] toml::de::Error),
@@ -99,7 +102,7 @@ impl Config {
     ///
     /// This function will return an error if the file cannot be opened or if the content is invalid.
     pub fn from(file_path: &Path) -> Result<Self> {
-        let file_content = fs::read_to_string(file_path)?;
+        let file_content = fs::read_to_string(file_path).err_with_path("read", file_path)?;
         let mut config: Self = toml::from_str(&file_content)?;
 
         // Remove undefined repositories from rank list
@@ -199,7 +202,7 @@ impl EditableConfig {
     /// This function will return an error if the file cannot be opened or if the content is invalid.
     pub fn from(file_path: &Path) -> Result<Self> {
         let config = Config::from(file_path)?;
-        let file_content = fs::read_to_string(file_path)?;
+        let file_content = fs::read_to_string(file_path).err_with_path("read", file_path)?;
         let document = DocumentMut::from_str(&file_content)?;
 
         Ok(Self { config, document })
@@ -215,11 +218,11 @@ impl EditableConfig {
 
         // Create parent directories
         if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)?;
+            fs::create_dir_all(parent).err_with_path("create dirs", parent)?;
         }
 
         // Write data to file
-        fs::write(path, data)?;
+        fs::write(path, data).err_with_path("write", path)?;
 
         Ok(())
     }

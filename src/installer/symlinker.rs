@@ -10,7 +10,7 @@ use crate::{
     },
     platforms::symlink,
     register::package_register::PackageRegister,
-    utils::io,
+    utils::{io, ioerror::IOResultExt},
 };
 
 /// Manages symlink operations for installing, uninstalling and changing active and symlink states of packages.
@@ -66,7 +66,7 @@ impl<'a> Symlinker<'a> {
         }
 
         // Create active symlink
-        fs::create_dir_all(global_active_path)?;
+        fs::create_dir_all(&global_active_path).err_with_path("create dirs", &global_active_path)?;
         symlink::create_symlink(&package_version.install_path, &active_path)?;
 
         // Only create new symlinks if we should symlink
@@ -114,10 +114,11 @@ impl<'a> Symlinker<'a> {
         })?;
 
         // Remove all symlinks except for those in the active directory
-        for entry in fs::read_dir(&self.config.prefix_directory)? {
-            let entry = entry?;
+        for entry in fs::read_dir(&self.config.prefix_directory).err_with_path("read", &self.config.prefix_directory)? {
+            let entry = entry.err_with_path("iterate", &self.config.prefix_directory)?;
 
-            if entry.file_type()?.is_dir() && entry.file_name() != "active" {
+            let file_type = entry.file_type().err_with_path("get filetype of", &entry.path())?;
+            if file_type.is_dir() && entry.file_name() != "active" {
                 io::remove_symlinks(&entry.path(), &package_version.install_path)?;
             }
         }

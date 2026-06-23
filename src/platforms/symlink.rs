@@ -6,6 +6,8 @@ use std::{
 
 use thiserror::Error;
 
+use crate::utils::ioerror::{self, IOResultExt};
+
 /// The errors that occur during symlink operations.
 #[derive(Error, Debug)]
 pub enum SymlinkError {
@@ -17,15 +19,15 @@ pub enum SymlinkError {
         original: PathBuf,
     },
 
-    #[error("Symlink IO failed")]
-    IOError(#[from] std::io::Error),
+    #[error("Error while interacting with filesystem")]
+    IOError(#[from] ioerror::IOError),
 }
 
 pub type Result<T> = core::result::Result<T, SymlinkError>;
 
 /// Creates a symlink at `link`, pointing to `original`. Checks if the original exists and calls platform specific code.
 pub fn create_symlink(original: &Path, link: &Path) -> Result<()> {
-    if !fs::exists(original)? {
+    if !fs::exists(original).err_with_path("check existance of", original)? {
         return Err(SymlinkError::OriginalNotFound {
             original: original.to_path_buf(),
         });
@@ -48,18 +50,20 @@ pub fn remove_symlink(symlink: &Path) -> Result<()> {
 pub mod platform {
     use std::path::Path;
 
+    use crate::utils::ioerror::IOResultExt;
+
     use super::Result;
 
     /// Creates a symlink on macOS and Linux from link to original.
     pub fn create_symlink(original: &Path, link: &Path) -> Result<()> {
-        std::os::unix::fs::symlink(original, link)?;
+        std::os::unix::fs::symlink(original, link).err_with_path("create symlink", link)?;
 
         Ok(())
     }
 
     /// Removes the given symlink on macOS and Linux.
     pub fn remove_symlink(symlink: &Path) -> Result<()> {
-        std::fs::remove_file(symlink)?;
+        std::fs::remove_file(symlink).err_with_path("remove symlink", symlink)?;
 
         Ok(())
     }
@@ -69,13 +73,15 @@ pub mod platform {
 pub mod platform {
     use std::path::Path;
 
+    use crate::utils::ioerror::IOResultExt;
+
     use super::Result;
 
     /// Creates a symlink on Windows from link to original.
     pub fn create_symlink(original: &Path, link: &Path) -> Result<()> {
         match original.is_dir() {
-            true => std::os::windows::fs::symlink_dir(original, link)?,
-            false => std::os::windows::fs::symlink_file(original, link)?,
+            true => std::os::windows::fs::symlink_dir(original, link).err_with_path("create dir symlink", link)?,
+            false => std::os::windows::fs::symlink_file(original, link).err_with_path("create file symlink", link)?,
         }
 
         Ok(())
@@ -84,8 +90,8 @@ pub mod platform {
     /// Removes the given symlink on macOS and Linux.
     pub fn remove_symlink(symlink: &Path) -> Result<()> {
         match symlink.is_dir() {
-            true => std::fs::remove_dir(symlink)?,
-            false => std::fs::remove_file(symlink)?,
+            true => std::fs::remove_dir(symlink).err_with_path("remove dir symlink", symlink)?,
+            false => std::fs::remove_file(symlink).err_with_path("remove file symlink", symlink)?,
         }
 
         Ok(())

@@ -15,7 +15,10 @@ use crate::{
     },
     register::package_register::PackageRegister,
     repositories::manager::RepositoryManager,
-    utils::constants::{DEFAULT_METADATA_REPOSITORY_NAME, REGISTER_FILENAME},
+    utils::{
+        constants::{DEFAULT_METADATA_REPOSITORY_NAME, REGISTER_FILENAME},
+        ioerror::IOResultExt,
+    },
 };
 
 /// Fixes a missing Config.toml. Either by rebuilding the config from known information or using default values.
@@ -26,7 +29,7 @@ pub fn fix_missing_config() -> Result<()> {
     // Figure out the prefix path
     let mut prefix_path = PathBuf::from(DEFAULT_PREFIX);
     loop {
-        if fs::exists(&prefix_path)? {
+        if fs::exists(&prefix_path).err_with_path("check existance of", &prefix_path)? {
             let question = format!("Prefix directory '{}' was found, do you wish to use this?", prefix_path.display());
             if ask_user(&question, QuestionResponse::Yes)?.is_yes() {
                 break;

@@ -11,6 +11,7 @@ use crate::{
         provider::PrebuildProvider,
         types::Checksum,
     },
+    utils::ioerror::IOResultExt,
 };
 
 pub const FILESYSTEM_PREBUILD_PROVIDER_ID: &str = "fs";
@@ -34,7 +35,7 @@ impl PrebuildProvider for FileSystemPrebuildProvider {
             None => return Ok(None),
         };
 
-        let checksum_string = fs::read_to_string(path)?;
+        let checksum_string = fs::read_to_string(&path).err_with_path("read", path)?;
 
         Ok(Some(Checksum::from_str(&checksum_string)?))
     }
@@ -46,7 +47,7 @@ impl PrebuildProvider for FileSystemPrebuildProvider {
         })?;
 
         // TODO: improve efficiency of file reading
-        let bytes = fs::read(&url)?;
+        let bytes = fs::read(&url).err_with_path("read", &url)?;
 
         Ok((ArchiveExtension::from_path(&url), Bytes::from(bytes)))
     }
@@ -65,7 +66,7 @@ impl FileSystemPrebuildProvider {
         let prebuild_name = format!("{package_id}-{revision}-{target}.{extension}");
         let path = self.path.join("packages").join(prefix).join(&package_id.name).join(package_id.version.to_string()).join(prebuild_name);
 
-        if !fs::exists(&path)? {
+        if !fs::exists(&path).err_with_path("check existance of", &path)? {
             return Ok(None);
         }
 

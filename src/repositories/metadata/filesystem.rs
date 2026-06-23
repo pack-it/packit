@@ -11,6 +11,7 @@ use crate::{
         provider::MetadataProvider,
         types::{IndexMeta, PackageMeta, PackageVersionMeta, RepositoryMeta},
     },
+    utils::ioerror::IOResultExt,
 };
 
 pub const FILESYSTEM_METADATA_PROVIDER_ID: &str = "fs";
@@ -22,26 +23,26 @@ pub struct FileSystemMetadataProvider {
 
 impl MetadataProvider for FileSystemMetadataProvider {
     fn read_repository_metadata(&self) -> Result<RepositoryMeta> {
-        let data = fs::read_to_string(self.path.join("repository.toml"))?;
+        let data = Self::read_file_string(self.path.join("repository.toml"))?;
 
         Ok(toml::de::from_str(&data)?)
     }
 
     fn read_index_metadata(&self) -> Result<IndexMeta> {
-        let data = fs::read_to_string(self.path.join("index.toml"))?;
+        let data = Self::read_file_string(self.path.join("index.toml"))?;
 
         Ok(toml::de::from_str(&data)?)
     }
 
     fn read_package(&self, package: &PackageName) -> Result<PackageMeta> {
-        let data = fs::read_to_string(self.path.join("packages").join(package.to_string()).join("package.toml"))?;
+        let data = Self::read_file_string(self.path.join("packages").join(package.to_string()).join("package.toml"))?;
 
         Ok(toml::de::from_str(&data)?)
     }
 
     fn read_package_version(&self, package: &PackageName, version: &Version) -> Result<PackageVersionMeta> {
         let path = self.path.join("packages").join(package.to_string()).join(version.to_string()).join("targets.toml");
-        let data = fs::read_to_string(path)?;
+        let data = Self::read_file_string(path)?;
 
         Ok(toml::de::from_str(&data)?)
     }
@@ -50,22 +51,22 @@ impl MetadataProvider for FileSystemMetadataProvider {
         let file_path = PathBuf::from(file_path);
         let path = self.path.join("packages").join(package.to_string()).join(file_path);
 
-        if !fs::exists(&path)? {
+        if !fs::exists(&path).err_with_path("check existance of", &path)? {
             return Ok(None);
         }
 
-        Ok(Some(fs::read(&path)?.into()))
+        Ok(Some(fs::read(&path).err_with_path("read", &path)?.into()))
     }
 
     fn read_file(&self, package: &PackageName, file_path: &str) -> Result<Option<String>> {
         let file_path = PathBuf::from(file_path);
         let path = self.path.join("packages").join(package.to_string()).join(file_path);
 
-        if !fs::exists(&path)? {
+        if !fs::exists(&path).err_with_path("check existance of", &path)? {
             return Ok(None);
         }
 
-        Ok(Some(fs::read_to_string(&path)?))
+        Ok(Some(Self::read_file_string(path)?))
     }
 }
 
@@ -80,5 +81,10 @@ impl FileSystemMetadataProvider {
         Some(Self {
             path: PathBuf::from(&repository.url),
         })
+    }
+
+    /// Reads the file at the given path into a string
+    fn read_file_string(path: PathBuf) -> Result<String> {
+        Ok(fs::read_to_string(&path).err_with_path("read", path)?)
     }
 }

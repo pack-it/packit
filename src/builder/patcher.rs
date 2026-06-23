@@ -14,6 +14,7 @@ use crate::{
     config::Config,
     installer::types::PackageId,
     register::installed_package_version::InstalledPackageVersion,
+    utils::ioerror::{self, IOResultExt},
 };
 
 /// The errors that occur during binary operations.
@@ -34,7 +35,7 @@ pub enum BinaryPatcherError {
     OsStringConversionError,
 
     #[error("Error while interacting with filesystem")]
-    IOError(#[from] std::io::Error),
+    IOError(#[from] ioerror::IOError),
 }
 
 type Result<T> = std::result::Result<T, BinaryPatcherError>;
@@ -51,7 +52,7 @@ impl<'a> BinaryPatcher<'a> {
 
     /// Patches all binaries in the given directory.
     pub fn patch_binaries_in(&self, path: PathBuf, package: &PackageId, dependencies: Vec<&InstalledPackageVersion>) -> Result<()> {
-        let metadata = fs::metadata(&path)?;
+        let metadata = fs::metadata(&path).err_with_path("read metadata of", &path)?;
 
         // If the given path is a file, patch the file directly
         if metadata.is_file() {
@@ -60,10 +61,10 @@ impl<'a> BinaryPatcher<'a> {
 
         let mut queue = VecDeque::from([path]);
         while let Some(item) = queue.pop_front() {
-            for entry in fs::read_dir(item)? {
-                let entry = entry?;
+            for entry in fs::read_dir(&item).err_with_path("read", &item)? {
+                let entry = entry.err_with_path("iterate", &item)?;
 
-                let metadata = entry.metadata()?;
+                let metadata = entry.metadata().err_with_path("read metadata of", entry.path())?;
 
                 // If the entry is a directory, add it to the queue
                 if metadata.is_dir() {

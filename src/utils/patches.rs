@@ -12,8 +12,11 @@ use diffy::{
 };
 use thiserror::Error;
 
-use crate::cli::display::logging::{debug, warning};
-use crate::utils::io;
+use crate::utils::{io, ioerror::IOResultExt};
+use crate::{
+    cli::display::logging::{debug, warning},
+    utils::ioerror,
+};
 
 /// The errors that occur while applying patches.
 #[derive(Error, Debug)]
@@ -22,7 +25,7 @@ pub enum PatchError {
     UnknownPatchFormat,
 
     #[error("Error while interacting with filesystem")]
-    IoError(#[from] std::io::Error),
+    IoError(#[from] ioerror::IOError),
 
     #[error("Error while parsing path to UTF-8")]
     PathParseError(#[from] std::str::Utf8Error),
@@ -107,7 +110,7 @@ fn handle_file_operation(operation: &FileOperation<[u8]>, patch: &FilePatch<[u8]
             let path = create_path(directory, path)?;
             debug!("Deleting file '{}'", path.display());
 
-            fs::remove_file(&path)?;
+            fs::remove_file(&path).err_with_path("remove", path)?;
         },
         FileOperation::Modify { original, modified } => {
             let source = create_path(directory, original)?;
@@ -123,7 +126,7 @@ fn handle_file_operation(operation: &FileOperation<[u8]>, patch: &FilePatch<[u8]
 
             // If the source and destination are not the same, the file is also moved.
             if source != destination {
-                fs::remove_file(&source)?;
+                fs::remove_file(&source).err_with_path("remove", source)?;
             }
         },
         FileOperation::Rename { from, to } => {
@@ -133,10 +136,10 @@ fn handle_file_operation(operation: &FileOperation<[u8]>, patch: &FilePatch<[u8]
             debug!("Renaming file '{}' to '{}'", source.display(), destination.display());
 
             if let Some(parent) = destination.parent() {
-                fs::create_dir_all(parent)?;
+                fs::create_dir_all(parent).err_with_path("create dirs", parent)?;
             }
 
-            fs::rename(&source, &destination)?;
+            fs::rename(&source, &destination).err_with_path("rename", source)?;
         },
         FileOperation::Copy { from, to } => {
             let source = create_path(directory, from)?;
@@ -145,10 +148,10 @@ fn handle_file_operation(operation: &FileOperation<[u8]>, patch: &FilePatch<[u8]
             debug!("Copying file '{}' to '{}'", source.display(), destination.display());
 
             if let Some(parent) = destination.parent() {
-                fs::create_dir_all(parent)?;
+                fs::create_dir_all(parent).err_with_path("create dirs", parent)?;
             }
 
-            fs::copy(&source, &destination)?;
+            fs::copy(&source, &destination).err_with_path("copy", source)?;
         },
     }
 
@@ -189,7 +192,7 @@ fn apply_path(patch: &PatchKind<[u8]>, source: Option<&Path>, destination: &Path
     }
 
     let original = match source {
-        Some(source) => fs::read(source)?,
+        Some(source) => fs::read(source).err_with_path("read", source)?,
         None => vec![],
     };
 
@@ -199,10 +202,10 @@ fn apply_path(patch: &PatchKind<[u8]>, source: Option<&Path>, destination: &Path
     };
 
     if let Some(parent) = destination.parent() {
-        fs::create_dir_all(parent)?;
+        fs::create_dir_all(parent).err_with_path("create dirs", parent)?;
     }
 
-    fs::write(destination, patched)?;
+    fs::write(destination, patched).err_with_path("write", destination)?;
 
     Ok(())
 }

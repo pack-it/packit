@@ -25,7 +25,7 @@ use crate::{
         manager::RepositoryManager,
         types::{Checksum, Patch},
     },
-    utils::{patches, requests},
+    utils::{ioerror::IOResultExt, patches, requests},
 };
 
 /// The builder of Packit, managing the building of packages.
@@ -98,7 +98,7 @@ impl<'a> Builder<'a> {
         let bytes = self.download_file(&source.url, &source.mirrors, &source.checksum, package_name)?;
 
         // Create temp directory to build in
-        let build_directory = TempDir::new()?;
+        let build_directory = TempDir::new().err_operation("create temp dir")?;
 
         // Only unpack if the source does not specify the skip_unpack option, write file otherwise
         if !source.skip_unpack {
@@ -108,7 +108,7 @@ impl<'a> Builder<'a> {
             let url = Url::parse(&source.url)?;
             let file_name = url.path_segments().and_then(|mut x| x.next_back()).ok_or(BuilderError::EmptyUrlPath)?;
             let file_path = build_directory.path().join(file_name);
-            fs::write(file_path, bytes)?;
+            fs::write(&file_path, bytes).err_with_path("write", file_path)?;
         }
 
         // Construct default apply directory for patches
