@@ -62,7 +62,7 @@ impl<'a> Symlinker<'a> {
         let package_directory = self.config.prefix_directory.join("packages").join(&package_id.name);
 
         // Remove symlinks for all package symlinked directories
-        for dir_name in SYMLINK_DIRECTORIES.iter().chain(iter::once("active")) {
+        for dir_name in SYMLINK_DIRECTORIES.iter().chain(iter::once(&"active")) {
             let prefix_dir_path = self.config.prefix_directory.join(dir_name);
 
             io::remove_symlinks(&prefix_dir_path, &package_directory)?;

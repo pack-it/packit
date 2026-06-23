@@ -56,7 +56,7 @@ impl<'a> Into<Environment> for BuildEnv<'a> {
             env.strip_var(*var);
         }
 
-        // Add M4 variable if m4 is a dependency
+        // Add M4 variable if m4 is a build dependency
         if let Some(m4) = self.build_dependencies.iter().find(|x| *x.package_id.name == "m4") {
             match m4.install_path.to_str() {
                 Some(path) => env.insert_var("M4", path),
