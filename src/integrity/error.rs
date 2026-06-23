@@ -24,10 +24,10 @@ pub enum VerifierError {
     InvalidUnicodeError,
 
     #[error("Cannot do general checks before doing initial checks")]
-    InitialChecksSkippedError,
+    InitialChecksSkipped,
 
     #[error("Cannot continue with checks, missing check implementation")]
-    UnimplementedCheckError,
+    UnimplementedCheck,
 
     #[error("Could not display issues")]
     DisplayError(#[from] DisplayError),

@@ -40,7 +40,7 @@ impl HandleCommand for CheckArgs {
         let register_dir = PackageRegister::get_path(&config.prefix_directory);
         let register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
-        // Make sure all specied packages exist
+        // Make sure all specified packages exist
         for package_id in &self.packages {
             let installed_directory = config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
             if register.get_package_version(package_id).is_none() && !fs::exists(installed_directory).unwrap_or_exit(1) {

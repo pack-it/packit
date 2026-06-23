@@ -66,8 +66,8 @@ impl Verifier {
                 Check::RegisterExistence => initial::check_register_existence()?,
                 Check::RegisterSyntax => initial::check_register_syntax()?,
 
-                // Make sure that the check is not an initial check
-                _ if Check::get_initial_checks().contains(check) => return Err(VerifierError::UnimplementedCheckError),
+                // Return `VerifierError::UnimplementedCheck` if the current check is not an initial check (meaning it's not implemented).
+                _ if Check::get_initial_checks().contains(check) => return Err(VerifierError::UnimplementedCheck),
 
                 // Continue if the check is not an initial check
                 _ => continue,
@@ -85,7 +85,7 @@ impl Verifier {
     pub fn next_issue(&mut self, packages: &Vec<PackageId>, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
         // Make sure the initial checks have been run before doing general checks
         if self.current_intial_check != Check::get_initial_checks().len() {
-            return Err(VerifierError::InitialChecksSkippedError);
+            return Err(VerifierError::InitialChecksSkipped);
         }
 
         match self.next_issue_impl(packages, register, config) {
@@ -129,10 +129,10 @@ impl Verifier {
                 Check::ForbiddenLink => package::check_forbidden_link(packages, register)?,
                 Check::MissingLink => package::check_missing_link(packages, register, config)?,
 
-                // Make sure that the check is not a general check
-                _ if Check::get_checks().contains(check) => return Err(VerifierError::UnimplementedCheckError),
+                // Return `VerifierError::UnimplementedCheck` if the current check is not a general check (meaning it's not implemented).
+                _ if Check::get_checks().contains(check) => return Err(VerifierError::UnimplementedCheck),
 
-                // Continue if the check is package specific or is an initial check
+                // Continue if the check is an initial check
                 _ => continue,
             };
 
@@ -143,7 +143,7 @@ impl Verifier {
         }
     }
 
-    /// Get the issues found states.
+    /// Get the issues found state.
     /// Returns true if issues are found, false otherwise.
     pub fn issues_found(&self) -> bool {
         self.issues_found

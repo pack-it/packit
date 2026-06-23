@@ -14,6 +14,7 @@ pub enum Check {
     StrayDirectory,
     PackitGroup,
 
+    // Package related checks
     StorageConsistency,
     RegisterConsistency,
     DependencyTree,

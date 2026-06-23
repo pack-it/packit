@@ -151,6 +151,8 @@ fn package_storage_is_consistent(package_id: &PackageId, config: &Config) -> Res
 }
 
 /// Checks if the given packages in storage also exist in the register.
+/// Note that this is a package related check, but not from the register and it would be weird to only check the specified packages.
+/// As we would get all the packages from storage and then ignore unspecified packages (failing when no packages are specified by the user).
 /// Returns a register consistency issue or None if there are packages missing from the register.
 pub fn check_register_consistency(register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
     let storage_packages = get_storage_packages(config)?;

@@ -20,6 +20,7 @@ impl Repairer {
         Self
     }
 
+    /// Fixes the initial issues (issues which are critical for Packit itself to work).
     pub fn fix_initial_issues(&mut self, issue: Issue) -> Result<()> {
         match issue {
             Issue::MissingConfig => initial::fix_missing_config()?,

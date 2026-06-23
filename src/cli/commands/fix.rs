@@ -37,7 +37,7 @@ impl HandleCommand for FixArgs {
 }
 
 impl FixArgs {
-    /// Fixes the initial issues, which check basic files which Packit requires to run properly (for example Config.toml or Register.toml).
+    /// Fixes the initial issues, which check basic files that Packit requires to run properly (for example Config.toml or Register.toml).
     fn fix_initial(&self, verifier: &mut Verifier, repairer: &mut Repairer) {
         let mut issue_index = -1;
         while let Some(issue) = verifier.next_initial_issue().unwrap_or_exit(1) {
@@ -68,7 +68,7 @@ impl FixArgs {
         let register_dir = PackageRegister::get_path(&config.prefix_directory);
         let mut register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
-        // Make sure all specied packages exist
+        // Make sure all specified packages exist
         for package_id in &self.packages {
             let installed_directory = config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
             if register.get_package_version(package_id).is_none() && !fs::exists(installed_directory).unwrap_or_exit(1) {
