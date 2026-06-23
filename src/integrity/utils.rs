@@ -1,9 +1,10 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use std::{collections::HashSet, fs, str::FromStr};
 
 use crate::{
     config::Config,
     installer::types::{PackageId, PackageName, Version},
-    verifier::error::{Result, VerifierError},
+    integrity::error::{Result, VerifierError},
 };
 
 /// Gets all the packages stored in the prefix/packages directory.

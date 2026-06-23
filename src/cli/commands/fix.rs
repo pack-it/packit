@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::process::exit;
+use std::{fs, process::exit};
 
 use clap::Args;
 
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{QuestionResponse, ask_user, logging::error},
+        display::{QuestionResponse, ask_user, logging::error, not_found},
     },
     config::Config,
     installer::types::PackageId,
+    integrity::{Repairer, Verifier},
     register::package_register::PackageRegister,
     repositories::manager::RepositoryManager,
     utils::unwrap_or_exit::UnwrapOrExit,
-    verifier::{Repairer, Verifier},
 };
 
 /// Fixes all issues found by the check command. The user will be asked if they want to fix an issue for each issue type.
@@ -31,16 +31,14 @@ impl HandleCommand for FixArgs {
         let mut verifier = Verifier::new();
         let mut repairer = Repairer::new();
 
-        match self.packages.is_empty() {
-            true => self.fix_all(&mut verifier, &mut repairer),
-            false => self.fix_packages(&mut verifier, &mut repairer),
-        }
+        self.fix_initial(&mut verifier, &mut repairer);
+        self.fix(&mut verifier, &mut repairer);
     }
 }
 
 impl FixArgs {
-    /// Fixes all packages.
-    fn fix_all(&self, verifier: &mut Verifier, repairer: &mut Repairer) {
+    /// Fixes the initial issues, which check basic files that Packit requires to run properly (for example Config.toml or Register.toml).
+    fn fix_initial(&self, verifier: &mut Verifier, repairer: &mut Repairer) {
         let mut issue_index = -1;
         while let Some(issue) = verifier.next_initial_issue().unwrap_or_exit(1) {
             // Check if the index is the same as the previously found issue (meaning the same issue is found and the fix didn't work)
@@ -52,7 +50,7 @@ impl FixArgs {
             println!("{issue}");
             println!("{}", issue.get_fix_message());
             if ask_user(FIX_MESSAGE, QuestionResponse::Yes).unwrap_or_exit(1).is_no() {
-                return;
+                exit(0);
             }
 
             // Repair the found issues
@@ -61,17 +59,34 @@ impl FixArgs {
             // Reverse the verifier to redo the check to make sure the fix worked
             issue_index = verifier.reverse_initial_check() as i32;
         }
+    }
 
+    /// Does the normal fixes.
+    fn fix(&self, verifier: &mut Verifier, repairer: &mut Repairer) {
         let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
         let manager = RepositoryManager::new(&config);
         let register_dir = PackageRegister::get_path(&config.prefix_directory);
         let mut register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
+        // Make sure all specified packages exist
+        for package_id in &self.packages {
+            let installed_directory = config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
+            if register.get_package_version(package_id).is_none() && !fs::exists(installed_directory).unwrap_or_exit(1) {
+                not_found::register_package_version(package_id, &register);
+            }
+        }
+
+        // Fix all packages if no packages are specified
+        let packages: &Vec<PackageId> = match self.packages.is_empty() {
+            true => &register.iterate_all().map(|p| p.package_id.clone()).collect(),
+            false => &self.packages,
+        };
+
         // Retrieve and fix the issues one by one
         let mut issue_index = -1;
-        while let Some(issue) = verifier.next_issue(&register, &config).unwrap_or_exit(1) {
+        while let Some(issue) = verifier.next_issue(packages, &register, &config).unwrap_or_exit(1) {
             // Check if the index is the same as the previously found issue (meaning the same issue is found and the fix didn't work)
-            if verifier.get_general_check_index() as i32 - 1 == issue_index {
+            if verifier.get_check_index() as i32 - 1 == issue_index {
                 error!(msg: UNSUCCESSFUL_FIX_MESSAGE);
                 exit(1);
             }
@@ -89,58 +104,11 @@ impl FixArgs {
             register.save_to(&register_dir).unwrap_or_exit(1);
 
             // Reverse the verifier to redo the check to make sure the fix worked
-            issue_index = verifier.reverse_general_check() as i32;
+            issue_index = verifier.reverse_check() as i32;
         }
 
-        // Return correct message based on found issues
         if !verifier.issues_found() {
             println!("No issues were found");
         }
-
-        // Save changes
-        register.save_to(&register_dir).unwrap_or_exit(1);
-    }
-
-    /// Fixes the packages specified by the user.
-    fn fix_packages(&self, verifier: &mut Verifier, repairer: &mut Repairer) {
-        let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
-        let manager = RepositoryManager::new(&config);
-        let register_dir = PackageRegister::get_path(&config.prefix_directory);
-        let mut register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
-
-        for package_id in &self.packages {
-            // Retrieve and fix the issues one by one
-            let mut issue_index = -1;
-            while let Some(issue) = verifier.next_package_issue(package_id, &register, &config).unwrap_or_exit(1) {
-                // Check if the index is the same as the previously found issue (meaning the same issue is found and the fix didn't work)
-                if verifier.get_package_check_index() as i32 - 1 == issue_index {
-                    error!(msg: UNSUCCESSFUL_FIX_MESSAGE);
-                    exit(1);
-                }
-
-                println!("{issue}");
-                println!("{}", issue.get_fix_message());
-                if ask_user(FIX_MESSAGE, QuestionResponse::Yes).unwrap_or_exit(1).is_no() {
-                    return;
-                }
-
-                // Repair the found issues
-                repairer.fix(issue, &mut register, &config, &manager).unwrap_or_exit(1);
-
-                // Save register after each fix
-                register.save_to(&register_dir).unwrap_or_exit(1);
-
-                // Reverse the verifier to redo the check to make sure the fix worked
-                issue_index = verifier.reverse_package_check() as i32;
-            }
-
-            // Show when no errors are found for the current package
-            if !verifier.issues_found() {
-                println!("No issues were found for {package_id}");
-            }
-        }
-
-        // Save changes
-        register.save_to(&register_dir).unwrap_or_exit(1);
     }
 }

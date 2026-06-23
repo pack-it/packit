@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The install tree is now fully expanded before installation, making it clearer what will be installed.
 - Trees now perform a check for cycles, throwing an error if they detect one.
 - Update all dependencies, remove unnecessary dependency features and ensure all dependencies support MSRV 1.85.
+- When packages are specified for the `check` and `fix` commands, only those are checked when doing a package related check. Initial and general checks are now done as well in the case.
 
 ### Fixed
 - Fix package not found issue when multiple repositories have the same package but different versions.

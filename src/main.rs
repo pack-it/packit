@@ -5,12 +5,12 @@ mod builder;
 mod cli;
 mod config;
 mod installer;
+mod integrity;
 mod packager;
 mod platforms;
 mod register;
 mod repositories;
 mod utils;
-mod verifier;
 
 use crate::cli::commands::Cli;
 
