@@ -12,7 +12,7 @@ use crate::{
     installer::{InstallType, Installer, InstallerOptions, types::OptionalPackageId},
     platforms::Target,
     register::package_register::PackageRegister,
-    repositories::manager::RepositoryManager,
+    repositories::{error::RepositoryError, manager::RepositoryManager},
     utils::{duplicates, unwrap_or_exit::UnwrapOrExit},
 };
 
@@ -73,10 +73,27 @@ impl HandleCommand for InstallArgs {
         // Check if all packages exist before starting installation
         for optional_id in &self.packages {
             match optional_id.versioned() {
-                Some(package_id) if manager.read_package_version(&package_id, &Target::current()).is_ok() => continue,
-                Some(package_id) => not_found::repository_package_version(&package_id, &manager),
-                None if manager.read_package(&optional_id.name).is_ok() => continue,
-                None => not_found::repository_package(&optional_id.name, &manager),
+                // TODO: try to refactor this match
+                Some(package_id) => match manager.read_package_version(&package_id, &Target::current()) {
+                    Ok(_) => continue,
+                    Err(RepositoryError::PackageNotFoundError { reason, .. }) => {
+                        not_found::repository_package_version(&package_id, &manager, reason)
+                    },
+                    Err(e) => {
+                        error!(e, "Cannot read package {package_id}");
+                        return;
+                    },
+                },
+                None => match manager.read_package(&optional_id.name) {
+                    Ok(_) => continue,
+                    Err(RepositoryError::PackageNotFoundError { reason, .. }) => {
+                        not_found::repository_package(&optional_id.name, &manager, reason)
+                    },
+                    Err(e) => {
+                        error!(e, "Cannot read package {}", optional_id.name);
+                        return;
+                    },
+                },
             }
         }
 

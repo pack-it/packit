@@ -12,7 +12,7 @@ use crate::{
     },
     platforms::Target,
     repositories::{
-        error::{RepositoryError, Result},
+        error::{PackageNotFoundReason, RepositoryError, Result},
         provider::{self, MetadataProvider, PrebuildProvider},
         types::{Checksum, IndexMeta, PackageMeta, PackageVersionMeta, RepositoryMeta},
     },
@@ -124,6 +124,8 @@ impl<'a> RepositoryManager<'a> {
     /// Reads package metadata of the given package, containing information about the package.
     /// Returns the id of the repository and the package metadata.
     pub fn read_package(&self, package: &PackageName) -> Result<(String, PackageMeta)> {
+        let mut not_found_reasons = HashMap::new();
+
         for repository_id in self.iter_filtered_repositories_rank() {
             let provider = match self.metadata_providers.get(repository_id) {
                 Some(provider) => provider,
@@ -141,8 +143,9 @@ impl<'a> RepositoryManager<'a> {
                 },
             };
 
-            // Check if package contains the target
-            if package.get_latest_version(&Target::current()).is_err() {
+            // Check package compatibility
+            if let Some(reason) = self.check_package_compatibility(&package) {
+                not_found_reasons.insert(repository_id, reason);
                 continue;
             }
 
@@ -152,6 +155,7 @@ impl<'a> RepositoryManager<'a> {
         Err(RepositoryError::PackageNotFoundError {
             package_name: package.to_string(),
             version: None,
+            reason: PackageNotFoundReason::get_primary_reason(not_found_reasons.values()).unwrap_or(PackageNotFoundReason::NotFound),
         })
     }
 
@@ -159,12 +163,44 @@ impl<'a> RepositoryManager<'a> {
     /// Does not check if the data contains the current target.
     /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     pub fn read_repo_package(&self, repository_id: &str, package: &PackageName) -> Result<PackageMeta> {
-        self.get_metadata_provider(repository_id)?.read_package(package)
+        let package_meta = self.get_metadata_provider(repository_id)?.read_package(package)?;
+
+        if let Some(reason) = self.check_package_compatibility(&package_meta) {
+            return Err(RepositoryError::PackageNotFoundError {
+                package_name: package.to_string(),
+                version: None,
+                reason,
+            });
+        }
+
+        Ok(package_meta)
+    }
+
+    /// Checks if a package is compatible.
+    /// Returns a Some(PackageNotFoundReason) if the package is not compatible, None otherwise.
+    fn check_package_compatibility(&self, package: &PackageMeta) -> Option<PackageNotFoundReason> {
+        // Check if package contains the target
+        if package.get_latest_version(&Target::current()).is_err() {
+            return Some(PackageNotFoundReason::UnsupportedTarget);
+        }
+
+        // Check if package is supported by the current Packit version
+        if let Some(required_packit_version) = &package.required_packit_version
+            && *required_packit_version > current_packit_version()
+        {
+            return Some(PackageNotFoundReason::NotSupported {
+                requires: required_packit_version.clone(),
+            });
+        }
+
+        None
     }
 
     /// Reads package version metadata of the given package, containing dependencies and targets.
     /// Returns the id of the repository and the package version metadata.
     pub fn read_package_version(&self, package_id: &PackageId, target: &Target) -> Result<(String, PackageVersionMeta)> {
+        let mut not_found_reasons = HashMap::new();
+
         for repository_id in self.iter_filtered_repositories_rank() {
             let provider = match self.metadata_providers.get(repository_id) {
                 Some(provider) => provider,
@@ -182,14 +218,15 @@ impl<'a> RepositoryManager<'a> {
                 },
             };
 
-            // Check if package contains the target
-            if matches!(package.get_best_target(target), Err(RepositoryError::TargetError)) {
+            // Check package version compatibility
+            if let Some(reason) = self.check_package_version_compatibility(&package, target) {
+                not_found_reasons.insert(repository_id, reason);
                 continue;
             }
 
             // Validate the package before returning
             if package.has_conflicts() {
-                return Err(RepositoryError::ValidationError("Package has dependency conflicts.".to_string()));
+                return Err(RepositoryError::ValidationError("Package has conflicts in metadata.".to_string()));
             }
 
             return Ok((repository_id.clone(), package));
@@ -198,6 +235,7 @@ impl<'a> RepositoryManager<'a> {
         Err(RepositoryError::PackageNotFoundError {
             package_name: package_id.name.to_string(),
             version: Some(package_id.version.to_string()),
+            reason: PackageNotFoundReason::get_primary_reason(not_found_reasons.values()).unwrap_or(PackageNotFoundReason::NotFound),
         })
     }
 
@@ -206,14 +244,34 @@ impl<'a> RepositoryManager<'a> {
     /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     pub fn read_repo_package_version(&self, repository_id: &str, package_id: &PackageId) -> Result<PackageVersionMeta> {
         let provider = self.get_metadata_provider(repository_id)?;
+        let package = provider.read_package_version(&package_id.name, &package_id.version)?;
+
+        // Check package version compatibility
+        if let Some(reason) = self.check_package_version_compatibility(&package, &Target::current()) {
+            return Err(RepositoryError::PackageNotFoundError {
+                package_name: package_id.name.to_string(),
+                version: Some(package_id.version.to_string()),
+                reason,
+            });
+        }
 
         // Validate the package before returning
-        let package = provider.read_package_version(&package_id.name, &package_id.version)?;
         if package.has_conflicts() {
             return Err(RepositoryError::ValidationError("Package has dependency conflicts.".to_string()));
         }
 
         Ok(package)
+    }
+
+    /// Checks if a package version is compatible.
+    /// Returns a Some(PackageNotFoundReason) if the package version is not compatible, None otherwise.
+    fn check_package_version_compatibility(&self, package_version: &PackageVersionMeta, target: &Target) -> Option<PackageNotFoundReason> {
+        // Check if package contains the target
+        if matches!(package_version.get_best_target(target), Err(RepositoryError::TargetError)) {
+            return Some(PackageNotFoundReason::UnsupportedTarget);
+        }
+
+        None
     }
 
     /// Reads a file of the given package from the given repository.

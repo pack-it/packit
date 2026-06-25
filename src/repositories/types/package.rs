@@ -19,6 +19,7 @@ pub struct PackageMeta {
     pub description: String,
     pub homepage: Option<String>,
     pub versions: Vec<Version>,
+    pub required_packit_version: Option<Version>,
     pub supported_versions: HashMap<TargetBounds, VersionIntervals>,
 }
 

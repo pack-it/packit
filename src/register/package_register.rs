@@ -434,6 +434,7 @@ pub mod tests {
             description: "-".to_string(),
             homepage: None,
             versions: vec![package_id.version.clone()],
+            required_packit_version: None,
             supported_versions: HashMap::from([(current_target_bounds, version_intervals)]),
         }
     }

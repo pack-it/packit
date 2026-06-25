@@ -5,7 +5,7 @@ use crate::{
     cli::display::logging::error,
     installer::types::{PackageId, PackageName, Version},
     register::package_register::PackageRegister,
-    repositories::manager::RepositoryManager,
+    repositories::{error::PackageNotFoundReason, manager::RepositoryManager},
     utils::{fuzzy, unwrap_or_exit::UnwrapOrExit},
 };
 
@@ -42,7 +42,7 @@ fn display_versions<'a>(versions: impl Iterator<Item = &'a Version>) -> ! {
 
 /// Shows an error that the package (name) cannot be found (in the register) and a fuzzy alternative. Then exits at the end.
 pub fn register_package(package_name: &PackageName, register: &PackageRegister) -> ! {
-    error!(msg: "Package '{}' cannot be found", package_name);
+    error!(msg: "Package '{package_name}' cannot be found");
 
     let fuzzy_match = fuzzy::min_search(register.iterate_package_names(), package_name);
     if let Some(fuzzy_match) = fuzzy_match {
@@ -53,12 +53,14 @@ pub fn register_package(package_name: &PackageName, register: &PackageRegister) 
 }
 
 /// Shows an error that the package (name) cannot be found (in the repository) and a fuzzy alternative. Then exits at the end.
-pub fn repository_package(package_name: &PackageName, manager: &RepositoryManager) -> ! {
-    error!(msg: "Package '{package_name}' cannot be found.");
+pub fn repository_package(package_name: &PackageName, manager: &RepositoryManager, reason: PackageNotFoundReason) -> ! {
+    error!(msg: "Package '{package_name}' cannot be found: {reason}");
 
-    let fuzzy_match = fuzzy::repository_search(manager, package_name).unwrap_or_exit(1);
-    if let Some(fuzzy_match) = fuzzy_match {
-        println!("Did you mean: '{fuzzy_match}'?");
+    if matches!(reason, PackageNotFoundReason::NotFound) {
+        let fuzzy_match = fuzzy::repository_search(manager, package_name).unwrap_or_exit(1);
+        if let Some(fuzzy_match) = fuzzy_match {
+            println!("Did you mean: '{fuzzy_match}'?");
+        }
     }
 
     exit(1);
@@ -78,13 +80,16 @@ pub fn register_package_version(package_id: &PackageId, register: &PackageRegist
 }
 
 /// Shows an error that the package version cannot be found (in the repository) and a fuzzy alternative. Then exits at the end.
-pub fn repository_package_version(package_id: &PackageId, manager: &RepositoryManager) -> ! {
-    error!(msg: "Package '{}' cannot be found.", package_id);
-    repository_version(&package_id.name, manager);
+pub fn repository_package_version(package_id: &PackageId, manager: &RepositoryManager, reason: PackageNotFoundReason) -> ! {
+    error!(msg: "Package '{package_id}' cannot be found: {reason}");
 
-    let fuzzy_match = fuzzy::repository_search(manager, &package_id.name).unwrap_or_exit(1);
-    if let Some(fuzzy_match) = fuzzy_match {
-        println!("Did you mean: '{fuzzy_match}'?");
+    if matches!(reason, PackageNotFoundReason::NotFound) {
+        repository_version(&package_id.name, manager);
+
+        let fuzzy_match = fuzzy::repository_search(manager, &package_id.name).unwrap_or_exit(1);
+        if let Some(fuzzy_match) = fuzzy_match {
+            println!("Did you mean: '{fuzzy_match}'?");
+        }
     }
 
     exit(1);

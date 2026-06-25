@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use thiserror::Error;
 
-use crate::{installer::types::PackageId, utils::ioerror};
+use crate::{
+    installer::types::{PackageId, Version},
+    utils::ioerror,
+};
 
 /// The errors that occur when requesting metadata from a repository.
 #[derive(Error, Debug)]
@@ -16,10 +19,11 @@ pub enum RepositoryError {
         repository_id: String,
     },
 
-    #[error("Cannot find package '{package_name}' with version '{}' in any repository", version.as_deref().unwrap_or("any"))]
+    #[error("Cannot find package '{package_name}' with version '{}': {reason}", version.as_deref().unwrap_or("any"))]
     PackageNotFoundError {
         package_name: String,
         version: Option<String>,
+        reason: PackageNotFoundReason,
     },
 
     #[error("Cannot find prebuild of package '{package_id}' revision {revision}")]
@@ -60,3 +64,50 @@ pub enum RepositoryError {
 }
 
 pub(super) type Result<T> = std::result::Result<T, RepositoryError>;
+
+/// The reasons why a package cannot be found.
+#[derive(Error, Clone, Debug)]
+pub enum PackageNotFoundReason {
+    #[error("cannot be found in any repository")]
+    NotFound,
+
+    #[error("not available for the current target")]
+    UnsupportedTarget,
+
+    #[error("not supported for the current Packit version, requires Packit {requires}")]
+    NotSupported {
+        requires: Version,
+    },
+}
+
+impl PackageNotFoundReason {
+    /// Gets the primary reason from an iterator over reasons
+    pub fn get_primary_reason<'a>(reasons: impl Iterator<Item = &'a PackageNotFoundReason>) -> Option<PackageNotFoundReason> {
+        let mut primary = None;
+
+        for next in reasons {
+            match &primary {
+                // If the primary is UnsupportedTarget, only use new one if the next is not NotFound
+                Some(PackageNotFoundReason::UnsupportedTarget) => {
+                    if !matches!(next, PackageNotFoundReason::NotFound) {
+                        primary = Some(next.clone());
+                    }
+                },
+
+                // If the primary is NotSupported, only use new one if next is NotSupported and the required version is lower
+                Some(PackageNotFoundReason::NotSupported { requires }) => {
+                    if let PackageNotFoundReason::NotSupported { requires: requires_next } = next
+                        && requires_next < requires
+                    {
+                        primary = Some(next.clone());
+                    }
+                },
+
+                // If the current primary is empty or not found, use the new one
+                Some(PackageNotFoundReason::NotFound) | None => primary = Some(next.clone()),
+            }
+        }
+
+        primary
+    }
+}
