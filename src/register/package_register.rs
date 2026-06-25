@@ -442,6 +442,7 @@ pub mod tests {
     fn create_package_version_meta(package_id: &PackageId) -> PackageVersionMeta {
         PackageVersionMeta {
             version: package_id.version.clone(),
+            required_packit_version: None,
             dependencies: Vec::new(),
             build_dependencies: Vec::new(),
             targets: HashMap::new(),

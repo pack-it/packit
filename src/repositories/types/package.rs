@@ -24,8 +24,7 @@ pub struct PackageMeta {
 }
 
 impl PackageMeta {
-    /// Gets the latest supported version for the current target.
-    pub fn get_latest_version(&self, target: &Target) -> Result<&Version> {
+    pub fn get_supported_versions(&self, target: &Target) -> Result<Vec<&Version>> {
         let target = match TargetBounds::get_best_target(target, self.supported_versions.keys().collect()) {
             Some(target) => target,
             None => return Err(RepositoryError::TargetError),
@@ -34,24 +33,27 @@ impl PackageMeta {
         let supported = self.supported_versions.get(target).ok_or(RepositoryError::TargetError)?;
 
         // The versions vec isn't necessary in order, so we need to keep track of the current highest version
-        let mut current_highest: Option<&Version> = None;
+        let mut versions = Vec::new();
         for version in &self.versions {
             // Continue if the version is not supported by the current target
             if !supported.covers(version) {
                 continue;
             }
 
-            current_highest = match current_highest {
-                Some(highest) if highest < version => Some(version),
-                None => Some(version),
-                _ => continue,
-            };
+            versions.push(version);
+        }
+        versions.sort();
+
+        // Return a support error if no supported versions are found
+        if versions.is_empty() {
+            return Err(RepositoryError::SupportError(self.name.to_string()));
         }
 
-        current_highest.ok_or(RepositoryError::SupportError(self.name.to_string()))
+        Ok(versions)
     }
 
     /// Gets the latest supported version for the current target which also satisfies the given dependency.
+    // TODO: Move to manager and use same checks as read_latest_supported_version
     pub fn get_latest_dependency_version(&self, dependency: &Dependency, target: &Target) -> Result<&Version> {
         let target = match TargetBounds::get_best_target(target, self.supported_versions.keys().collect()) {
             Some(target) => target,

@@ -85,10 +85,10 @@ impl SearchArgs {
         };
 
         // Get latest version of package
-        let latest_version = match package.get_latest_version(&Target::current()) {
+        let latest_version = match manager.read_latest_supported_version(&repository_id, &package, &Target::current()) {
             Ok(version) => version,
-            Err(RepositoryError::TargetError) => {
-                println!("Package does not exist for current target");
+            Err(RepositoryError::PackageNotFoundError { reason, .. }) => {
+                println!("Package cannot be found: {reason}");
                 return;
             },
             Err(e) => {
@@ -123,7 +123,7 @@ impl SearchArgs {
         // Print package information
         println!("{} ({})", package.name.bold().blue(), package_version.version);
         println!("{}", package.description.green());
-        println!("Latest version: {}", latest_version.to_string().red());
+        println!("Latest version: {}", latest_version.version.to_string().red());
         println!("Dependencies: {}", dependencies.join(", ").red());
         println!("License: {}", package_version.license.to_string().red());
 

@@ -207,9 +207,9 @@ pub fn fix_missing_dependencies(
         let package = match register.get_latest_satisfying_package(&missing_dependency) {
             Some(package) => package.package_id.clone(),
             None => {
-                let (_, package_metadata) = manager.read_package(missing_dependency.get_name())?;
-                let latest_version = package_metadata.get_latest_version(&Target::current())?;
-                PackageId::new(missing_dependency.get_name().clone(), latest_version.clone())
+                let (repository_id, package_metadata) = manager.read_package(missing_dependency.get_name())?;
+                let version_metadata = manager.read_latest_supported_version(&repository_id, &package_metadata, &Target::current())?;
+                PackageId::new(missing_dependency.get_name().clone(), version_metadata.version)
             },
         };
 

@@ -19,6 +19,7 @@ use crate::{
 #[derive(Serialize, Deserialize, Debug)]
 pub struct PackageVersionMeta {
     pub version: Version,
+    pub required_packit_version: Option<Version>,
 
     #[serde(default, skip_serializing_if = "Licenses::is_unknown")]
     pub license: Licenses,

@@ -98,11 +98,7 @@ impl<'a> RepositoryManager<'a> {
             None => {
                 // Read package metadata first
                 let (repository_id, package_metadata) = self.read_package(&package.name)?;
-
-                // Read latest version package version metadata
-                let latest_version = package_metadata.get_latest_version(target)?;
-                let package_id = PackageId::new(package.name.clone(), latest_version.clone());
-                let version_metadata = self.read_repo_package_version(&repository_id, &package_id)?;
+                let version_metadata = self.read_latest_supported_version(&repository_id, &package_metadata, target)?;
 
                 Ok((repository_id, package_metadata, version_metadata))
             },
@@ -180,7 +176,7 @@ impl<'a> RepositoryManager<'a> {
     /// Returns a Some(PackageNotFoundReason) if the package is not compatible, None otherwise.
     fn check_package_compatibility(&self, package: &PackageMeta) -> Option<PackageNotFoundReason> {
         // Check if package contains the target
-        if package.get_latest_version(&Target::current()).is_err() {
+        if package.get_supported_versions(&Target::current()).is_err() {
             return Some(PackageNotFoundReason::UnsupportedTarget);
         }
 
@@ -271,6 +267,15 @@ impl<'a> RepositoryManager<'a> {
             return Some(PackageNotFoundReason::UnsupportedTarget);
         }
 
+        // Check if package version is supported by the current Packit version
+        if let Some(required_packit_version) = &package_version.required_packit_version
+            && *required_packit_version > current_packit_version()
+        {
+            return Some(PackageNotFoundReason::NotSupported {
+                requires: required_packit_version.clone(),
+            });
+        }
+
         None
     }
 
@@ -317,6 +322,30 @@ impl<'a> RepositoryManager<'a> {
         target: &Target,
     ) -> Result<(ArchiveExtension, Bytes)> {
         self.get_prebuid_provider(repository_id)?.read_prebuild(package, revision, target)
+    }
+
+    /// Gets the latest supported package version for the given package metadata.
+    pub fn read_latest_supported_version(&self, repository_id: &str, package: &PackageMeta, target: &Target) -> Result<PackageVersionMeta> {
+        let supported_versions = package.get_supported_versions(target)?;
+        let mut supported_versions = supported_versions.iter().rev();
+
+        let mut reasons = Vec::new();
+        loop {
+            let latest_version = *supported_versions.next().ok_or(RepositoryError::PackageNotFoundError {
+                package_name: package.name.to_string(),
+                version: None,
+                reason: PackageNotFoundReason::get_primary_reason(reasons.iter()).unwrap_or(PackageNotFoundReason::NotFound),
+            })?;
+
+            let package_id = PackageId::new(package.name.clone(), latest_version.clone());
+            match self.read_repo_package_version(&repository_id, &package_id) {
+                Ok(package_version) => {
+                    return Ok(package_version);
+                },
+                Err(RepositoryError::PackageNotFoundError { reason, .. }) => reasons.push(reason),
+                Err(e) => return Err(e),
+            }
+        }
     }
 
     /// Iterates over the repositories rank. Filters the unsupported repositories from the list.

@@ -53,8 +53,9 @@ impl ListArgs {
         let manager = RepositoryManager::new(config);
         let mut updatables = Vec::new();
         for (package_name, package) in register.iterate_packages() {
-            let (_, package_meta) = manager.read_package(&package_name).unwrap_or_exit(1);
-            let latest_available_version = package_meta.get_latest_version(&Target::current()).unwrap_or_exit(1);
+            let (repository_id, package_meta) = manager.read_package(&package_name).unwrap_or_exit(1);
+            let version_meta = manager.read_latest_supported_version(&repository_id, &package_meta, &Target::current()).unwrap_or_exit(1);
+            let latest_available_version = &version_meta.version;
 
             // Get the latest installed version
             let latest_installed_version = package.versions.keys().max().expect("Expected a latest installed version");

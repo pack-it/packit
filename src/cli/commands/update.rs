@@ -44,11 +44,11 @@ impl HandleCommand for UpdateArgs {
             None => not_found::register_package(&self.optional_id.name, &register),
         }
 
-        let (_, package_meta) = manager.read_package(&self.optional_id.name).unwrap_or_exit(1);
+        let (repository_id, package_meta) = manager.read_package(&self.optional_id.name).unwrap_or_exit(1);
 
         let new_version = match &self.new_version {
             Some(version) => version,
-            None => package_meta.get_latest_version(&Target::current()).unwrap_or_exit(1),
+            None => &manager.read_latest_supported_version(&repository_id, &package_meta, &Target::current()).unwrap_or_exit(1).version,
         };
 
         // Check if the new version exists
