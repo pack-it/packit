@@ -74,9 +74,9 @@ impl HandleCommand for InstallArgs {
         for optional_id in &self.packages {
             match optional_id.versioned() {
                 Some(package_id) if manager.read_package_version(&package_id, &Target::current()).is_ok() => continue,
-                Some(package_id) => not_found::repository_package_version(&package_id, &manager, &config),
+                Some(package_id) => not_found::repository_package_version(&package_id, &manager),
                 None if manager.read_package(&optional_id.name).is_ok() => continue,
-                None => not_found::repository_package(&optional_id.name, &manager, &config),
+                None => not_found::repository_package(&optional_id.name, &manager),
             }
         }
 

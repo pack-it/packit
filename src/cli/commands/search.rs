@@ -48,12 +48,7 @@ impl SearchArgs {
 
         let regex = Regex::new(&self.query).unwrap_or_exit_msg("Invalid regex pattern", 1);
         let mut matches = HashSet::new();
-        for repository_id in &config.repositories_rank {
-            // Skip unsupported repositories
-            if manager.get_unsupported_repositories().contains_key(repository_id) {
-                continue;
-            }
-
+        for repository_id in manager.iter_filtered_repositories_rank() {
             let index_meta = manager.read_index_metadata(repository_id).unwrap_or_exit(1);
             for package in index_meta.supported_packages {
                 if regex.is_match(&package) {
@@ -82,7 +77,7 @@ impl SearchArgs {
         let manager = RepositoryManager::new(&config);
         let (repository_id, package, package_version) = match manager.read_package_and_version(&optional_id, &Target::current()) {
             Ok(package) => package,
-            Err(RepositoryError::PackageNotFoundError { .. }) => not_found::repository_package(&optional_id.name, &manager, &config),
+            Err(RepositoryError::PackageNotFoundError { .. }) => not_found::repository_package(&optional_id.name, &manager),
             Err(e) => {
                 error!(e, "Cannot read package");
                 return;

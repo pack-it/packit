@@ -41,35 +41,34 @@ impl<'a> RepositoryManager<'a> {
                 continue;
             };
 
+            // Read repository metadata, or skip repository is metadata cannot be read
             let repository_meta = match provider.read_repository_metadata() {
-                Ok(repository_meta) => Some(repository_meta),
+                Ok(repository_meta) => repository_meta,
                 Err(e) => {
-                    error!(e, "Cannot retrieve repository metadata of repository {id}");
-                    None
+                    error!(e, "Cannot retrieve repository metadata of repository {id}, ignoring repository...");
+                    continue;
                 },
             };
 
-            if let Some(repository_meta) = &repository_meta {
-                if let Some(required_packit_version) = &repository_meta.required_packit_version {
-                    if *required_packit_version > current_packit_version() {
-                        unsupported_repositories.insert(id.to_string(), repository_meta.clone());
-                        warning!("Repository '{id}' requires Packit version {required_packit_version} or higher, ignoring repository...");
-                        continue;
-                    }
+            // Check if the repository works for the current Packit version
+            if let Some(required_packit_version) = &repository_meta.required_packit_version {
+                if *required_packit_version > current_packit_version() {
+                    unsupported_repositories.insert(id.to_string(), repository_meta.clone());
+                    warning!("Repository '{id}' requires Packit version {required_packit_version} or higher, ignoring repository...");
+                    continue;
                 }
             }
 
             metadata_providers.insert(id.clone(), provider);
 
-            if let Some(repository_meta) = repository_meta {
-                let prebuild_provider = provider::create_prebuild_provider(repository, repository_meta);
-                let Some(prebuild_provider) = prebuild_provider else {
-                    warning!("Cannot create prebuild provider for repository {id}.");
-                    continue;
-                };
+            // Try to create the prebuild provider
+            let prebuild_provider = provider::create_prebuild_provider(repository, repository_meta);
+            let Some(prebuild_provider) = prebuild_provider else {
+                warning!("Cannot create prebuild provider for repository {id}.");
+                continue;
+            };
 
-                prebuild_providers.insert(id.clone(), prebuild_provider);
-            }
+            prebuild_providers.insert(id.clone(), prebuild_provider);
         }
 
         Self {
@@ -125,12 +124,7 @@ impl<'a> RepositoryManager<'a> {
     /// Reads package metadata of the given package, containing information about the package.
     /// Returns the id of the repository and the package metadata.
     pub fn read_package(&self, package: &PackageName) -> Result<(String, PackageMeta)> {
-        for repository_id in &self.config.repositories_rank {
-            // Skip unsupported repositories
-            if self.unsupported_repositories.contains_key(repository_id) {
-                continue;
-            }
-
+        for repository_id in self.iter_filtered_repositories_rank() {
             let provider = match self.metadata_providers.get(repository_id) {
                 Some(provider) => provider,
                 None => {
@@ -171,12 +165,7 @@ impl<'a> RepositoryManager<'a> {
     /// Reads package version metadata of the given package, containing dependencies and targets.
     /// Returns the id of the repository and the package version metadata.
     pub fn read_package_version(&self, package_id: &PackageId, target: &Target) -> Result<(String, PackageVersionMeta)> {
-        for repository_id in &self.config.repositories_rank {
-            // Skip unsupported repositories
-            if self.unsupported_repositories.contains_key(repository_id) {
-                continue;
-            }
-
+        for repository_id in self.iter_filtered_repositories_rank() {
             let provider = match self.metadata_providers.get(repository_id) {
                 Some(provider) => provider,
                 None => {
@@ -270,6 +259,12 @@ impl<'a> RepositoryManager<'a> {
         target: &Target,
     ) -> Result<(ArchiveExtension, Bytes)> {
         self.get_prebuid_provider(repository_id)?.read_prebuild(package, revision, target)
+    }
+
+    /// Iterates over the repositories rank. Filters the unsupported repositories from the list.
+    /// Returns an iterator that only contains the ids of working repositories.
+    pub fn iter_filtered_repositories_rank(&self) -> impl Iterator<Item = &String> {
+        self.config.repositories_rank.iter().filter(|x| !self.unsupported_repositories.contains_key(*x))
     }
 
     /// Gets the list of repositories that are not supported by this Packit version.
