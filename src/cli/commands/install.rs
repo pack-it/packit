@@ -7,13 +7,14 @@ use crate::{
     cli::{
         commands::HandleCommand,
         display::{logging::error, not_found},
+        parameter_checks,
     },
     config::Config,
     installer::{InstallType, Installer, InstallerOptions, types::OptionalPackageId},
     platforms::Target,
     register::package_register::PackageRegister,
     repositories::manager::RepositoryManager,
-    utils::{duplicates, unwrap_or_exit::UnwrapOrExit},
+    utils::unwrap_or_exit::UnwrapOrExit,
 };
 
 /// Installs the specified packages, if a version is given that version will be installed,
@@ -53,7 +54,7 @@ pub struct InstallArgs {
 impl HandleCommand for InstallArgs {
     fn handle(&self) {
         // Check for duplicates, because installing twice will result in a confusing error
-        let duplicates = duplicates::get_duplicates(&self.packages);
+        let duplicates = parameter_checks::get_duplicates(&self.packages);
         if !duplicates.is_empty() {
             let mut duplicate_string = String::new();
             for duplicate in duplicates {

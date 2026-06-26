@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{fs, process::exit};
+use std::process::exit;
 
 use clap::Args;
 
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{QuestionResponse, ask_user, logging::error, not_found},
+        display::{QuestionResponse, ask_user, logging::error},
+        parameter_checks,
     },
     config::Config,
-    installer::types::PackageId,
+    installer::types::{OptionalPackageId, PackageId},
     integrity::{Repairer, Verifier},
     register::package_register::PackageRegister,
     repositories::manager::RepositoryManager,
@@ -20,7 +21,7 @@ use crate::{
 #[derive(Args, Debug)]
 pub struct FixArgs {
     /// A list of packages to fix. Could be empty, then all packages are fixed
-    pub packages: Vec<PackageId>,
+    pub packages: Vec<OptionalPackageId>,
 }
 
 const FIX_MESSAGE: &str = "Would you like to automatically apply the fix above?";
@@ -68,18 +69,13 @@ impl FixArgs {
         let register_dir = PackageRegister::get_path(&config.prefix_directory);
         let mut register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
-        // Make sure all specified packages exist
-        for package_id in &self.packages {
-            let installed_directory = config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
-            if register.get_package_version(package_id).is_none() && !fs::exists(installed_directory).unwrap_or_exit(1) {
-                not_found::register_package_version(package_id, &register);
-            }
-        }
+        // Get the package ids
+        let package_ids = parameter_checks::expand_optional_ids(&register, &config, &self.packages);
 
         // Fix all packages if no packages are specified
-        let packages: &Vec<PackageId> = match self.packages.is_empty() {
+        let packages: &Vec<PackageId> = match package_ids.is_empty() {
             true => &register.iterate_all().map(|p| p.package_id.clone()).collect(),
-            false => &self.packages,
+            false => &package_ids,
         };
 
         // Retrieve and fix the issues one by one
