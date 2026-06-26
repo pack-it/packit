@@ -38,8 +38,11 @@ pub enum RepositoryError {
     #[error("Cannot find target for package.")]
     TargetError,
 
-    #[error("Dependency '{0}' cannot be satisfied by the current package repository for the current target.")]
-    DependencySupportError(String),
+    #[error("Dependency '{dependency}' cannot be satisfied: {reason}")]
+    DependencyNotFoundError {
+        dependency: String,
+        reason: PackageNotFoundReason,
+    },
 
     #[error("No supported version for the current target could be found for package '{0}'.")]
     SupportError(String),

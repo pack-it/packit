@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    installer::types::{Dependency, PackageName, Version, VersionIntervals},
+    installer::types::{PackageName, Version, VersionIntervals},
     platforms::Target,
     repositories::{
         error::{RepositoryError, Result},
@@ -50,33 +50,5 @@ impl PackageMeta {
         }
 
         Ok(versions)
-    }
-
-    /// Gets the latest supported version for the current target which also satisfies the given dependency.
-    // TODO: Move to manager and use same checks as read_latest_supported_version
-    pub fn get_latest_dependency_version(&self, dependency: &Dependency, target: &Target) -> Result<&Version> {
-        let target = match TargetBounds::get_best_target(target, self.supported_versions.keys().collect()) {
-            Some(target) => target,
-            None => return Err(RepositoryError::TargetError),
-        };
-
-        let supported = self.supported_versions.get(target).ok_or(RepositoryError::TargetError)?;
-
-        // The versions vec isn't necessary in order, so we need to keep track of the current highest version
-        let mut current_highest: Option<&Version> = None;
-        for version in &self.versions {
-            // Continue if the dependency is not satisfied or if the version is not supported by the current target
-            if !dependency.satisfied(&self.name, version) || !supported.covers(version) {
-                continue;
-            }
-
-            current_highest = match current_highest {
-                Some(highest) if highest < version => Some(version),
-                None => Some(version),
-                _ => continue,
-            };
-        }
-
-        current_highest.ok_or(RepositoryError::DependencySupportError(dependency.to_string()))
     }
 }

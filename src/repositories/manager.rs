@@ -7,7 +7,7 @@ use crate::{
     cli::display::logging::{debug, error, warning},
     config::Config,
     installer::{
-        types::{OptionalPackageId, PackageId, PackageName},
+        types::{Dependency, OptionalPackageId, PackageId, PackageName},
         unpack::ArchiveExtension,
     },
     platforms::Target,
@@ -334,6 +334,36 @@ impl<'a> RepositoryManager<'a> {
             let latest_version = *supported_versions.next().ok_or(RepositoryError::PackageNotFoundError {
                 package_name: package.name.to_string(),
                 version: None,
+                reason: PackageNotFoundReason::get_primary_reason(reasons.iter()).unwrap_or(PackageNotFoundReason::NotFound),
+            })?;
+
+            let package_id = PackageId::new(package.name.clone(), latest_version.clone());
+            match self.read_repo_package_version(&repository_id, &package_id) {
+                Ok(package_version) => {
+                    return Ok(package_version);
+                },
+                Err(RepositoryError::PackageNotFoundError { reason, .. }) => reasons.push(reason),
+                Err(e) => return Err(e),
+            }
+        }
+    }
+
+    /// Gets the latest supported package version for the given package metadata that satisfies the given dependency.
+    // TODO: change name of this function
+    pub fn read_latest_supported_dependency_version(
+        &self,
+        repository_id: &str,
+        package: &PackageMeta,
+        dependency: &Dependency,
+        target: &Target,
+    ) -> Result<PackageVersionMeta> {
+        let supported_versions = package.get_supported_versions(target)?;
+        let mut supported_versions = supported_versions.iter().filter(|version| dependency.satisfied(&package.name, version)).rev();
+
+        let mut reasons = Vec::new();
+        loop {
+            let latest_version = *supported_versions.next().ok_or(RepositoryError::DependencyNotFoundError {
+                dependency: dependency.to_string(),
                 reason: PackageNotFoundReason::get_primary_reason(reasons.iter()).unwrap_or(PackageNotFoundReason::NotFound),
             })?;
 

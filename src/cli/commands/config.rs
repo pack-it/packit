@@ -190,7 +190,7 @@ impl ConfigArgs {
             println!("Repository provider: {}, url: {}", repository.provider, repository.url);
 
             if let Some(required_packit_version) = metadata.required_packit_version {
-                println!("Required Packit Version: {required_packit_version}");
+                println!("Required Packit Version: {}", required_packit_version.to_string().green());
             }
         }
     }

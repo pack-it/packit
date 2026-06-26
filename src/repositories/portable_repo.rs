@@ -174,18 +174,17 @@ impl<'a> PortableRepoCreator<'a> {
 
         let mut package_queue = VecDeque::new();
         for package_id in included_packages {
-            package_queue.push_back(package_id);
+            let (repository_id, version_meta) = self.repository_manager.read_package_version(&package_id, &self.target)?;
+            package_queue.push_back((package_id, repository_id, version_meta));
         }
 
-        while let Some(package_id) = package_queue.pop_front() {
+        while let Some((package_id, repository_id, version_meta)) = package_queue.pop_front() {
             // Continue if we've already seen the package
             if all_packages.contains(&package_id) {
                 continue;
             }
 
             let package_name = package_id.name.clone();
-
-            let (repository_id, package_version) = self.repository_manager.read_package_version(&package_id, &self.target)?;
 
             // Check if the package name was previously requested from a different repository
             if package_index.contains_key(&package_name) && package_index[&package_name] != repository_id {
@@ -201,20 +200,25 @@ impl<'a> PortableRepoCreator<'a> {
                 continue;
             }
 
-            let target = package_version.get_target(&package_version.get_best_target(&self.target)?)?;
+            let target = version_meta.get_target(&version_meta.get_best_target(&self.target)?)?;
 
-            let dependencies = package_version.dependencies.iter().chain(target.dependencies.iter());
+            let dependencies = version_meta.dependencies.iter().chain(target.dependencies.iter());
             let dependencies: Vec<&Dependency> = match self.exclude_prebuilds {
-                true => dependencies.chain(package_version.build_dependencies.iter()).chain(target.build_dependencies.iter()).collect(),
+                true => dependencies.chain(version_meta.build_dependencies.iter()).chain(target.build_dependencies.iter()).collect(),
                 false => dependencies.collect(),
             };
 
             // Add the dependencies to the queue
             for dependency in dependencies {
-                let (_, package_metadata) = self.repository_manager.read_package(dependency.get_name())?;
-                let version = package_metadata.get_latest_dependency_version(dependency, &self.target)?;
-                let dependency_id = PackageId::new(dependency.get_name().clone(), version.clone());
-                package_queue.push_back(dependency_id);
+                let (repository_id, package_meta) = self.repository_manager.read_package(dependency.get_name())?;
+                let version_meta = self.repository_manager.read_latest_supported_dependency_version(
+                    &repository_id,
+                    &package_meta,
+                    dependency,
+                    &self.target,
+                )?;
+                let dependency_id = PackageId::new(dependency.get_name().clone(), version_meta.version.clone());
+                package_queue.push_back((dependency_id, repository_id, version_meta));
             }
         }
 
