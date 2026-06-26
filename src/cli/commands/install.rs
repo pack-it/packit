@@ -72,29 +72,16 @@ impl HandleCommand for InstallArgs {
 
         // Check if all packages exist before starting installation
         for optional_id in &self.packages {
-            match optional_id.versioned() {
-                // TODO: try to refactor this match
-                Some(package_id) => match manager.read_package_version(&package_id, &Target::current()) {
-                    Ok(_) => continue,
-                    Err(RepositoryError::PackageNotFoundError { reason, .. }) => {
-                        not_found::repository_package_version(&package_id, &manager, reason)
-                    },
-                    Err(e) => {
-                        error!(e, "Cannot read package {package_id}");
-                        return;
-                    },
+            match manager.read_package_and_version(&optional_id, &Target::current()) {
+                Ok(package) => package,
+                Err(RepositoryError::PackageNotFoundError { reason, .. }) => {
+                    not_found::repository_optional_package(optional_id, &manager, reason)
                 },
-                None => match manager.read_package(&optional_id.name) {
-                    Ok(_) => continue,
-                    Err(RepositoryError::PackageNotFoundError { reason, .. }) => {
-                        not_found::repository_package(&optional_id.name, &manager, reason)
-                    },
-                    Err(e) => {
-                        error!(e, "Cannot read package {}", optional_id.name);
-                        return;
-                    },
+                Err(e) => {
+                    error!(e, "Cannot read package");
+                    return;
                 },
-            }
+            };
         }
 
         // Determine the install type. Note that clap already check if build and build-all are both set (which should not be possible).

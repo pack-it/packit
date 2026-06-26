@@ -85,29 +85,30 @@ pub enum PackageNotFoundReason {
 
 impl PackageNotFoundReason {
     /// Gets the primary reason from an iterator over reasons
-    pub fn get_primary_reason<'a>(reasons: impl Iterator<Item = &'a PackageNotFoundReason>) -> Option<PackageNotFoundReason> {
-        let mut primary = None;
+    /// If the iterator has no items, PackageNotFoundReason::NotFound is returned.
+    pub fn get_primary_reason<'a>(reasons: impl Iterator<Item = &'a PackageNotFoundReason>) -> PackageNotFoundReason {
+        let mut primary = PackageNotFoundReason::NotFound;
 
         for next in reasons {
             match &primary {
                 // If the primary is UnsupportedTarget, only use new one if the next is not NotFound
-                Some(PackageNotFoundReason::UnsupportedTarget) => {
+                PackageNotFoundReason::UnsupportedTarget => {
                     if !matches!(next, PackageNotFoundReason::NotFound) {
-                        primary = Some(next.clone());
+                        primary = next.clone();
                     }
                 },
 
                 // If the primary is NotSupported, only use new one if next is NotSupported and the required version is lower
-                Some(PackageNotFoundReason::NotSupported { requires }) => {
+                PackageNotFoundReason::NotSupported { requires } => {
                     if let PackageNotFoundReason::NotSupported { requires: requires_next } = next
                         && requires_next < requires
                     {
-                        primary = Some(next.clone());
+                        primary = next.clone();
                     }
                 },
 
-                // If the current primary is empty or not found, use the new one
-                Some(PackageNotFoundReason::NotFound) | None => primary = Some(next.clone()),
+                // If the current primary is not found, always use the new one
+                PackageNotFoundReason::NotFound => primary = next.clone(),
             }
         }
 

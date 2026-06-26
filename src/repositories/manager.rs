@@ -151,7 +151,7 @@ impl<'a> RepositoryManager<'a> {
         Err(RepositoryError::PackageNotFoundError {
             package_name: package.to_string(),
             version: None,
-            reason: PackageNotFoundReason::get_primary_reason(not_found_reasons.values()).unwrap_or(PackageNotFoundReason::NotFound),
+            reason: PackageNotFoundReason::get_primary_reason(not_found_reasons.values()),
         })
     }
 
@@ -231,7 +231,7 @@ impl<'a> RepositoryManager<'a> {
         Err(RepositoryError::PackageNotFoundError {
             package_name: package_id.name.to_string(),
             version: Some(package_id.version.to_string()),
-            reason: PackageNotFoundReason::get_primary_reason(not_found_reasons.values()).unwrap_or(PackageNotFoundReason::NotFound),
+            reason: PackageNotFoundReason::get_primary_reason(not_found_reasons.values()),
         })
     }
 
@@ -334,14 +334,12 @@ impl<'a> RepositoryManager<'a> {
             let latest_version = *supported_versions.next().ok_or(RepositoryError::PackageNotFoundError {
                 package_name: package.name.to_string(),
                 version: None,
-                reason: PackageNotFoundReason::get_primary_reason(reasons.iter()).unwrap_or(PackageNotFoundReason::NotFound),
+                reason: PackageNotFoundReason::get_primary_reason(reasons.iter()),
             })?;
 
             let package_id = PackageId::new(package.name.clone(), latest_version.clone());
             match self.read_repo_package_version(&repository_id, &package_id) {
-                Ok(package_version) => {
-                    return Ok(package_version);
-                },
+                Ok(package_version) => return Ok(package_version),
                 Err(RepositoryError::PackageNotFoundError { reason, .. }) => reasons.push(reason),
                 Err(e) => return Err(e),
             }
@@ -364,14 +362,12 @@ impl<'a> RepositoryManager<'a> {
         loop {
             let latest_version = *supported_versions.next().ok_or(RepositoryError::DependencyNotFoundError {
                 dependency: dependency.to_string(),
-                reason: PackageNotFoundReason::get_primary_reason(reasons.iter()).unwrap_or(PackageNotFoundReason::NotFound),
+                reason: PackageNotFoundReason::get_primary_reason(reasons.iter()),
             })?;
 
             let package_id = PackageId::new(package.name.clone(), latest_version.clone());
             match self.read_repo_package_version(&repository_id, &package_id) {
-                Ok(package_version) => {
-                    return Ok(package_version);
-                },
+                Ok(package_version) => return Ok(package_version),
                 Err(RepositoryError::PackageNotFoundError { reason, .. }) => reasons.push(reason),
                 Err(e) => return Err(e),
             }

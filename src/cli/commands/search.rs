@@ -77,7 +77,9 @@ impl SearchArgs {
         let manager = RepositoryManager::new(&config);
         let (repository_id, package, package_version) = match manager.read_package_and_version(&optional_id, &Target::current()) {
             Ok(package) => package,
-            Err(RepositoryError::PackageNotFoundError { reason, .. }) => not_found::repository_package(&optional_id.name, &manager, reason),
+            Err(RepositoryError::PackageNotFoundError { reason, .. }) => {
+                not_found::repository_optional_package(&optional_id, &manager, reason)
+            },
             Err(e) => {
                 error!(e, "Cannot read package");
                 return;
