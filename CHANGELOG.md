@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - When packages are specified for the `check` and `fix` commands, only those are checked when doing a package related check. Initial and general checks are now done as well in the case.
 - Improve IOError messages by including information about the operation that failed.
 - The `gnubin` directory of a package is now also symlinked into `<prefix>/gnubin`.
+- The `check` and `fix` commands now accept `[<PACKAGE-NAME>[@<VERSION>] ...]` instead of just `[<PACKAGE-NAME>@<VERSION> ...]`.
 
 ### Fixed
 - Fix package not found issue when multiple repositories have the same package but different versions.

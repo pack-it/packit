@@ -2,12 +2,12 @@
 use clap::Args;
 
 use crate::{
-    cli::commands::HandleCommand,
+    cli::{commands::HandleCommand, parameter_checks},
     config::Config,
     installer::types::{OptionalPackageId, PackageId},
     integrity::Verifier,
     register::package_register::PackageRegister,
-    utils::{parameter_checks, unwrap_or_exit::UnwrapOrExit},
+    utils::unwrap_or_exit::UnwrapOrExit,
 };
 
 /// Checks for any inconsistencies or mistakes in the installed packages or in the Packit files itself.

@@ -7,13 +7,14 @@ use crate::{
     cli::{
         commands::HandleCommand,
         display::{QuestionResponse, ask_user, logging::error},
+        parameter_checks,
     },
     config::Config,
     installer::types::{OptionalPackageId, PackageId},
     integrity::{Repairer, Verifier},
     register::package_register::PackageRegister,
     repositories::manager::RepositoryManager,
-    utils::{parameter_checks, unwrap_or_exit::UnwrapOrExit},
+    utils::unwrap_or_exit::UnwrapOrExit,
 };
 
 /// Fixes all issues found by the check command. The user will be asked if they want to fix an issue for each issue type.

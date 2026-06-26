@@ -5,7 +5,6 @@ pub mod fuzzy;
 pub mod io;
 pub mod ioerror;
 pub mod packit_version;
-pub mod parameter_checks;
 pub mod patches;
 pub mod requests;
 pub mod tree;

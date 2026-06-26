@@ -7,12 +7,13 @@ use crate::{
     cli::{
         commands::HandleCommand,
         display::{logging::error, not_found},
+        parameter_checks,
     },
     config::Config,
     installer::{Installer, InstallerOptions, types::OptionalPackageId},
     register::package_register::PackageRegister,
     repositories::manager::RepositoryManager,
-    utils::{parameter_checks, unwrap_or_exit::UnwrapOrExit},
+    utils::unwrap_or_exit::UnwrapOrExit,
 };
 
 /// Uninstalls the specified packages, if a version is given that version will be uninstalled, if not,
