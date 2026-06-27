@@ -8,7 +8,7 @@ use crate::{
     platforms::Target,
     repositories::{
         error::{RepositoryError, Result},
-        types::TargetBounds,
+        types::{DeprecationInfo, TargetBounds},
     },
 };
 
@@ -21,6 +21,7 @@ pub struct PackageMeta {
     pub versions: Vec<Version>,
     pub required_packit_version: Option<Version>,
     pub supported_versions: HashMap<TargetBounds, VersionIntervals>,
+    pub deprecation: Option<DeprecationInfo>,
 }
 
 impl PackageMeta {

@@ -7,12 +7,15 @@ use std::{collections::HashSet, str::FromStr};
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{logging::error, not_found, print_grid},
+        display::{
+            logging::{error, warning},
+            not_found, print_grid,
+        },
     },
     config::Config,
     installer::types::OptionalPackageId,
     platforms::Target,
-    repositories::{error::RepositoryError, manager::RepositoryManager},
+    repositories::{error::RepositoryError, manager::RepositoryManager, types::Date},
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
@@ -102,17 +105,11 @@ impl SearchArgs {
         // Create a package id
         let package_id = optional_id.versioned_or_cloned(&package_version.version);
 
-        let target_bounds = package_version
-            .get_best_target(&Target::current())
-            .unwrap_or_exit_msg("The package is not available for the current target", 1);
+        let target_bounds = package_version.get_best_target(&Target::current()).unwrap_or_exit(1);
 
         // Get current target
         let target = match package_version.get_target(&target_bounds) {
             Ok(target) => target,
-            Err(RepositoryError::TargetError) => {
-                println!("Package {package_id} from repository {repository_id} does not exist for current target");
-                return;
-            },
             Err(e) => {
                 error!(e, "Cannot read {package_id} from repository {repository_id}");
                 return;
@@ -134,6 +131,19 @@ impl SearchArgs {
             println!("Revisions:");
             for revision in package_version.revisions {
                 println!("  - {revision}");
+            }
+        }
+
+        // Check if the package is deprecated
+        if let Some(deprecation) = &package.deprecation {
+            let reason = match &deprecation.reason {
+                Some(reason) => format!(" with reason '{reason}'"),
+                None => String::default(),
+            };
+
+            match deprecation.deprecated_from <= Date::now() {
+                true => warning!("This package is deprecated since {}{reason}", deprecation.deprecated_from),
+                false => warning!("This package will be deprecated at {}{reason}", deprecation.deprecated_from),
             }
         }
     }

@@ -82,6 +82,8 @@ impl HandleCommand for InstallArgs {
                     return;
                 },
             };
+
+            // TODO: check if package is deprecated
         }
 
         // Determine the install type. Note that clap already check if build and build-all are both set (which should not be possible).

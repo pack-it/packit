@@ -14,7 +14,7 @@ use crate::{
     repositories::{
         error::{PackageNotFoundReason, RepositoryError, Result},
         provider::{self, MetadataProvider, PrebuildProvider},
-        types::{Checksum, IndexMeta, PackageMeta, PackageVersionMeta, RepositoryMeta},
+        types::{Checksum, Date, IndexMeta, PackageMeta, PackageVersionMeta, RepositoryMeta},
     },
     utils::packit_version::current_packit_version,
 };
@@ -145,6 +145,8 @@ impl<'a> RepositoryManager<'a> {
                 continue;
             }
 
+            // TODO: do we want priority for packages that are not deprecated?
+
             return Ok((repository_id.clone(), package));
         }
 
@@ -175,6 +177,17 @@ impl<'a> RepositoryManager<'a> {
     /// Checks if a package is compatible.
     /// Returns a Some(PackageNotFoundReason) if the package is not compatible, None otherwise.
     fn check_package_compatibility(&self, package: &PackageMeta) -> Option<PackageNotFoundReason> {
+        // Check if the package is disabled
+        if let Some(deprecation) = &package.deprecation
+            && let Some(disabled_from) = &deprecation.disabled_from
+            && *disabled_from <= Date::now()
+        {
+            return Some(PackageNotFoundReason::Disabled {
+                since: disabled_from.clone(),
+                reason: deprecation.reason.clone(),
+            });
+        }
+
         // Check if package contains the target
         if package.get_supported_versions(&Target::current()).is_err() {
             return Some(PackageNotFoundReason::UnsupportedTarget);

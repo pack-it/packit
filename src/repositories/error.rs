@@ -3,6 +3,7 @@ use thiserror::Error;
 
 use crate::{
     installer::types::{PackageId, Version},
+    repositories::types::Date,
     utils::ioerror,
 };
 
@@ -74,6 +75,12 @@ pub enum PackageNotFoundReason {
     #[error("cannot be found in any repository")]
     NotFound,
 
+    #[error("package is disabled since {since}{}", reason.as_ref().map(|reason| format!(", with reason '{reason}'")).unwrap_or_default())]
+    Disabled {
+        since: Date,
+        reason: Option<String>,
+    },
+
     #[error("not available for the current target")]
     UnsupportedTarget,
 
@@ -91,9 +98,9 @@ impl PackageNotFoundReason {
 
         for next in reasons {
             match &primary {
-                // If the primary is UnsupportedTarget, only use new one if the next is not NotFound
+                // If the primary is UnsupportedTarget, only use new one if the next is not NotFound or Disabled
                 PackageNotFoundReason::UnsupportedTarget => {
-                    if !matches!(next, PackageNotFoundReason::NotFound) {
+                    if !matches!(next, PackageNotFoundReason::NotFound | PackageNotFoundReason::Disabled { .. }) {
                         primary = next.clone();
                     }
                 },
@@ -105,6 +112,15 @@ impl PackageNotFoundReason {
                     {
                         primary = next.clone();
                     }
+                },
+
+                // If the primary is Disabled, only use the new one if the next if UnsupportedTarget or NotSupported, or a newer disable
+                PackageNotFoundReason::Disabled { since, .. } => {
+                    match next {
+                        PackageNotFoundReason::UnsupportedTarget | PackageNotFoundReason::NotSupported { .. } => primary = next.clone(),
+                        PackageNotFoundReason::Disabled { since: since_next, .. } if since_next > since => primary = next.clone(),
+                        _ => {},
+                    };
                 },
 
                 // If the current primary is not found, always use the new one

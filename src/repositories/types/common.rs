@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{collections::HashMap, ops::Not};
+use std::{collections::HashMap, fmt::Display, ops::Not};
 
+use chrono::Utc;
 use serde::{Deserialize, Deserializer, Serialize, de};
 
 use crate::repositories::types::Checksum;
@@ -54,6 +55,22 @@ pub struct Patch {
     pub apply_in: Option<String>,
 }
 
+/// Represents a date in the metadata.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Date(chrono::NaiveDate);
+
+/// Represents information about a package deprecation and disabling.
+#[derive(Serialize, Deserialize, Debug)]
+pub struct DeprecationInfo {
+    pub deprecated_from: Date,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub disabled_from: Option<Date>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+}
+
 impl Source {
     /// Gets all patches of the source, sorted by id.
     pub fn get_sorted_patches(&self) -> Vec<(u32, &Patch)> {
@@ -95,5 +112,18 @@ impl<'de> Deserialize<'de> for Sources {
 
         let named = HashMap::deserialize(value).map_err(de::Error::custom)?;
         Ok(Sources::Named(named))
+    }
+}
+
+impl Display for Date {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0.format("%Y-%m-%d"))
+    }
+}
+
+impl Date {
+    /// Gets the current date.
+    pub fn now() -> Self {
+        Self(Utc::now().date_naive())
     }
 }
