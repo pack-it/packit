@@ -21,6 +21,8 @@ pub struct PackageMeta {
     pub versions: Vec<Version>,
     pub required_packit_version: Option<Version>,
     pub supported_versions: HashMap<TargetBounds, VersionIntervals>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub deprecation: Option<DeprecationInfo>,
 }
 

@@ -275,6 +275,17 @@ impl<'a> RepositoryManager<'a> {
     /// Checks if a package version is compatible.
     /// Returns a Some(PackageNotFoundReason) if the package version is not compatible, None otherwise.
     fn check_package_version_compatibility(&self, package_version: &PackageVersionMeta, target: &Target) -> Option<PackageNotFoundReason> {
+        // Check if the package is disabled
+        if let Some(deprecation) = &package_version.deprecation
+            && let Some(disabled_from) = &deprecation.disabled_from
+            && *disabled_from <= Date::now()
+        {
+            return Some(PackageNotFoundReason::Disabled {
+                since: disabled_from.clone(),
+                reason: deprecation.reason.clone(),
+            });
+        }
+
         // Check if package contains the target
         if matches!(package_version.get_best_target(target), Err(RepositoryError::TargetError)) {
             return Some(PackageNotFoundReason::UnsupportedTarget);

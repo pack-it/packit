@@ -11,7 +11,7 @@ use crate::{
     platforms::Target,
     repositories::{
         error::{RepositoryError, Result},
-        types::{Licenses, PackageTarget, Script, Source, Sources, TargetBounds},
+        types::{DeprecationInfo, Licenses, PackageTarget, Script, Source, Sources, TargetBounds},
     },
 };
 
@@ -56,6 +56,9 @@ pub struct PackageVersionMeta {
 
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub revisions: Vec<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deprecation: Option<DeprecationInfo>,
 
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub script_args: HashMap<String, String>,

@@ -146,5 +146,18 @@ impl SearchArgs {
                 false => warning!("This package will be deprecated at {}{reason}", deprecation.deprecated_from),
             }
         }
+
+        // Check if the package version is deprecated
+        if let Some(deprecation) = &package_version.deprecation {
+            let reason = match &deprecation.reason {
+                Some(reason) => format!(" with reason '{reason}'"),
+                None => String::default(),
+            };
+
+            match deprecation.deprecated_from <= Date::now() {
+                true => warning!("This package version is deprecated since {}{reason}", deprecation.deprecated_from),
+                false => warning!("This package version will be deprecated at {}{reason}", deprecation.deprecated_from),
+            }
+        }
     }
 }
