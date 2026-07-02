@@ -26,7 +26,7 @@ use crate::{
 /// cannot be done with multiple packages at once.
 #[derive(Args, Debug)]
 pub struct UpdateArgs {
-    /// The packages to update specified with <PACKAGE-NAME>[@<VERSION>]
+    /// The packages to update specified with <PACKAGE-NAME>[@<VERSION>] ...
     #[arg(conflicts_with = "all")]
     optional_ids: Vec<OptionalPackageId>,
 
@@ -38,7 +38,7 @@ pub struct UpdateArgs {
     #[arg(long, default_value = "false", conflicts_with_all = ["optional_ids"])]
     all: bool,
 
-    /// Exclude packages when using the `--all` flag
+    /// Exclude packages when using the `--all` flag, specified with <PACKAGE-NAME> ...
     #[arg(long, requires = "all")]
     exclude: Vec<PackageName>,
 }

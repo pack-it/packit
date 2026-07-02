@@ -4,7 +4,10 @@ use clap::Args;
 use crate::{
     cli::{commands::HandleCommand, display},
     config::Config,
-    installer::Installer,
+    installer::{
+        Installer,
+        types::{OptionalPackageId, PackageId},
+    },
     register::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
     repositories::manager::RepositoryManager,
     utils::unwrap_or_exit::UnwrapOrExit,
@@ -57,6 +60,16 @@ impl ListArgs {
             return;
         }
 
-        display::print_grid(&updatables);
+        // Expand the updatables with all installed versions instead of just the highest one
+        let mut expanded_updatables = Vec::new();
+        for package in updatables {
+            for version in register.get_package(&package.name).expect("Expected package to exist").versions.keys() {
+                let package_id = PackageId::new(package.name.clone(), version.clone());
+                let optional_id = OptionalPackageId::from(package_id);
+                expanded_updatables.push(optional_id);
+            }
+        }
+
+        display::print_grid(&expanded_updatables);
     }
 }
