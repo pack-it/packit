@@ -12,7 +12,7 @@ use crate::{
     config::Config,
     installer::{
         Installer, InstallerOptions,
-        types::{OptionalPackageId, PackageName, Version},
+        types::{OptionalPackageId, Version},
     },
     platforms::Target,
     register::package_register::PackageRegister,
@@ -26,7 +26,7 @@ use crate::{
 /// cannot be done with multiple packages at once.
 #[derive(Args, Debug)]
 pub struct UpdateArgs {
-    /// The packages to update specified with <PACKAGE-NAME>[@<VERSION>]
+    /// The packages to update specified with <PACKAGE-NAME>[@<VERSION>] ...
     #[arg(conflicts_with = "all")]
     optional_ids: Vec<OptionalPackageId>,
 
@@ -38,9 +38,9 @@ pub struct UpdateArgs {
     #[arg(long, default_value = "false", conflicts_with_all = ["optional_ids"])]
     all: bool,
 
-    /// Exclude packages when using the `--all` flag
+    /// Exclude packages when using the `--all` flag, specified with <PACKAGE-NAME>[@<VERSION>] ...
     #[arg(long, requires = "all")]
-    exclude: Vec<PackageName>,
+    exclude: Vec<OptionalPackageId>,
 }
 
 impl HandleCommand for UpdateArgs {
@@ -130,23 +130,23 @@ impl UpdateArgs {
     /// Gets the updatables and prints them. It will also exclude the packages specified with the exclude flag.
     /// Returns the updatables or exits with status 0 in case all packages are up-to-date.
     pub fn get_updatables(&self, register: &PackageRegister, manager: &RepositoryManager) -> Vec<OptionalPackageId> {
-        let updatables = Installer::get_updatables(register, manager).unwrap_or_exit(1);
+        let mut updatables = Installer::get_updatables(register, manager).unwrap_or_exit(1);
 
         // Filter the packages to exclude
-        let mut filtered_updatables = Vec::new();
-        for package_id in updatables {
-            if !self.exclude.contains(&package_id.name) {
-                filtered_updatables.push(package_id);
+        for optional_id in &self.exclude {
+            match optional_id.versioned() {
+                Some(id) => updatables = updatables.into_iter().filter(|p| *p != id).collect(),
+                None => updatables = updatables.into_iter().filter(|p| p.name != optional_id.name).collect(),
             }
         }
 
-        if filtered_updatables.is_empty() {
+        if updatables.is_empty() {
             println!("All packages are up-to-date!");
             exit(0);
         }
 
         println!("The following packages will be updated:");
-        grid::print_grid(&filtered_updatables);
+        grid::print_grid(&updatables);
 
         // Check if the user wants to proceed with the update of the found packages
         let question = "Do you wish to proceed?";
@@ -155,6 +155,6 @@ impl UpdateArgs {
             exit(0);
         }
 
-        filtered_updatables.into_iter().map(|p| OptionalPackageId::from(p)).collect()
+        updatables.into_iter().map(|p| OptionalPackageId::from(p)).collect()
     }
 }

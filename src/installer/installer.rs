@@ -821,7 +821,10 @@ impl<'a> Installer<'a> {
                 continue;
             }
 
-            updatables.push(PackageId::new(package_name.clone(), latest_installed_version.clone()));
+            // Add all installed versions
+            for version in package.versions.keys() {
+                updatables.push(PackageId::new(package_name.clone(), version.clone()));
+            }
         }
 
         Ok(updatables)
