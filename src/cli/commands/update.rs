@@ -6,7 +6,7 @@ use clap::Args;
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{logging::error, not_found},
+        display::{QuestionResponse, ask_user, grid, logging::error, not_found},
         parameter_checks,
     },
     config::Config,
@@ -21,15 +21,22 @@ use crate::{
 };
 
 /// Updates the specified package to the new version, or the latest version if no new version is specified.
-/// If multiple versions of the same package are installed, the <VERSION> option is required.
+/// If multiple packages are specified they are all updated to the latest version.
+/// If multiple versions of the same package are installed, the <VERSION> option is required, note that this
+/// cannot be done with multiple packages at once.
 #[derive(Args, Debug)]
 pub struct UpdateArgs {
     /// The name of the package to update, with an optional version specified with NAME@VERSION
+    #[arg(conflicts_with = "all")]
     optional_ids: Vec<OptionalPackageId>,
 
     /// The version to update to. This can only be a higher version than the current version and is only used when a single package is specified
     #[arg(long, requires = "optional_ids")]
     new_version: Option<Version>,
+
+    /// Updates all the installed packages to the latest version possible
+    #[arg(long, default_value = "false", conflicts_with_all = ["optional_ids"])]
+    all: bool,
 }
 
 impl HandleCommand for UpdateArgs {
@@ -39,13 +46,28 @@ impl HandleCommand for UpdateArgs {
         let register_dir = PackageRegister::get_path(&config.prefix_directory);
         let mut register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
-        if self.optional_ids.len() > 1 && self.new_version.is_some() {
+        // If `--all` is specified use all the updatable pacakges
+        let optional_ids = match self.all {
+            true => &self.get_updatables(&register, &manager),
+            false if self.optional_ids.is_empty() => {
+                error!(msg: "No packages specified to update");
+                exit(1);
+            },
+            false => &self.optional_ids,
+        };
+
+        if optional_ids.is_empty() {
+            error!(msg: "No packages were specified or found to be updatable");
+            exit(1);
+        }
+
+        if optional_ids.len() > 1 && self.new_version.is_some() {
             error!(msg: "Cannot specify new version when multiple packages are given");
             exit(1);
         }
 
         // Check for duplicates, because updating twice will result in an error
-        let duplicates = parameter_checks::get_duplicates(&self.optional_ids);
+        let duplicates = parameter_checks::get_duplicates(optional_ids);
         if !duplicates.is_empty() {
             let mut duplicate_string = String::new();
             for duplicate in duplicates {
@@ -57,7 +79,7 @@ impl HandleCommand for UpdateArgs {
             exit(1);
         }
 
-        for optional_id in &self.optional_ids {
+        for optional_id in optional_ids {
             match optional_id.versioned() {
                 Some(package_id) if register.get_package_version(&package_id).is_some() => {},
                 Some(package_id) => not_found::register_package_version(&package_id, &register),
@@ -97,5 +119,29 @@ impl HandleCommand for UpdateArgs {
             // Save changes
             register.save_to(&register_dir).unwrap_or_exit(1);
         }
+    }
+}
+
+impl UpdateArgs {
+    /// Gets the updatables and prints them.
+    /// Returns the updatables or exits with status 0 in case all packages are up-to-date.
+    pub fn get_updatables(&self, register: &PackageRegister, manager: &RepositoryManager) -> Vec<OptionalPackageId> {
+        let updatables = Installer::get_updatables(register, manager).unwrap_or_exit(1);
+        if updatables.is_empty() {
+            println!("All packages are up-to-date!");
+            exit(0);
+        }
+
+        println!("The following packages will be updated:");
+        grid::print_grid(&updatables);
+
+        // Check if the user wants to proceed with the update of the found packages
+        let question = "Do you wish to proceed?";
+        if ask_user(question, QuestionResponse::Yes).unwrap_or_exit(1).is_no_or_invalid() {
+            println!("Update canceled");
+            exit(0);
+        }
+
+        updatables.into_iter().map(|p| OptionalPackageId::from(p)).collect()
     }
 }

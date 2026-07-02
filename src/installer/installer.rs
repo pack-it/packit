@@ -803,4 +803,27 @@ impl<'a> Installer<'a> {
             version: Some("any".to_string()),
         })?)
     }
+
+    /// Gets the packages which could be updated.
+    /// Note that it doesn't take into account package dependencies.
+    /// Returns a list of packages which could be updated or a `RepositoryError`.
+    pub fn get_updatables(register: &PackageRegister, manager: &RepositoryManager) -> Result<Vec<PackageId>> {
+        let mut updatables = Vec::new();
+        for (package_name, package) in register.iterate_packages() {
+            let (_, package_meta) = manager.read_package(&package_name)?;
+            let latest_available_version = package_meta.get_latest_version(&Target::current())?;
+
+            // Get the latest installed version
+            let latest_installed_version = package.versions.keys().max().expect("Expected a latest installed version");
+
+            // Check if the latest version exists
+            if latest_available_version == latest_installed_version {
+                continue;
+            }
+
+            updatables.push(PackageId::new(package_name.clone(), latest_installed_version.clone()));
+        }
+
+        Ok(updatables)
+    }
 }
