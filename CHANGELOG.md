@@ -10,6 +10,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Support for loading non-text external test files.
 - The `--active` flag for the list command, to list all active packages.
 - Support for context (using our [`contextdiff-parser`](https://github.com/pack-it/contextdiff-parser)) and unified diff formats for patches.
+- The update command now accepts multiple packages as input instead of just one.
+- The `--all` flag for the update command flag to update all packages which are not up-to-date.
+- The `--exclude` flag for the update command to exclude certain packages when using the `--all` flag.
 
 ### Changes
 - The build system now includes a new `package-build` xtask to create a full Packit prebuild for the release.
