@@ -6,13 +6,16 @@ use clap::Args;
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{logging::error, not_found},
+        display::{
+            logging::{error, warning},
+            not_found,
+        },
     },
     config::Config,
     installer::{InstallType, Installer, InstallerOptions, types::OptionalPackageId},
     platforms::Target,
     register::package_register::PackageRegister,
-    repositories::{error::RepositoryError, manager::RepositoryManager},
+    repositories::{error::RepositoryError, manager::RepositoryManager, types::Date},
     utils::{duplicates, unwrap_or_exit::UnwrapOrExit},
 };
 
@@ -72,7 +75,7 @@ impl HandleCommand for InstallArgs {
 
         // Check if all packages exist before starting installation
         for optional_id in &self.packages {
-            match manager.read_package_and_version(&optional_id, &Target::current()) {
+            let (_, package, package_version) = match manager.read_package_and_version(&optional_id, &Target::current()) {
                 Ok(package) => package,
                 Err(RepositoryError::PackageNotFoundError { reason, .. }) => {
                     not_found::repository_optional_package(optional_id, &manager, reason)
@@ -83,7 +86,31 @@ impl HandleCommand for InstallArgs {
                 },
             };
 
-            // TODO: check if package is deprecated
+            // Check if the package is deprecated
+            if let Some(deprecation) = &package.deprecation {
+                let reason = match &deprecation.reason {
+                    Some(reason) => format!(" with reason '{reason}'"),
+                    None => String::default(),
+                };
+
+                match deprecation.deprecated_from <= Date::now() {
+                    true => warning!("This package is deprecated since {}{reason}", deprecation.deprecated_from),
+                    false => warning!("This package will be deprecated at {}{reason}", deprecation.deprecated_from),
+                }
+            }
+
+            // Check if the package version is deprecated
+            if let Some(deprecation) = &package_version.deprecation {
+                let reason = match &deprecation.reason {
+                    Some(reason) => format!(" with reason '{reason}'"),
+                    None => String::default(),
+                };
+
+                match deprecation.deprecated_from <= Date::now() {
+                    true => warning!("This package version is deprecated since {}{reason}", deprecation.deprecated_from),
+                    false => warning!("This package version will be deprecated at {}{reason}", deprecation.deprecated_from),
+                }
+            }
         }
 
         // Determine the install type. Note that clap already check if build and build-all are both set (which should not be possible).
