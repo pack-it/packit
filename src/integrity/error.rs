@@ -6,6 +6,7 @@ use crate::{
     config::ConfigError,
     installer::{
         error::InstallerError,
+        scripts::ScriptError,
         types::{PackageNameError, VersionError},
     },
     packager::PackagerError,
@@ -62,6 +63,9 @@ pub enum VerifierError {
 
     #[error("Cannot perform check or fix, because of an error while interacting with the filesystem")]
     IOError(#[from] ioerror::IOError),
+
+    #[error("Cannot perform check, because of an error when executing a script")]
+    ScriptError(#[from] ScriptError),
 }
 
 pub(super) type Result<T> = std::result::Result<T, VerifierError>;

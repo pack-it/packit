@@ -56,6 +56,9 @@ pub enum Issue {
 
     /// A list of packages which have missing symlinks.
     MissingLinks(Vec<PackageName>),
+
+    /// A list of packages for which the test from the repository metadata failed.
+    FailedTest(Vec<PackageId>),
 }
 
 impl Display for Issue {
@@ -190,6 +193,15 @@ impl Display for Issue {
                     writeln!(f, "  - {}", directory.display())?;
                 }
             },
+            Issue::FailedTest(packages) => {
+                writeln!(f, "Failed test")?;
+                let issue_explanation = "The tests for the following packages failed:";
+                writeln!(f, "{issue_explanation}")?;
+
+                for package in packages {
+                    writeln!(f, "  - {package}")?;
+                }
+            },
         }
 
         Ok(())
@@ -222,6 +234,7 @@ impl Issue {
             Issue::InconsistentRegister(_) => {
                 "To fix this issue we try to reconstruct the Register.toml with data still in the Packit directory."
             },
+            Issue::FailedTest(_) => "To fix this issue we try to re-install the package.",
             Issue::AlteredPackage(_) | Issue::MissingPackitGroup => "There is no automatic fix for this issue available yet.",
         }
     }
