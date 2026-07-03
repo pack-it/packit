@@ -330,7 +330,7 @@ pub mod tests {
     use crate::installer::types::VersionIntervals;
     use crate::installer::types::dependency_tests::create_dependency;
     use crate::platforms::TargetArchitecture;
-    use crate::repositories::types::{Checksum, Licenses, Source, Sources, TargetBounds};
+    use crate::repositories::types::{Checksum, FileSize, Licenses, Source, Sources, TargetBounds};
 
     use super::*;
 
@@ -452,6 +452,7 @@ pub mod tests {
             sources: Sources::Single(Source {
                 url: "-".to_string(),
                 checksum: Checksum { sha256: [0; 32] },
+                size: FileSize(0),
                 mirrors: Vec::new(),
                 skip_unpack: false,
                 apply_patches_in: None,

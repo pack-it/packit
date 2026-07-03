@@ -21,6 +21,8 @@ pub use self::common::Script;
 
 pub use self::common::Date;
 pub use self::common::DeprecationInfo;
+#[cfg(test)]
+pub use self::common::FileSize;
 pub use self::common::Patch;
 pub use self::common::Source;
 pub use self::common::Sources;
