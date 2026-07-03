@@ -69,7 +69,7 @@ Lists all the installed packages.
 Searches a package with `<PACKAGE-NAME>` and shows information based on the package metadata. If the version is given that specific version is searched for.
 
 #### `pit update [<PACKAGE-NAME>[@<VERSION>] ...] [--new-version <NEW-VERSION>] [--all] [--exclude <PACKAGE-NAME> ...]`
-Updates the specified package to the new version, or the latest version if no new version is specified. If multiple packages are specified they are all updated to the latest version (and --new-version cannot be used). If multiple versions of the same package are installed, the `--new-version` flag is required, note that this cannot be done with multiple packages at once. The `--all` flag can be used to update all packages (the latest installed version will be updated). The `--exclude` flag can be used to exclude certain packages when using the `--all` flag.
+Updates the specified package to the new version, or the latest version if no new version is specified. If multiple packages are specified they are all updated to the latest version (and `--new-version` cannot be used). If multiple versions of the same package are installed, the latest installed version is assumed. The `--new-version` flag can be used to specify the new version to install. The `--all` flag can be used to update all packages (the latest installed version will be updated). The `--exclude` flag can be used to exclude certain packages when using the `--all` flag.
 
 #### `pit info <PACKAGE-NAME>[@<VERSION>] [-v] [--tree]`
 Shows info about the specified installed package. If the `-v` option is given, extra information is shown. If the `--tree` option is enabled, the whole dependency tree is shown.

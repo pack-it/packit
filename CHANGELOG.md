@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Improve IOError messages by including information about the operation that failed.
 - The `gnubin` directory of a package is now also symlinked into `<prefix>/gnubin`.
 - The `check` and `fix` commands now accept `[<PACKAGE-NAME>[@<VERSION>] ...]` instead of just `[<PACKAGE-NAME>@<VERSION> ...]`.
+- The `update` command now updates the latest install version, unless otherwise specified.
 
 ### Fixed
 - Fix package not found issue when multiple repositories have the same package but different versions.

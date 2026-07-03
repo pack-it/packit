@@ -28,14 +28,14 @@ use crate::{
 pub struct UpdateArgs {
     /// The packages to update specified with <PACKAGE-NAME>[@<VERSION>] ...
     #[arg(conflicts_with = "all")]
-    optional_ids: Vec<OptionalPackageId>,
+    packages: Vec<OptionalPackageId>,
 
     /// The version to update to. This can only be a higher version than the current version and can only be used when a single package is specified
-    #[arg(long, requires = "optional_ids")]
+    #[arg(long, requires = "packages")]
     new_version: Option<Version>,
 
     /// Updates all the installed packages to the latest version possible
-    #[arg(long, default_value = "false", conflicts_with_all = ["optional_ids"])]
+    #[arg(long, default_value = "false", conflicts_with = "packages")]
     all: bool,
 
     /// Exclude packages when using the `--all` flag, specified with <PACKAGE-NAME> ...
@@ -50,20 +50,18 @@ impl HandleCommand for UpdateArgs {
         let register_dir = PackageRegister::get_path(&config.prefix_directory);
         let mut register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
+        let options = InstallerOptions::default();
+        let installer = Installer::new(&config, &mut register, &manager, options);
+
         // If `--all` is specified use all the updatable pacakges
         let optional_ids = match self.all {
-            true => &self.get_updatables(&register, &manager),
-            false if self.optional_ids.is_empty() => {
+            true => &self.get_updatables(installer),
+            false if self.packages.is_empty() => {
                 error!(msg: "No packages specified to update");
                 exit(1);
             },
-            false => &self.optional_ids,
+            false => &self.packages,
         };
-
-        if optional_ids.is_empty() {
-            error!(msg: "No packages were specified or found to be updatable");
-            exit(1);
-        }
 
         if optional_ids.len() > 1 && self.new_version.is_some() {
             error!(msg: "Cannot specify new version when multiple packages are given");
@@ -118,10 +116,15 @@ impl HandleCommand for UpdateArgs {
                 },
             };
 
-            println!("Successfully updated {} to {new_package_id}", optional_id);
+            match new_package_id {
+                Some(new_package_id) => {
+                    println!("Successfully updated {} to {new_package_id}", optional_id);
 
-            // Save changes
-            register.save_to(&register_dir).unwrap_or_exit(1);
+                    // Save changes
+                    register.save_to(&register_dir).unwrap_or_exit(1);
+                },
+                None => println!("{} is up-to-date!", optional_id.name),
+            }
         }
     }
 }
@@ -129,8 +132,8 @@ impl HandleCommand for UpdateArgs {
 impl UpdateArgs {
     /// Gets the updatables and prints them. It will also exclude the packages specified with the exclude flag.
     /// Returns the updatables or exits with status 0 in case all packages are up-to-date.
-    pub fn get_updatables(&self, register: &PackageRegister, manager: &RepositoryManager) -> Vec<OptionalPackageId> {
-        let updatables = Installer::get_updatables(register, manager).unwrap_or_exit(1);
+    pub fn get_updatables(&self, installer: Installer) -> Vec<OptionalPackageId> {
+        let updatables = installer.get_updatables().unwrap_or_exit(1);
 
         // Filter the packages to exclude
         let mut filtered_updatables = Vec::new();
