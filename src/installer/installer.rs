@@ -663,10 +663,14 @@ impl<'a> Installer<'a> {
     }
 
     /// Updates a package to a newer version.
-    /// Returns a `PackageId` from the updated package if successful.
-    /// Returns an `InstallerError::VersionTooLowError` if the old version is newer then the given new version
-    /// or an `InstallerError::AlreadyInstalledError` if the new package version is already installed.
-    pub fn update(&mut self, optional_id: &OptionalPackageId, new_version: &Version) -> Result<PackageId> {
+    /// Returns a `PackageId` from the updated package if successful, `None` in case the package is already up-to-date.
+    /// Returns an `InstallerError::VersionTooLowError` if the old version is newer then the given new version.
+    pub fn update(&mut self, optional_id: &OptionalPackageId, new_version: &Version) -> Result<Option<PackageId>> {
+        // Check if the new version of the package already exists
+        if self.register.get_package_version(&PackageId::new(optional_id.name.clone(), new_version.clone())).is_some() {
+            return Ok(None);
+        }
+
         let old_package = self.get_specific_package_update(optional_id)?;
         let new_package_id = PackageId::new(old_package.package_id.name.clone(), new_version.clone());
 
@@ -674,13 +678,6 @@ impl<'a> Installer<'a> {
         if old_package.package_id.version > *new_version {
             return Err(InstallerError::VersionTooLowError {
                 new_version: new_version.clone(),
-            });
-        }
-
-        // Check if the new version is already installed
-        if old_package.package_id.version == *new_version {
-            return Err(InstallerError::AlreadyInstalledError {
-                package_id: old_package.package_id.clone(),
             });
         }
 
@@ -773,13 +770,14 @@ impl<'a> Installer<'a> {
             self.uninstall(&old_package_id.into())?;
         }
 
-        Ok(new_package_id)
+        Ok(Some(new_package_id))
     }
 
     /// Gets a specific installed package version. If a version is specified that version is used.
     /// If the version is not specified, but only one version exists, then that version is used.
-    /// Returns an `InstallerError::PackageNotFound` if the package cannot be found or
-    /// an `InstallerError::SpecificityError` if multiple versions exist, but the version isn't specified.
+    /// When multiple versions are installed the latest version is returned.
+    /// Returns an `InstallerError::PackageNotFound` if the package cannot be found or an
+    /// `InstallerError::InstallationCanceled` if the user chooses to cancel the update.
     fn get_specific_package_update(&self, optional_id: &OptionalPackageId) -> Result<&InstalledPackageVersion> {
         // Use the specified version if it exists
         if let Some(package_id) = optional_id.versioned() {
@@ -791,16 +789,51 @@ impl<'a> Installer<'a> {
 
         // Get installed versions
         let installed_versions = self.register.get_all_package_versions(&optional_id.name);
+        let latest_installed_version = match installed_versions.iter().max_by_key(|p| &p.package_id.version) {
+            Some(latest) => latest,
+            None => {
+                return Err(InstallerError::PackageNotFound {
+                    package_name: optional_id.name.to_string(),
+                    version: Some("any".to_string()),
+                });
+            },
+        };
 
-        // Check if version is specified when multiple versions are installed
         if installed_versions.len() > 1 && optional_id.version.is_none() {
-            return Err(InstallerError::SpecificityError);
+            let question = format!(
+                "Multiple versions of '{}' are installed, the latest version '{}' will be updated, do you wish to continue?",
+                optional_id.name, latest_installed_version.package_id.version
+            );
+            if ask_user(&question, QuestionResponse::Yes)?.is_no_or_invalid() {
+                return Err(InstallerError::InstallationCanceled {
+                    reason: "Latest version may not be used, but version not specified".to_string(),
+                });
+            }
         }
 
-        // Get the installed package version and simultaneously check if any version of the package exists
-        Ok(installed_versions.first().ok_or(InstallerError::PackageNotFound {
-            package_name: optional_id.name.to_string(),
-            version: Some("any".to_string()),
-        })?)
+        Ok(*latest_installed_version)
+    }
+
+    /// Gets the packages which could be updated.
+    /// Note that it doesn't take into account package dependencies.
+    /// Returns a list of packages which could be updated or a `RepositoryError`.
+    pub fn get_updatables(&self) -> Result<Vec<PackageId>> {
+        let mut updatables = Vec::new();
+        for (package_name, package) in self.register.iterate_packages() {
+            let (_, package_meta) = self.repository_manager.read_package(&package_name)?;
+            let latest_available_version = package_meta.get_latest_version(&Target::current())?;
+
+            // Get the latest installed version
+            let latest_installed_version = package.versions.keys().max().expect("Expected a latest installed version");
+
+            // Check if the latest version exists
+            if latest_available_version == latest_installed_version {
+                continue;
+            }
+
+            updatables.push(PackageId::new(package_name.clone(), latest_installed_version.clone()));
+        }
+
+        Ok(updatables)
     }
 }

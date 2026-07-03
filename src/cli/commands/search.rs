@@ -63,7 +63,7 @@ impl SearchArgs {
             return;
         }
 
-        print_grid(matches.into_iter().collect());
+        print_grid(&matches.into_iter().collect());
     }
 
     /// Searches information of a package based on the provided `OptionalPackageId`.
