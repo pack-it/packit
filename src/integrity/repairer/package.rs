@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{collections::HashSet, fs, str::FromStr};
+use std::{collections::HashSet, fs, path::Path, str::FromStr};
 
 use crate::{
     cli::display::{logging::warning, styled::Styled},
     config::Config,
     installer::{
         Installer, InstallerOptions, Symlinker,
-        types::{Dependency, PackageId, PackageName, Version},
+        types::{Dependency, OptionalPackageId, PackageId, PackageName, Version},
     },
     integrity::{
         error::{Result, VerifierError},
@@ -23,7 +23,7 @@ use crate::{
         manager::RepositoryManager,
         types::{Checksum, PackageVersionMeta},
     },
-    utils::ioerror::IOResultExt,
+    utils::{io::remove_symlinks, ioerror::IOResultExt},
 };
 
 /// Fixes broken dependency trees by installing the missing packages.
@@ -321,6 +321,62 @@ pub fn fix_missing_links(missing: Vec<PackageName>, register: &mut PackageRegist
             package.symlinked = true;
         };
     }
+
+    Ok(())
+}
+
+/// Tries to fix packages by re-installing those packages.
+pub fn try_reinstall(packages: Vec<PackageId>, register: &mut PackageRegister, manager: &RepositoryManager, config: &Config) -> Result<()> {
+    for package in packages {
+        reinstall_package(package, register, manager, config)?;
+    }
+
+    Ok(())
+}
+
+/// Uninstalls a package and then reinstalls it.
+fn reinstall_package(package_id: PackageId, register: &mut PackageRegister, manager: &RepositoryManager, config: &Config) -> Result<()> {
+    let active_directory = config.prefix_directory.join("active");
+    let bin_directory = config.prefix_directory.join("bin");
+    let package_directory = config.prefix_directory.join("packages");
+
+    // Figure out the active version
+    let path = active_directory.join(&package_id.name);
+    let active_target = fs::read_link(&path).err_with_path("read link", path)?;
+    let target_name = active_target.file_name().ok_or(VerifierError::InvalidSymlink)?;
+    let version = Version::from_str(target_name.to_str().ok_or(VerifierError::InvalidUnicodeError)?)?;
+
+    // Check if the package should be the active package when installed
+    let active = package_id.version == version;
+
+    // Figure out if symlinked
+    let symlinked = fs::symlink_metadata(bin_directory.join(&package_id.name)).is_ok();
+
+    // Temporarily remove the package from the storage
+    // Remove the symlinks first
+    let path = &package_directory.join(&package_id.name).join(package_id.version.to_string());
+    if symlinked {
+        remove_symlinks(Path::new(&config.prefix_directory), path)?;
+    }
+
+    // Remove the dependency symlinks if they exist
+    let dependency_directory_path = config.prefix_directory.join("dependencies").join(package_id.to_string());
+    if fs::exists(&dependency_directory_path).err_with_path("check existence of", &dependency_directory_path)? {
+        fs::remove_dir_all(&dependency_directory_path).err_with_path("remove", &dependency_directory_path)?;
+    }
+
+    // Remove the package
+    let path = package_directory.join(&package_id.name).join(package_id.version.to_string());
+    fs::remove_dir_all(&path).err_with_path("remove dirs", path)?;
+
+    // Remove the package from the register
+    register.remove_package_version(&package_id);
+
+    // Re-install the package
+    let installer_options = InstallerOptions::default().skip_symlinking(!symlinked).skip_active(!active);
+    let mut installer = Installer::new(config, register, manager, installer_options);
+
+    installer.install(&OptionalPackageId::from(package_id))?;
 
     Ok(())
 }

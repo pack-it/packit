@@ -234,8 +234,8 @@ impl Issue {
             Issue::InconsistentRegister(_) => {
                 "To fix this issue we try to reconstruct the Register.toml with data still in the Packit directory."
             },
-            Issue::FailedTest(_) => "To fix this issue we try to re-install the package.",
-            Issue::AlteredPackage(_) | Issue::MissingPackitGroup => "There is no automatic fix for this issue available yet.",
+            Issue::FailedTest(_) | Issue::AlteredPackage(_) => "To fix this issue we try to re-install the package.",
+            Issue::MissingPackitGroup => "There is no automatic fix for this issue available yet.",
         }
     }
 }
