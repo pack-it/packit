@@ -7,7 +7,7 @@ use crate::{
     cli::display::logging::{debug, error, warning},
     config::Config,
     installer::{
-        types::{Dependency, OptionalPackageId, PackageId, PackageName},
+        types::{Dependency, OptionalPackageId, PackageId, PackageName, Version},
         unpack::ArchiveExtension,
     },
     platforms::Target,
@@ -351,23 +351,9 @@ impl<'a> RepositoryManager<'a> {
     /// Gets the latest supported package version for the given package metadata.
     pub fn read_latest_supported_version(&self, repository_id: &str, package: &PackageMeta, target: &Target) -> Result<PackageVersionMeta> {
         let supported_versions = package.get_supported_versions(target)?;
-        let mut supported_versions = supported_versions.iter().rev();
+        let supported_versions = supported_versions.into_iter().rev();
 
-        let mut reasons = Vec::new();
-        loop {
-            let latest_version = *supported_versions.next().ok_or(RepositoryError::PackageNotFoundError {
-                package_name: package.name.to_string(),
-                version: None,
-                reason: PackageNotFoundReason::get_primary_reason(reasons.iter()),
-            })?;
-
-            let package_id = PackageId::new(package.name.clone(), latest_version.clone());
-            match self.read_repo_package_version(&repository_id, &package_id) {
-                Ok(package_version) => return Ok(package_version),
-                Err(RepositoryError::PackageNotFoundError { reason, .. }) => reasons.push(reason),
-                Err(e) => return Err(e),
-            }
-        }
+        self.read_latest_supported_version_impl(repository_id, package, supported_versions)
     }
 
     /// Gets the latest supported package version for the given package metadata that satisfies the given dependency.
@@ -380,22 +366,69 @@ impl<'a> RepositoryManager<'a> {
         target: &Target,
     ) -> Result<PackageVersionMeta> {
         let supported_versions = package.get_supported_versions(target)?;
-        let mut supported_versions = supported_versions.iter().filter(|version| dependency.satisfied(&package.name, version)).rev();
+        let supported_versions = supported_versions.into_iter().filter(|version| dependency.satisfied(&package.name, version)).rev();
 
-        let mut reasons = Vec::new();
-        loop {
-            let latest_version = *supported_versions.next().ok_or(RepositoryError::DependencyNotFoundError {
+        match self.read_latest_supported_version_impl(repository_id, package, supported_versions) {
+            Ok(package_version) => Ok(package_version),
+            Err(RepositoryError::PackageNotFoundError { reason, .. }) => Err(RepositoryError::DependencyNotFoundError {
                 dependency: dependency.to_string(),
-                reason: PackageNotFoundReason::get_primary_reason(reasons.iter()),
-            })?;
+                reason,
+            }),
+            Err(e) => Err(e),
+        }
+    }
+
+    /// Implementation of the read latest supported version function.
+    /// Resolves the latest supported version based on compatibility checks and implements deprecation resolving.
+    fn read_latest_supported_version_impl<'v>(
+        &self,
+        repository_id: &str,
+        package: &PackageMeta,
+        mut supported_versions: impl Iterator<Item = &'v Version>,
+    ) -> Result<PackageVersionMeta> {
+        let mut reasons = Vec::new();
+        let mut latest_deprecated: Option<PackageVersionMeta> = None;
+        loop {
+            let Some(latest_version) = supported_versions.next() else { break };
 
             let package_id = PackageId::new(package.name.clone(), latest_version.clone());
-            match self.read_repo_package_version(&repository_id, &package_id) {
-                Ok(package_version) => return Ok(package_version),
-                Err(RepositoryError::PackageNotFoundError { reason, .. }) => reasons.push(reason),
+            let package_version = match self.read_repo_package_version(&repository_id, &package_id) {
+                Ok(package_version) => package_version,
+                Err(RepositoryError::PackageNotFoundError { reason, .. }) => {
+                    reasons.push(reason);
+                    continue;
+                },
                 Err(e) => return Err(e),
-            }
+            };
+
+            let deprecation = match &package_version.deprecation {
+                Some(deprecation) => deprecation,
+                None => return Ok(package_version),
+            };
+
+            // Update the latest_deprecated if it was None or if the current version deprecates at a later moment
+            match &latest_deprecated {
+                Some(latest_deprecation) => {
+                    if let Some(latest_deprecation) = &latest_deprecation.deprecation
+                        && latest_deprecation.deprecated_from < deprecation.deprecated_from
+                    {
+                        latest_deprecated = Some(package_version);
+                    }
+                },
+                None => latest_deprecated = Some(package_version),
+            };
         }
+
+        // If all versions deprecate, take the latest deprecated version
+        if let Some(latest_deprecated) = latest_deprecated {
+            return Ok(latest_deprecated);
+        }
+
+        Err(RepositoryError::PackageNotFoundError {
+            package_name: package.name.to_string(),
+            version: None,
+            reason: PackageNotFoundReason::get_primary_reason(reasons.iter()),
+        })
     }
 
     /// Iterates over the repositories rank. Filters the unsupported repositories from the list.

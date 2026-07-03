@@ -122,7 +122,7 @@ impl SearchArgs {
         // Print package information
         println!("{} ({})", package.name.bold().blue(), package_version.version);
         println!("{}", package.description.green());
-        println!("Latest version: {}", latest_version.version.to_string().red());
+        println!("Latest stable version: {}", latest_version.version.to_string().red());
         println!("Dependencies: {}", dependencies.join(", ").red());
         println!("License: {}", package_version.license.to_string().red());
 
