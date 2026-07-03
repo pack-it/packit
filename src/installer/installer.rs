@@ -303,6 +303,16 @@ impl<'a> Installer<'a> {
                 None => install_meta.version_metadata.skip_symlinking,
             };
 
+        // Check if the package has conflicting packages
+        let conflicts = self.register.get_conflicting_packages(&package_id.name, &install_meta.package_metadata.conflicts_with);
+        if !conflicts.is_empty() {
+            warning!(
+                "Skipping symlinking because of conflicting packages: {}",
+                conflicts.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(", ")
+            );
+            should_symlink = false;
+        }
+
         let mut should_set_active = !self.options.skip_active;
 
         // Check if we have a previous active install

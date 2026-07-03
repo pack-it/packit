@@ -20,6 +20,9 @@ pub struct PackageMeta {
     pub homepage: Option<String>,
     pub versions: Vec<Version>,
     pub required_packit_version: Option<Version>,
+
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub conflicts_with: Vec<PackageName>,
     pub supported_versions: HashMap<TargetBounds, VersionIntervals>,
 
     #[serde(skip_serializing_if = "Option::is_none")]

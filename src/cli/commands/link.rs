@@ -55,6 +55,16 @@ impl HandleCommand for LinkArgs {
 
         // Check if we are allowed to symlink when not forcing
         if !self.force {
+            let conflicts = register.get_conflicting_packages(&self.package_name, &package.conflicts_with);
+            if !conflicts.is_empty() {
+                println!("The package has conflicts with other packages, cancelling linking.");
+                println!(
+                    "Conflicting packages: {}",
+                    conflicts.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(", ")
+                );
+                return;
+            }
+
             let repository = Repository::new(
                 &package_version.metadata_repository_url,
                 &package_version.metadata_repository_provider,
