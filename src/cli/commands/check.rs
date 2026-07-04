@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::fs;
-
 use clap::Args;
 
 use crate::{
-    cli::{commands::HandleCommand, display::not_found},
+    cli::{commands::HandleCommand, parameter_checks},
     config::Config,
-    installer::types::PackageId,
+    installer::types::{OptionalPackageId, PackageId},
     integrity::Verifier,
     register::package_register::PackageRegister,
     utils::unwrap_or_exit::UnwrapOrExit,
@@ -16,7 +14,7 @@ use crate::{
 #[derive(Args, Debug)]
 pub struct CheckArgs {
     /// A list of packages to check. Could be empty, then all packages are checked
-    pub packages: Vec<PackageId>,
+    pub packages: Vec<OptionalPackageId>,
 }
 
 const ISSUE_FOUND_MESSAGE: &str = "Consider running `pit fix` to resolve the issues above.";
@@ -40,18 +38,13 @@ impl HandleCommand for CheckArgs {
         let register_dir = PackageRegister::get_path(&config.prefix_directory);
         let register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
-        // Make sure all specified packages exist
-        for package_id in &self.packages {
-            let installed_directory = config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
-            if register.get_package_version(package_id).is_none() && !fs::exists(installed_directory).unwrap_or_exit(1) {
-                not_found::register_package_version(package_id, &register);
-            }
-        }
+        // Get the package ids
+        let package_ids = parameter_checks::expand_optional_ids(&register, &config, &self.packages);
 
         // Check all packages if no packages are specified
-        let packages: &Vec<PackageId> = match self.packages.is_empty() {
+        let packages: &Vec<PackageId> = match package_ids.is_empty() {
             true => &register.iterate_all().map(|p| p.package_id.clone()).collect(),
-            false => &self.packages,
+            false => &package_ids,
         };
 
         while let Some(issue) = verifier.next_issue(&packages, &register, &config).unwrap_or_exit(1) {

@@ -10,6 +10,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Support for loading non-text external test files.
 - The `--active` flag for the list command, to list all active packages.
 - Support for context (using our [`contextdiff-parser`](https://github.com/pack-it/contextdiff-parser)) and unified diff formats for patches.
+- The update command now accepts multiple packages as input instead of just one.
+- The `--all` flag for the update command flag to update all packages which are not up-to-date.
+- The `--exclude` flag for the update command to exclude certain packages when using the `--all` flag.
 - The `required_packit_version` field to describe the minimum required Packit version for a package in `repository.toml`, `package.toml` and `targets.toml` metadata files.
 - The `conflicts_with` fields to describe conflicting packages in the `package.toml` metadata file. Two conflicting packages cannot be symlinked at the same time.
 - The `size` field in the source fields in the `targets.toml` metadata file.
@@ -25,6 +28,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - When packages are specified for the `check` and `fix` commands, only those are checked when doing a package related check. Initial and general checks are now done as well in the case.
 - Improve IOError messages by including information about the operation that failed.
 - The `gnubin` directory of a package is now also symlinked into `<prefix>/gnubin`.
+- The `check` and `fix` commands now accept `[<PACKAGE-NAME>[@<VERSION>] ...]` instead of just `[<PACKAGE-NAME>@<VERSION> ...]`.
+- The `update` command now updates the latest install version, unless otherwise specified.
 - The package metadata resolving algorithm now finds matching packages in more cases and shows a clear reason when a package cannot be found.
 - The `util checksum` command now also shows the size of the file.
 - When the `repository.toml` file of a metadata repository cannot be fetched, the repository will not be loaded anymore.

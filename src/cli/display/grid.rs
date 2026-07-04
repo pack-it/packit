@@ -5,7 +5,7 @@ use terminal_size::{Height, Width, terminal_size};
 
 /// Prints the given items in a grid.
 /// Falls back to vertical print if the terminal width cannot be obtained.
-pub fn print_grid<T>(items: Vec<T>)
+pub fn print_grid<T>(items: &Vec<T>)
 where
     T: Display,
 {
@@ -17,7 +17,7 @@ where
 
     // Get the widest string in the given items
     let mut widest = String::from("");
-    for item in &items {
+    for item in items {
         let item = item.to_string();
         if item.len() > widest.len() {
             widest = item;
@@ -46,7 +46,7 @@ where
 }
 
 /// Prints items vertically.
-fn vertical_print<T>(items: Vec<T>)
+fn vertical_print<T>(items: &Vec<T>)
 where
     T: Display,
 {

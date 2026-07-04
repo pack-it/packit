@@ -4,8 +4,10 @@ use clap::Args;
 use crate::{
     cli::{commands::HandleCommand, display},
     config::Config,
-    installer::types::PackageId,
-    platforms::Target,
+    installer::{
+        Installer, InstallerOptions,
+        types::{OptionalPackageId, PackageId},
+    },
     register::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
     repositories::manager::RepositoryManager,
     utils::unwrap_or_exit::UnwrapOrExit,
@@ -27,52 +29,49 @@ impl HandleCommand for ListArgs {
     fn handle(&self) {
         let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
         let register_dir = PackageRegister::get_path(&config.prefix_directory);
-        let register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
+        let mut register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
         if self.updatables {
-            self.updatables_list(&config, &register);
+            self.updatables_list(&config, &mut register);
 
             return;
         }
 
         if self.active {
-            display::print_grid(register.iterate_active_packages().collect());
+            display::print_grid(&register.iterate_active_packages().collect());
 
             return;
         }
 
         let mut packages: Vec<&InstalledPackageVersion> = register.iterate_all().collect();
         packages.sort_by_key(|a| a.package_id.to_string());
-        display::print_grid(packages.iter().map(|p| &p.package_id).collect());
+        display::print_grid(&packages.iter().map(|p| &p.package_id).collect());
     }
 }
 
 impl ListArgs {
     /// Lists all updatable packages.
-    fn updatables_list(&self, config: &Config, register: &PackageRegister) {
+    fn updatables_list(&self, config: &Config, register: &mut PackageRegister) {
         let manager = RepositoryManager::new(config);
-        let mut updatables = Vec::new();
-        for (package_name, package) in register.iterate_packages() {
-            let (repository_id, package_meta) = manager.read_package(&package_name).unwrap_or_exit(1);
-            let version_meta = manager.read_latest_supported_version(&repository_id, &package_meta, &Target::current()).unwrap_or_exit(1);
-            let latest_available_version = &version_meta.version;
+        let options = InstallerOptions::default();
+        let installer = Installer::new(&config, register, &manager, options);
 
-            // Get the latest installed version
-            let latest_installed_version = package.versions.keys().max().expect("Expected a latest installed version");
-
-            // Check if the latest version exists
-            if latest_available_version == latest_installed_version {
-                continue;
-            }
-
-            updatables.push(PackageId::new(package_name.clone(), latest_installed_version.clone()));
-        }
-
+        let updatables = installer.get_updatables().unwrap_or_exit(1);
         if updatables.is_empty() {
-            println!("No updatable packages found");
+            println!("All packages are up-to-date!");
             return;
         }
 
-        display::print_grid(updatables);
+        // Expand the updatables with all installed versions instead of just the highest one
+        let mut expanded_updatables = Vec::new();
+        for package in updatables {
+            for version in register.get_package(&package.name).expect("Expected package to exist").versions.keys() {
+                let package_id = PackageId::new(package.name.clone(), version.clone());
+                let optional_id = OptionalPackageId::from(package_id);
+                expanded_updatables.push(optional_id);
+            }
+        }
+
+        display::print_grid(&expanded_updatables);
     }
 }
