@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Support for loading non-text external test files.
 - The `--active` flag for the list command, to list all active packages.
 - Support for context (using our [`contextdiff-parser`](https://github.com/pack-it/contextdiff-parser)) and unified diff formats for patches.
+- The `required_packit_version` field to describe the minimum required Packit version for a package in `repository.toml`, `package.toml` and `targets.toml` metadata files.
+- The `conflicts_with` fields to describe conflicting packages in the `package.toml` metadata file. Two conflicting packages cannot be symlinked at the same time.
+- The `size` field in the source fields in the `targets.toml` metadata file.
+- Deprecation information fields, to allow specifying deprecation and disabling dates of packages or specific versions.
 
 ### Changes
 - The build system now includes a new `package-build` xtask to create a full Packit prebuild for the release.
@@ -21,6 +25,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - When packages are specified for the `check` and `fix` commands, only those are checked when doing a package related check. Initial and general checks are now done as well in the case.
 - Improve IOError messages by including information about the operation that failed.
 - The `gnubin` directory of a package is now also symlinked into `<prefix>/gnubin`.
+- The package metadata resolving algorithm now finds matching packages in more cases and shows a clear reason when a package cannot be found.
+- The `util checksum` command now also shows the size of the file.
+- When the `repository.toml` file of a metadata repository cannot be fetched, the repository will not be loaded anymore.
 
 ### Fixed
 - Fix package not found issue when multiple repositories have the same package but different versions.

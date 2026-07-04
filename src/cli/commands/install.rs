@@ -93,9 +93,10 @@ impl HandleCommand for InstallArgs {
                     None => String::default(),
                 };
 
-                match deprecation.deprecated_from <= Date::now() {
-                    true => warning!("This package is deprecated since {}{reason}", deprecation.deprecated_from),
-                    false => warning!("This package will be deprecated at {}{reason}", deprecation.deprecated_from),
+                let deprecated_from = &deprecation.deprecated_from;
+                match *deprecated_from <= Date::now() {
+                    true => warning!("Package '{optional_id}' is deprecated since {}{reason}", deprecated_from),
+                    false => warning!("Package '{optional_id}' will be deprecated at {}{reason}", deprecated_from),
                 }
             }
 
@@ -106,9 +107,10 @@ impl HandleCommand for InstallArgs {
                     None => String::default(),
                 };
 
-                match deprecation.deprecated_from <= Date::now() {
-                    true => warning!("This package version is deprecated since {}{reason}", deprecation.deprecated_from),
-                    false => warning!("This package version will be deprecated at {}{reason}", deprecation.deprecated_from),
+                let deprecated_from = &deprecation.deprecated_from;
+                match *deprecated_from <= Date::now() {
+                    true => warning!("Package version '{optional_id}' is deprecated since {}{reason}", deprecated_from),
+                    false => warning!("Package version '{optional_id}' will be deprecated at {}{reason}", deprecated_from),
                 }
             }
         }
