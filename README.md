@@ -83,8 +83,8 @@ Fix all issues found by the check command. You will be asked if you want to fix 
 #### `pit switch <PACKAGE-NAME> <VERSION> [--skip-symlinking]`
 Switches the active version of the specified package to the specified version. If the `--skip-symlinking` option is given, the new active version is not symlinked into the /bin, /lib, /share, etc. directories.
 
-#### `pit link <PACKAGE-NAME> [--force]`
-Links the specified package into the /bin, /lib, /share, etc. directories. If the package metadata does not allow a package to be symlinked, the `--force` option is required to force the symlinking of the package. Please be careful with using the `--force` option, since there is most likely a good reason to skip symlinking.
+#### `pit link <PACKAGE-NAME> [--force] [--overwrite]`
+Links the specified package into the /bin, /lib, /share, etc. directories. If the package metadata does not allow a package to be symlinked, the `--force` option is required to force the symlinking of the package. Please be careful with using the `--force` option, since there is most likely a good reason to skip symlinking. The `--overwrite` option can be used to overwrite existing symlinks from another package, please note that this should normally not be used, as conflicts between packages should be avoided.
 
 #### `pit unlink <PACKAGE-NAME>`
 Unlinks the specified package, causing the package to be unavailable from the `PATH` environment variable.

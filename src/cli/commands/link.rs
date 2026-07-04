@@ -23,6 +23,10 @@ pub struct LinkArgs {
     /// True to force linking, even when we should not link
     #[arg(short, long, default_value = "false")]
     pub force: bool,
+
+    /// True to overwrite existing links from another package, false to skip existing links
+    #[arg(long, default_value = "false")]
+    pub overwrite: bool,
 }
 
 impl HandleCommand for LinkArgs {
@@ -38,7 +42,7 @@ impl HandleCommand for LinkArgs {
         };
 
         // Check if the package is already symlinked
-        if package.symlinked {
+        if !self.overwrite && package.symlinked {
             println!("This package is already symlinked");
             return;
         }
@@ -105,7 +109,9 @@ impl HandleCommand for LinkArgs {
         }
 
         // Create symlinks
-        Symlinker::new(&config).create_symlinks(&package_version.install_path).unwrap_or_exit_msg("Unable to link package", 1);
+        Symlinker::new(&config)
+            .create_symlinks(&package_version.install_path, self.overwrite)
+            .unwrap_or_exit_msg("Unable to link package", 1);
 
         let package = register
             .get_package_mut(&self.package_name)

@@ -46,6 +46,12 @@ pub fn remove_symlink(symlink: &Path) -> Result<()> {
     platform::remove_symlink(symlink)
 }
 
+/// Checks if a symlink exists.
+/// Returns true if it does exist, false otherwise.
+pub fn exists(symlink: &Path) -> bool {
+    fs::symlink_metadata(symlink).is_ok()
+}
+
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 pub mod platform {
     use std::path::Path;
