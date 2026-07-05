@@ -17,6 +17,9 @@ VERSION="0.0.2"
 REVISION="0"
 CURRENT_OS="$(uname -s)"
 
+echo "Installing Packit $VERSION ($REVISION)"
+echo "Current OS: $CURRENT_OS"
+
 # Get the OS name
 if [ $CURRENT_OS = "Darwin" ]; then
     CURRENT_OS_NAME="apple-darwin"
@@ -47,6 +50,8 @@ fi
 # Create target
 TARGET="$CURRENT_ARCH-$CURRENT_OS_NAME"
 
+echo "Current target: $TARGET"
+
 SOURCE_URL="https://github.com/pack-it/packit/releases/download/$VERSION/packit@$VERSION.tar.gz"
 PREBUILD_URL="https://github.com/pack-it/packit/releases/download/$VERSION/packit@$VERSION-$REVISION-$TARGET.tar.gz"
 
@@ -57,6 +62,9 @@ if [ $CURRENT_OS = "Darwin" ]; then
 else
     CONFIG_DIR="/etc/packit"
 fi
+
+echo "Prefix directory: $PREFIX_DIR"
+echo "Config directory: $CONFIG_DIR"
 
 # Ask the user for admin rights
 printf "The Packit install script requires root to modify '$PREFIX_DIR' and '$CONFIG_DIR', do you wish to continue? (Y/n) "
@@ -78,13 +86,13 @@ sudo chown -R $USERNAME "$PREFIX_DIR"
 cd "$PREFIX_DIR/packages/packit/"
 
 # Install Packit to the prefix directory
-echo "Downloading Packit prebuild"
+echo "Downloading Packit prebuild from '$PREBUILD_URL'"
 if curl --proto "=https" -sSfL $PREBUILD_URL --output packit@$VERSION-$REVISION-$TARGET.tar.gz; then
     tar -xf packit@$VERSION-$REVISION-$TARGET.tar.gz
     rm packit@$VERSION-$REVISION-$TARGET.tar.gz
     mv packit@$VERSION-$REVISION-$TARGET $VERSION
     
-    echo "Downloaded prebuild"
+    echo "Downloading Packit prebuild successful"
 else
     printf "Retrieving prebuilds failed. Do you wish to build Packit from source? (Y/n) "
     answer=$(get_answer)
@@ -106,6 +114,7 @@ else
             exit 1
         fi
 
+        echo "Installing cargo from 'https://sh.rustup.rs'"
         curl --proto '=https' --tlsv1.2 -sSfL https://sh.rustup.rs | sh
 
         # Make sure that the rustup install was successful
@@ -114,13 +123,22 @@ else
             exit 1
         fi
 
+        echo "Installing cargo successful"
         RUSTUP_INSTALLED=1
     fi
 
+    echo "Downloading Packit source files from '$SOURCE_URL'"
     curl --proto "=https" -sSfL $SOURCE_URL --output packit@$VERSION.tar.gz
+    echo "Downloading Packit source files successful"
+
+    echo "Unpacking Packit source files"
     tar -xf packit@$VERSION.tar.gz
+    echo "Unpacking Packit source files successful"
+
     rm packit@$VERSION.tar.gz
     cd packit@$VERSION
+
+    echo "Building Packit from source"
     cargo build-install --destination ../$VERSION
     cd ..
     rm -r ./packit@$VERSION
@@ -134,15 +152,20 @@ else
             rustup self uninstall
         fi
     fi
+
+    echo "Building Packit from source successful"
 fi
 
 sudo mkdir -p "$CONFIG_DIR"
 sudo chmod -R 755 "$CONFIG_DIR"
 sudo chown -R $USERNAME "$CONFIG_DIR"
 
+echo "Initializing Packit"
 "$PREFIX_DIR/packages/packit/$VERSION/bin/packit" init
+echo "Initializing Packit successful"
 
 # Make sure that pit works
+echo "Testing Packit install"
 if ! command -v $PREFIX_DIR/bin/pit -h >/dev/null 2>&1; then
     echo "Unsuccessfull install of Packit, the 'pit' command cannot be found"
     exit 1
@@ -154,7 +177,7 @@ if ! command -v $PREFIX_DIR/bin/packit -h >/dev/null 2>&1; then
     exit 1
 fi
 
-echo "Successfully installed Packit"
+echo "Successfully installed Packit!"
 
 # Exit early if Packit is already in the PATH
 if echo ":$PATH:" | grep -q ":$PREFIX_DIR/bin:"; then
@@ -177,6 +200,7 @@ case "$SHELL" in
 
         if [ "$answer" = "y" ] || [ "$answer" = "yes" ] || [ "$answer" = "" ]; then
             fish -c "fish_add_path $PREFIX_DIR/bin"
+            echo "Restart your shell to refresh your path and use Packit"
             exit 0
         fi
         ;;
@@ -185,18 +209,19 @@ case "$SHELL" in
 esac
 
 if [ -e "$SHELL_CONFIG_PATH" ]; then
-    printf "Do you wish to automatically add Packit to your PATH by adding it to $SHELL_CONFIG_PATH? (Y/n) "
+    printf "Do you wish to automatically add Packit to your PATH by adding it to '$SHELL_CONFIG_PATH'? (Y/n) "
     answer=$(get_answer)
 
     if [ "$answer" = "y" ] || [ "$answer" = "yes" ] || [ "$answer" = "" ]; then
         echo "export PATH=\"$PREFIX_DIR/bin:\$PATH\"" >> "$SHELL_CONFIG_PATH"
         export PATH="$PREFIX_DIR/bin:$PATH"
+        echo "Restart your shell to refresh your path and use Packit"
         exit 0
     fi
 fi
 
 # If the shell is not recognized or user did not want to add Packit automatically tell the user how to add Packit to their shell config
-echo "Add $PREFIX_DIR/bin to your PATH by adding the command below to your shell config:"
+echo "Add '$PREFIX_DIR/bin' to your PATH by adding the command below to your shell config:"
 echo "export PATH=\"$PREFIX_DIR/bin:\$PATH\""
 }
 

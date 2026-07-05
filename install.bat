@@ -3,18 +3,27 @@ setlocal enabledelayedexpansion
 
 set "VERSION=0.0.2"
 set "REVISION=0"
+
+echo Installing Packit %VERSION% (%REVISION%)
+echo Current OS: Windows
+
 if "%PROCESSOR_ARCHITECTURE%"=="ARM64" (
-    set "CURRENT_OS=aarch64-pc-windows-msvc"
+    set "TARGET=aarch64-pc-windows-msvc"
 ) else (
-    set "CURRENT_OS=x86_64-pc-windows-msvc"
+    set "TARGET=x86_64-pc-windows-msvc"
 )
 
+echo Current target: %TARGET%
+
 set "SOURCE_URL=https://github.com/pack-it/packit/releases/download/%VERSION%/packit@%VERSION%.tar.gz"
-set "PREBUILD_URL=https://github.com/pack-it/packit/releases/download/%VERSION%/packit@%VERSION%-%REVISION%-%CURRENT_OS%.tar.gz"
+set "PREBUILD_URL=https://github.com/pack-it/packit/releases/download/%VERSION%/packit@%VERSION%-%REVISION%-%TARGET%.tar.gz"
 
 REM Determine the prefix and config directory
 set "PREFIX_DIR=C:\Program Files\packit"
 set "CONFIG_DIR=C:\Program Files\packit"
+
+echo Prefix directory: %PREFIX_DIR%
+echo Config directory: %CONFIG_DIR%
 
 REM Check for administrator privileges 
 fltmc >nul 2>&1
@@ -38,14 +47,14 @@ mkdir "%PREFIX_DIR%\packages\packit"
 pushd "%PREFIX_DIR%\packages\packit"
 
 REM Install Packit to the prefix directory 
-echo Downloading Packit prebuild
-curl --proto "=https" -sSfL %PREBUILD_URL% --output packit@%VERSION%-%REVISION%-%CURRENT_OS%.tar.gz
+echo Downloading Packit prebuild from `%PREBUILD_URL%`
+curl --proto "=https" -sSfL %PREBUILD_URL% --output packit@%VERSION%-%REVISION%-%TARGET%.tar.gz
 if not ERRORLEVEL 1 (
-    tar -xf packit@%VERSION%-%REVISION%-%CURRENT_OS%.tar.gz
-    del packit@%VERSION%-%REVISION%-%CURRENT_OS%.tar.gz
-    ren packit@%VERSION%-%REVISION%-%CURRENT_OS% %VERSION%
+    tar -xf packit@%VERSION%-%REVISION%-%TARGET%.tar.gz
+    del packit@%VERSION%-%REVISION%-%TARGET%.tar.gz
+    ren packit@%VERSION%-%REVISION%-%TARGET% %VERSION%
 
-    echo Downloaded prebuild
+    echo Downloading Packit prebuild successful
 ) else (
     set "answer="
     set /p "answer=Retrieving prebuilds failed. Do you wish to build Packit from source? (Y/n) "
@@ -77,11 +86,14 @@ if not ERRORLEVEL 1 (
 
         REM Install the correct rustup version for the current platform
         if "%PROCESSOR_ARCHITECTURE%"=="ARM64" (
+            echo Installing cargo from 'https://static.rust-lang.org/rustup/dist/aarch64-pc-windows-msvc/rustup-init.exe'
             curl --proto "=https" --tlsv1.2 -sSfL https://static.rust-lang.org/rustup/dist/aarch64-pc-windows-msvc/rustup-init.exe --output rustup-init.exe
         ) else (
             if defined PROCESSOR_ARCHITEW6432 (
+                echo Installing cargo from 'https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe'
                 curl --proto "=https" --tlsv1.2 -sSfL https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe --output rustup-init.exe
             ) else (
+                echo Installing cargo from 'https://static.rust-lang.org/rustup/dist/i686-pc-windows-msvc/rustup-init.exe'
                 curl --proto "=https" --tlsv1.2 -sSfL https://static.rust-lang.org/rustup/dist/i686-pc-windows-msvc/rustup-init.exe --output rustup-init.exe
             )
         )
@@ -97,13 +109,22 @@ if not ERRORLEVEL 1 (
             exit /b 1
         )
 
+        echo Installing cargo successful
         set RUSTUP_INSTALLED=1
     )
 
+    echo Downloading Packit source files from '%SOURCE_URL%'
     curl --proto "=https" -sSfL %SOURCE_URL% --output packit@%VERSION%.tar.gz
+    echo Downloading Packit source files successful
+
+    echo Unpacking Packit source files
     tar -xf packit@%VERSION%.tar.gz
+    echo Unpacking Packit source files successful
+
     del packit@%VERSION%.tar.gz
     cd packit@%VERSION%
+
+    echo Building Packit from source
     cargo build-install --destination ..\$VERSION
     cd ..
     rmdir /s /q .\packit@%VERSION%
@@ -120,15 +141,20 @@ if not ERRORLEVEL 1 (
             rustup self uninstall
         )
     )
+
+    echo Building Packit from source successful
 )
 
 if not exist "%CONFIG_DIR%" (
     mkdir "%CONFIG_DIR%"
 )
 
+echo Initializing Packit
 "%PREFIX_DIR%\packages\packit\%VERSION%\bin\packit.exe" init
+echo Initializing Packit successful
 
 REM Make sure that packit words
+echo "Testing Packit install"
 "%PREFIX_DIR%\bin\pit.exe" --version 2>nul >nul
 if ERRORLEVEL 1 (
     echo Unsuccessfull install of Packit, the 'pit' command cannot be found
@@ -143,7 +169,7 @@ if ERRORLEVEL 1 (
     exit /b 1
 )
 
-echo Successfully installed Packit
+echo Successfully installed Packit!
 
 REM Exit early if Packit is already in the user PATH
 echo ";%PATH%;" | find /I ";%PREFIX_DIR%\bin;" >nul
@@ -160,11 +186,12 @@ if "!answer!"=="yes" set "match=1"
 if "!answer!"=="" set "match=1"
 if "!match!"=="1" (
     setx PATH "%PATH%;%PREFIX_DIR%\bin"
+    echo Restart your shell to refresh your path and use Packit
     popd
     exit /b 0
 )
 
-echo Add %PREFIX_DIR%\bin to your PATH by adding the command below to your shell:
+echo Add '%PREFIX_DIR%\bin' to your PATH by adding the command below to your shell:
 echo setx PATH "%%PATH%%;%PREFIX_DIR%\bin"
 
 popd
