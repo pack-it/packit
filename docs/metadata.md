@@ -3,14 +3,15 @@
 ### `repository.toml`
 This file should be present in every Packit repository, it quickly describes what the repository is for.
 
-| Field                | Explanation                                                         |
-| -------------------- | ------------------------------------------------------------------- |
-| `name`               | The name of the repository. (required)                              |
-| `description`        | A small description of the repository. (required)                   |
-| `license`            | The license of the repository.                                      |
-| `maintainers`        | A list of maintainers of the repository. (required)                 |
-| `prebuilds_url`      | Defines the url of the prebuilds repository for this repository.    |
-| `prebuilds_provider` | Defines the provider of the prebuilds repository, defaults to `fs`. |
+| Field                     | Explanation                                                         |
+| ------------------------- | ------------------------------------------------------------------- |
+| `name`                    | The name of the repository. (required)                              |
+| `description`             | A small description of the repository. (required)                   |
+| `license`                 | The license of the repository.                                      |
+| `maintainers`             | A list of maintainers of the repository. (required)                 |
+| `required_packit_version` | The minimum required Packit version to use the repository.          |
+| `prebuilds_url`           | Defines the url of the prebuilds repository for this repository.    |
+| `prebuilds_provider`      | Defines the provider of the prebuilds repository, defaults to `fs`. |
 
 
 ### `index.toml`
@@ -31,7 +32,10 @@ Each package contains this file, it describes the package as whole. It shows the
 - Short description
 - Package homepage url
 - Available versions
+- The minimum required Packit version
+- Conflicting packages
 - Supported versions (for each target, see [Target bounds](#target-bounds))
+- Deprecation information about the package
 
 
 ### `targets.toml`
@@ -42,12 +46,14 @@ See the tables below for all different fields, see [Target fields](#target-field
 | Field                           | Explanation                                                                    |
 | ------------------------------- | ------------------------------------------------------------------------------ |
 | `version`                       | Defines the version of the package.                                            |
+| `required_packit_version`       | The minimum required Packit version to use the package.                        |
 | `license`                       | The license of this version of the package.                                    |
 | `dependencies`                  | Defines all the dependencies of the package, that are shared by all targets.   |
 | `build_dependencies`            | Defines all build dependencies of the package, that are shared by all targets. |
 | `use_version_specific_<script>` | When set to yes, the specified script is read from the package version directory, instead of the package directory. |
 | `skip_symlinking`               | When set to yes, the package is not symlinked after installation, preventing the package to be detectable through the PATH. |
 | `revisions`                     | A list of strings containing a description of what changed in each metadata or script revision. |
+| `deprecation`                   | Defines when the version deprecates, disables and the reason.                  |
 | `script_args`                   | A table of key-value pairs containing arguments passed to scripts.             |
 | `external_test_files`           | A list of external test files that are needed for executing the test script. These files are automatically downloaded. |
 
@@ -58,6 +64,7 @@ The targets.toml file can contain one or multiple sources, specified in the foll
 | ------------------ | ------------------------------------------------------------------------------------------------------------ |
 | `url`              | Defines the url of the archive containing the sourcecode of the package.                                     |
 | `checksum`         | Defines the sha256 checksum of the source archive.                                                           |
+| `size`             | Defines the size of the source archive in bytes.                                                             |
 | `mirrors`          | Defines a list of mirrors which could be used to download the sourcecode if the original url is unavailable. |
 | `skip_unpack`      | True to skip the unpack step and just download the source file, false to use the build in unpack.            |
 | `apply_patches_in` | Defines the directory that should be used to apply all patches in.                                           |
@@ -74,6 +81,15 @@ The `patches` field in a source is specified in the following format. Patches ar
 | `apply_in` | Defines the directory that should be used to apply this specific patches in.                            |
 
 Please note that the `mirrors` is not used when the url contains a file in the repository, this file is then expected to exist.
+
+#### Deprecation
+The `deprecation` fields in package.toml and targets.toml describe when a package is deprecated, when it will be disabled and why.
+
+| Field             | Explanation                                                                      |
+| ----------------- | -------------------------------------------------------------------------------- |
+| `deprecated_from` | Defines the date (in YYYY-MM-DD) when the package will be deprecated (required). |
+| `disabled_from`   | Defines the date (in YYYY-MM-DD) when the package will be disabled, installing the package will not be possible anymore after this date. |
+| `reason`          | Defines the reason the package is deprecated.                                    |
 
 #### Target fields
 

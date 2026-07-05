@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use thiserror::Error;
 
-use crate::{installer::types::PackageId, utils::ioerror};
+use crate::{
+    installer::types::{PackageId, Version},
+    repositories::types::Date,
+    utils::ioerror,
+};
 
 /// The errors that occur when requesting metadata from a repository.
 #[derive(Error, Debug)]
@@ -11,10 +15,16 @@ pub enum RepositoryError {
         repository_id: String,
     },
 
-    #[error("Cannot find package '{package_name}' with version '{}' in any repository", version.as_deref().unwrap_or("any"))]
+    #[error("Repository '{repository_id}' not supported, the current Packit version is too low")]
+    RepositoryNotSupported {
+        repository_id: String,
+    },
+
+    #[error("Cannot find package '{package_name}' with version '{}': {reason}", version.as_deref().unwrap_or("any"))]
     PackageNotFoundError {
         package_name: String,
         version: Option<String>,
+        reason: PackageNotFoundReason,
     },
 
     #[error("Cannot find prebuild of package '{package_id}' revision {revision}")]
@@ -29,8 +39,11 @@ pub enum RepositoryError {
     #[error("Cannot find target for package.")]
     TargetError,
 
-    #[error("Dependency '{0}' cannot be satisfied by the current package repository for the current target.")]
-    DependencySupportError(String),
+    #[error("Dependency '{dependency}' cannot be satisfied: {reason}")]
+    DependencyNotFoundError {
+        dependency: String,
+        reason: PackageNotFoundReason,
+    },
 
     #[error("No supported version for the current target could be found for package '{0}'.")]
     SupportError(String),
@@ -55,3 +68,66 @@ pub enum RepositoryError {
 }
 
 pub(super) type Result<T> = std::result::Result<T, RepositoryError>;
+
+/// The reasons why a package cannot be found.
+#[derive(Error, Clone, Debug)]
+pub enum PackageNotFoundReason {
+    #[error("cannot be found in any repository")]
+    NotFound,
+
+    #[error("package is disabled since {since}{}", reason.as_ref().map(|reason| format!(", with reason '{reason}'")).unwrap_or_default())]
+    Disabled {
+        since: Date,
+        reason: Option<String>,
+    },
+
+    #[error("not available for the current target")]
+    UnsupportedTarget,
+
+    #[error("not supported for the current Packit version, requires Packit {requires}")]
+    NotSupported {
+        requires: Version,
+    },
+}
+
+impl PackageNotFoundReason {
+    /// Gets the primary reason from an iterator over reasons
+    /// If the iterator has no items, PackageNotFoundReason::NotFound is returned.
+    pub fn get_primary_reason<'a>(reasons: impl Iterator<Item = &'a PackageNotFoundReason>) -> PackageNotFoundReason {
+        let mut primary = PackageNotFoundReason::NotFound;
+
+        for next in reasons {
+            match &primary {
+                // If the primary is `UnsupportedTarget`, only use the new one if the next is not `NotFound` or `Disabled`
+                PackageNotFoundReason::UnsupportedTarget => {
+                    if !matches!(next, PackageNotFoundReason::NotFound | PackageNotFoundReason::Disabled { .. }) {
+                        primary = next.clone();
+                    }
+                },
+
+                // If the primary is `NotSupported`, only use the new one if next is `NotSupported` and the required version is lower
+                PackageNotFoundReason::NotSupported { requires } => {
+                    if let PackageNotFoundReason::NotSupported { requires: requires_next } = next
+                        && requires_next < requires
+                    {
+                        primary = next.clone();
+                    }
+                },
+
+                // If the primary is `Disabled`, only use the new one if the next if `UnsupportedTarget` or `NotSupported`, or a newer disable
+                PackageNotFoundReason::Disabled { since, .. } => {
+                    match next {
+                        PackageNotFoundReason::UnsupportedTarget | PackageNotFoundReason::NotSupported { .. } => primary = next.clone(),
+                        PackageNotFoundReason::Disabled { since: since_next, .. } if since_next > since => primary = next.clone(),
+                        _ => {},
+                    };
+                },
+
+                // If the current primary is `NotFound`, always use the new one
+                PackageNotFoundReason::NotFound => primary = next.clone(),
+            }
+        }
+
+        primary
+    }
+}

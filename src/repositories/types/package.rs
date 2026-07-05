@@ -4,11 +4,11 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    installer::types::{Dependency, PackageName, Version, VersionIntervals},
+    installer::types::{PackageName, Version, VersionIntervals},
     platforms::Target,
     repositories::{
         error::{RepositoryError, Result},
-        types::TargetBounds,
+        types::{DeprecationInfo, TargetBounds},
     },
 };
 
@@ -19,12 +19,19 @@ pub struct PackageMeta {
     pub description: String,
     pub homepage: Option<String>,
     pub versions: Vec<Version>,
+    pub required_packit_version: Option<Version>,
+
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub conflicts_with: Vec<PackageName>,
     pub supported_versions: HashMap<TargetBounds, VersionIntervals>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deprecation: Option<DeprecationInfo>,
 }
 
 impl PackageMeta {
-    /// Gets the latest supported version for the current target.
-    pub fn get_latest_version(&self, target: &Target) -> Result<&Version> {
+    /// Gets a list of all supported versions for the given target.
+    pub fn get_supported_versions(&self, target: &Target) -> Result<Vec<&Version>> {
         let target = match TargetBounds::get_best_target(target, self.supported_versions.keys().collect()) {
             Some(target) => target,
             None => return Err(RepositoryError::TargetError),
@@ -32,48 +39,23 @@ impl PackageMeta {
 
         let supported = self.supported_versions.get(target).ok_or(RepositoryError::TargetError)?;
 
-        // The versions vec isn't necessary in order, so we need to keep track of the current highest version
-        let mut current_highest: Option<&Version> = None;
+        // Get all supported versions and sort them
+        let mut versions = Vec::new();
         for version in &self.versions {
             // Continue if the version is not supported by the current target
             if !supported.covers(version) {
                 continue;
             }
 
-            current_highest = match current_highest {
-                Some(highest) if highest < version => Some(version),
-                None => Some(version),
-                _ => continue,
-            };
+            versions.push(version);
+        }
+        versions.sort();
+
+        // Return a support error if no supported versions are found
+        if versions.is_empty() {
+            return Err(RepositoryError::SupportError(self.name.to_string()));
         }
 
-        current_highest.ok_or(RepositoryError::SupportError(self.name.to_string()))
-    }
-
-    /// Gets the latest supported version for the current target which also satisfies the given dependency.
-    pub fn get_latest_dependency_version(&self, dependency: &Dependency, target: &Target) -> Result<&Version> {
-        let target = match TargetBounds::get_best_target(target, self.supported_versions.keys().collect()) {
-            Some(target) => target,
-            None => return Err(RepositoryError::TargetError),
-        };
-
-        let supported = self.supported_versions.get(target).ok_or(RepositoryError::TargetError)?;
-
-        // The versions vec isn't necessary in order, so we need to keep track of the current highest version
-        let mut current_highest: Option<&Version> = None;
-        for version in &self.versions {
-            // Continue if the dependency is not satisfied or if the version is not supported by the current target
-            if !dependency.satisfied(&self.name, version) || !supported.covers(version) {
-                continue;
-            }
-
-            current_highest = match current_highest {
-                Some(highest) if highest < version => Some(version),
-                None => Some(version),
-                _ => continue,
-            };
-        }
-
-        current_highest.ok_or(RepositoryError::DependencySupportError(dependency.to_string()))
+        Ok(versions)
     }
 }

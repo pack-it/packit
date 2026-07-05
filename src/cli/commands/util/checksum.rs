@@ -55,5 +55,6 @@ impl HandleCommand for ChecksumArgs {
 
         spinner.finish("Downloading file successful".into());
         println!("Found checksum {}", checksum);
+        println!("Size of file: {}", bytes.len());
     }
 }

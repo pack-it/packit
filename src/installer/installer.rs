@@ -303,6 +303,16 @@ impl<'a> Installer<'a> {
                 None => install_meta.version_metadata.skip_symlinking,
             };
 
+        // Check if the package has conflicting packages
+        let conflicts = self.register.get_conflicting_packages(&package_id.name, &install_meta.package_metadata.conflicts_with);
+        if !conflicts.is_empty() {
+            warning!(
+                "Skipping symlinking because of conflicting packages: {}",
+                conflicts.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(", ")
+            );
+            should_symlink = false;
+        }
+
         let mut should_set_active = !self.options.skip_active;
 
         // Check if we have a previous active install
@@ -820,14 +830,15 @@ impl<'a> Installer<'a> {
     pub fn get_updatables(&self) -> Result<Vec<PackageId>> {
         let mut updatables = Vec::new();
         for (package_name, package) in self.register.iterate_packages() {
-            let (_, package_meta) = self.repository_manager.read_package(&package_name)?;
-            let latest_available_version = package_meta.get_latest_version(&Target::current())?;
+            let (repository_id, package_meta) = self.repository_manager.read_package(&package_name)?;
+            let latest_available_version =
+                self.repository_manager.read_latest_supported_version(&repository_id, &package_meta, &Target::current())?;
 
             // Get the latest installed version
             let latest_installed_version = package.versions.keys().max().expect("Expected a latest installed version");
 
             // Check if the latest version exists
-            if latest_available_version == latest_installed_version {
+            if latest_available_version.version == *latest_installed_version {
                 continue;
             }
 

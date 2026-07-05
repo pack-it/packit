@@ -11,7 +11,7 @@ use crate::{
     platforms::Target,
     repositories::{
         error::{RepositoryError, Result},
-        types::{Licenses, PackageTarget, Script, Source, Sources, TargetBounds},
+        types::{DeprecationInfo, Licenses, PackageTarget, Script, Source, Sources, TargetBounds},
     },
 };
 
@@ -19,6 +19,7 @@ use crate::{
 #[derive(Serialize, Deserialize, Debug)]
 pub struct PackageVersionMeta {
     pub version: Version,
+    pub required_packit_version: Option<Version>,
 
     #[serde(default, skip_serializing_if = "Licenses::is_unknown")]
     pub license: Licenses,
@@ -55,6 +56,9 @@ pub struct PackageVersionMeta {
 
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub revisions: Vec<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deprecation: Option<DeprecationInfo>,
 
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub script_args: HashMap<String, String>,
@@ -168,8 +172,9 @@ impl PackageVersionMeta {
         self.revisions.len() as u64
     }
 
-    /// Checks if there are conflicts in the package version metadata
-    pub fn has_conflicts(&self) -> bool {
+    /// Checks if there are conflicts in the package version metadata.
+    /// Returns true if the metadata is valid and thus contains no conflicts.
+    pub fn is_metadata_valid(&self) -> bool {
         // Check if a global dependency is also specified as target specific dependency
         for dependency in &self.dependencies {
             for target in self.targets.values() {

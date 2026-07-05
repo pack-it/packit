@@ -3,7 +3,10 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{installer::types::Version, register::installed_package_version::InstalledPackageVersion};
+use crate::{
+    installer::types::{PackageName, Version},
+    register::installed_package_version::InstalledPackageVersion,
+};
 
 /// Represents a package that is installed on the system, holding package specific info
 /// and a mapping from the installed versions to package versions.
@@ -18,6 +21,9 @@ pub struct InstalledPackage {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub homepage: Option<String>,
+
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub conflicts_with: Vec<PackageName>,
 }
 
 impl InstalledPackage {
@@ -27,6 +33,7 @@ impl InstalledPackage {
         symlinked: bool,
         package_description: String,
         package_homepage: Option<String>,
+        conflicts_with: Vec<PackageName>,
     ) -> Self {
         let version = package_version.package_id.version.clone();
         Self {
@@ -35,6 +42,7 @@ impl InstalledPackage {
             active_version: version,
             description: package_description,
             homepage: package_homepage,
+            conflicts_with,
         }
     }
 

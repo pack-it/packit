@@ -6,14 +6,14 @@ use clap::Args;
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{logging::error, not_found},
+        display::{deprecation, logging::error, not_found},
         parameter_checks,
     },
     config::Config,
     installer::{InstallType, Installer, InstallerOptions, types::OptionalPackageId},
     platforms::Target,
     register::package_register::PackageRegister,
-    repositories::manager::RepositoryManager,
+    repositories::{error::RepositoryError, manager::RepositoryManager},
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
@@ -73,12 +73,20 @@ impl HandleCommand for InstallArgs {
 
         // Check if all packages exist before starting installation
         for optional_id in &self.packages {
-            match optional_id.versioned() {
-                Some(package_id) if manager.read_package_version(&package_id, &Target::current()).is_ok() => continue,
-                Some(package_id) => not_found::repository_package_version(&package_id, &manager, &config),
-                None if manager.read_package(&optional_id.name).is_ok() => continue,
-                None => not_found::repository_package(&optional_id.name, &manager, &config),
-            }
+            let (_, package, package_version) = match manager.read_package_and_version(&optional_id, &Target::current()) {
+                Ok(package) => package,
+                Err(RepositoryError::PackageNotFoundError { reason, .. }) => {
+                    not_found::repository_optional_package(optional_id, &manager, reason)
+                },
+                Err(e) => {
+                    error!(e, "Cannot read package");
+                    return;
+                },
+            };
+
+            // Check if the package or version is deprecated
+            deprecation::show_package_warnings(&package);
+            deprecation::show_package_version_warnings(&package_version, &optional_id.name);
         }
 
         // Determine the install type. Note that clap already check if build and build-all are both set (which should not be possible).

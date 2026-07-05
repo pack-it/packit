@@ -116,7 +116,7 @@ pub fn fix_inconsistent_register(
 
         // Use checksum to check if a prebuild was used (use checksum to make sure it's the same prebuild)
         let install_path = &package_directory.join(&package_id.name).join(package_id.version.to_string());
-        let (repository_id, package_version_meta) = manager.read_package_version(package_id, &Target::current())?;
+        let (repository_id, _, package_version_meta) = manager.read_package_and_version(&package_id.clone().into(), &Target::current())?;
         let revisions = package_version_meta.get_revision_count();
         let used_prebuild = match manager.get_prebuild_checksum(&repository_id, package_id, revisions, &Target::current()) {
             Ok(Some(correct_checksum)) => {
@@ -207,9 +207,9 @@ pub fn fix_missing_dependencies(
         let package = match register.get_latest_satisfying_package(&missing_dependency) {
             Some(package) => package.package_id.clone(),
             None => {
-                let (_, package_metadata) = manager.read_package(missing_dependency.get_name())?;
-                let latest_version = package_metadata.get_latest_version(&Target::current())?;
-                PackageId::new(missing_dependency.get_name().clone(), latest_version.clone())
+                let (repository_id, package_metadata) = manager.read_package(missing_dependency.get_name())?;
+                let version_metadata = manager.read_latest_supported_version(&repository_id, &package_metadata, &Target::current())?;
+                PackageId::new(missing_dependency.get_name().clone(), version_metadata.version)
             },
         };
 

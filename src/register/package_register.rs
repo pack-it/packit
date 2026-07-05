@@ -130,6 +130,7 @@ impl PackageRegister {
             symlinked,
             package.description.clone(),
             package.homepage.clone(),
+            package.conflicts_with.clone(),
         )
     }
 
@@ -142,6 +143,7 @@ impl PackageRegister {
         symlinked: bool,
         package_description: String,
         package_homepage: Option<String>,
+        conflicts_with: Vec<PackageName>,
     ) -> Result<()> {
         // Add the package as a dependent in its dependencies
         for dependency in &installed_package_version.dependencies {
@@ -161,7 +163,13 @@ impl PackageRegister {
             None => {
                 self.packages.insert(
                     package_name.clone(),
-                    InstalledPackage::new(installed_package_version, symlinked, package_description, package_homepage),
+                    InstalledPackage::new(
+                        installed_package_version,
+                        symlinked,
+                        package_description,
+                        package_homepage,
+                        conflicts_with,
+                    ),
                 );
             },
         };
@@ -302,6 +310,30 @@ impl PackageRegister {
         latest
     }
 
+    /// Checks if a package has conflicts with any package that is installed.
+    /// Returns a list of the names of all conflicting packages.
+    pub fn get_conflicting_packages(&self, package_name: &PackageName, package_conflicts: &Vec<PackageName>) -> Vec<&PackageName> {
+        let mut conflicts = Vec::new();
+
+        for (name, package) in &self.packages {
+            if !package.symlinked || name == package_name {
+                continue;
+            }
+
+            // Check if the package specifies this package as conflict
+            if package_conflicts.contains(name) {
+                conflicts.push(name);
+            }
+
+            // Check if this package specifies the package as conflict
+            if package.conflicts_with.contains(package_name) {
+                conflicts.push(name);
+            }
+        }
+
+        conflicts
+    }
+
     /// Returns an iterator, which iterates over all nested installed package version values.
     pub fn iterate_all(&self) -> impl Iterator<Item = &InstalledPackageVersion> {
         self.packages.values().flat_map(|p| p.versions.values())
@@ -330,7 +362,7 @@ pub mod tests {
     use crate::installer::types::VersionIntervals;
     use crate::installer::types::dependency_tests::create_dependency;
     use crate::platforms::TargetArchitecture;
-    use crate::repositories::types::{Checksum, Licenses, Source, Sources, TargetBounds};
+    use crate::repositories::types::{Checksum, FileSize, Licenses, Source, Sources, TargetBounds};
 
     use super::*;
 
@@ -366,6 +398,7 @@ pub mod tests {
             active_version,
             description: "-".to_string(),
             homepage: None,
+            conflicts_with: Vec::new(),
         }
     }
 
@@ -434,20 +467,26 @@ pub mod tests {
             description: "-".to_string(),
             homepage: None,
             versions: vec![package_id.version.clone()],
+            required_packit_version: None,
+            conflicts_with: Vec::new(),
             supported_versions: HashMap::from([(current_target_bounds, version_intervals)]),
+            deprecation: None,
         }
     }
 
     fn create_package_version_meta(package_id: &PackageId) -> PackageVersionMeta {
         PackageVersionMeta {
             version: package_id.version.clone(),
+            required_packit_version: None,
             dependencies: Vec::new(),
             build_dependencies: Vec::new(),
             targets: HashMap::new(),
             external_test_files: HashSet::new(),
+            deprecation: None,
             sources: Sources::Single(Source {
                 url: "-".to_string(),
                 checksum: Checksum { sha256: [0; 32] },
+                size: FileSize(0),
                 mirrors: Vec::new(),
                 skip_unpack: false,
                 apply_patches_in: None,

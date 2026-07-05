@@ -204,11 +204,12 @@ impl<'a> InstallTreeBuilder<'a> {
         }
 
         // Use the latest version if the dependency is not yet satisfied
-        let (repository_id, package_metadata) = self.repository_manager.read_package(dependency.get_name())?;
-        let version = package_metadata.get_latest_dependency_version(dependency, &Target::current())?;
-        let dependency_id = PackageId::new(dependency.get_name().clone(), version.clone());
-        let version_metadata = self.repository_manager.read_repo_package_version(&repository_id, &dependency_id)?;
-        let install_meta = InstallMeta::new(package_metadata, version_metadata, repository_id)?;
+        let target = Target::current();
+        let (repository_id, package_meta) = self.repository_manager.read_package(dependency.get_name())?;
+        let version_meta =
+            self.repository_manager.read_latest_supported_dependency_version(&repository_id, &package_meta, dependency, &target)?;
+        let dependency_id = PackageId::new(dependency.get_name().clone(), version_meta.version.clone());
+        let install_meta = InstallMeta::new(package_meta, version_meta, repository_id)?;
 
         let label = match self.check_prebuild(&install_meta, &dependency_id, &label)? {
             Some(adjusted_label) => adjusted_label,

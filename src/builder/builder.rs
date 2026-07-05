@@ -12,7 +12,7 @@ use crate::{
         BinaryPatcher, BuildEnv,
         error::{BuilderError, Result},
     },
-    cli::display::Spinner,
+    cli::display::{Spinner, logging::debug},
     config::Config,
     installer::{
         install_tree::InstallMeta,
@@ -93,6 +93,7 @@ impl<'a> Builder<'a> {
 
         // Get source from the package version
         let source = install_meta.version_metadata.get_source(&install_meta.target_bounds)?;
+        debug!("Source size: {}", source.size);
 
         // Download the build files
         let bytes = self.download_file(&source.url, &source.mirrors, &source.checksum, package_name)?;

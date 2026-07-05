@@ -2,7 +2,6 @@
 use std::cmp;
 
 use crate::{
-    config::Config,
     installer::types::PackageName,
     repositories::{error::RepositoryError, manager::RepositoryManager},
 };
@@ -12,14 +11,10 @@ const FUZZY_THRESHOLD: f64 = 0.25;
 /// Does a fuzzy search against the repository index.toml.
 /// Returns a `RepositoryError` for repository related errors
 /// or optionally a `PackageName` if a fuzzy match can be found.
-pub fn repository_search(
-    config: &Config,
-    manager: &RepositoryManager,
-    package_name: &PackageName,
-) -> Result<Option<PackageName>, RepositoryError> {
+pub fn repository_search(manager: &RepositoryManager, package_name: &PackageName) -> Result<Option<PackageName>, RepositoryError> {
     let mut best_word = None;
     let mut best_distance = None;
-    for repository_id in &config.repositories_rank {
+    for repository_id in manager.iter_supported_repositories_rank() {
         let repository_index = manager.read_index_metadata(repository_id)?;
 
         let fuzzy_matches = fuzzy_search(repository_index.supported_packages.iter(), package_name.as_str());

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{collections::HashMap, ops::Not};
+use std::{collections::HashMap, fmt::Display, ops::Not};
 
+use chrono::Utc;
 use serde::{Deserialize, Deserializer, Serialize, de};
 
 use crate::repositories::types::Checksum;
@@ -26,6 +27,7 @@ pub struct Source {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mirrors: Vec<String>,
     pub checksum: Checksum,
+    pub size: FileSize,
 
     #[serde(default, skip_serializing_if = "<&bool>::not")]
     pub skip_unpack: bool,
@@ -52,6 +54,26 @@ pub struct Patch {
     pub mirrors: Vec<String>,
     pub checksum: Checksum,
     pub apply_in: Option<String>,
+}
+
+/// Represents the size of a file in bytes.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct FileSize(pub u32);
+
+/// Represents a date in the metadata.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Date(chrono::NaiveDate);
+
+/// Represents information about a package deprecation and disabling.
+#[derive(Serialize, Deserialize, Debug)]
+pub struct DeprecationInfo {
+    pub deprecated_from: Date,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub disabled_from: Option<Date>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
 }
 
 impl Source {
@@ -95,5 +117,38 @@ impl<'de> Deserialize<'de> for Sources {
 
         let named = HashMap::deserialize(value).map_err(de::Error::custom)?;
         Ok(Sources::Named(named))
+    }
+}
+
+impl Display for FileSize {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut unit = 0;
+        let mut value = self.0 as f64;
+
+        // Adjust unit and value to order of size
+        while unit < Self::UNITS.len() && value > 1750.0 {
+            unit += 1;
+            value /= 1024.0;
+        }
+
+        // Show 2 decimal places and the correct unit
+        write!(f, "{:.2} {}", value, Self::UNITS[unit])
+    }
+}
+
+impl FileSize {
+    const UNITS: &[&str] = &["B", "KB", "MB", "GB", "TB"];
+}
+
+impl Display for Date {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0.format("%Y-%m-%d"))
+    }
+}
+
+impl Date {
+    /// Gets the current date.
+    pub fn now() -> Self {
+        Self(Utc::now().date_naive())
     }
 }

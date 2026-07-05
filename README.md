@@ -93,7 +93,7 @@ Unlinks the specified package, causing the package to be unavailable from the `P
 Packages the specified package(s) into a prebuild and stores it in the destination directory, together with a checksum of the prebuild. When `--structured` is used the packages will be put into a prebuild directory structure. `--all` will package all installed packages.
 
 #### `pit util checksum <URL>`
-Calculates the checksum of the file at the given url.
+Calculates the checksum of the file at the given url. Also shows the size of the downloaded file in bytes.
 
 #### `pit util portable-repo <DESTINATION> <PACKAGE-NAME>@<VERSION> ... [--exclude-prebuilds] [--skip-dependency-resolution]`
 Generates a portable repository at the given destination, containing the specified packages. Normally all dependencies of the packages are added automatically, when the `--skip-dependency-resolution` flag is given, this step is skipped. If the `--exclude-prebuilds` flag is given, prebuilds are not included in the portable repository and are not required for the generation.

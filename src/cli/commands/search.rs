@@ -7,7 +7,7 @@ use std::{collections::HashSet, str::FromStr};
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{logging::error, not_found, print_grid},
+        display::{deprecation, logging::error, not_found, print_grid},
     },
     config::Config,
     installer::types::OptionalPackageId,
@@ -48,7 +48,7 @@ impl SearchArgs {
 
         let regex = Regex::new(&self.query).unwrap_or_exit_msg("Invalid regex pattern", 1);
         let mut matches = HashSet::new();
-        for repository_id in &config.repositories_rank {
+        for repository_id in manager.iter_supported_repositories_rank() {
             let index_meta = manager.read_index_metadata(repository_id).unwrap_or_exit(1);
             for package in index_meta.supported_packages {
                 if regex.is_match(&package) {
@@ -77,7 +77,9 @@ impl SearchArgs {
         let manager = RepositoryManager::new(&config);
         let (repository_id, package, package_version) = match manager.read_package_and_version(&optional_id, &Target::current()) {
             Ok(package) => package,
-            Err(RepositoryError::PackageNotFoundError { .. }) => not_found::repository_package(&optional_id.name, &manager, &config),
+            Err(RepositoryError::PackageNotFoundError { reason, .. }) => {
+                not_found::repository_optional_package(&optional_id, &manager, reason)
+            },
             Err(e) => {
                 error!(e, "Cannot read package");
                 return;
@@ -85,10 +87,10 @@ impl SearchArgs {
         };
 
         // Get latest version of package
-        let latest_version = match package.get_latest_version(&Target::current()) {
+        let latest_version = match manager.read_latest_supported_version(&repository_id, &package, &Target::current()) {
             Ok(version) => version,
-            Err(RepositoryError::TargetError) => {
-                println!("Package does not exist for current target");
+            Err(RepositoryError::PackageNotFoundError { reason, .. }) => {
+                println!("Package cannot be found: {reason}");
                 return;
             },
             Err(e) => {
@@ -100,17 +102,11 @@ impl SearchArgs {
         // Create a package id
         let package_id = optional_id.versioned_or_cloned(&package_version.version);
 
-        let target_bounds = package_version
-            .get_best_target(&Target::current())
-            .unwrap_or_exit_msg("The package is not available for the current target", 1);
+        let target_bounds = package_version.get_best_target(&Target::current()).unwrap_or_exit(1);
 
         // Get current target
         let target = match package_version.get_target(&target_bounds) {
             Ok(target) => target,
-            Err(RepositoryError::TargetError) => {
-                println!("Package {package_id} from repository {repository_id} does not exist for current target");
-                return;
-            },
             Err(e) => {
                 error!(e, "Cannot read {package_id} from repository {repository_id}");
                 return;
@@ -123,16 +119,20 @@ impl SearchArgs {
         // Print package information
         println!("{} ({})", package.name.bold().blue(), package_version.version);
         println!("{}", package.description.green());
-        println!("Latest version: {}", latest_version.to_string().red());
+        println!("Latest stable version: {}", latest_version.version.to_string().red());
         println!("Dependencies: {}", dependencies.join(", ").red());
         println!("License: {}", package_version.license.to_string().red());
 
         // Also print revisions if there are any
         if !package_version.revisions.is_empty() {
             println!("Revisions:");
-            for revision in package_version.revisions {
+            for revision in &package_version.revisions {
                 println!("  - {revision}");
             }
         }
+
+        // Check if the package or version is deprecated
+        deprecation::show_package_warnings(&package);
+        deprecation::show_package_version_warnings(&package_version, &optional_id.name);
     }
 }
