@@ -94,6 +94,13 @@ if curl --proto "=https" -sSfL $PREBUILD_URL --output packit@$VERSION-$REVISION-
     
     echo "Downloading Packit prebuild successful"
 else
+    # Check internet connection with reliable site
+    if ! curl -sSf http://www.google.com > /dev/null 2>&1; then
+        echo "Retrieving prebuilds failed, because there is no working internet connection"
+        echo "Canceling installation of Packit"
+        exit 1
+    fi
+
     printf "Retrieving prebuilds failed. Do you wish to build Packit from source? (Y/n) "
     answer=$(get_answer)
 

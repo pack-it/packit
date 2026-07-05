@@ -56,6 +56,14 @@ if not ERRORLEVEL 1 (
 
     echo Downloading Packit prebuild successful
 ) else (
+    REM Check internet connection with reliable site
+    curl -sSf http://www.google.com >NUL 2>&1
+    if ERRORLEVEL 1 (
+        echo Retrieving prebuilds failed, because there is no working internet connection
+        echo Canceling installation of Packit
+        exit /b 1
+    )
+
     set "answer="
     set /p "answer=Retrieving prebuilds failed. Do you wish to build Packit from source? (Y/n) "
     set "match="
