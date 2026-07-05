@@ -1,5 +1,5 @@
 #!/bin/sh
-set -eu
+set -eEu
 
 # Gets user input and uses /dev/tty when stdin is not available
 get_answer() {
@@ -12,7 +12,32 @@ get_answer() {
     echo "$answer"
 }
 
-main () {
+# Removes all created files in case of an error
+cleanup() {
+    # Don't cleanup of `SHOULD_CLEANUP` is not true
+    if [ ${SHOULD_CLEANUP-} -eq 0 ]; then
+        exit 0
+    fi
+
+    echo "Remove installed Packit files"
+
+    # Remove the prefix directory if `PREFIX_DIR` is set and it exists
+    if [ -n "${PREFIX_DIR-}" ] && [ -d "$PREFIX_DIR" ]; then
+        sudo rm -r "$PREFIX_DIR"
+    fi
+    
+    # Remove the config directory if `CONFIG_DIR` is set and it exists
+    if [ -n "${CONFIG_DIR-}" ] && [ -d "$CONFIG_DIR" ]; then
+        sudo rm -r "$CONFIG_DIR"
+    fi
+}
+
+main() {
+# Execute `handle_exit` in case of ctrl+C interupt, termination signal or exit
+# And SHOULD_CLEANUP by default
+trap cleanup INT TERM EXIT
+SHOULD_CLEANUP=1
+
 VERSION="0.0.2"
 REVISION="0"
 CURRENT_OS="$(uname -s)"
@@ -77,6 +102,14 @@ fi
 # Execute sudo without doing anything
 sudo true
 
+# Exit early with code 0 if there already is a version of Packit installed
+# Note that we can't rely on the `packit init` command, because we don't know if it fails because of an already existing config file
+if [ -f "$CONFIG_DIR/Config.toml" ]; then
+    echo "Packit already seems to be installed, config file found in '$CONFIG_DIR'"
+    SHOULD_CLEANUP=0
+    exit 0
+fi
+
 USERNAME=$(whoami)
 
 # Go into the prefix directory
@@ -96,7 +129,7 @@ if curl --proto "=https" -sSfL $PREBUILD_URL --output packit@$VERSION-$REVISION-
 else
     # Check internet connection with reliable site
     if ! curl -sSf http://www.google.com > /dev/null 2>&1; then
-        echo "Retrieving prebuilds failed, because there is no working internet connection"
+        echo "Retrieving Packit prebuilds failed, because there is no working internet connection"
         echo "Canceling installation of Packit"
         exit 1
     fi
@@ -188,6 +221,7 @@ echo "Successfully installed Packit!"
 
 # Exit early if Packit is already in the PATH
 if echo ":$PATH:" | grep -q ":$PREFIX_DIR/bin:"; then
+    SHOULD_CLEANUP=0
     exit 0
 fi
 
@@ -208,6 +242,7 @@ case "$SHELL" in
         if [ "$answer" = "y" ] || [ "$answer" = "yes" ] || [ "$answer" = "" ]; then
             fish -c "fish_add_path $PREFIX_DIR/bin"
             echo "Restart your shell to refresh your path and use Packit"
+            SHOULD_CLEANUP=0
             exit 0
         fi
         ;;
@@ -223,6 +258,7 @@ if [ -e "$SHELL_CONFIG_PATH" ]; then
         echo "export PATH=\"$PREFIX_DIR/bin:\$PATH\"" >> "$SHELL_CONFIG_PATH"
         export PATH="$PREFIX_DIR/bin:$PATH"
         echo "Restart your shell to refresh your path and use Packit"
+        SHOULD_CLEANUP=0
         exit 0
     fi
 fi
@@ -230,6 +266,7 @@ fi
 # If the shell is not recognized or user did not want to add Packit automatically tell the user how to add Packit to their shell config
 echo "Add '$PREFIX_DIR/bin' to your PATH by adding the command below to your shell config:"
 echo "export PATH=\"$PREFIX_DIR/bin:\$PATH\""
+SHOULD_CLEANUP=0
 }
 
 main "$@"
