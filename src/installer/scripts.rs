@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::{
     collections::HashMap,
-    fs,
+    fs::{self, File},
     path::{self, Path, PathBuf},
     process::{Command, Stdio},
 };
@@ -17,8 +17,17 @@ use crate::{
     installer::types::{PackageId, PackageName},
     platforms::{Os, TargetArchitecture},
     repositories::{error::RepositoryError, manager::RepositoryManager},
-    utils::env::Environment,
+    utils::{
+        env::Environment,
+        ioerror::{self, IOResultExt},
+    },
 };
+
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+use std::os::fd::IntoRawFd;
+
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+use std::os::unix::process::CommandExt;
 
 /// The errors that occur during script handling.
 #[derive(Error, Debug)]
@@ -46,6 +55,9 @@ pub enum ScriptError {
 
     #[error("Cannot fetch script from repository")]
     FetchScriptError(#[from] RepositoryError),
+
+    #[error("Error while interacting with filesystem")]
+    IOError(#[from] ioerror::IOError),
 }
 
 pub type Result<T> = core::result::Result<T, ScriptError>;
@@ -144,6 +156,9 @@ fn run_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, env: Environm
     if show_output {
         command.stdout(Stdio::inherit()).stderr(Stdio::inherit());
     }
+
+    // Bind extra output pipes
+    bind_extra_outputs(&mut command, script_data)?;
 
     // Remove stripped environment variables
     for key in env.stripped_vars {
@@ -250,3 +265,30 @@ pub const SCRIPT_EXTENSION: &str = "sh";
 
 #[cfg(target_os = "windows")]
 pub const SCRIPT_EXTENSION: &str = "bat";
+
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+fn bind_extra_outputs(command: &mut Command, script_data: &ScriptData) -> Result<()> {
+    let source_verbose_fd = match script_data.verbose {
+        true => libc::STDOUT_FILENO,
+        false => File::options().write(true).open("/dev/null").err_operation("open /dev/null")?.into_raw_fd(),
+    };
+    unsafe {
+        command.pre_exec(move || {
+            libc::dup2(source_verbose_fd, 3);
+
+            Ok(())
+        })
+    };
+
+    Ok(())
+}
+
+#[cfg(target_os = "windows")]
+fn bind_extra_outputs(command: &mut Command) -> Result<()> {
+    Ok(())
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+fn bind_extra_outputs(command: &mut Command) -> Result<()> {
+    panic!("Cannot bind extra outputs for target, target is not supported.");
+}
