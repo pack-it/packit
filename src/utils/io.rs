@@ -9,14 +9,14 @@ use std::{
 use std::{ffi::OsStr, os::unix::ffi::OsStrExt};
 
 use crate::{
-    cli::display::logging::warning,
+    cli::display::logging::{debug, warning},
     platforms::symlink,
     utils::ioerror::{self, IOResultExt},
 };
 
 /// Recursively creates symlinks from a link directory to the original directory.
 /// Note that there is an early return when the original doesn't exist. Non-existant link directories are created.
-pub fn create_folder_symlinks(original_dir: &Path, link_dir: &Path) -> symlink::Result<()> {
+pub fn create_folder_symlinks(original_dir: &Path, link_dir: &Path, overwrite: bool) -> symlink::Result<()> {
     // Skip symlinking if source does not exist
     if !original_dir.exists() {
         return Ok(());
@@ -35,14 +35,26 @@ pub fn create_folder_symlinks(original_dir: &Path, link_dir: &Path) -> symlink::
 
         // Create the symlinks for the subdirectory
         if file.file_type().err_with_path("get file type of", file.path())?.is_dir() {
-            create_folder_symlinks(&file.path(), &link_path)?;
+            create_folder_symlinks(&file.path(), &link_path, overwrite)?;
             continue;
         }
 
         // Check if file already exists
-        if fs::exists(&link_path).err_with_path("check existance of", &link_path)? {
-            warning!("Symlink {} already exists in {}", file.file_name().display(), link_dir.display());
-            continue;
+        if symlink::exists(&link_path) {
+            // If the symlink already exists as expected, skip removing and recreation
+            if link_path.is_symlink() && fs::read_link(&link_path).err_with_path("read link", &link_path)? == file.path() {
+                continue;
+            }
+
+            // Show warning and continue if overwrite is disabled
+            if !overwrite {
+                warning!("Symlink '{}' already exists in {}", file.file_name().display(), link_dir.display());
+                continue;
+            }
+
+            // Remove existing symlink when overwrite is enabled
+            debug!("Overwriting symlink {}", link_path.display());
+            symlink::remove_symlink(&link_path)?;
         }
 
         // Symlink file in link path

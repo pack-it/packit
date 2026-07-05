@@ -30,7 +30,7 @@ impl<'a> Symlinker<'a> {
     /// Creates symlinks from Packit's "bin", "include", "lib", "share", etc. directories to
     /// the "bin", "include", "lib", "share", etc. directories in a given package directory.
     /// Could return an IO error.
-    pub fn create_symlinks(&self, package_directory: &Path) -> Result<()> {
+    pub fn create_symlinks(&self, package_directory: &Path, overwrite: bool) -> Result<()> {
         let prefix_dir = Path::new(&self.config.prefix_directory);
 
         // Symlink package directories bin, include, lib, share, etc.
@@ -38,7 +38,7 @@ impl<'a> Symlinker<'a> {
             let package_dir_path = package_directory.join(dir_name);
             let prefix_dir_path = prefix_dir.join(dir_name);
 
-            io::create_folder_symlinks(&package_dir_path, &prefix_dir_path)?;
+            io::create_folder_symlinks(&package_dir_path, &prefix_dir_path, overwrite)?;
         }
 
         Ok(())
@@ -74,7 +74,7 @@ impl<'a> Symlinker<'a> {
 
         // Only create new symlinks if we should symlink
         if should_symlink {
-            self.create_symlinks(Path::new(&package_version.install_path))?;
+            self.create_symlinks(Path::new(&package_version.install_path), false)?;
         }
 
         // Updates the active version and sets its symlinked state

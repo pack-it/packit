@@ -315,7 +315,7 @@ pub fn fix_missing_links(missing: Vec<PackageName>, register: &mut PackageRegist
 
         let install_path = package_version.install_path.clone();
         symlinker.unlink_package(register, package_name)?;
-        symlinker.create_symlinks(&install_path)?;
+        symlinker.create_symlinks(&install_path, false)?;
 
         if let Some(package) = register.get_package_mut(package_name) {
             package.symlinked = true;
