@@ -41,7 +41,7 @@ impl<'a> RepositoryManager<'a> {
                 continue;
             };
 
-            // Read repository metadata, or skip repository is metadata cannot be read
+            // Read repository metadata, or skip repository if the metadata cannot be read
             let repository_meta = match provider.read_repository_metadata() {
                 Ok(repository_meta) => repository_meta,
                 Err(e) => {
@@ -51,12 +51,11 @@ impl<'a> RepositoryManager<'a> {
             };
 
             // Check if the repository works for the current Packit version
-            if let Some(required_packit_version) = &repository_meta.required_packit_version {
-                if *required_packit_version > current_packit_version() {
-                    unsupported_repositories.insert(id.to_string(), repository_meta.clone());
-                    warning!("Repository '{id}' requires Packit version {required_packit_version} or higher, ignoring repository...");
-                    continue;
-                }
+            let required_packit_version = &repository_meta.required_packit_version;
+            if *required_packit_version > current_packit_version() {
+                unsupported_repositories.insert(id.to_string(), repository_meta.clone());
+                warning!("Repository '{id}' requires Packit version {required_packit_version} or higher, ignoring repository...");
+                continue;
             }
 
             metadata_providers.insert(id.clone(), provider);
@@ -79,7 +78,7 @@ impl<'a> RepositoryManager<'a> {
         }
     }
 
-    /// Reads package and package version metadata of the given package. When the package is only a name, the latest version is read.
+    /// Reads package and package version metadata of the given package. When only a package name is given the latest supported version is used.
     /// Returns the repository id, package metadata and package version metadata.
     /// Returns a `PackageNotFoundError` if the package canot be found.
     pub fn read_package_and_version(
@@ -122,7 +121,7 @@ impl<'a> RepositoryManager<'a> {
     pub fn read_package(&self, package: &PackageName) -> Result<(String, PackageMeta)> {
         let mut not_found_reasons = HashMap::new();
 
-        for repository_id in self.iter_filtered_repositories_rank() {
+        for repository_id in self.iter_supported_repositories_rank() {
             let provider = match self.metadata_providers.get(repository_id) {
                 Some(provider) => provider,
                 None => {
@@ -145,8 +144,6 @@ impl<'a> RepositoryManager<'a> {
                 continue;
             }
 
-            // TODO: do we want priority for packages that are not deprecated?
-
             return Ok((repository_id.clone(), package));
         }
 
@@ -158,7 +155,7 @@ impl<'a> RepositoryManager<'a> {
     }
 
     /// Reads package metadata of the given package from the given repository, containing information about the package.
-    /// Does not check if the data contains the current target.
+    /// Also checks for package compatibility.
     /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     pub fn read_repo_package(&self, repository_id: &str, package: &PackageName) -> Result<PackageMeta> {
         let package_meta = self.get_metadata_provider(repository_id)?.read_package(package)?;
@@ -174,8 +171,11 @@ impl<'a> RepositoryManager<'a> {
         Ok(package_meta)
     }
 
-    /// Checks if a package is compatible.
-    /// Returns a Some(PackageNotFoundReason) if the package is not compatible, None otherwise.
+    /// Checks if a package is compatible, a package is compatible if:
+    /// - It's not disabled
+    /// - It contains the current target
+    /// - The package is supported by the current Packit version
+    /// Returns Some(PackageNotFoundReason) if the package is not compatible, None otherwise.
     fn check_package_compatibility(&self, package: &PackageMeta) -> Option<PackageNotFoundReason> {
         // Check if the package is disabled
         if let Some(deprecation) = &package.deprecation
@@ -210,7 +210,7 @@ impl<'a> RepositoryManager<'a> {
     pub fn read_package_version(&self, package_id: &PackageId, target: &Target) -> Result<(String, PackageVersionMeta)> {
         let mut not_found_reasons = HashMap::new();
 
-        for repository_id in self.iter_filtered_repositories_rank() {
+        for repository_id in self.iter_supported_repositories_rank() {
             let provider = match self.metadata_providers.get(repository_id) {
                 Some(provider) => provider,
                 None => {
@@ -234,7 +234,7 @@ impl<'a> RepositoryManager<'a> {
             }
 
             // Validate the package before returning
-            if package.has_conflicts() {
+            if package.is_metadata_valid() {
                 return Err(RepositoryError::ValidationError("Package has conflicts in metadata.".to_string()));
             }
 
@@ -249,7 +249,7 @@ impl<'a> RepositoryManager<'a> {
     }
 
     /// Reads package version metadata of the given package from the given repository, containing dependencies and targets.
-    /// Does not check if the data contains the current target.
+    /// Also checks for package version compatibility.
     /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     pub fn read_repo_package_version(&self, repository_id: &str, package_id: &PackageId) -> Result<PackageVersionMeta> {
         let provider = self.get_metadata_provider(repository_id)?;
@@ -265,15 +265,18 @@ impl<'a> RepositoryManager<'a> {
         }
 
         // Validate the package before returning
-        if package.has_conflicts() {
-            return Err(RepositoryError::ValidationError("Package has dependency conflicts.".to_string()));
+        if package.is_metadata_valid() {
+            return Err(RepositoryError::ValidationError("Package has conflicts in metadata.".to_string()));
         }
 
         Ok(package)
     }
 
-    /// Checks if a package version is compatible.
-    /// Returns a Some(PackageNotFoundReason) if the package version is not compatible, None otherwise.
+    /// Checks if a package version is compatible, a package version is compatible if:
+    /// - It's not disabled
+    /// - It contains the current target
+    /// - The package version is supported by the current Packit version
+    /// Returns Some(PackageNotFoundReason) if the package version is not compatible, None otherwise.
     fn check_package_version_compatibility(&self, package_version: &PackageVersionMeta, target: &Target) -> Option<PackageNotFoundReason> {
         // Check if the package is disabled
         if let Some(deprecation) = &package_version.deprecation
@@ -357,7 +360,6 @@ impl<'a> RepositoryManager<'a> {
     }
 
     /// Gets the latest supported package version for the given package metadata that satisfies the given dependency.
-    // TODO: change name of this function
     pub fn read_latest_supported_dependency_version(
         &self,
         repository_id: &str,
@@ -380,6 +382,7 @@ impl<'a> RepositoryManager<'a> {
 
     /// Implementation of the read latest supported version function.
     /// Resolves the latest supported version based on compatibility checks and implements deprecation resolving.
+    /// Note that it assumes a list of supported versions that is in order of low to high.
     fn read_latest_supported_version_impl<'v>(
         &self,
         repository_id: &str,
@@ -388,9 +391,7 @@ impl<'a> RepositoryManager<'a> {
     ) -> Result<PackageVersionMeta> {
         let mut reasons = Vec::new();
         let mut latest_deprecated: Option<PackageVersionMeta> = None;
-        loop {
-            let Some(latest_version) = supported_versions.next() else { break };
-
+        while let Some(latest_version) = supported_versions.next() {
             let package_id = PackageId::new(package.name.clone(), latest_version.clone());
             let package_version = match self.read_repo_package_version(&repository_id, &package_id) {
                 Ok(package_version) => package_version,
@@ -432,17 +433,17 @@ impl<'a> RepositoryManager<'a> {
     }
 
     /// Iterates over the repositories rank. Filters the unsupported repositories from the list.
-    /// Returns an iterator that only contains the ids of working repositories.
-    pub fn iter_filtered_repositories_rank(&self) -> impl Iterator<Item = &String> {
+    /// Returns an iterator that only contains the ids of supported repositories.
+    pub fn iter_supported_repositories_rank(&self) -> impl Iterator<Item = &String> {
         self.config.repositories_rank.iter().filter(|x| !self.unsupported_repositories.contains_key(*x))
     }
 
-    /// Gets the list of repositories that are not supported by this Packit version.
+    /// Gets a map of repository ids and metadata for all repositories that are not supported by this Packit version.
     pub fn get_unsupported_repositories(&self) -> &HashMap<String, RepositoryMeta> {
         &self.unsupported_repositories
     }
 
-    /// A helper method to het the metadata provider.
+    /// A helper method to get the metadata provider.
     /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     fn get_metadata_provider(&self, repository_id: &str) -> Result<&Box<dyn MetadataProvider>> {
         // Check if repository is unsupported
@@ -460,7 +461,7 @@ impl<'a> RepositoryManager<'a> {
         }
     }
 
-    /// A helper method to het the prebuild provider.
+    /// A helper method to get the prebuild provider.
     /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     fn get_prebuid_provider(&self, repository_id: &str) -> Result<&Box<dyn PrebuildProvider>> {
         // Check if repository is unsupported

@@ -9,7 +9,7 @@ pub struct RepositoryMeta {
     pub name: String,
     pub description: String,
     pub maintainers: Vec<String>,
-    pub required_packit_version: Option<Version>,
+    pub required_packit_version: Version,
 
     #[serde(skip_serializing_if = "Licenses::is_unknown", default)]
     pub license: Licenses,

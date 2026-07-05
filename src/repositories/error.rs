@@ -15,7 +15,7 @@ pub enum RepositoryError {
         repository_id: String,
     },
 
-    #[error("Repository '{repository_id}' not supported")]
+    #[error("Repository '{repository_id}' not supported, the current Packit version is too low")]
     RepositoryNotSupported {
         repository_id: String,
     },
@@ -98,14 +98,14 @@ impl PackageNotFoundReason {
 
         for next in reasons {
             match &primary {
-                // If the primary is UnsupportedTarget, only use new one if the next is not NotFound or Disabled
+                // If the primary is `UnsupportedTarget`, only use the new one if the next is not `NotFound` or `Disabled`
                 PackageNotFoundReason::UnsupportedTarget => {
                     if !matches!(next, PackageNotFoundReason::NotFound | PackageNotFoundReason::Disabled { .. }) {
                         primary = next.clone();
                     }
                 },
 
-                // If the primary is NotSupported, only use new one if next is NotSupported and the required version is lower
+                // If the primary is `NotSupported`, only use the new one if next is `NotSupported` and the required version is lower
                 PackageNotFoundReason::NotSupported { requires } => {
                     if let PackageNotFoundReason::NotSupported { requires: requires_next } = next
                         && requires_next < requires
@@ -114,7 +114,7 @@ impl PackageNotFoundReason {
                     }
                 },
 
-                // If the primary is Disabled, only use the new one if the next if UnsupportedTarget or NotSupported, or a newer disable
+                // If the primary is `Disabled`, only use the new one if the next if `UnsupportedTarget` or `NotSupported`, or a newer disable
                 PackageNotFoundReason::Disabled { since, .. } => {
                     match next {
                         PackageNotFoundReason::UnsupportedTarget | PackageNotFoundReason::NotSupported { .. } => primary = next.clone(),
@@ -123,7 +123,7 @@ impl PackageNotFoundReason {
                     };
                 },
 
-                // If the current primary is not found, always use the new one
+                // If the current primary is `NotFound`, always use the new one
                 PackageNotFoundReason::NotFound => primary = next.clone(),
             }
         }

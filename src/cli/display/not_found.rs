@@ -52,7 +52,7 @@ pub fn register_package(package_name: &PackageName, register: &PackageRegister) 
     exit(1);
 }
 
-/// Shows an error that the package (name) cannot be found (in the repository) and a fuzzy alternative. Then exits at the end.
+/// Shows an error that the package (name) cannot be found (in the repository) and a fuzzy alternative when the given reason is `PackageNotFoundReason::NotFound`. Then exits at the end.
 pub fn repository_package(package_name: &PackageName, manager: &RepositoryManager, reason: PackageNotFoundReason) -> ! {
     error!(msg: "Package '{package_name}' cannot be found: {reason}");
 
@@ -80,7 +80,7 @@ pub fn register_package_version(package_id: &PackageId, register: &PackageRegist
     exit(1);
 }
 
-/// Shows an error that the package version cannot be found (in the repository) and a fuzzy alternative. Then exits at the end.
+/// Shows an error that the package version cannot be found (in the repository) and a fuzzy alternative when the given reason is `PackageNotFoundReason::NotFound`. Then exits at the end.
 pub fn repository_package_version(package_id: &PackageId, manager: &RepositoryManager, reason: PackageNotFoundReason) -> ! {
     error!(msg: "Package '{package_id}' cannot be found: {reason}");
 
@@ -97,8 +97,8 @@ pub fn repository_package_version(package_id: &PackageId, manager: &RepositoryMa
     exit(1);
 }
 
-/// Shows an error that the package (with optional version) cannot be found and a fuzzy alternative. Then exits at the end.
-/// When the package_id contains a version, a version suggestion is also shown.
+/// Shows an error that the package (with optional version) cannot be found and a fuzzy alternative when the given reason is `PackageNotFoundReason::NotFound`. Then exits at the end.
+/// When the package_id contains a version, a version suggestion is shown when the package name is found.
 pub fn repository_optional_package(package_id: &OptionalPackageId, manager: &RepositoryManager, reason: PackageNotFoundReason) -> ! {
     match package_id.versioned() {
         Some(package_id) => repository_package_version(&package_id, manager, reason),

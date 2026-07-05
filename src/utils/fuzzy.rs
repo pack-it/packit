@@ -14,7 +14,7 @@ const FUZZY_THRESHOLD: f64 = 0.25;
 pub fn repository_search(manager: &RepositoryManager, package_name: &PackageName) -> Result<Option<PackageName>, RepositoryError> {
     let mut best_word = None;
     let mut best_distance = None;
-    for repository_id in manager.iter_filtered_repositories_rank() {
+    for repository_id in manager.iter_supported_repositories_rank() {
         let repository_index = manager.read_index_metadata(repository_id)?;
 
         let fuzzy_matches = fuzzy_search(repository_index.supported_packages.iter(), package_name.as_str());

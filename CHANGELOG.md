@@ -16,7 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The `required_packit_version` field to describe the minimum required Packit version for a package in `repository.toml`, `package.toml` and `targets.toml` metadata files.
 - The `conflicts_with` fields to describe conflicting packages in the `package.toml` metadata file. Two conflicting packages cannot be symlinked at the same time.
 - The `size` field in the source fields in the `targets.toml` metadata file.
-- Deprecation information fields, to allow specifying deprecation and disabling dates of packages or specific versions.
+- Deprecation information fields (deprecated_from, disabled_from and reason), to allow specifying deprecation and disabling dates of packages or specific versions.
 
 ### Changes
 - The build system now includes a new `package-build` xtask to create a full Packit prebuild for the release.
@@ -30,7 +30,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The `gnubin` directory of a package is now also symlinked into `<prefix>/gnubin`.
 - The `check` and `fix` commands now accept `[<PACKAGE-NAME>[@<VERSION>] ...]` instead of just `[<PACKAGE-NAME>@<VERSION> ...]`.
 - The `update` command now updates the latest install version, unless otherwise specified.
-- The package metadata resolving algorithm now finds matching packages in more cases and shows a clear reason when a package cannot be found.
+- The package metadata resolving algorithm is improved and now shows a clear reason when a package cannot be found.
 - The `util checksum` command now also shows the size of the file.
 - When the `repository.toml` file of a metadata repository cannot be fetched, the repository will not be loaded anymore.
 

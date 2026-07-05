@@ -7,15 +7,12 @@ use std::{collections::HashSet, str::FromStr};
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{
-            logging::{error, warning},
-            not_found, print_grid,
-        },
+        display::{deprecation, logging::error, not_found, print_grid},
     },
     config::Config,
     installer::types::OptionalPackageId,
     platforms::Target,
-    repositories::{error::RepositoryError, manager::RepositoryManager, types::Date},
+    repositories::{error::RepositoryError, manager::RepositoryManager},
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
@@ -51,7 +48,7 @@ impl SearchArgs {
 
         let regex = Regex::new(&self.query).unwrap_or_exit_msg("Invalid regex pattern", 1);
         let mut matches = HashSet::new();
-        for repository_id in manager.iter_filtered_repositories_rank() {
+        for repository_id in manager.iter_supported_repositories_rank() {
             let index_meta = manager.read_index_metadata(repository_id).unwrap_or_exit(1);
             for package in index_meta.supported_packages {
                 if regex.is_match(&package) {
@@ -129,35 +126,13 @@ impl SearchArgs {
         // Also print revisions if there are any
         if !package_version.revisions.is_empty() {
             println!("Revisions:");
-            for revision in package_version.revisions {
+            for revision in &package_version.revisions {
                 println!("  - {revision}");
             }
         }
 
-        // Check if the package is deprecated
-        if let Some(deprecation) = &package.deprecation {
-            let reason = match &deprecation.reason {
-                Some(reason) => format!(" with reason '{reason}'"),
-                None => String::default(),
-            };
-
-            match deprecation.deprecated_from <= Date::now() {
-                true => warning!("This package is deprecated since {}{reason}", deprecation.deprecated_from),
-                false => warning!("This package will be deprecated at {}{reason}", deprecation.deprecated_from),
-            }
-        }
-
-        // Check if the package version is deprecated
-        if let Some(deprecation) = &package_version.deprecation {
-            let reason = match &deprecation.reason {
-                Some(reason) => format!(" with reason '{reason}'"),
-                None => String::default(),
-            };
-
-            match deprecation.deprecated_from <= Date::now() {
-                true => warning!("This package version is deprecated since {}{reason}", deprecation.deprecated_from),
-                false => warning!("This package version will be deprecated at {}{reason}", deprecation.deprecated_from),
-            }
-        }
+        // Check if the package or version is deprecated
+        deprecation::show_package_warnings(&package);
+        deprecation::show_package_version_warnings(&package_version, &optional_id.name);
     }
 }

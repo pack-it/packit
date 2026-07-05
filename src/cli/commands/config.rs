@@ -7,12 +7,15 @@ use colored::Colorize;
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::logging::{error, warning},
+        display::{
+            QuestionResponse, ask_user,
+            logging::{error, warning},
+        },
     },
     config::{Config, EditableConfig, Repository},
     register::package_register::PackageRegister,
-    repositories::{manager::RepositoryManager, metadata::DEFAULT_METADATA_PROVIDER_ID},
-    utils::unwrap_or_exit::UnwrapOrExit,
+    repositories::{manager::RepositoryManager, metadata::DEFAULT_METADATA_PROVIDER_ID, provider},
+    utils::{packit_version::current_packit_version, unwrap_or_exit::UnwrapOrExit},
 };
 
 /// Manages the Packit config file.
@@ -164,10 +167,7 @@ impl ConfigArgs {
                 println!("License: {}", metadata.license);
                 println!("Maintainers: {}", metadata.maintainers.join(", "));
                 println!("Repository provider: {}, url: {}", repository.provider, repository.url);
-
-                if let Some(required_packit_version) = &metadata.required_packit_version {
-                    println!("Required Packit Version: {}", required_packit_version.to_string().red());
-                }
+                println!("Required Packit Version: {}", metadata.required_packit_version.to_string().red());
                 continue;
             }
 
@@ -188,10 +188,7 @@ impl ConfigArgs {
             println!("License: {}", metadata.license);
             println!("Maintainers: {}", metadata.maintainers.join(", "));
             println!("Repository provider: {}, url: {}", repository.provider, repository.url);
-
-            if let Some(required_packit_version) = metadata.required_packit_version {
-                println!("Required Packit Version: {}", required_packit_version.to_string().green());
-            }
+            println!("Required Packit Version: {}", metadata.required_packit_version.to_string().green());
         }
     }
 
@@ -232,6 +229,24 @@ impl ConfigArgs {
             None => DEFAULT_METADATA_PROVIDER_ID,
         };
         let repository = Repository::new(url, provider);
+
+        // Try to connect to the repository
+        let provider = provider::create_metadata_provider(&repository).unwrap_or_exit_msg("Unable to connect to repository", 1);
+        let repo_meta = provider.read_repository_metadata().unwrap_or_exit_msg("Unable to read repository metadata", 1);
+
+        // Check if the repository is supported
+        if repo_meta.required_packit_version > current_packit_version() {
+            warning!(
+                "This repository requires Packit version {}, while your current version is {}",
+                repo_meta.required_packit_version,
+                current_packit_version()
+            );
+
+            if ask_user("Are you sure you want to add this repository?", QuestionResponse::No).unwrap_or_exit(1).is_no_or_invalid() {
+                println!("Cancelling adding of repository.");
+                return;
+            }
+        }
 
         config.set_repository(id, repository);
 

@@ -30,6 +30,7 @@ pub struct PackageMeta {
 }
 
 impl PackageMeta {
+    /// Gets a list of all supported versions for the given target.
     pub fn get_supported_versions(&self, target: &Target) -> Result<Vec<&Version>> {
         let target = match TargetBounds::get_best_target(target, self.supported_versions.keys().collect()) {
             Some(target) => target,
@@ -38,7 +39,7 @@ impl PackageMeta {
 
         let supported = self.supported_versions.get(target).ok_or(RepositoryError::TargetError)?;
 
-        // The versions vec isn't necessary in order, so we need to keep track of the current highest version
+        // Get all supported versions and sort them
         let mut versions = Vec::new();
         for version in &self.versions {
             // Continue if the version is not supported by the current target

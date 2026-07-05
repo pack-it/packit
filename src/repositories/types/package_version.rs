@@ -172,8 +172,9 @@ impl PackageVersionMeta {
         self.revisions.len() as u64
     }
 
-    /// Checks if there are conflicts in the package version metadata
-    pub fn has_conflicts(&self) -> bool {
+    /// Checks if there are conflicts in the package version metadata.
+    /// Returns true if the metadata is valid and thus contains no conflicts.
+    pub fn is_metadata_valid(&self) -> bool {
         // Check if a global dependency is also specified as target specific dependency
         for dependency in &self.dependencies {
             for target in self.targets.values() {

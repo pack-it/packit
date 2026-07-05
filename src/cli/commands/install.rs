@@ -6,17 +6,14 @@ use clap::Args;
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{
-            logging::{error, warning},
-            not_found,
-        },
+        display::{deprecation, logging::error, not_found},
         parameter_checks,
     },
     config::Config,
     installer::{InstallType, Installer, InstallerOptions, types::OptionalPackageId},
     platforms::Target,
     register::package_register::PackageRegister,
-    repositories::{error::RepositoryError, manager::RepositoryManager, types::Date},
+    repositories::{error::RepositoryError, manager::RepositoryManager},
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
@@ -87,33 +84,9 @@ impl HandleCommand for InstallArgs {
                 },
             };
 
-            // Check if the package is deprecated
-            if let Some(deprecation) = &package.deprecation {
-                let reason = match &deprecation.reason {
-                    Some(reason) => format!(" with reason '{reason}'"),
-                    None => String::default(),
-                };
-
-                let deprecated_from = &deprecation.deprecated_from;
-                match *deprecated_from <= Date::now() {
-                    true => warning!("Package '{optional_id}' is deprecated since {}{reason}", deprecated_from),
-                    false => warning!("Package '{optional_id}' will be deprecated at {}{reason}", deprecated_from),
-                }
-            }
-
-            // Check if the package version is deprecated
-            if let Some(deprecation) = &package_version.deprecation {
-                let reason = match &deprecation.reason {
-                    Some(reason) => format!(" with reason '{reason}'"),
-                    None => String::default(),
-                };
-
-                let deprecated_from = &deprecation.deprecated_from;
-                match *deprecated_from <= Date::now() {
-                    true => warning!("Package version '{optional_id}' is deprecated since {}{reason}", deprecated_from),
-                    false => warning!("Package version '{optional_id}' will be deprecated at {}{reason}", deprecated_from),
-                }
-            }
+            // Check if the package or version is deprecated
+            deprecation::show_package_warnings(&package);
+            deprecation::show_package_version_warnings(&package_version, &optional_id.name);
         }
 
         // Determine the install type. Note that clap already check if build and build-all are both set (which should not be possible).
