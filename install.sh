@@ -58,6 +58,17 @@ else
     CONFIG_DIR="/etc/packit"
 fi
 
+# Ask the user for admin rights
+printf "The Packit install script requires root to modify '$PREFIX_DIR' and '$CONFIG_DIR', do you wish to continue? (Y/n) "
+answer=$(get_answer)
+if [ "$answer" = "n" ] || [ "$answer" = "no" ]; then
+    echo "Canceling installation of Packit"
+    exit 1
+fi
+
+# Execute sudo without doing anything
+sudo true
+
 USERNAME=$(whoami)
 
 # Go into the prefix directory
@@ -75,7 +86,7 @@ if curl --proto "=https" -sSfL $PREBUILD_URL --output packit@$VERSION-$REVISION-
     
     echo "Downloaded prebuild"
 else
-    echo "Retrieving prebuilds failed. Do you wish to build Packit from source? (Y/n)"
+    printf "Retrieving prebuilds failed. Do you wish to build Packit from source? (Y/n) "
     answer=$(get_answer)
 
     if [ "$answer" = "n" ] || [ "$answer" = "no" ]; then
@@ -87,7 +98,7 @@ else
 
     # Make sure cargo exists before building Packit
     if ! command -v cargo >/dev/null 2>&1; then
-        echo "Cargo is not installed, do you wish to install it to build Packit? (y/N)"
+        printf "Cargo is not installed, do you wish to install it to build Packit? (y/N) "
         answer=$(get_answer)
 
         if [ "$answer" = "n" ] || [ "$answer" = "no" ] || [ "$answer" = "" ]; then
@@ -115,7 +126,7 @@ else
     rm -r ./packit@$VERSION
 
     if [ $RUSTUP_INSTALLED -eq 1 ]; then
-        echo "You installed rustup to install Packit. This installation is not registered in Packit. Do you wish to uninstall it? (Y/n)"
+        printf "You installed rustup to install Packit. This installation is not registered in Packit. Do you wish to uninstall it? (Y/n) "
         answer=$(get_answer)
 
         if [ "$answer" = "y" ] || [ "$answer" = "yes" ] || [ "$answer" = "" ]; then
@@ -161,7 +172,7 @@ case "$SHELL" in
         ;;
     *fish)
         # Fish is not POSIX, so it needs custom handling
-        echo "Do you wish to automatically add Packit to your PATH? (Y/n)"
+        printf "Do you wish to automatically add Packit to your PATH? (Y/n) "
         answer=$(get_answer)
 
         if [ "$answer" = "y" ] || [ "$answer" = "yes" ] || [ "$answer" = "" ]; then
@@ -174,7 +185,7 @@ case "$SHELL" in
 esac
 
 if [ -e "$SHELL_CONFIG_PATH" ]; then
-    echo "Do you wish to automatically add Packit to your PATH by adding it to $SHELL_CONFIG_PATH? (Y/n)"
+    printf "Do you wish to automatically add Packit to your PATH by adding it to $SHELL_CONFIG_PATH? (Y/n) "
     answer=$(get_answer)
 
     if [ "$answer" = "y" ] || [ "$answer" = "yes" ] || [ "$answer" = "" ]; then

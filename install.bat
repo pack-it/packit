@@ -1,23 +1,6 @@
 @echo off
 setlocal enabledelayedexpansion
 
-REM Check for administrator privileges 
-fltmc >nul 2>&1
-if ERRORLEVEL 1 (
-    echo The Packit install requires administrator privileges.
-    choice /M "Do you wish to continue as administrator?"
-
-    if ERRORLEVEL 2 (
-        echo Packit installed cancelled
-        exit /b 1
-    )
-
-    REM Rerun the script with elevated permissions (this will first prompt the user)
-    powershell -Command "Start-Process cmd -Verb RunAs -ArgumentList '/k \"%~f0\"'"
-
-    exit /b
-)
-
 set "VERSION=0.0.2"
 set "REVISION=0"
 if "%PROCESSOR_ARCHITECTURE%"=="ARM64" (
@@ -32,6 +15,23 @@ set "PREBUILD_URL=https://github.com/pack-it/packit/releases/download/%VERSION%/
 REM Determine the prefix and config directory
 set "PREFIX_DIR=C:\Program Files\packit"
 set "CONFIG_DIR=C:\Program Files\packit"
+
+REM Check for administrator privileges 
+fltmc >nul 2>&1
+if ERRORLEVEL 1 (
+    echo The Packit install requires administrator privileges to modify '%PREFIX_DIR%' and '%CONFIG_DIR%'.
+    choice /M "Do you wish to continue as administrator?"
+
+    if ERRORLEVEL 2 (
+        echo Packit installed cancelled
+        exit /b 1
+    )
+
+    REM Rerun the script with elevated permissions (this will first prompt the user)
+    powershell -Command "Start-Process cmd -Verb RunAs -ArgumentList '/k \"%~f0\"'"
+
+    exit /b
+)
 
 REM Go into the prefix directory 
 mkdir "%PREFIX_DIR%\packages\packit"
