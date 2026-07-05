@@ -109,7 +109,8 @@ impl<'a> PortableRepoCreator<'a> {
         let (all_packages, package_index) = self.create_package_tree(included_packages)?;
 
         for package_id in all_packages {
-            let (repository_id, package_version) = self.repository_manager.read_package_version(&package_id, &self.target)?;
+            let (repository_id, _, package_version) =
+                self.repository_manager.read_package_and_version(&package_id.clone().into(), &self.target)?;
 
             if !self.exclude_prebuilds {
                 // Check if the package has a prebuild
@@ -174,7 +175,8 @@ impl<'a> PortableRepoCreator<'a> {
 
         let mut package_queue = VecDeque::new();
         for package_id in included_packages {
-            let (repository_id, version_meta) = self.repository_manager.read_package_version(&package_id, &self.target)?;
+            let (repository_id, _, version_meta) =
+                self.repository_manager.read_package_and_version(&package_id.clone().into(), &self.target)?;
             package_queue.push_back((package_id, repository_id, version_meta));
         }
 

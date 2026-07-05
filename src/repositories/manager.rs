@@ -207,7 +207,8 @@ impl<'a> RepositoryManager<'a> {
 
     /// Reads package version metadata of the given package, containing dependencies and targets.
     /// Returns the id of the repository and the package version metadata.
-    pub fn read_package_version(&self, package_id: &PackageId, target: &Target) -> Result<(String, PackageVersionMeta)> {
+    /// Note that this does not check for compatibility of the corresponding PackageMeta.
+    fn read_package_version(&self, package_id: &PackageId, target: &Target) -> Result<(String, PackageVersionMeta)> {
         let mut not_found_reasons = HashMap::new();
 
         for repository_id in self.iter_supported_repositories_rank() {
@@ -249,7 +250,7 @@ impl<'a> RepositoryManager<'a> {
     }
 
     /// Reads package version metadata of the given package from the given repository, containing dependencies and targets.
-    /// Also checks for package version compatibility.
+    /// Also checks for package version compatibility. Note that this does not check for compatibility of the corresponding PackageMeta.
     /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     pub fn read_repo_package_version(&self, repository_id: &str, package_id: &PackageId) -> Result<PackageVersionMeta> {
         let provider = self.get_metadata_provider(repository_id)?;
