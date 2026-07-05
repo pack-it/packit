@@ -30,6 +30,12 @@ pub fn check_permissions() -> Result<Option<Issue>> {
 /// Returns all directories which are not writable (could be empty).
 fn check_permissions_impl(directory: &PathBuf) -> Result<Vec<PathBuf>> {
     let mut unwritable = Vec::new();
+
+    // Return early if the directory doesn't exist (also if a symlink destination doesn't exist)
+    if !directory.exists() {
+        return Ok(unwritable);
+    }
+
     if !is_writable(directory)? {
         unwritable.push(directory.clone());
     }
