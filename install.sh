@@ -1,5 +1,5 @@
 #!/bin/sh
-set -eEu
+set -eu
 
 # Gets user input and uses /dev/tty when stdin is not available
 get_answer() {
@@ -258,7 +258,6 @@ if [ -e "$SHELL_CONFIG_PATH" ]; then
 
     if [ "$answer" = "y" ] || [ "$answer" = "yes" ] || [ "$answer" = "" ]; then
         echo "export PATH=\"$PREFIX_DIR/bin:\$PATH\"" >> "$SHELL_CONFIG_PATH"
-        export PATH="$PREFIX_DIR/bin:$PATH"
         echo "Restart your shell to refresh your path and use Packit"
         SHOULD_CLEANUP=0
         exit 0

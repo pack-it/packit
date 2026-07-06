@@ -25,17 +25,17 @@ set "CONFIG_DIR=C:\Program Files\packit"
 echo Prefix directory: %PREFIX_DIR%
 echo Config directory: %CONFIG_DIR%
 
+REM TODO: Use choice command everywhere
+REM Ask the user for administrator rights
+choice /M "The Packit install script requires root to modify '%PREFIX_DIR%' and '%CONFIG_DIR%', do you wish to continue? (Y/n) "
+if ERRORLEVEL 2 (
+    echo Packit install cancelled
+    goto cleanup
+)
+
 REM Check for administrator privileges 
 fltmc >nul 2>&1
 if ERRORLEVEL 1 (
-    echo The Packit install requires administrator privileges to modify '%PREFIX_DIR%' and '%CONFIG_DIR%'.
-    choice /M "Do you wish to continue as administrator?"
-
-    if ERRORLEVEL 2 (
-        echo Packit install cancelled
-        goto cleanup
-    )
-
     REM Rerun the script with elevated permissions (this will first prompt the user)
     powershell -Command "Start-Process cmd -Verb RunAs -ArgumentList '/k \"%~f0\"'"
 
