@@ -1,6 +1,30 @@
 @echo off
 setlocal enabledelayedexpansion
 
+REM A function to handle (yes/no) questions
+REM Returns 1 if the default option was chosen, 0 otherwise
+goto ask_end
+:ask
+REM The preferred answer to the question (the default), needs to be a string of value 'Y' or 'N'
+set "PREFERRED=%~1"
+
+REM The question to ask
+set "QUESTION=%~2"
+
+if "!PREFERRED!"=="Y" (
+    set /p "answer=!QUESTION! (Y/n) "
+    if /I "!answer!"=="N" exit /b 0
+    if /I "!answer!"=="NO" exit /b 0
+    exit /b 1
+)
+
+set /p "answer=!QUESTION! (y/N) "
+if /I "!answer!"=="Y" exit /b 0
+if /I "!answer!"=="YES" exit /b 0
+exit /b 1
+
+:ask_end
+
 set "VERSION=0.0.2"
 set "REVISION=0"
 
@@ -25,11 +49,10 @@ set "CONFIG_DIR=C:\Program Files\packit"
 echo Prefix directory: %PREFIX_DIR%
 echo Config directory: %CONFIG_DIR%
 
-REM TODO: Use choice command everywhere
 REM Ask the user for administrator rights
-choice /M "The Packit install script requires root to modify '%PREFIX_DIR%' and '%CONFIG_DIR%', do you wish to continue? (Y/n) "
-if ERRORLEVEL 2 (
-    echo Packit install cancelled
+call :ask "Y" "The Packit install script requires root to modify '%PREFIX_DIR%' and '%CONFIG_DIR%', do you wish to continue"
+if not ERRORLEVEL 1 (
+    echo Canceling installation of Packit
     goto cleanup
 )
 
@@ -76,12 +99,8 @@ if not ERRORLEVEL 1 (
         goto cleanup
     )
 
-    set "answer="
-    set /p "answer=Retrieving prebuilds failed. Do you wish to build Packit from source? (Y/n) "
-    set "match="
-    if "!answer!"=="n" set "match=1"
-    if "!answer!"=="no" set "match=1"
-    if "!match!"=="1" (
+    call :ask "Y" "Retrieving prebuilds failed. Do you wish to build Packit from source"
+    if not ERRORLEVEL 1 (
         echo Canceling installation of Packit
         goto cleanup
     )
@@ -91,13 +110,8 @@ if not ERRORLEVEL 1 (
     REM Make sure cargo exists before building Packit
     where cargo 2>nul >nul
     if ERRORLEVEL 1 (
-        set "answer="
-        set /p "answer=Cargo is not installed, do you wish to install it to build Packit? (y/N) "
-        set "match="
-        if "!answer!"=="n" set "match=1"
-        if "!answer!"=="no" set "match=1"
-        if "!answer!"=="" set "match=1"
-        if "!match!"=="1" (
+        call :ask "N" "Cargo is not installed, do you wish to install it to build Packit"
+        if ERRORLEVEL 1 (
             echo Canceling installation of Packit
             goto cleanup
         )
@@ -159,13 +173,8 @@ if not ERRORLEVEL 1 (
     if ERRORLEVEL 1 goto cleanup
 
     if "!RUSTUP_INSTALLED!"==1 (
-        set "answer="
-        set /p "answer=You installed rustup to install Packit. This installation is not registered in Packit. Do you wish to uninstall it? (Y/n) "
-        set "match="
-        if "!answer!"=="y" set "match=1"
-        if "!answer!"=="yes" set "match=1"
-        if "!answer!"=="" set "match=1"
-        if "!match!"=="1" (
+        call :ask "Y" "You installed rustup to install Packit. This installation is not registered in Packit. Do you wish to uninstall it"
+        if ERRORLEVEL 1 (
             echo Uninstalling rustup
             rustup self uninstall
             if ERRORLEVEL 1 goto cleanup
@@ -204,20 +213,15 @@ echo Successfully installed Packit!
 
 REM Exit early if Packit is already in the user PATH
 echo ";%PATH%;" | find /I ";%PREFIX_DIR%\bin;" >nul
-if ERRORLEVEL 0 (
+if %ERRORLEVEL%==0 (
     echo Packit already found in PATH, no further actions should be required
     popd
     exit /b 0
 )
 
 REM Ask the user if they want to automatically add Packit to their PATH
-set "answer="
-set /p "answer=Do you wish to automatically add Packit to your user PATH? (Y/n) "
-set "match="
-if "!answer!"=="y" set "match=1"
-if "!answer!"=="yes" set "match=1"
-if "!answer!"=="" set "match=1"
-if "!match!"=="1" (
+call :ask "Y" "Do you wish to automatically add Packit to your user PATH"
+if ERRORLEVEL 1 (
     setx PATH "%PATH%;%PREFIX_DIR%\bin"
     if ERRORLEVEL 1 goto cleanup
     echo Restart your shell to refresh your path and use Packit
@@ -233,7 +237,7 @@ exit /b 0
 
 REM Removes all created files in case of an error and exits with the appropriate status code
 :cleanup
-set STATUS_CODE = %ERRORLEVEL%
+set STATUS_CODE=%ERRORLEVEL%
 
 popd
 echo Remove installed Packit files
