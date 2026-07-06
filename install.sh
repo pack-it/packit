@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-# Gets user input and uses /dev/tty when stdin is not available
+# Gets user input and uses /dev/tty when stdin is not available.
 get_answer() {
     if [ -t 0 ]; then
         read answer
@@ -12,7 +12,32 @@ get_answer() {
     echo "$answer"
 }
 
-# Removes all created files in case of an error
+# Converts a string to lowercase.
+to_lower() {
+    printf "%s" "$1" | tr "[:upper:]" "[:lower:]"
+}
+
+# A function to handle (yes/no) questions.
+# Returns 1 if the default option was chosen, 0 otherwise.
+ask() {
+    # The preferred answer to the question (the default), needs to be a string of value 'Y' or 'N'
+    PREFERRED=$1
+
+    # The question to ask
+    QUESTION=$2
+
+    if [ "$PREFERRED" = "Y" ]; then
+        printf "$QUESTION? (Y/n) "
+        answer=$(to_lower "$(get_answer)")
+        ! { [ "$answer" = "n" ] || [ "$answer" = "no" ]; }
+    else
+        printf "$QUESTION? (y/N) "
+        answer=$(to_lower "$(get_answer)")
+        ! { [ "$answer" = "y" ] || [ "$answer" = "yes" ]; }
+    fi
+}
+
+# Removes all created files in case of an error.
 cleanup() {
     # Don't cleanup of `SHOULD_CLEANUP` is not true
     if [ ${SHOULD_CLEANUP-} -eq 0 ]; then
@@ -92,9 +117,7 @@ echo "Prefix directory: $PREFIX_DIR"
 echo "Config directory: $CONFIG_DIR"
 
 # Ask the user for admin rights
-printf "The Packit install script requires root to modify '$PREFIX_DIR' and '$CONFIG_DIR', do you wish to continue? (Y/n) "
-answer=$(get_answer)
-if [ "$answer" = "n" ] || [ "$answer" = "no" ]; then
+if ! ask "Y" "The Packit install script requires root to modify '$PREFIX_DIR' and '$CONFIG_DIR', do you wish to continue"; then
     echo "Canceling installation of Packit"
     exit 1
 fi
@@ -134,10 +157,7 @@ else
         exit 1
     fi
 
-    printf "Retrieving prebuilds failed. Do you wish to build Packit from source? (Y/n) "
-    answer=$(get_answer)
-
-    if [ "$answer" = "n" ] || [ "$answer" = "no" ]; then
+    if ! ask "Y" "Retrieving prebuilds failed. Do you wish to build Packit from source"; then
         echo "Canceling installation of Packit"
         exit 1
     fi
@@ -146,10 +166,7 @@ else
 
     # Make sure cargo exists before building Packit
     if ! command -v cargo >/dev/null 2>&1; then
-        printf "Cargo is not installed, do you wish to install it to build Packit? (y/N) "
-        answer=$(get_answer)
-
-        if [ "$answer" = "n" ] || [ "$answer" = "no" ] || [ "$answer" = "" ]; then
+        if ask "N" "Cargo is not installed, do you wish to install it to build Packit"; then
             echo "Canceling installation of Packit"
             exit 1
         fi
@@ -184,10 +201,7 @@ else
     rm -r ./packit@$VERSION
 
     if [ $RUSTUP_INSTALLED -eq 1 ]; then
-        printf "You installed rustup to install Packit. This installation is not registered in Packit. Do you wish to uninstall it? (Y/n) "
-        answer=$(get_answer)
-
-        if [ "$answer" = "y" ] || [ "$answer" = "yes" ] || [ "$answer" = "" ]; then
+        if ask "Y" "You installed rustup to install Packit. This installation is not registered in Packit. Do you wish to uninstall it"; then
             echo "Uninstalling rustup"
             rustup self uninstall
             echo "Uninstalling rustup successful"
@@ -238,10 +252,7 @@ case "$SHELL" in
         ;;
     *fish)
         # Fish is not POSIX, so it needs custom handling
-        printf "Do you wish to automatically add Packit to your PATH? (Y/n) "
-        answer=$(get_answer)
-
-        if [ "$answer" = "y" ] || [ "$answer" = "yes" ] || [ "$answer" = "" ]; then
+        if ask "Y" "Do you wish to automatically add Packit to your PATH"; then
             fish -c "fish_add_path $PREFIX_DIR/bin"
             echo "Restart your shell to refresh your path and use Packit"
             SHOULD_CLEANUP=0
@@ -253,10 +264,7 @@ case "$SHELL" in
 esac
 
 if [ -e "$SHELL_CONFIG_PATH" ]; then
-    printf "Do you wish to automatically add Packit to your PATH by adding it to '$SHELL_CONFIG_PATH'? (Y/n) "
-    answer=$(get_answer)
-
-    if [ "$answer" = "y" ] || [ "$answer" = "yes" ] || [ "$answer" = "" ]; then
+    if ask "Y" "Do you wish to automatically add Packit to your PATH by adding it to '$SHELL_CONFIG_PATH'"; then
         echo "export PATH=\"$PREFIX_DIR/bin:\$PATH\"" >> "$SHELL_CONFIG_PATH"
         echo "Restart your shell to refresh your path and use Packit"
         SHOULD_CLEANUP=0

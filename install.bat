@@ -1,8 +1,8 @@
 @echo off
 setlocal enabledelayedexpansion
 
-REM A function to handle (yes/no) questions
-REM Returns 1 if the default option was chosen, 0 otherwise
+REM A function to handle (yes/no) questions.
+REM Returns 1 if the default option was chosen, 0 otherwise.
 goto ask_end
 :ask
 REM The preferred answer to the question (the default), needs to be a string of value 'Y' or 'N'
@@ -24,6 +24,27 @@ if /I "!answer!"=="YES" exit /b 0
 exit /b 1
 
 :ask_end
+
+REM Removes all created files in case of an error and exits with the appropriate status code.
+goto cleanup_end
+:cleanup
+set STATUS_CODE=%ERRORLEVEL%
+
+popd
+echo Remove installed Packit files
+
+REM Remove the prefix directory if `PREFIX_DIR` exists
+if exist "%PREFIX_DIR%" (
+    rmdir /s /q "%PREFIX_DIR%"
+)
+
+REM Remove the config directory if `PREFIX_DIR` exists
+if exist "%CONFIG_DIR%" (
+    rmdir /s /q "%CONFIG_DIR%"
+)
+
+exit /b %STATUS_CODE%
+:cleanup_end
 
 set "VERSION=0.0.2"
 set "REVISION=0"
@@ -233,23 +254,3 @@ echo Add '%PREFIX_DIR%\bin' to your PATH by adding the command below to your she
 echo setx PATH "%%PATH%%;%PREFIX_DIR%\bin"
 
 popd
-exit /b 0
-
-REM Removes all created files in case of an error and exits with the appropriate status code
-:cleanup
-set STATUS_CODE=%ERRORLEVEL%
-
-popd
-echo Remove installed Packit files
-
-REM Remove the prefix directory if `PREFIX_DIR` exists
-if exist "%PREFIX_DIR%" (
-    rmdir /s /q "%PREFIX_DIR%"
-)
-
-REM Remove the config directory if `PREFIX_DIR` exists
-if exist "%CONFIG_DIR%" (
-    rmdir /s /q "%CONFIG_DIR%"
-)
-
-exit /b %STATUS_CODE%
