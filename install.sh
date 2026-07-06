@@ -190,6 +190,7 @@ else
         if [ "$answer" = "y" ] || [ "$answer" = "yes" ] || [ "$answer" = "" ]; then
             echo "Uninstalling rustup"
             rustup self uninstall
+            echo "Uninstalling rustup successful"
         fi
     fi
 
@@ -221,6 +222,7 @@ echo "Successfully installed Packit!"
 
 # Exit early if Packit is already in the PATH
 if echo ":$PATH:" | grep -q ":$PREFIX_DIR/bin:"; then
+    echo "Packit already found in PATH, no further actions should be required"
     SHOULD_CLEANUP=0
     exit 0
 fi

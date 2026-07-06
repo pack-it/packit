@@ -32,8 +32,8 @@ if ERRORLEVEL 1 (
     choice /M "Do you wish to continue as administrator?"
 
     if ERRORLEVEL 2 (
-        echo Packit installed cancelled
-        exit /b 1
+        echo Packit install cancelled
+        goto cleanup
     )
 
     REM Rerun the script with elevated permissions (this will first prompt the user)
@@ -42,17 +42,29 @@ if ERRORLEVEL 1 (
     exit /b
 )
 
+REM Exit early with code 0 if there already is a version of Packit installed
+REM Note that we can't rely on the `packit init` command, because we don't know if it fails because of an already existing config file
+if exist "%CONFIG_DIR%\Config.toml" (
+    echo Packit already seems to be installed, config file found in '%CONFIG_DIR%'
+    exit /b 0
+)
+
 REM Go into the prefix directory 
 mkdir "%PREFIX_DIR%\packages\packit"
+if ERRORLEVEL 1 goto cleanup
 pushd "%PREFIX_DIR%\packages\packit"
+if ERRORLEVEL 1 goto cleanup
 
 REM Install Packit to the prefix directory 
 echo Downloading Packit prebuild from `%PREBUILD_URL%`
 curl --proto "=https" -sSfL %PREBUILD_URL% --output packit@%VERSION%-%REVISION%-%TARGET%.tar.gz
 if not ERRORLEVEL 1 (
     tar -xf packit@%VERSION%-%REVISION%-%TARGET%.tar.gz
+    if ERRORLEVEL 1 goto cleanup
     del packit@%VERSION%-%REVISION%-%TARGET%.tar.gz
+    if ERRORLEVEL 1 goto cleanup
     ren packit@%VERSION%-%REVISION%-%TARGET% %VERSION%
+    if ERRORLEVEL 1 goto cleanup
 
     echo Downloading Packit prebuild successful
 ) else (
@@ -61,7 +73,7 @@ if not ERRORLEVEL 1 (
     if ERRORLEVEL 1 (
         echo Retrieving prebuilds failed, because there is no working internet connection
         echo Canceling installation of Packit
-        exit /b 1
+        goto cleanup
     )
 
     set "answer="
@@ -71,8 +83,7 @@ if not ERRORLEVEL 1 (
     if "!answer!"=="no" set "match=1"
     if "!match!"=="1" (
         echo Canceling installation of Packit
-        popd
-        exit /b 1
+        goto cleanup
     )
 
     set RUSTUP_INSTALLED=0
@@ -88,33 +99,36 @@ if not ERRORLEVEL 1 (
         if "!answer!"=="" set "match=1"
         if "!match!"=="1" (
             echo Canceling installation of Packit
-            popd
-            exit /b 1
+            goto cleanup
         )
 
         REM Install the correct rustup version for the current platform
         if "%PROCESSOR_ARCHITECTURE%"=="ARM64" (
             echo Installing cargo from 'https://static.rust-lang.org/rustup/dist/aarch64-pc-windows-msvc/rustup-init.exe'
             curl --proto "=https" --tlsv1.2 -sSfL https://static.rust-lang.org/rustup/dist/aarch64-pc-windows-msvc/rustup-init.exe --output rustup-init.exe
+            if ERRORLEVEL 1 goto cleanup
         ) else (
             if defined PROCESSOR_ARCHITEW6432 (
                 echo Installing cargo from 'https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe'
                 curl --proto "=https" --tlsv1.2 -sSfL https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe --output rustup-init.exe
+                if ERRORLEVEL 1 goto cleanup
             ) else (
                 echo Installing cargo from 'https://static.rust-lang.org/rustup/dist/i686-pc-windows-msvc/rustup-init.exe'
                 curl --proto "=https" --tlsv1.2 -sSfL https://static.rust-lang.org/rustup/dist/i686-pc-windows-msvc/rustup-init.exe --output rustup-init.exe
+                if ERRORLEVEL 1 goto cleanup
             )
         )
         
         .\rustup-init.exe
+        if ERRORLEVEL 1 goto cleanup
         del .\rustup-init.exe
+        if ERRORLEVEL 1 goto cleanup
 
         REM Make sure that the rustup install was successful
         where cargo 2>nul >nul
         if ERRORLEVEL 1 (
             echo Installing rustup failed, canceling Packit installation
-            popd
-            exit /b 1
+            goto cleanup
         )
 
         echo Installing cargo successful
@@ -123,19 +137,26 @@ if not ERRORLEVEL 1 (
 
     echo Downloading Packit source files from '%SOURCE_URL%'
     curl --proto "=https" -sSfL %SOURCE_URL% --output packit@%VERSION%.tar.gz
+    if ERRORLEVEL 1 goto cleanup
     echo Downloading Packit source files successful
 
     echo Unpacking Packit source files
     tar -xf packit@%VERSION%.tar.gz
+    if ERRORLEVEL 1 goto cleanup
     echo Unpacking Packit source files successful
 
     del packit@%VERSION%.tar.gz
+    if ERRORLEVEL 1 goto cleanup
     cd packit@%VERSION%
+    if ERRORLEVEL 1 goto cleanup
 
     echo Building Packit from source
     cargo build-install --destination ..\$VERSION
+    if ERRORLEVEL 1 goto cleanup
     cd ..
+    if ERRORLEVEL 1 goto cleanup
     rmdir /s /q .\packit@%VERSION%
+    if ERRORLEVEL 1 goto cleanup
 
     if "!RUSTUP_INSTALLED!"==1 (
         set "answer="
@@ -147,6 +168,8 @@ if not ERRORLEVEL 1 (
         if "!match!"=="1" (
             echo Uninstalling rustup
             rustup self uninstall
+            if ERRORLEVEL 1 goto cleanup
+            echo Uninstalling rustup successful
         )
     )
 
@@ -155,33 +178,35 @@ if not ERRORLEVEL 1 (
 
 if not exist "%CONFIG_DIR%" (
     mkdir "%CONFIG_DIR%"
+    if ERRORLEVEL 1 goto cleanup
 )
 
 echo Initializing Packit
 "%PREFIX_DIR%\packages\packit\%VERSION%\bin\packit.exe" init
+if ERRORLEVEL 1 goto cleanup
 echo Initializing Packit successful
 
 REM Make sure that packit words
-echo "Testing Packit install"
+echo Testing Packit install
 "%PREFIX_DIR%\bin\pit.exe" --version 2>nul >nul
 if ERRORLEVEL 1 (
     echo Unsuccessfull install of Packit, the 'pit' command cannot be found
-    popd
-    exit /b 1
+    goto cleanup
 )
 
 "%PREFIX_DIR%\bin\packit.exe" --version 2>nul >nul
 if ERRORLEVEL 1 (
     echo Unsuccessfull install of Packit, the 'packit' command cannot be found
-    popd
-    exit /b 1
+    goto cleanup
 )
 
 echo Successfully installed Packit!
 
 REM Exit early if Packit is already in the user PATH
 echo ";%PATH%;" | find /I ";%PREFIX_DIR%\bin;" >nul
-if %ERRORLEVEL%==0 (
+if ERRORLEVEL 0 (
+    echo Packit already found in PATH, no further actions should be required
+    popd
     exit /b 0
 )
 
@@ -194,6 +219,7 @@ if "!answer!"=="yes" set "match=1"
 if "!answer!"=="" set "match=1"
 if "!match!"=="1" (
     setx PATH "%PATH%;%PREFIX_DIR%\bin"
+    if ERRORLEVEL 1 goto cleanup
     echo Restart your shell to refresh your path and use Packit
     popd
     exit /b 0
@@ -203,3 +229,23 @@ echo Add '%PREFIX_DIR%\bin' to your PATH by adding the command below to your she
 echo setx PATH "%%PATH%%;%PREFIX_DIR%\bin"
 
 popd
+exit /b 0
+
+REM Removes all created files in case of an error and exits with the appropriate status code
+:cleanup
+set STATUS_CODE = %ERRORLEVEL%
+
+popd
+echo Remove installed Packit files
+
+REM Remove the prefix directory if `PREFIX_DIR` exists
+if exist "%PREFIX_DIR%" (
+    rmdir /s /q "%PREFIX_DIR%"
+)
+
+REM Remove the config directory if `PREFIX_DIR` exists
+if exist "%CONFIG_DIR%" (
+    rmdir /s /q "%CONFIG_DIR%"
+)
+
+exit /b %STATUS_CODE%
