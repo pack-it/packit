@@ -17,17 +17,13 @@ use crate::{
     installer::types::{PackageId, PackageName},
     platforms::{Os, TargetArchitecture},
     repositories::{error::RepositoryError, manager::RepositoryManager},
-    utils::{
-        env::Environment,
-        ioerror::{self, IOResultExt},
-    },
+    utils::{env::Environment, ioerror},
 };
 
 #[cfg(any(target_os = "macos", target_os = "linux"))]
+use crate::utils::ioerror::IOResultExt;
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 use std::os::{fd::IntoRawFd, unix::process::CommandExt};
-
-#[cfg(target_os = "windows")]
-use crate::platforms::pipes;
 
 /// The errors that occur during script handling.
 #[derive(Error, Debug)]
@@ -158,7 +154,7 @@ fn run_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, env: Environm
     }
 
     // Bind extra output pipes
-    let (mut command, close_bindings) = bind_extra_outputs(command, script_data)?;
+    bind_extra_outputs(&mut command, script_data)?;
 
     // Remove stripped environment variables
     for key in env.stripped_vars {
@@ -178,11 +174,6 @@ fn run_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, env: Environm
 
     // Run script
     let output = command.output().map_err(ScriptError::RunError)?;
-
-    // Close bindings of extra outputs
-    if let Some(close_bindings) = close_bindings {
-        close_bindings();
-    }
 
     // Display status to user
     match output.status.code() {
@@ -272,7 +263,7 @@ pub const SCRIPT_EXTENSION: &str = "sh";
 pub const SCRIPT_EXTENSION: &str = "bat";
 
 #[cfg(any(target_os = "macos", target_os = "linux"))]
-fn bind_extra_outputs(mut command: Command, script_data: &ScriptData) -> Result<(Command, Option<impl FnOnce()>)> {
+fn bind_extra_outputs(command: &mut Command, script_data: &ScriptData) -> Result<()> {
     let source_verbose_fd = match script_data.verbose {
         true => libc::STDOUT_FILENO,
         false => fs::File::options().write(true).open("/dev/null").err_operation("open /dev/null")?.into_raw_fd(),
@@ -285,23 +276,22 @@ fn bind_extra_outputs(mut command: Command, script_data: &ScriptData) -> Result<
         })
     };
 
-    Ok((command, None::<fn()>))
+    Ok(())
 }
 
 #[cfg(target_os = "windows")]
-fn bind_extra_outputs(mut command: Command, script_data: &ScriptData) -> Result<(Command, Option<impl FnOnce()>)> {
+fn bind_extra_outputs(command: &mut Command, script_data: &ScriptData) -> Result<()> {
     if !script_data.verbose {
-        command.env("PACKIT_VERBOSE_OUT", "nul");
-        return Ok((command, None));
+        command.env("PACKIT_OUTPUTS", "3>nul");
+        return Ok(());
     }
 
-    let close = pipes::windows::start_pipe_server("\\\\.\\pipe\\packittestpipe");
-    command.env("PACKIT_VERBOSE_OUT", "\\\\.\\pipe\\packittestpipe");
+    command.env("PACKIT_OUTPUTS", "3>&1");
 
-    Ok((command, Some(close)))
+    Ok(())
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
-fn bind_extra_outputs(command: &mut Command, script_data: &ScriptData) -> Result<(Command, Option<impl FnOnce()>)> {
+fn bind_extra_outputs(command: &mut Command, script_data: &ScriptData) -> Result<()> {
     panic!("Cannot bind extra outputs for target, target is not supported.");
 }
