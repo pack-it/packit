@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::{
-    collections::HashMap,
+    collections::{HashMap, VecDeque},
     fs::{self},
+    io::{BufRead, BufReader},
     path::{self, Path, PathBuf},
     process::{Command, Stdio},
 };
@@ -17,11 +18,12 @@ use crate::{
     installer::types::{PackageId, PackageName},
     platforms::{Os, TargetArchitecture},
     repositories::{error::RepositoryError, manager::RepositoryManager},
-    utils::{env::Environment, ioerror},
+    utils::{
+        env::Environment,
+        ioerror::{self, IOResultExt},
+    },
 };
 
-#[cfg(any(target_os = "macos", target_os = "linux"))]
-use crate::utils::ioerror::IOResultExt;
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 use std::os::{fd::IntoRawFd, unix::process::CommandExt};
 
@@ -52,7 +54,7 @@ pub enum ScriptError {
     #[error("Cannot fetch script from repository")]
     FetchScriptError(#[from] RepositoryError),
 
-    #[error("Error while interacting with filesystem")]
+    #[error("IOError during a script operation")]
     IOError(#[from] ioerror::IOError),
 }
 
@@ -148,9 +150,16 @@ fn run_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, env: Environm
         .env("PACKIT_PACKAGE_DEPENDENCIES_PATH", &package_dependencies_path)
         .env("PACKIT_VERBOSE", if script_data.verbose { "1" } else { "0" });
 
-    // Only display build logging if verbose is enabled
+    // Only display build logging if verbose is enabled, otherwise create combined pipe for reading
+    let mut output = None;
     if show_output {
         command.stdout(Stdio::inherit()).stderr(Stdio::inherit());
+    } else {
+        // Create pipe to capture both stdout and stderr together
+        let (reader, writer) = std::io::pipe().err_operation("create pipe")?;
+        let writer_clone = writer.try_clone().err_operation("clone pipe writer")?;
+        command.stdout(writer).stderr(writer_clone);
+        output = Some(reader);
     }
 
     // Bind extra output pipes
@@ -172,21 +181,48 @@ fn run_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, env: Environm
         command.env(formatted_key, value);
     }
 
-    // Run script
-    let output = command.output().map_err(ScriptError::RunError)?;
+    // Run script and destroy command builder
+    let mut process = command.spawn().map_err(ScriptError::RunError)?;
+    drop(command);
+
+    // Capture last lines of script output if enabled
+    let mut last_lines = VecDeque::with_capacity(10);
+    if let Some(output) = output {
+        let lines = BufReader::new(output).lines();
+        for line in lines {
+            let line = line.err_operation("read output line")?;
+
+            if last_lines.len() == 10 {
+                last_lines.pop_front();
+            }
+
+            last_lines.push_back(line);
+        }
+    }
 
     // Display status to user
-    match output.status.code() {
+    let status = process.wait().map_err(ScriptError::RunError)?;
+    match status.code() {
         Some(0) => {
             println!("Script executed succesfully");
             Ok(())
         },
         Some(code) => {
             warning!("Script executed with status code {code}");
+            if !last_lines.is_empty() {
+                eprintln!("Last lines of script output:");
+                last_lines.iter().for_each(|x| eprintln!("{x}"));
+            }
+
             Err(ScriptError::ScriptFailed(code))
         },
         None => {
             warning!("Script executed without a status code");
+            if !last_lines.is_empty() {
+                eprintln!("Last lines of script output:");
+                last_lines.iter().for_each(|x| eprintln!("{x}"));
+            }
+
             Err(ScriptError::ScriptFailed(-1))
         },
     }
