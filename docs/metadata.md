@@ -197,3 +197,7 @@ Please note that the build script output is only shown to the user when the verb
 The script arguments that are defined in the metadata are passed to the script as environment variable as `PACKIT_ARGS_<argument-name>`.
 
 The environment of build scripts are managed more extensively to ensure reproducible builds.
+
+Scripts have the ability to use file descriptor 3 to print verbose output, this output is only shown to user when verbose mode is turned on. Scripts should only print absolute necessary output to stdout and stderr, other output should be redirected to this verbose stream.
+<br>
+Please note that on Windows `%PACKIT_OUTPUTS% >&3` is required to redirect output to this verbose stream, while just `>&3` is enough on Unix.

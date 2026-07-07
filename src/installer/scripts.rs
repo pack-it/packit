@@ -60,6 +60,9 @@ pub enum ScriptError {
 
 pub type Result<T> = core::result::Result<T, ScriptError>;
 
+/// Describes the number of lines that should be captured from a script that has show_output disabled.
+const MAX_CAPTURED_OUTPUT_LINES: usize = 10;
+
 /// Holds data necessary for script execution.
 pub struct ScriptData<'a> {
     path: &'a dyn AsRef<Path>,
@@ -186,13 +189,13 @@ fn run_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, env: Environm
     drop(command);
 
     // Capture last lines of script output if enabled
-    let mut last_lines = VecDeque::with_capacity(10);
+    let mut last_lines = VecDeque::with_capacity(MAX_CAPTURED_OUTPUT_LINES);
     if let Some(output) = output {
         let lines = BufReader::new(output).lines();
         for line in lines {
             let line = line.err_operation("read output line")?;
 
-            if last_lines.len() == 10 {
+            if last_lines.len() == MAX_CAPTURED_OUTPUT_LINES {
                 last_lines.pop_front();
             }
 
