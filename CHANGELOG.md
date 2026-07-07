@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The `size` field in the source fields in the `targets.toml` metadata file.
 - Deprecation information fields (deprecated_from, disabled_from and reason), to allow specifying deprecation and disabling dates of packages or specific versions.
 - The `--overwrite` flag to the link command to overwrite existing links from another package that are conflicting.
+- The Packit install scripts for Unix and Windows now cleanup the created Packit files in case of an error during installation.
 
 ### Changes
 - The build system now includes a new `package-build` xtask to create a full Packit prebuild for the release.
