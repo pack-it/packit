@@ -39,12 +39,12 @@ ask() {
 
 # Removes all created files in case of an error.
 cleanup() {
-    # Don't cleanup of `SHOULD_CLEANUP` is not true
+    # Don't cleanup if `SHOULD_CLEANUP` is not true
     if [ ${SHOULD_CLEANUP-} -eq 0 ]; then
         exit 0
     fi
 
-    echo "Remove installed Packit files"
+    echo "Removing installed Packit files"
 
     # Remove the prefix directory if `PREFIX_DIR` is set and it exists
     if [ -n "${PREFIX_DIR-}" ] && [ -d "$PREFIX_DIR" ]; then
@@ -129,6 +129,11 @@ sudo true
 # Note that we can't rely on the `packit init` command, because we don't know if it fails because of an already existing config file
 if [ -f "$CONFIG_DIR/Config.toml" ]; then
     echo "Packit already seems to be installed, config file found in '$CONFIG_DIR'"
+    SHOULD_CLEANUP=0
+    exit 0
+fi
+if [ -f "$PREFIX_DIR/Register.toml" ]; then
+    echo "Packit already seems to be installed, register file found in '$PREFIX_DIR'"
     SHOULD_CLEANUP=0
     exit 0
 fi

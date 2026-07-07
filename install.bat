@@ -31,7 +31,7 @@ goto cleanup_end
 set STATUS_CODE=%ERRORLEVEL%
 
 popd
-echo Remove installed Packit files
+echo Removing installed Packit files
 
 REM Remove the prefix directory if `PREFIX_DIR` exists
 if exist "%PREFIX_DIR%" (
@@ -92,6 +92,10 @@ if exist "%CONFIG_DIR%\Config.toml" (
     echo Packit already seems to be installed, config file found in '%CONFIG_DIR%'
     exit /b 0
 )
+if exist "%PREFIX_DIR%\Register.toml" (
+    echo Packit already seems to be installed, register file found in '%PREFIX_DIR%'
+    exit /b 0
+)
 
 REM Go into the prefix directory 
 mkdir "%PREFIX_DIR%\packages\packit"
@@ -137,22 +141,21 @@ if not ERRORLEVEL 1 (
             goto cleanup
         )
 
-        REM Install the correct rustup version for the current platform
+        REM Choose the correct rustup version for the current platform
         if "%PROCESSOR_ARCHITECTURE%"=="ARM64" (
-            echo Installing cargo from 'https://static.rust-lang.org/rustup/dist/aarch64-pc-windows-msvc/rustup-init.exe'
-            curl --proto "=https" --tlsv1.2 -sSfL https://static.rust-lang.org/rustup/dist/aarch64-pc-windows-msvc/rustup-init.exe --output rustup-init.exe
-            if ERRORLEVEL 1 goto cleanup
+            set "RUSTUP_URL=https://static.rust-lang.org/rustup/dist/aarch64-pc-windows-msvc/rustup-init.exe"
         ) else (
             if defined PROCESSOR_ARCHITEW6432 (
-                echo Installing cargo from 'https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe'
-                curl --proto "=https" --tlsv1.2 -sSfL https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe --output rustup-init.exe
-                if ERRORLEVEL 1 goto cleanup
+                set "RUSTUP_URL=https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe"
             ) else (
-                echo Installing cargo from 'https://static.rust-lang.org/rustup/dist/i686-pc-windows-msvc/rustup-init.exe'
-                curl --proto "=https" --tlsv1.2 -sSfL https://static.rust-lang.org/rustup/dist/i686-pc-windows-msvc/rustup-init.exe --output rustup-init.exe
-                if ERRORLEVEL 1 goto cleanup
+                set "RUSTUP_URL=https://static.rust-lang.org/rustup/dist/i686-pc-windows-msvc/rustup-init.exe"
             )
         )
+
+        REM Install cargo
+        echo Installing cargo from '%RUSTUP_URL%'
+        curl --proto "=https" --tlsv1.2 -sSfL "%RUSTUP_URL%" --output rustup-init.exe
+        if ERRORLEVEL 1 goto cleanup
         
         .\rustup-init.exe
         if ERRORLEVEL 1 goto cleanup
