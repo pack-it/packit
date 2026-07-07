@@ -71,7 +71,7 @@ echo Prefix directory: %PREFIX_DIR%
 echo Config directory: %CONFIG_DIR%
 
 REM Ask the user for administrator rights
-call :ask "Y" "The Packit install script requires root to modify '%PREFIX_DIR%' and '%CONFIG_DIR%', do you wish to continue"
+call :ask "Y" "The Packit install script requires administrator privileges to modify '%PREFIX_DIR%' and '%CONFIG_DIR%', do you wish to continue"
 if not ERRORLEVEL 1 (
     echo Canceling installation of Packit
     goto cleanup
@@ -144,17 +144,16 @@ if not ERRORLEVEL 1 (
         REM Choose the correct rustup version for the current platform
         if "%PROCESSOR_ARCHITECTURE%"=="ARM64" (
             set "RUSTUP_URL=https://static.rust-lang.org/rustup/dist/aarch64-pc-windows-msvc/rustup-init.exe"
+        ) else if "%PROCESSOR_ARCHITECTURE%"=="AMD64" (
+            set "RUSTUP_URL=https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe"
         ) else (
-            if defined PROCESSOR_ARCHITEW6432 (
-                set "RUSTUP_URL=https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe"
-            ) else (
-                set "RUSTUP_URL=https://static.rust-lang.org/rustup/dist/i686-pc-windows-msvc/rustup-init.exe"
-            )
+            echo Current target not supported
+            goto cleanup
         )
 
         REM Install cargo
-        echo Installing cargo from '%RUSTUP_URL%'
-        curl --proto "=https" --tlsv1.2 -sSfL "%RUSTUP_URL%" --output rustup-init.exe
+        echo Installing cargo from '!RUSTUP_URL!'
+        curl --proto "=https" --tlsv1.2 -sSfL "!RUSTUP_URL!" --output rustup-init.exe
         if ERRORLEVEL 1 goto cleanup
         
         .\rustup-init.exe
