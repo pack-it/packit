@@ -28,7 +28,9 @@ exit /b 1
 REM Removes all created files in case of an error and exits with the appropriate status code.
 goto cleanup_end
 :cleanup
-set STATUS_CODE=%ERRORLEVEL%
+REM Set the status code to the errorlevel, if the errorlevel is zero set it to 1 (cleanup only happens in case of error)
+set STATUS_CODE=!ERRORLEVEL!
+if !STATUS_CODE!==0 set STATUS_CODE=1
 
 popd
 echo Removing installed Packit files
@@ -74,7 +76,7 @@ REM Ask the user for administrator rights
 call :ask "Y" "The Packit install script requires administrator privileges to modify '%PREFIX_DIR%' and '%CONFIG_DIR%', do you wish to continue"
 if not ERRORLEVEL 1 (
     echo Canceling installation of Packit
-    goto cleanup
+    exit /b 1
 )
 
 REM Check for administrator privileges 

@@ -119,6 +119,7 @@ echo "Config directory: $CONFIG_DIR"
 # Ask the user for admin rights
 if ! ask "Y" "The Packit install script requires root to modify '$PREFIX_DIR' and '$CONFIG_DIR', do you wish to continue"; then
     echo "Canceling installation of Packit"
+    SHOULD_CLEANUP=0
     exit 1
 fi
 
