@@ -307,9 +307,20 @@ fn bind_extra_outputs(command: &mut Command, script_data: &ScriptData) -> Result
         true => libc::STDOUT_FILENO,
         false => fs::File::options().write(true).open("/dev/null").err_operation("open /dev/null")?.into_raw_fd(),
     };
+
+    // SAFETY: only dup2 and close operations are called in the subprocess which are async-signal-safe.
+    // SAFETY: ownership of the /dev/null file descriptor is moved into the subprocess and closed there.
+    // SAFETY: errors of dup2 are propagated back to the spawn function.
     unsafe {
         command.pre_exec(move || {
-            libc::dup2(source_verbose_fd, 3);
+            if libc::dup2(source_verbose_fd, 3) == -1 {
+                return Err(std::io::Error::last_os_error());
+            }
+
+            // Close /dev/null file descriptor after duplicating it onto fd 3
+            if source_verbose_fd != libc::STDOUT_FILENO && source_verbose_fd != 3 {
+                libc::close(source_verbose_fd);
+            }
 
             Ok(())
         })
@@ -326,7 +337,6 @@ fn bind_extra_outputs(command: &mut Command, script_data: &ScriptData) -> Result
     }
 
     command.env("PACKIT_OUTPUTS", "3>&1");
-
     Ok(())
 }
 
