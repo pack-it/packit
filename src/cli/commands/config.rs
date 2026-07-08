@@ -8,7 +8,9 @@ use crate::{
     cli::{
         commands::HandleCommand,
         display::{
-            QuestionResponse, ask_user,
+            QuestionResponse,
+            aligned_print::{self, PairAlginer},
+            ask_user,
             logging::{error, warning},
         },
     },
@@ -162,12 +164,15 @@ impl ConfigArgs {
 
             // Check if the repository is unsupported
             if let Some(metadata) = manager.get_unsupported_repositories().get(repository_id) {
-                println!("{}: {} ({repository_id})", "NOT SUPPORTED".bold().red(), metadata.name.bold().red());
-                println!("{}", metadata.description.red());
-                println!("License: {}", metadata.license);
-                println!("Maintainers: {}", metadata.maintainers.join(", "));
-                println!("Repository provider: {}, url: {}", repository.provider, repository.url);
-                println!("Required Packit Version: {}", metadata.required_packit_version.to_string().red());
+                println!("{} ({repository_id}) {}", metadata.name.bold().blue(), "NOT SUPPORTED".bold().red());
+                println!("{}", metadata.description.italic().cyan());
+                let mut pair_aligner = PairAlginer::new();
+                pair_aligner.add("License", &metadata.license);
+                pair_aligner.add("Maintainers", metadata.maintainers.join(", "));
+                pair_aligner.add("Repository provider", &repository.provider);
+                pair_aligner.add("Repository url", &repository.url);
+                pair_aligner.add("Required Packit Version", &metadata.required_packit_version);
+                pair_aligner.display(aligned_print::VERTICAL_LINE_PREFIX);
                 continue;
             }
 
@@ -184,11 +189,14 @@ impl ConfigArgs {
 
             // Print repository information
             println!("{} ({repository_id})", metadata.name.bold().blue());
-            println!("{}", metadata.description.green());
-            println!("License: {}", metadata.license);
-            println!("Maintainers: {}", metadata.maintainers.join(", "));
-            println!("Repository provider: {}, url: {}", repository.provider, repository.url);
-            println!("Required Packit Version: {}", metadata.required_packit_version.to_string().green());
+            println!("{}", metadata.description.italic().cyan());
+            let mut pair_aligner = PairAlginer::new();
+            pair_aligner.add("License", metadata.license);
+            pair_aligner.add("Maintainers", metadata.maintainers.join(", "));
+            pair_aligner.add("Repository provider", &repository.provider);
+            pair_aligner.add("Repository url", &repository.url);
+            pair_aligner.add("Required Packit Version", metadata.required_packit_version);
+            pair_aligner.display(aligned_print::VERTICAL_LINE_PREFIX);
         }
     }
 

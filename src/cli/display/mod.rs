@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+pub mod aligned_print;
 pub mod deprecation;
 pub mod error;
 pub mod grid;
@@ -8,6 +9,8 @@ mod progressbar;
 mod prompts;
 mod reader;
 mod spinner;
+pub mod standard_print;
+pub mod styled;
 
 pub use grid::print_grid;
 

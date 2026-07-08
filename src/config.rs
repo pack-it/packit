@@ -6,12 +6,17 @@ use std::{
     str::FromStr,
 };
 
+use colored::Colorize;
 use serde::Deserialize;
 use thiserror::Error;
 use toml_edit::DocumentMut;
 
 use crate::{
-    cli::display::logging::warning,
+    cli::display::{
+        aligned_print::{self, PairAlginer},
+        logging::warning,
+        standard_print,
+    },
     platforms::{DEFAULT_CONFIG_DIR, DEFAULT_PREFIX},
     repositories::metadata::DEFAULT_METADATA_PROVIDER_ID,
     utils::{
@@ -140,23 +145,28 @@ impl Config {
 
     /// Displays the Config settings.
     pub fn display(&self) {
-        println!("Prefix directory: {}", self.prefix_directory.display());
-        print!("Multiuser mode: ");
-        match self.multiuser {
-            true => println!("on"),
-            false => println!("off"),
-        }
+        let mut pair_aligner = PairAlginer::new();
+        pair_aligner.add("Prefix directory", self.prefix_directory.display());
+        pair_aligner.add("Multiuser mode", if self.multiuser { "on" } else { "off" });
+        pair_aligner.add("Repositories rank", self.repositories_rank.join(", "));
+        pair_aligner.display("");
 
-        println!("Repositories rank: {}", self.repositories_rank.join(", "));
         for (name, repo) in &self.repositories {
-            println!("{name}");
-            println!("\tUrl: {}", repo.url);
-            println!("\tProvider: {}", repo.provider);
-            println!(
-                "\tPrebuilds provider: {}",
-                repo.prebuilds_provider.as_ref().unwrap_or(&"None".to_string())
+            println!();
+            println!("{}", name.bold());
+
+            let mut pair_aligner = PairAlginer::new();
+            pair_aligner.add("Url", &repo.url);
+            pair_aligner.add("Provider", &repo.provider);
+            pair_aligner.add(
+                "Prebuilds provider",
+                standard_print::get_string_option_display(repo.prebuilds_provider.clone()),
             );
-            println!("\tPrebuilds url: {}", repo.prebuilds_url.as_ref().unwrap_or(&"None".to_string()));
+            pair_aligner.add(
+                "Prebuilds url",
+                standard_print::get_string_option_display(repo.prebuilds_url.clone()),
+            );
+            pair_aligner.display(aligned_print::VERTICAL_LINE_PREFIX);
         }
     }
 }
