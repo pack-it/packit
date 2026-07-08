@@ -2,7 +2,7 @@
 use std::{collections::HashMap, path::PathBuf};
 
 use crate::{
-    cli::display::logging::warning,
+    cli::display::{logging::warning, styled::Styled},
     register::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
     utils::env::Environment,
 };
@@ -115,7 +115,7 @@ impl<'a> BuildEnv<'a> {
                 None => {
                     warning!(
                         "Cannot add dependency {} to build env PATH: cannot convert PathBuf to string",
-                        dependency.package_id
+                        dependency.package_id.style()
                     );
                     continue;
                 },
@@ -164,7 +164,7 @@ impl<'a> BuildEnv<'a> {
                     None => {
                         warning!(
                             "Cannot add dependency {} lib/pkgconfig to build env PKG_CONFIG_PATH: cannot convert PathBuf to string",
-                            dependency.package_id
+                            dependency.package_id.style()
                         );
                         continue;
                     },
@@ -178,7 +178,7 @@ impl<'a> BuildEnv<'a> {
                     None => {
                         warning!(
                             "Cannot add dependency {} share/pkgconfig to build env PKG_CONFIG_PATH: cannot convert PathBuf to string",
-                            dependency.package_id
+                            dependency.package_id.style()
                         );
                         continue;
                     },
@@ -213,7 +213,7 @@ impl<'a> BuildEnv<'a> {
                 None => {
                     warning!(
                         "Cannot add dependency {} to build env CMAKE_PREFIX_PATH: cannot convert PathBuf to string",
-                        dependency.package_id
+                        dependency.package_id.style()
                     );
                     continue;
                 },
@@ -253,7 +253,7 @@ impl<'a> BuildEnv<'a> {
                 None => {
                     warning!(
                         "Cannot add dependency {} to build env ACLOCAL_PATH: cannot convert PathBuf to string",
-                        dependency.package_id
+                        dependency.package_id.style()
                     );
                     continue;
                 },

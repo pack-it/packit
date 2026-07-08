@@ -5,7 +5,7 @@ use std::process::exit;
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{QuestionResponse, ask_user, grid, logging::error, not_found, styled::Styled},
+        display::{QuestionResponse, ask_user, grid, logging::error, not_found, standard_print, styled::Styled},
         parameter_checks,
     },
     config::Config,
@@ -68,16 +68,10 @@ impl HandleCommand for UpdateArgs {
         }
 
         // Check for duplicates, because updating twice will result in an error
-        // TODO: Like the other duplicate methods
         let duplicates = parameter_checks::get_duplicates(optional_ids);
         if !duplicates.is_empty() {
-            let mut duplicate_string = String::new();
-            for duplicate in duplicates {
-                duplicate_string.push_str(&duplicate.to_string());
-                duplicate_string.push(' ');
-            }
-
-            error!(msg: "Duplicate package arguments are not allowed. The following duplicates were found: {duplicate_string}");
+            error!(msg: "Duplicate package arguments are not allowed. The following duplicates were found:");
+            standard_print::print_list(duplicates.iter());
             exit(1);
         }
 

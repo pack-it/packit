@@ -126,7 +126,7 @@ impl<'a> Installer<'a> {
         self.install_nodes(&dependency_tree)?;
 
         if !self.options.keep_build {
-            println!("Removing build dependencies (if there are any");
+            println!("Removing build dependencies (if there are any)");
             self.remove_build_dependencies(0, &dependency_tree)?;
         }
 
@@ -334,7 +334,8 @@ impl<'a> Installer<'a> {
                 if should_set_active && !installed_package.symlinked && should_symlink {
                     let question = format!(
                         "The current active version of {} ({}) is not symlinked, do you want to proceed with symlinking the newly installed version",
-                        package_id.name, installed_package.active_version
+                        package_id.name.style(),
+                        installed_package.active_version.style()
                     );
                     should_symlink = ask_user(&question, QuestionResponse::No)?.is_yes();
                 }
@@ -705,7 +706,7 @@ impl<'a> Installer<'a> {
                 None => {
                     warning!(
                         "Dependent is not a dependent of {} eventhough it should be.",
-                        old_package.package_id
+                        old_package.package_id.style()
                     );
                     continue;
                 },
@@ -818,7 +819,8 @@ impl<'a> Installer<'a> {
         if installed_versions.len() > 1 && optional_id.version.is_none() {
             let question = format!(
                 "Multiple versions of {} are installed, the latest version {} will be updated, do you wish to continue?",
-                optional_id.name, latest_installed_version.package_id.version
+                optional_id.name.style(),
+                latest_installed_version.package_id.version.style()
             );
             if ask_user(&question, QuestionResponse::Yes)?.is_no_or_invalid() {
                 return Err(InstallerError::InstallationCanceled {

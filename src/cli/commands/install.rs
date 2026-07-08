@@ -5,7 +5,7 @@ use std::process::exit;
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{deprecation, logging::error, not_found, styled::Styled},
+        display::{deprecation, logging::error, not_found, standard_print, styled::Styled},
         parameter_checks,
     },
     config::Config,
@@ -53,16 +53,10 @@ pub struct InstallArgs {
 impl HandleCommand for InstallArgs {
     fn handle(&self) {
         // Check for duplicates, because installing twice will result in a confusing error
-        // TODO: Make blue and make a list with '-' (Also for other duplicate impl)
         let duplicates = parameter_checks::get_duplicates(&self.packages);
         if !duplicates.is_empty() {
-            let mut duplicate_string = String::new();
-            for duplicate in duplicates {
-                duplicate_string.push_str(&duplicate.to_string());
-                duplicate_string.push(' ');
-            }
-
-            error!(msg: "Duplicate package arguments are not allowed. The following duplicates were found: {duplicate_string}");
+            error!(msg: "Duplicate package arguments are not allowed. The following duplicates were found:");
+            standard_print::print_list(duplicates.iter());
             exit(1);
         }
 

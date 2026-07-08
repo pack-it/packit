@@ -3,11 +3,11 @@ use std::fmt::Display;
 
 pub const VERTICAL_LINE_PREFIX: &str = " \u{2502} ";
 
-pub struct PairAlginer {
+pub struct PairAligner {
     pairs: Vec<(String, String)>,
 }
 
-impl PairAlginer {
+impl PairAligner {
     pub fn new() -> Self {
         Self { pairs: Vec::new() }
     }

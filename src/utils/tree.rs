@@ -138,7 +138,7 @@ impl<V, L: Eq> Tree<V, L> {
     /// The implementation of the tree display.
     fn display_impl(&self, f: &mut std::fmt::Formatter<'_>, node_index: usize, prefix: &str) -> std::fmt::Result {
         let node = self.get_node_by_index(node_index).expect("Expected node to exist");
-        writeln!(f, "{prefix}{}", node.package_id)?;
+        writeln!(f, "{prefix}{}", node.package_id.style())?;
 
         // Note that when the input prefix is "" then this prefix will also be ""
         let prefix = match prefix.ends_with(BRANCH) {

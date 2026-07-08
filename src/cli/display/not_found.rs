@@ -2,7 +2,7 @@
 use std::process::exit;
 
 use crate::{
-    cli::display::{logging::error, styled::Styled},
+    cli::display::{logging::error, standard_print, styled::Styled},
     installer::types::{OptionalPackageId, PackageId, PackageName, Version},
     register::package_register::PackageRegister,
     repositories::{error::PackageNotFoundReason, manager::RepositoryManager},
@@ -30,14 +30,10 @@ pub fn repository_version(package_name: &PackageName, manager: &RepositoryManage
 }
 
 /// Displays alternative versions and exits.
+/// Assumes that at least one item exists in the given list of versions.
 fn display_versions<'a>(versions: impl Iterator<Item = &'a Version>) -> ! {
-    // TODO: Should this also be a list '-'?
-    print!("Did you mean version(s): ");
-    for version in versions {
-        print!("{} ", version.style());
-    }
-    println!();
-
+    println!("Did you mean one of the following version(s):");
+    standard_print::print_list(versions.map(|v| v.style()));
     exit(1);
 }
 

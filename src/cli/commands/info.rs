@@ -8,7 +8,7 @@ use crate::{
     cli::{
         commands::HandleCommand,
         display::{
-            aligned_print::{self, PairAlginer},
+            aligned_print::{self, PairAligner},
             logging::error,
             not_found, standard_print,
             styled::Styled,
@@ -83,7 +83,7 @@ impl InfoArgs {
         println!("{}", self.package.name.style());
         println!("{}", package.description.italic().cyan());
 
-        let mut pair_aligner = PairAlginer::new();
+        let mut pair_aligner = PairAligner::new();
         pair_aligner.add("Homepage", standard_print::get_string_option_display(package.homepage.clone()));
         pair_aligner.add(
             "Installed versions",
@@ -104,13 +104,10 @@ impl InfoArgs {
         println!("{}", package_id.style());
         println!("{}", package.description.italic().cyan());
 
-        let mut pair_aligner = PairAlginer::new();
+        let mut pair_aligner = PairAligner::new();
         pair_aligner.add("Homepage", standard_print::get_string_option_display(package.homepage.clone()));
         pair_aligner.add("License", &package_version.license);
-        pair_aligner.add(
-            "Install path",
-            package_version.install_path.to_str().unwrap_or_exit_msg("Invalid install path", 1),
-        );
+        pair_aligner.add("Install path", package_version.install_path.display());
         pair_aligner.add("Active", package.active_version == package_id.version);
         pair_aligner.add("Symlinked", package.symlinked);
 
@@ -122,48 +119,18 @@ impl InfoArgs {
         pair_aligner.display(aligned_print::VERTICAL_LINE_PREFIX);
         println!();
 
-        print!("Dependencies: ");
-        if package_version.dependencies.is_empty() {
-            print!("{}", "None".dimmed());
-        }
-
-        for dependency in &package_version.dependencies {
-            print!("\n  - {}", dependency.style());
-        }
-        println!();
+        print!("Dependencies:");
+        standard_print::print_list_or_none(package_version.dependencies.iter().map(|d| d.style()));
 
         // Early return if verbose is disabled
         if !self.verbose {
             return;
         }
 
-        if !package_version.dependencies.is_empty() {
-            println!();
-        }
-
         print!("Dependents: ");
-        if package_version.dependents.is_empty() {
-            print!("{}", "None".dimmed());
-        }
-
-        for dependent in &package_version.dependents {
-            print!("\n  - {}", dependent.style());
-        }
-        println!();
-
-        if !package_version.dependents.is_empty() {
-            println!();
-        }
+        standard_print::print_list_or_none(package_version.dependents.iter().map(|d| d.style()));
 
         print!("Revisions: ");
-        if package_version.revisions.is_empty() {
-            print!("{}", "None".dimmed());
-        }
-
-        for revision in &package_version.revisions {
-            print!("\n  - {revision}");
-        }
-
-        println!();
+        standard_print::print_list_or_none(package_version.revisions.iter());
     }
 }

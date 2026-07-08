@@ -9,9 +9,10 @@ use crate::{
         commands::HandleCommand,
         display::{
             QuestionResponse,
-            aligned_print::{self, PairAlginer},
+            aligned_print::{self, PairAligner},
             ask_user,
             logging::{error, warning},
+            styled::Styled,
         },
     },
     config::{Config, EditableConfig, Repository},
@@ -166,12 +167,12 @@ impl ConfigArgs {
             if let Some(metadata) = manager.get_unsupported_repositories().get(repository_id) {
                 println!("{} ({repository_id}) {}", metadata.name.bold().blue(), "NOT SUPPORTED".bold().red());
                 println!("{}", metadata.description.italic().cyan());
-                let mut pair_aligner = PairAlginer::new();
+                let mut pair_aligner = PairAligner::new();
                 pair_aligner.add("License", &metadata.license);
                 pair_aligner.add("Maintainers", metadata.maintainers.join(", "));
                 pair_aligner.add("Repository provider", &repository.provider);
                 pair_aligner.add("Repository url", &repository.url);
-                pair_aligner.add("Required Packit Version", &metadata.required_packit_version);
+                pair_aligner.add("Required Packit Version", &metadata.required_packit_version.style().red());
                 pair_aligner.display(aligned_print::VERTICAL_LINE_PREFIX);
                 continue;
             }
@@ -190,12 +191,12 @@ impl ConfigArgs {
             // Print repository information
             println!("{} ({repository_id})", metadata.name.bold().blue());
             println!("{}", metadata.description.italic().cyan());
-            let mut pair_aligner = PairAlginer::new();
+            let mut pair_aligner = PairAligner::new();
             pair_aligner.add("License", metadata.license);
             pair_aligner.add("Maintainers", metadata.maintainers.join(", "));
             pair_aligner.add("Repository provider", &repository.provider);
             pair_aligner.add("Repository url", &repository.url);
-            pair_aligner.add("Required Packit Version", metadata.required_packit_version);
+            pair_aligner.add("Required Packit Version", metadata.required_packit_version.style());
             pair_aligner.display(aligned_print::VERTICAL_LINE_PREFIX);
         }
     }

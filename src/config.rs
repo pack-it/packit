@@ -13,7 +13,7 @@ use toml_edit::DocumentMut;
 
 use crate::{
     cli::display::{
-        aligned_print::{self, PairAlginer},
+        aligned_print::{self, PairAligner},
         logging::warning,
         standard_print,
     },
@@ -145,7 +145,7 @@ impl Config {
 
     /// Displays the Config settings.
     pub fn display(&self) {
-        let mut pair_aligner = PairAlginer::new();
+        let mut pair_aligner = PairAligner::new();
         pair_aligner.add("Prefix directory", self.prefix_directory.display());
         pair_aligner.add("Multiuser mode", if self.multiuser { "on" } else { "off" });
         pair_aligner.add("Repositories rank", self.repositories_rank.join(", "));
@@ -155,7 +155,7 @@ impl Config {
             println!();
             println!("{}", name.bold());
 
-            let mut pair_aligner = PairAlginer::new();
+            let mut pair_aligner = PairAligner::new();
             pair_aligner.add("Url", &repo.url);
             pair_aligner.add("Provider", &repo.provider);
             pair_aligner.add(
