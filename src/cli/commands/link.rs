@@ -4,7 +4,7 @@ use clap::Args;
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{logging::warning, not_found},
+        display::{logging::warning, not_found, styled::Styled},
     },
     config::{Config, Repository},
     installer::{Symlinker, types::PackageName},
@@ -58,13 +58,14 @@ impl HandleCommand for LinkArgs {
             .unwrap_or_exit_msg("Unable to retrieve active version of package", 1);
 
         // Check if we are allowed to symlink when not forcing
+        // TODO: Print conflicting package in list with '-' (Maybe make list util)
         if !self.force {
             let conflicts = register.get_conflicting_packages(&self.package_name, &package.conflicts_with);
             if !conflicts.is_empty() {
                 println!("The package has conflicts with other packages, cancelling linking.");
                 println!(
                     "Conflicting packages: {}",
-                    conflicts.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(", ")
+                    conflicts.iter().map(|x| x.style().to_string()).collect::<Vec<_>>().join(", ")
                 );
                 return;
             }
@@ -122,6 +123,6 @@ impl HandleCommand for LinkArgs {
         // Save package register
         register.save_to(&register_path).unwrap_or_exit(1);
 
-        println!("Successfully linked {}", self.package_name);
+        println!("Successfully linked {}", self.package_name.style());
     }
 }

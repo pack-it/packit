@@ -2,7 +2,10 @@
 use clap::Args;
 
 use crate::{
-    cli::{commands::HandleCommand, display::not_found},
+    cli::{
+        commands::HandleCommand,
+        display::{not_found, styled::Styled},
+    },
     config::Config,
     installer::{Symlinker, types::PackageName},
     register::package_register::PackageRegister,
@@ -39,7 +42,7 @@ impl HandleCommand for UnlinkArgs {
             .unlink_package(&mut register, &self.package_name)
             .unwrap_or_exit_msg("Unable to unlink package", 1);
 
-        println!("Successfully unlinked {}", self.package_name);
+        println!("Successfully unlinked {}", self.package_name.style());
 
         // Save package register
         register.save_to(&register_path).unwrap_or_exit(1);

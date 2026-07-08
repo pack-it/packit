@@ -7,7 +7,7 @@ use std::{collections::HashSet, str::FromStr};
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{deprecation, logging::error, not_found, print_grid},
+        display::{self, deprecation, logging::error, not_found, styled::Styled},
     },
     config::Config,
     installer::types::OptionalPackageId,
@@ -63,7 +63,7 @@ impl SearchArgs {
             return;
         }
 
-        print_grid(&matches.into_iter().collect());
+        display::print_grid(&matches.into_iter().map(|p| p.style()).collect());
     }
 
     /// Searches information of a package based on the provided `OptionalPackageId`.
@@ -108,7 +108,7 @@ impl SearchArgs {
         let target = match package_version.get_target(&target_bounds) {
             Ok(target) => target,
             Err(e) => {
-                error!(e, "Cannot read {package_id} from repository {repository_id}");
+                error!(e, "Cannot read {} from repository {repository_id}", package_id.style());
                 return;
             },
         };
@@ -117,10 +117,10 @@ impl SearchArgs {
         let dependencies: Vec<String> = dependencies.iter().map(|d| d.to_string()).collect();
 
         // Print package information
-        println!("{} ({})", package.name.bold().blue(), package_version.version);
+        println!("{} ({})", package.name.style(), package_version.version.style()); // TODO
         println!("{}", package.description.green());
-        println!("Latest stable version: {}", latest_version.version.to_string().red());
-        println!("Dependencies: {}", dependencies.join(", ").red());
+        println!("Latest stable version: {}", latest_version.version.style());
+        println!("Dependencies: {}", dependencies.join(", ").bold().blue()); // TODO: List with '-'
         println!("License: {}", package_version.license.to_string().red());
 
         // Also print revisions if there are any

@@ -12,7 +12,7 @@ use crate::{
         BinaryPatcher, BuildEnv,
         error::{BuilderError, Result},
     },
-    cli::display::{Spinner, logging::debug},
+    cli::display::{Spinner, logging::debug, styled::Styled},
     config::Config,
     installer::{
         install_tree::InstallMeta,
@@ -133,7 +133,7 @@ impl<'a> Builder<'a> {
             // Apply patch
             patches::apply_patch(patch_bytes, &apply_directory)?;
 
-            println!("Applied patch '{id}' to '{package_id}'");
+            println!("Applied patch '{id}' to '{}'", package_id.style());
         }
 
         // Create build env
@@ -153,7 +153,7 @@ impl<'a> Builder<'a> {
             .ok_or(ScriptError::ScriptNotFound("build".into()))?;
         let script_data = ScriptData::new(&script_path, &destination_dir, &package_id, self.config, &script_args, self.verbose);
 
-        println!("Executing build script of {package_id}");
+        println!("Executing build script of {}", package_id.style());
 
         // Show build spinner
         if !self.verbose {

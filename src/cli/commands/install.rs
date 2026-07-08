@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::process::exit;
-
 use clap::Args;
+use std::process::exit;
 
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{deprecation, logging::error, not_found},
+        display::{deprecation, logging::error, not_found, styled::Styled},
         parameter_checks,
     },
     config::Config,
@@ -54,6 +53,7 @@ pub struct InstallArgs {
 impl HandleCommand for InstallArgs {
     fn handle(&self) {
         // Check for duplicates, because installing twice will result in a confusing error
+        // TODO: Make blue and make a list with '-' (Also for other duplicate impl)
         let duplicates = parameter_checks::get_duplicates(&self.packages);
         if !duplicates.is_empty() {
             let mut duplicate_string = String::new();
@@ -109,10 +109,10 @@ impl HandleCommand for InstallArgs {
         // TODO: Check if this exists as an external package (possibly leading to conflicts) (if so, add to external packages)
 
         // Install all packages
-        for package_id in &self.packages {
-            match installer.install(package_id) {
-                Ok(installed_package) => println!("Successfully installed {installed_package}"),
-                Err(error) => error!(error, "Cannot install package {package_id}"),
+        for optional_id in &self.packages {
+            match installer.install(optional_id) {
+                Ok(installed_package) => println!("Successfully installed {}", installed_package.style()),
+                Err(error) => error!(error, "Cannot install package {}", optional_id),
             }
         }
 

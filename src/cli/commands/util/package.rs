@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{fs, path::PathBuf, process::exit};
-
 use clap::Args;
+use std::{fs, path::PathBuf, process::exit};
 
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{Spinner, logging::error, not_found},
+        display::{Spinner, logging::error, not_found, styled::Styled},
     },
     config::Config,
     installer::types::PackageId,
@@ -81,6 +80,6 @@ impl PackageArgs {
         packager::package(config, package_id, destination, package_version.revisions.len() as u64).unwrap_or_exit(1);
 
         spinner.finish(format!("{spinner_message} successful"));
-        println!("Successfully packaged {package_id} to {}", destination.display());
+        println!("Successfully packaged {} to {}", package_id.style(), destination.display());
     }
 }

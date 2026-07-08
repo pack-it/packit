@@ -1,9 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-only
+use std::{
+    collections::HashSet,
+    fs,
+    path::{Path, PathBuf},
+};
+
 use crate::{
     builder::Builder,
     cli::display::{
         QuestionResponse, Spinner, ask_user,
         logging::{debug, warning},
+        styled::Styled,
     },
     config::{Config, Repository},
     installer::{
@@ -24,12 +31,6 @@ use crate::{
         types::{Checksum, PackageTarget},
     },
     utils::{io, ioerror::IOResultExt},
-};
-
-use std::{
-    collections::HashSet,
-    fs,
-    path::{Path, PathBuf},
 };
 
 /// The installer of Packit, managing the installation of packages on the system.
@@ -116,7 +117,7 @@ impl<'a> Installer<'a> {
         let install_label = InstallLabel::new(self.options.install_type.clone(), false);
 
         // Create the install tree based on the install type
-        println!("Building dependency tree for {package_id}");
+        println!("Building dependency tree for {}", package_id.style());
         let mut tree_builder = InstallTreeBuilder::new(self.register, self.repository_manager);
         let dependency_tree = tree_builder.create_tree(package_id.clone(), root_meta, install_label)?;
 
@@ -189,7 +190,7 @@ impl<'a> Installer<'a> {
         let downloaded_script =
             scripts::download_script(self.repository_manager, &script_path, &package_id.name, &install_meta.repository_id)?;
         if let Some(script_file) = downloaded_script {
-            println!("Executing preinstall script of {package_id}");
+            println!("Executing preinstall script of {}", package_id.style());
             let script_data = ScriptData::new(
                 &script_file,
                 &install_directory,
@@ -240,7 +241,7 @@ impl<'a> Installer<'a> {
         let downloaded_script =
             scripts::download_script(self.repository_manager, &script_path, &package_id.name, &install_meta.repository_id)?;
         if let Some(script_file) = downloaded_script {
-            println!("Executing postinstall script of {package_id}");
+            println!("Executing postinstall script of {}", package_id.style());
             let script_data = ScriptData::new(
                 &script_file,
                 &install_directory,
@@ -259,7 +260,7 @@ impl<'a> Installer<'a> {
         let downloaded_script =
             scripts::download_script(self.repository_manager, &script_path, &package_id.name, &install_meta.repository_id)?;
         if let Some(script_file) = downloaded_script {
-            println!("Executing test script of {package_id}");
+            println!("Executing test script of {}", package_id.style());
             let script_data = ScriptData::new(
                 &script_file,
                 &install_directory,
@@ -392,7 +393,7 @@ impl<'a> Installer<'a> {
 
         // Don't remove the package if it's the root
         if node_index != 0 {
-            println!("Remove build dependency {}", node.get_package_id());
+            println!("Remove build dependency {}", node.get_package_id().style());
             self.uninstall(optional_id)?;
         }
 
@@ -524,7 +525,7 @@ impl<'a> Installer<'a> {
             other_versions.sort_by_key(|x| &x.package_id.version);
 
             if let Some(newest) = other_versions.last() {
-                println!("Set active package to version `{}`", newest.package_id);
+                println!("Set active package to version `{}`", newest.package_id.style());
                 Symlinker::new(self.config).set_active(self.register, &newest.package_id.clone(), installed_package.symlinked)?;
             }
         }
@@ -659,7 +660,7 @@ impl<'a> Installer<'a> {
                 &script_args,
                 self.options.verbose,
             );
-            println!("Executing uninstall script of {package_id}");
+            println!("Executing uninstall script of {}", package_id.style());
             scripts::run_uninstall_script(&script_data)?
         }
 
@@ -768,7 +769,10 @@ impl<'a> Installer<'a> {
             Symlinker::new(self.config).set_active(self.register, &new_package_id, package.symlinked)?;
         }
 
-        println!("The new package version '{new_version}' has been succesfully installed, uninstalling the old version now.");
+        println!(
+            "The new package version '{}' has been succesfully installed, uninstalling the old version now.",
+            new_version.style()
+        );
 
         // Remove the old package dependents, because the old package is no longer a dependency
         // Note that this is necessary before doing an uninstall.

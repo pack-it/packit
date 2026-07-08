@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::process::exit;
-
 use clap::Args;
+use std::process::exit;
 
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{logging::error, not_found},
+        display::{logging::error, not_found, styled::Styled},
         parameter_checks,
     },
     config::Config,
@@ -29,6 +28,7 @@ pub struct UninstallArgs {
 impl HandleCommand for UninstallArgs {
     fn handle(&self) {
         // Check for duplicates, because uninstalling twice will result in a confusing error
+        // TODO (Like the other duplicate method)
         let duplicates = parameter_checks::get_duplicates(&self.packages);
         if !duplicates.is_empty() {
             let mut duplicate_string = String::new();
@@ -62,14 +62,15 @@ impl HandleCommand for UninstallArgs {
         for optional_id in &self.packages {
             match installer.uninstall(optional_id) {
                 Ok(uninstalled_packages) => {
+                    // TODO: List '-'
                     let mut uninstalled_string = String::new();
                     for package in uninstalled_packages {
-                        uninstalled_string.push_str(&package.to_string());
+                        uninstalled_string.push_str(&package.style());
                         uninstalled_string.push(' ');
                     }
                     println!("Successfully uninstalled: {uninstalled_string}");
                 },
-                Err(error) => error!(error, "Cannot uninstall package {optional_id}"),
+                Err(error) => error!(error, "Cannot uninstall package {}", optional_id.style()),
             }
         }
 

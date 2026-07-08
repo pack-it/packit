@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::process::exit;
-
 use clap::Args;
+use colored::Colorize;
+use std::process::exit;
 
 use crate::{
     cli::{
@@ -9,6 +9,7 @@ use crate::{
         display::{
             logging::{error, warning},
             not_found,
+            styled::Styled,
         },
     },
     config::Config,
@@ -56,7 +57,8 @@ impl HandleCommand for SwitchArgs {
         let package_version = match package.get_package_version(&self.package_version) {
             Some(package_version) => package_version,
             None => {
-                error!(msg: "Package '{}@{}' cannot be found.", self.package_name, self.package_version);
+                let styled_package = format!("{}@{}", self.package_name, self.package_version).bold().blue();
+                error!(msg: "Package {styled_package} cannot be found.");
                 not_found::register_version(&self.package_name, &register);
                 exit(1);
             },
@@ -82,7 +84,8 @@ impl HandleCommand for SwitchArgs {
 
         println!(
             "Successfully switched '{}' active version to {}",
-            self.package_name, self.package_version
+            self.package_name.style(),
+            self.package_version.style()
         )
     }
 }
