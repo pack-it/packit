@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::{
-    collections::HashMap,
-    fs,
+    collections::{HashMap, VecDeque},
+    fs::{self},
+    io::{BufRead, BufReader},
     path::{self, Path, PathBuf},
     process::{Command, Stdio},
 };
@@ -17,8 +18,14 @@ use crate::{
     installer::types::{PackageId, PackageName},
     platforms::{Os, TargetArchitecture},
     repositories::{error::RepositoryError, manager::RepositoryManager},
-    utils::env::Environment,
+    utils::{
+        env::Environment,
+        ioerror::{self, IOResultExt},
+    },
 };
+
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+use std::os::{fd::IntoRawFd, unix::process::CommandExt};
 
 /// The errors that occur during script handling.
 #[derive(Error, Debug)]
@@ -46,9 +53,15 @@ pub enum ScriptError {
 
     #[error("Cannot fetch script from repository")]
     FetchScriptError(#[from] RepositoryError),
+
+    #[error("IOError during a script operation")]
+    IOError(#[from] ioerror::IOError),
 }
 
 pub type Result<T> = core::result::Result<T, ScriptError>;
+
+/// Describes the number of lines that should be captured from a script that has show_output disabled.
+const MAX_CAPTURED_OUTPUT_LINES: usize = 10;
 
 /// Holds data necessary for script execution.
 pub struct ScriptData<'a> {
@@ -140,10 +153,20 @@ fn run_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, env: Environm
         .env("PACKIT_PACKAGE_DEPENDENCIES_PATH", &package_dependencies_path)
         .env("PACKIT_VERBOSE", if script_data.verbose { "1" } else { "0" });
 
-    // Only display build logging if verbose is enabled
+    // Only display build logging if verbose is enabled, otherwise create combined pipe for reading
+    let mut output = None;
     if show_output {
         command.stdout(Stdio::inherit()).stderr(Stdio::inherit());
+    } else {
+        // Create pipe to capture both stdout and stderr together
+        let (reader, writer) = std::io::pipe().err_operation("create pipe")?;
+        let writer_clone = writer.try_clone().err_operation("clone pipe writer")?;
+        command.stdout(writer).stderr(writer_clone);
+        output = Some(reader);
     }
+
+    // Bind extra output pipes
+    bind_extra_outputs(&mut command, script_data)?;
 
     // Remove stripped environment variables
     for key in env.stripped_vars {
@@ -161,21 +184,48 @@ fn run_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, env: Environm
         command.env(formatted_key, value);
     }
 
-    // Run script
-    let output = command.output().map_err(ScriptError::RunError)?;
+    // Run script and destroy command builder
+    let mut process = command.spawn().map_err(ScriptError::RunError)?;
+    drop(command);
+
+    // Capture last lines of script output if enabled
+    let mut last_lines = VecDeque::with_capacity(MAX_CAPTURED_OUTPUT_LINES);
+    if let Some(output) = output {
+        let lines = BufReader::new(output).lines();
+        for line in lines {
+            let line = line.err_operation("read output line")?;
+
+            if last_lines.len() == MAX_CAPTURED_OUTPUT_LINES {
+                last_lines.pop_front();
+            }
+
+            last_lines.push_back(line);
+        }
+    }
 
     // Display status to user
-    match output.status.code() {
+    let status = process.wait().map_err(ScriptError::RunError)?;
+    match status.code() {
         Some(0) => {
             println!("Script executed succesfully");
             Ok(())
         },
         Some(code) => {
             warning!("Script executed with status code {code}");
+            if !last_lines.is_empty() {
+                eprintln!("Last lines of script output:");
+                last_lines.iter().for_each(|x| eprintln!("{x}"));
+            }
+
             Err(ScriptError::ScriptFailed(code))
         },
         None => {
             warning!("Script executed without a status code");
+            if !last_lines.is_empty() {
+                eprintln!("Last lines of script output:");
+                last_lines.iter().for_each(|x| eprintln!("{x}"));
+            }
+
             Err(ScriptError::ScriptFailed(-1))
         },
     }
@@ -250,3 +300,53 @@ pub const SCRIPT_EXTENSION: &str = "sh";
 
 #[cfg(target_os = "windows")]
 pub const SCRIPT_EXTENSION: &str = "bat";
+
+/// Binds the extra script output streams to the given command.
+/// Duplicates either `stdout` or `/dev/null` onto fd 3.
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+fn bind_extra_outputs(command: &mut Command, script_data: &ScriptData) -> Result<()> {
+    let source_verbose_fd = match script_data.verbose {
+        true => libc::STDOUT_FILENO,
+        false => fs::File::options().write(true).open("/dev/null").err_operation("open /dev/null")?.into_raw_fd(),
+    };
+
+    // SAFETY: only dup2 and close operations are called in the subprocess which are async-signal-safe.
+    // SAFETY: ownership of the /dev/null file descriptor is moved into the subprocess and closed there.
+    // SAFETY: errors of dup2 are propagated back to the spawn function.
+    unsafe {
+        command.pre_exec(move || {
+            // Duplicate source fd onto fd 3
+            // Note that we don't check for existance of fd 3, since this is the very first thing called in the child process
+            if libc::dup2(source_verbose_fd, 3) == -1 {
+                return Err(std::io::Error::last_os_error());
+            }
+
+            // Close /dev/null file descriptor after duplicating it onto fd 3
+            if source_verbose_fd != libc::STDOUT_FILENO && source_verbose_fd != 3 {
+                libc::close(source_verbose_fd);
+            }
+
+            Ok(())
+        })
+    };
+
+    Ok(())
+}
+
+/// Binds the extra script output streams to the given command.
+/// Sets the `PACKIT_OUTPUTS` environment variable to either `3>nul` or `3>&1`.
+#[cfg(target_os = "windows")]
+fn bind_extra_outputs(command: &mut Command, script_data: &ScriptData) -> Result<()> {
+    if !script_data.verbose {
+        command.env("PACKIT_OUTPUTS", "3>nul");
+        return Ok(());
+    }
+
+    command.env("PACKIT_OUTPUTS", "3>&1");
+    Ok(())
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+fn bind_extra_outputs(command: &mut Command, script_data: &ScriptData) -> Result<()> {
+    panic!("Cannot bind extra outputs for target, target is not supported.");
+}
