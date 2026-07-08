@@ -8,7 +8,7 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    cli::display::logging::warning,
+    cli::display::{logging::warning, styled::Styled},
     config::Repository,
     installer::types::{Dependency, OptionalPackageId, PackageId, PackageName},
     register::{
@@ -151,7 +151,7 @@ impl PackageRegister {
                 package.dependents.insert(installed_package_version.package_id.clone());
             } else {
                 // TODO: This should be an error
-                warning!("Cannot retrieve package {dependency} from register to insert dependents");
+                warning!("Cannot retrieve package {} from register to insert dependents", dependency.style());
             }
         }
 

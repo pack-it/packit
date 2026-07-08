@@ -4,7 +4,10 @@ use std::collections::HashMap;
 use bytes::Bytes;
 
 use crate::{
-    cli::display::logging::{debug, error, warning},
+    cli::display::{
+        logging::{debug, error, warning},
+        styled::Styled,
+    },
     config::Config,
     installer::{
         types::{Dependency, OptionalPackageId, PackageId, PackageName, Version},
@@ -54,7 +57,10 @@ impl<'a> RepositoryManager<'a> {
             let required_packit_version = &repository_meta.required_packit_version;
             if *required_packit_version > current_packit_version() {
                 unsupported_repositories.insert(id.to_string(), repository_meta.clone());
-                warning!("Repository '{id}' requires Packit version {required_packit_version} or higher, ignoring repository...");
+                warning!(
+                    "Repository '{id}' requires Packit version {} or higher, ignoring repository...",
+                    required_packit_version.style()
+                );
                 continue;
             }
 
@@ -133,7 +139,7 @@ impl<'a> RepositoryManager<'a> {
             let package = match provider.read_package(package) {
                 Ok(package) => package,
                 Err(e) => {
-                    debug!(err: e, "Unable to read {package} from repository {repository_id}, continuing...");
+                    debug!(err: e, "Unable to read {} from repository {repository_id}, continuing...", package.style());
                     continue;
                 },
             };
@@ -148,7 +154,7 @@ impl<'a> RepositoryManager<'a> {
         }
 
         Err(RepositoryError::PackageNotFoundError {
-            package_name: package.to_string(),
+            package_name: package.clone(),
             version: None,
             reason: PackageNotFoundReason::get_primary_reason(not_found_reasons.values()),
         })
@@ -162,7 +168,7 @@ impl<'a> RepositoryManager<'a> {
 
         if let Some(reason) = self.check_package_compatibility(&package_meta) {
             return Err(RepositoryError::PackageNotFoundError {
-                package_name: package.to_string(),
+                package_name: package.clone(),
                 version: None,
                 reason,
             });
@@ -223,7 +229,10 @@ impl<'a> RepositoryManager<'a> {
             let package = match provider.read_package_version(&package_id.name, &package_id.version) {
                 Ok(package) => package,
                 Err(_) => {
-                    debug!("Cannot find package {package_id} in repository {repository_id}, continuing.");
+                    debug!(
+                        "Cannot find package {} in repository {repository_id}, continuing.",
+                        package_id.style()
+                    );
                     continue;
                 },
             };
@@ -243,8 +252,8 @@ impl<'a> RepositoryManager<'a> {
         }
 
         Err(RepositoryError::PackageNotFoundError {
-            package_name: package_id.name.to_string(),
-            version: Some(package_id.version.to_string()),
+            package_name: package_id.name.clone(),
+            version: Some(package_id.version.style().to_string()),
             reason: PackageNotFoundReason::get_primary_reason(not_found_reasons.values()),
         })
     }
@@ -259,8 +268,8 @@ impl<'a> RepositoryManager<'a> {
         // Check package version compatibility
         if let Some(reason) = self.check_package_version_compatibility(&package, &Target::current()) {
             return Err(RepositoryError::PackageNotFoundError {
-                package_name: package_id.name.to_string(),
-                version: Some(package_id.version.to_string()),
+                package_name: package_id.name.clone(),
+                version: Some(package_id.version.style().to_string()),
                 reason,
             });
         }
@@ -427,7 +436,7 @@ impl<'a> RepositoryManager<'a> {
         }
 
         Err(RepositoryError::PackageNotFoundError {
-            package_name: package.name.to_string(),
+            package_name: package.name.clone(),
             version: None,
             reason: PackageNotFoundReason::get_primary_reason(reasons.iter()),
         })

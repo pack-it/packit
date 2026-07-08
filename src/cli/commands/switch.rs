@@ -83,7 +83,7 @@ impl HandleCommand for SwitchArgs {
         register.save_to(&register_path).unwrap_or_exit(1);
 
         println!(
-            "Successfully switched '{}' active version to {}",
+            "Successfully switched {} active version to {}",
             self.package_name.style(),
             self.package_version.style()
         )

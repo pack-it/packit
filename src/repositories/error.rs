@@ -2,7 +2,8 @@
 use thiserror::Error;
 
 use crate::{
-    installer::types::{PackageId, Version},
+    cli::display::styled::Styled,
+    installer::types::{PackageId, PackageName, Version},
     repositories::types::Date,
     utils::ioerror,
 };
@@ -20,14 +21,14 @@ pub enum RepositoryError {
         repository_id: String,
     },
 
-    #[error("Cannot find package '{package_name}' with version '{}': {reason}", version.as_deref().unwrap_or("any"))]
+    #[error("Cannot find package {} with version '{}': {reason}", package_name.style(), version.as_deref().unwrap_or("any"))]
     PackageNotFoundError {
-        package_name: String,
+        package_name: PackageName,
         version: Option<String>,
         reason: PackageNotFoundReason,
     },
 
-    #[error("Cannot find prebuild of package '{package_id}' revision {revision}")]
+    #[error("Cannot find prebuild of package {} revision {revision}", package_id.style())]
     PrebuildNotFound {
         package_id: PackageId,
         revision: u64,

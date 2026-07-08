@@ -9,6 +9,7 @@ use serde::Serialize;
 use thiserror::Error;
 
 use crate::{
+    cli::display::styled::Styled,
     config::Config,
     installer::types::{Dependency, PackageId, PackageName},
     packager::{self, PackagerError},
@@ -30,17 +31,17 @@ const PORTABLE_REPO_MAINTAINER: &str = concat!("Packit v", packit_version!());
 /// The errors that occur during portable repository creation.
 #[derive(Error, Debug)]
 pub enum PortableRepoError {
-    #[error("Prebuild for package '{package_id}' cannot be found")]
+    #[error("Prebuild for package {} cannot be found", package_id.style())]
     PrebuildNotFound {
         package_id: PackageId,
     },
 
-    #[error("Package '{package_name}' has versions in different repositories")]
+    #[error("Package {} has versions in different repositories", package_name.style())]
     PackageFromMultipleRepositories {
         package_name: PackageName,
     },
 
-    #[error("Metadata file of package '{package_name}' cannot be found")]
+    #[error("Metadata file of package {} cannot be found", package_name.style())]
     FileNotFound {
         package_name: PackageName,
         file_name: String,

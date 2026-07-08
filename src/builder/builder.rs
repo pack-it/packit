@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use bytes::Bytes;
+use colored::Colorize;
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -71,7 +72,7 @@ impl<'a> Builder<'a> {
             // Return error to indicate the dependency is not installed yet
             return Err(BuilderError::MissingDependencyError {
                 dependency_type: "normal".into(),
-                package_name: dependency.get_name().to_string(),
+                package_name: dependency.get_name().clone(),
             });
         }
 
@@ -87,7 +88,7 @@ impl<'a> Builder<'a> {
             // Return error to indicate the dependency is not installed yet
             return Err(BuilderError::MissingDependencyError {
                 dependency_type: "build".into(),
-                package_name: build_dependency.get_name().to_string(),
+                package_name: build_dependency.get_name().clone(),
             });
         }
 
@@ -133,7 +134,7 @@ impl<'a> Builder<'a> {
             // Apply patch
             patches::apply_patch(patch_bytes, &apply_directory)?;
 
-            println!("Applied patch '{id}' to '{}'", package_id.style());
+            println!("Applied patch '{id}' to {}", package_id.style());
         }
 
         // Create build env
@@ -158,7 +159,8 @@ impl<'a> Builder<'a> {
         // Show build spinner
         if !self.verbose {
             let spinner = Spinner::new();
-            let spinner_message = format!("Building {package_name}@{version}");
+            let styled_package = format!("{package_name}@{version}").bold().blue();
+            let spinner_message = format!("Building {styled_package}");
             spinner.show(spinner_message.clone());
 
             // Run build script
@@ -181,14 +183,15 @@ impl<'a> Builder<'a> {
     fn download_patch(&self, id: u32, patch: &Patch, package_id: &PackageId, repository_id: &str) -> Result<Bytes> {
         // Download patch from the url if it starts with 'http://' or 'https://'
         if patch.url.starts_with("http://") || patch.url.starts_with("https://") {
-            let download_description = format!("patch {id}' of '{package_id}");
+            let download_description = format!("patch {id}' of {}", package_id.style());
             return self.download_file(&patch.url, &patch.mirrors, &patch.checksum, &download_description);
         }
 
         // Create download spinner
         let spinner = Spinner::new();
         spinner.show(format!(
-            "Downloading 'patch {id}' of '{package_id}' from repository '{repository_id}'"
+            "Downloading 'patch {id}' of {} from repository '{repository_id}'",
+            package_id.style()
         ));
 
         // Download patch file from the repository itself
@@ -207,7 +210,8 @@ impl<'a> Builder<'a> {
 
         // Finish download spinner
         spinner.finish(format!(
-            "Downloading 'patch {id}' of '{package_id}' from repository '{repository_id}' successful"
+            "Downloading 'patch {id}' of {} from repository '{repository_id}' successful",
+            package_id.style()
         ));
 
         Ok(file)

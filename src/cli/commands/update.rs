@@ -99,7 +99,7 @@ impl HandleCommand for UpdateArgs {
 
             // Check if the new version exists
             if !package_meta.versions.contains(new_version) {
-                error!(msg: "New package version '{}' does not exist.", new_version.style());
+                error!(msg: "New package version {} does not exist.", new_version.style());
                 not_found::repository_version(&optional_id.name, &manager);
                 exit(1);
             }

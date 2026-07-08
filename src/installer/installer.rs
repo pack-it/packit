@@ -84,7 +84,9 @@ impl<'a> Installer<'a> {
         // If the version isn't specified check if a package with this package name is already installed (otherwise a user can get two different version installed without knowing)
         if optional_id.version.is_none() && self.register.get_package(&optional_id.name).is_some() {
             let question = format!(
-                "The package '{optional_id}' is already installed, but a newer version '{version}' is available. Do you wish to install the latest version as well?"
+                "The package {} is already installed, but a newer version {} is available. Do you wish to install the latest version as well?",
+                optional_id.style(),
+                version.style()
             );
             if ask_user(&question, QuestionResponse::No)?.is_no_or_invalid() {
                 return Err(InstallerError::InstallationCanceled {
@@ -331,7 +333,7 @@ impl<'a> Installer<'a> {
                 // Prompt user if the installed version is not symlinked and we're not skipping symlinking
                 if should_set_active && !installed_package.symlinked && should_symlink {
                     let question = format!(
-                        "The current active version of '{}' ({}) is not symlinked, do you want to proceed with symlinking the newly installed version",
+                        "The current active version of {} ({}) is not symlinked, do you want to proceed with symlinking the newly installed version",
                         package_id.name, installed_package.active_version
                     );
                     should_symlink = ask_user(&question, QuestionResponse::No)?.is_yes();
@@ -423,7 +425,7 @@ impl<'a> Installer<'a> {
 
         // Check equality of checksum
         match checksum {
-            Some(checksum) if checksum == calculated_checksum => debug!("{package} prebuild checksum matches"),
+            Some(checksum) if checksum == calculated_checksum => debug!("{} prebuild checksum matches", package.style()),
             _ => return Err(InstallerError::ChecksumError),
         }
 
@@ -447,7 +449,7 @@ impl<'a> Installer<'a> {
         // Check if the current package to delete is a dependency, if so, give dependency error
         if self.register.is_dependency(optional_id) {
             return Err(InstallerError::DependencyError {
-                package_name: optional_id.name.to_string(),
+                package_name: optional_id.name.clone(),
             });
         }
 
@@ -470,8 +472,8 @@ impl<'a> Installer<'a> {
         // Return an existError if the package to uninstall doesn't exist
         if self.register.get_package_version(&package_id).is_none() {
             return Err(InstallerError::PackageNotFound {
-                package_name: package_id.name.to_string(),
-                version: Some(package_id.version.to_string()),
+                package_name: package_id.name,
+                version: Some(package_id.version.style().to_string()),
             });
         }
 
@@ -537,7 +539,7 @@ impl<'a> Installer<'a> {
         fs::remove_dir_all(&directory).err_with_path("remove", &directory)?;
 
         // Remove package from the register
-        debug!("Removing {package_id} from the package register");
+        debug!("Removing {} from the package register", package_id.style());
         self.register.remove_package_version(&package_id);
 
         Ok(vec![package_id])
@@ -554,14 +556,14 @@ impl<'a> Installer<'a> {
         let question = "Version is not specified, do you wish to uninstall all versions of this package?";
         if installed_versions.len() > 1 && ask_user(question, QuestionResponse::No)?.is_no_or_invalid() {
             return Err(InstallerError::InstallationCanceled {
-                reason: format!("Prevent uninstall of all {package_name} versions"),
+                reason: format!("Prevent uninstall of all {} versions", package_name.style()),
             });
         }
 
         // Make sure at least one version exists
         if installed_versions.is_empty() {
             return Err(InstallerError::PackageNotFound {
-                package_name: package_name.to_string(),
+                package_name: package_name.clone(),
                 version: None,
             });
         }
@@ -580,7 +582,7 @@ impl<'a> Installer<'a> {
         // Check if package was symlinked
         if let Some(package) = self.register.get_package(package_name) {
             if package.symlinked {
-                debug!("Unlinking '{package_name}'");
+                debug!("Unlinking {}", package_name.style());
                 io::remove_symlinks(&self.config.prefix_directory, &directory)?;
             }
         }
@@ -611,7 +613,7 @@ impl<'a> Installer<'a> {
         let uninstalled = installed_versions.iter().map(|p| p.package_id.clone()).collect();
 
         // Delete the installed package from toml
-        debug!("Removing {package_name} from the package register");
+        debug!("Removing {} from the package register", package_name.style());
         self.register.remove_package(package_name);
 
         Ok(uninstalled)
@@ -702,7 +704,7 @@ impl<'a> Installer<'a> {
                 Some(dependency) => dependency,
                 None => {
                     warning!(
-                        "Dependent is not a dependent of '{}' eventhough it should be.",
+                        "Dependent is not a dependent of {} eventhough it should be.",
                         old_package.package_id
                     );
                     continue;
@@ -740,7 +742,7 @@ impl<'a> Installer<'a> {
             None => {
                 // Theoretically unreachable
                 return Err(InstallerError::UnreachableError {
-                    msg: format!("New package version '{new_version}' cannot be retrieved from the register"),
+                    msg: format!("New package version {} cannot be retrieved from the register", new_version.style()),
                 });
             },
         };
@@ -770,7 +772,7 @@ impl<'a> Installer<'a> {
         }
 
         println!(
-            "The new package version '{}' has been succesfully installed, uninstalling the old version now.",
+            "The new package version {} has been succesfully installed, uninstalling the old version now.",
             new_version.style()
         );
 
@@ -796,8 +798,8 @@ impl<'a> Installer<'a> {
         // Use the specified version if it exists
         if let Some(package_id) = optional_id.versioned() {
             return self.register.get_package_version(&package_id).ok_or(InstallerError::PackageNotFound {
-                package_name: package_id.name.to_string(),
-                version: Some(package_id.version.to_string()),
+                package_name: package_id.name,
+                version: Some(package_id.version.style().to_string()),
             });
         }
 
@@ -807,15 +809,15 @@ impl<'a> Installer<'a> {
             Some(latest) => latest,
             None => {
                 return Err(InstallerError::PackageNotFound {
-                    package_name: optional_id.name.to_string(),
-                    version: Some("any".to_string()),
+                    package_name: optional_id.name.clone(),
+                    version: None,
                 });
             },
         };
 
         if installed_versions.len() > 1 && optional_id.version.is_none() {
             let question = format!(
-                "Multiple versions of '{}' are installed, the latest version '{}' will be updated, do you wish to continue?",
+                "Multiple versions of {} are installed, the latest version {} will be updated, do you wish to continue?",
                 optional_id.name, latest_installed_version.package_id.version
             );
             if ask_user(&question, QuestionResponse::Yes)?.is_no_or_invalid() {

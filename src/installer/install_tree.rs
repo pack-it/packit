@@ -4,7 +4,7 @@ use std::collections::{HashSet, VecDeque};
 use console::Term;
 
 use crate::{
-    cli::display::{QuestionResponse, ask_user, logging::error},
+    cli::display::{QuestionResponse, ask_user, logging::error, styled::Styled},
     installer::{
         error::{InstallerError, Result},
         types::{Dependency, PackageId},
@@ -245,10 +245,13 @@ impl<'a> InstallTreeBuilder<'a> {
         }
 
         // Return an error if the user doesn't want to build from source as alternative install method
-        let question = format!("Prebuild package for {package_id} cannot be found, would you like to build from source instead?");
+        let question = format!(
+            "Prebuild package for {} cannot be found, would you like to build from source instead?",
+            package_id.style()
+        );
         if ask_user(&question, QuestionResponse::Yes)?.is_no_or_invalid() {
             return Err(InstallerError::InstallationCanceled {
-                reason: format!("package '{package_id}' cannot be installed without building from source"),
+                reason: format!("package {} cannot be installed without building from source", package_id.style()),
             });
         }
 
