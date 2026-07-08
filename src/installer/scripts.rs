@@ -301,6 +301,8 @@ pub const SCRIPT_EXTENSION: &str = "sh";
 #[cfg(target_os = "windows")]
 pub const SCRIPT_EXTENSION: &str = "bat";
 
+/// Binds the extra script output streams to the given command.
+/// Duplicates either `stdout` or `/dev/null` onto fd 3.
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 fn bind_extra_outputs(command: &mut Command, script_data: &ScriptData) -> Result<()> {
     let source_verbose_fd = match script_data.verbose {
@@ -313,6 +315,8 @@ fn bind_extra_outputs(command: &mut Command, script_data: &ScriptData) -> Result
     // SAFETY: errors of dup2 are propagated back to the spawn function.
     unsafe {
         command.pre_exec(move || {
+            // Duplicate source fd onto fd 3
+            // Note that we don't check for existance of fd 3, since this is the very first thing called in the child process
             if libc::dup2(source_verbose_fd, 3) == -1 {
                 return Err(std::io::Error::last_os_error());
             }
@@ -329,6 +333,8 @@ fn bind_extra_outputs(command: &mut Command, script_data: &ScriptData) -> Result
     Ok(())
 }
 
+/// Binds the extra script output streams to the given command.
+/// Sets the `PACKIT_OUTPUTS` environment variable to either `3>nul` or `3>&1`.
 #[cfg(target_os = "windows")]
 fn bind_extra_outputs(command: &mut Command, script_data: &ScriptData) -> Result<()> {
     if !script_data.verbose {
