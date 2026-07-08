@@ -119,7 +119,7 @@ impl InfoArgs {
         pair_aligner.display(aligned_print::VERTICAL_LINE_PREFIX);
         println!();
 
-        print!("Dependencies:");
+        print!("Dependencies: ");
         standard_print::print_list_or_none(package_version.dependencies.iter().map(|d| d.style()));
 
         // Early return if verbose is disabled

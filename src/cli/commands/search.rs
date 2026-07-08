@@ -7,7 +7,14 @@ use std::{collections::HashSet, str::FromStr};
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{self, deprecation, logging::error, not_found, styled::Styled},
+        display::{
+            self,
+            aligned_print::{self, PairAligner},
+            deprecation,
+            logging::error,
+            not_found, standard_print,
+            styled::Styled,
+        },
     },
     config::Config,
     installer::types::OptionalPackageId,
@@ -68,6 +75,7 @@ impl SearchArgs {
 
     /// Searches information of a package based on the provided `OptionalPackageId`.
     /// Fails if the given query is not a valid `OptionalPackageId`.
+    /// TODO: Search command should accept an optional id arg instead (similar to the info command)
     fn search_package(&self) {
         // Get the optional id
         let message = "The given search query isn't a valid `OptionalPackageId`. For regex use `--regex`.";
@@ -117,19 +125,19 @@ impl SearchArgs {
         let dependencies: Vec<String> = dependencies.iter().map(|d| d.to_string()).collect();
 
         // Print package information
-        println!("{} ({})", package.name.style(), package_version.version.style()); // TODO
-        println!("{}", package.description.green());
-        println!("Latest stable version: {}", latest_version.version.style());
-        println!("Dependencies: {}", dependencies.join(", ").bold().blue()); // TODO: List with '-'
-        println!("License: {}", package_version.license.to_string().red());
+        let styled_package = format!("{}@{}", package.name, package_version.version).bold().blue();
+        println!("{styled_package}");
+        println!("{}", package.description.italic().cyan());
+        let mut pair_aligner = PairAligner::new();
+        pair_aligner.add("Latest stable version", latest_version.version.style());
+        pair_aligner.add("License", &package_version.license);
+        pair_aligner.display(aligned_print::VERTICAL_LINE_PREFIX);
 
-        // Also print revisions if there are any
-        if !package_version.revisions.is_empty() {
-            println!("Revisions:");
-            for revision in &package_version.revisions {
-                println!("  - {revision}");
-            }
-        }
+        print!("Dependencies: ");
+        standard_print::print_list_or_none(dependencies.iter());
+
+        print!("Revisions: ");
+        standard_print::print_list_or_none(package_version.revisions.iter());
 
         // Check if the package or version is deprecated
         deprecation::show_package_warnings(&package);
