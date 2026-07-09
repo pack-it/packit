@@ -123,12 +123,14 @@ impl<'a> Installer<'a> {
         println!("Building dependency tree for {}", package_id.style());
         let mut tree_builder = InstallTreeBuilder::new(self.register, self.repository_manager);
         let dependency_tree = tree_builder.create_tree(package_id.clone(), root_meta, install_label)?;
+        println!();
 
         self.install_nodes(&dependency_tree)?;
 
         if !self.options.keep_build {
-            println!("Removing build dependencies (if there are any)");
-            self.remove_build_dependencies(0, &dependency_tree)?;
+            let removed = self.remove_build_dependencies(0, &dependency_tree)?;
+            print!("Removed build dependencies: ");
+            standard_print::print_list_or_none(removed.iter().map(|p| p.style()));
         }
 
         Ok(package_id)
@@ -488,31 +490,33 @@ impl<'a> Installer<'a> {
 
     /// Removes the build dependencies recursively. There are early returns to make sure that the
     /// package is not removed if it was already installed, is not installed anymore or is a dependency.
-    fn remove_build_dependencies(&mut self, node_index: usize, tree: &InstallTree) -> Result<()> {
+    fn remove_build_dependencies(&mut self, node_index: usize, tree: &InstallTree) -> Result<Vec<PackageId>> {
         let node = tree.get_node_by_index(node_index).expect("Expected node to exist");
 
         // Return early if the node value is None (meaning that the package was already installed)
         if node.get_value().is_none() {
-            return Ok(());
+            return Ok(Vec::new());
         }
 
         // Return early if the package doesn't exist (removed in earlier iteration) or if it's a dependency
         let optional_id = &OptionalPackageId::from(node.get_package_id().clone());
         if self.register.get_package_version(node.get_package_id()).is_none() || self.register.is_dependency(optional_id) {
-            return Ok(());
+            return Ok(Vec::new());
         }
+
+        // Keep track of uninstall packages
+        let mut uninstalled = Vec::new();
 
         // Don't remove the package if it's the root
         if node_index != 0 {
-            println!("Remove build dependency {}", node.get_package_id().style());
-            self.uninstall(optional_id)?;
+            uninstalled.extend(self.uninstall(optional_id)?);
         }
 
         for child in node.get_children() {
-            self.remove_build_dependencies(*child, tree)?;
+            uninstalled.extend(self.remove_build_dependencies(*child, tree)?);
         }
 
-        Ok(())
+        Ok(uninstalled)
     }
 
     /// Uninstalls a package version if specified, otherwise it will uninstall the entire package directory (after
@@ -867,7 +871,7 @@ impl<'a> Installer<'a> {
 
         println!(
             "The new package version {} has been succesfully installed, uninstalling the old version now.",
-            new_version.style() // TODO?
+            new_version.style()
         );
 
         // Remove the old package dependents, because the old package is no longer a dependency

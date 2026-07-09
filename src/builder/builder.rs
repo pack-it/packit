@@ -215,7 +215,7 @@ impl<'a> Builder<'a> {
     /// Downloads a file from the url, or one of the mirrors. Checks against a checksum and shows a spinner.
     fn download_file(&self, url: &str, mirrors: &[String], checksum: &Checksum, download_description: String) -> Result<Bytes> {
         // Show download spinner
-        let mut spinner = Spinner::new(format!("Downloading {download_description} from '{}'", &url));
+        let mut spinner = Spinner::new(format!("Downloading {download_description} from '{}'", url.cyan()));
         spinner.show();
 
         // Try to download from the main url
@@ -232,7 +232,7 @@ impl<'a> Builder<'a> {
             && let Some(mirror) = mirrors.next()
         {
             // Update spinner with new download url
-            spinner.adjust_message(format!("Downloading {download_description} from alternative '{}'", &mirror));
+            spinner.adjust_message(format!("Downloading {download_description} from alternative '{}'", &mirror.cyan()));
 
             // Get response from alternative mirror
             response = requests::get(mirror).map_err(BuilderError::RequestError);

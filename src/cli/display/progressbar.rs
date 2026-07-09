@@ -28,7 +28,7 @@ impl ProgressBar {
 
         // Finish the bar if the bar is full
         if position >= self.size {
-            let template = format!("{} [{{wide_bar}}] [{{percent}}%]", self.prefix.bold().green()).green().to_string();
+            let template = format!("{} [{{wide_bar}}] [{}]", self.prefix.bold().green(), "{percent}%".green());
             let style =
                 ProgressStyle::with_template(&template).expect("Expected template to be correct.").progress_chars("\u{2501}\u{2501} ");
             self.bar.set_style(style);
