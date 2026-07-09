@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use clap::Args;
+use colored::Colorize;
 use std::process::exit;
 
 use crate::{
@@ -105,7 +106,10 @@ impl HandleCommand for InstallArgs {
         // Install all packages
         for optional_id in &self.packages {
             match installer.install(optional_id) {
-                Ok(installed_package) => println!("Successfully installed {}", installed_package.style()),
+                Ok(installed_package) => {
+                    let styled_message = format!("Successfully installed {}", installed_package.style()).bold().green();
+                    println!("{styled_message}");
+                },
                 Err(error) => error!(error, "Cannot install package {}", optional_id),
             }
         }

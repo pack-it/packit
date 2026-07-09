@@ -154,8 +154,6 @@ impl<'a> Builder<'a> {
             .ok_or(ScriptError::ScriptNotFound("build".into()))?;
         let script_data = ScriptData::new(&script_path, &destination_dir, &package_id, self.config, &script_args, self.verbose);
 
-        println!("Executing build script of {}", package_id.style());
-
         // Show build spinner
         if !self.verbose {
             let styled_package = format!("{package_name}@{version}").bold().blue();
@@ -169,6 +167,8 @@ impl<'a> Builder<'a> {
             // Finish build spinner
             spinner.finish();
         } else {
+            println!("Executing build script of {}", package_id.style());
+
             // Run build script
             scripts::run_build_script(&script_data, &build_directory, env)?;
         }

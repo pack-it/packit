@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     fs,
     path::{Path, PathBuf},
 };
@@ -187,28 +187,10 @@ impl<'a> Installer<'a> {
         let version_meta = &install_meta.version_metadata;
         let script_args = version_meta.get_script_args(&install_meta.target_bounds)?;
 
-        // Download and run pre install script if it exists
-        let script_path = version_meta.get_preinstall_script_path(&install_meta.target_bounds)?;
-        let downloaded_script =
-            scripts::download_script(self.repository_manager, &script_path, &package_id.name, &install_meta.repository_id)?;
-        if let Some(script_file) = downloaded_script {
-            println!("Executing preinstall script of {}", package_id.style());
-            let script_data = ScriptData::new(
-                &script_file,
-                &install_directory,
-                &package_id,
-                self.config,
-                &script_args,
-                self.options.verbose,
-            );
-            scripts::run_pre_script(&script_data, &install_directory)?;
-        }
+        self.execute_preinstall(&package_id, install_meta, &install_directory, &script_args)?;
 
         // Get source repository for installed storage before actually installing package
         let source_repository = self.config.repositories.get(&install_meta.repository_id).expect("Expected repository in config");
-
-        // Get the target information from the package version info
-        let target = version_meta.get_target(&install_meta.target_bounds)?;
 
         self.create_dependency_symlinks(&package_id, &dependencies)?;
 
@@ -238,61 +220,144 @@ impl<'a> Installer<'a> {
         )?;
         self.register.save_to(&PackageRegister::get_path(&self.config.prefix_directory))?;
 
-        // Download and run post install script if it exists
-        let script_path = version_meta.get_postinstall_script_path(&install_meta.target_bounds)?;
-        let downloaded_script =
-            scripts::download_script(self.repository_manager, &script_path, &package_id.name, &install_meta.repository_id)?;
-        if let Some(script_file) = downloaded_script {
-            println!("Executing postinstall script of {}", package_id.style());
-            let script_data = ScriptData::new(
-                &script_file,
-                &install_directory,
-                &package_id,
-                self.config,
-                &script_args,
-                self.options.verbose,
-            );
-            scripts::run_post_script(&script_data)?;
-        }
+        self.execute_postinstall(&package_id, install_meta, &install_directory, &script_args)?;
+
+        // Get the target information from the package version info
+        let target = version_meta.get_target(&install_meta.target_bounds)?;
 
         self.determine_active(install_meta, &package_id, target)?;
 
-        // Download and run test script if it exists
-        let script_path = version_meta.get_test_script_path(&install_meta.target_bounds)?;
+        self.execute_test(&package_id, install_meta, &install_directory, &script_args, target)?;
+
+        Ok(())
+    }
+
+    /// Executes the preinstall script of the given package if it exists.
+    fn execute_preinstall(
+        &self,
+        package_id: &PackageId,
+        install_meta: &InstallMeta,
+        install_directory: &PathBuf,
+        script_args: &HashMap<&str, &str>,
+    ) -> Result<()> {
+        // Download and run preinstall script if it exists
+        let script_path = install_meta.version_metadata.get_preinstall_script_path(&install_meta.target_bounds)?;
         let downloaded_script =
             scripts::download_script(self.repository_manager, &script_path, &package_id.name, &install_meta.repository_id)?;
-        if let Some(script_file) = downloaded_script {
-            println!("Executing test script of {}", package_id.style());
-            let script_data = ScriptData::new(
-                &script_file,
-                &install_directory,
-                &package_id,
-                self.config,
-                &script_args,
-                self.options.verbose,
-            );
 
-            let external_files = version_meta.external_test_files.iter().chain(&target.external_test_files);
-            let mut read_files = Vec::new();
-            let mut skip_test = false;
-            for file in external_files {
-                let file_content =
-                    self.repository_manager.read_file_bytes(&install_meta.repository_id, &install_meta.package_metadata.name, file)?;
+        let Some(script_file) = downloaded_script else { return Ok(()) };
+        let script_data = ScriptData::new(
+            &script_file,
+            &install_directory,
+            &package_id,
+            self.config,
+            &script_args,
+            self.options.verbose,
+        );
 
-                match file_content {
-                    Some(content) => read_files.push((file, content)),
-                    None => {
-                        warning!("Skipping test, because the required files could not be downloaded.");
-                        skip_test = true;
-                        break;
-                    },
-                }
-            }
-
-            if !skip_test {
-                scripts::run_test_script(&script_data, &read_files)?;
-            }
+        // Only show a spinner when not verbose
+        if self.options.verbose {
+            println!("Executing preinstall script of {}", package_id.style());
+            scripts::run_pre_script(&script_data, &install_directory)?;
+            return Ok(());
         }
+
+        // Run script with spinner shown
+        let spinner_message = format!("Executing preinstall of {}", package_id.style());
+        let spinner = Spinner::new(spinner_message);
+        spinner.show();
+        scripts::run_pre_script(&script_data, &install_directory)?;
+        spinner.finish();
+
+        Ok(())
+    }
+
+    /// Creates the symlinks for all package dependencies in the `dependencies` directory.
+    fn create_dependency_symlinks(&self, current_package: &PackageId, dependencies: &HashSet<PackageId>) -> Result<()> {
+        // Prevent creating an empty directory
+        if dependencies.is_empty() {
+            return Ok(());
+        }
+
+        // Create package dependencies directory
+        let dependency_directory_path = self.config.prefix_directory.join("dependencies").join(current_package.to_string());
+        fs::create_dir_all(&dependency_directory_path).err_with_path("create dirs", &dependency_directory_path)?;
+
+        // Create symlinks to all dependencies
+        for dependency in dependencies {
+            let original = self.config.prefix_directory.join("packages").join(&dependency.name).join(dependency.version.to_string());
+            let link = dependency_directory_path.join(&dependency.name);
+            symlink::create_symlink(&original, &link)?;
+        }
+
+        Ok(())
+    }
+
+    /// Downloads a package pre-build and unpacks it into the given destination directory.
+    /// Returns an `InstallerError::ChecksumError` if the pre-build checksum doesn't match.
+    fn download_prebuild(&self, repository_id: &str, package: &PackageId, revision: u64, destination_dir: impl AsRef<Path>) -> Result<()> {
+        // Show download spinner
+        let spinner_message = format!("Downloading {} prebuild from '{}'", &package.name.style(), repository_id);
+        let spinner = Spinner::new(spinner_message);
+        spinner.show();
+
+        let (extension, bytes) = self.repository_manager.read_prebuild(repository_id, package, revision, &Target::current())?;
+        let checksum = self.repository_manager.get_prebuild_checksum(repository_id, package, revision, &Target::current())?;
+
+        // Finish download spinner
+        spinner.finish();
+
+        // Calculate the checksum
+        let calculated_checksum = Checksum::from_bytes(&bytes);
+
+        // Check equality of checksum
+        match checksum {
+            Some(checksum) if checksum == calculated_checksum => debug!("{} prebuild checksum matches", package.style()),
+            _ => return Err(InstallerError::ChecksumError),
+        }
+
+        // Unpack the prebuild to the destination
+        unpack(&package.name, extension, bytes, &destination_dir, false)?;
+
+        Ok(())
+    }
+
+    /// Executes the postinstall script of the given package if it exists.
+    fn execute_postinstall(
+        &self,
+        package_id: &PackageId,
+        install_meta: &InstallMeta,
+        install_directory: &PathBuf,
+        script_args: &HashMap<&str, &str>,
+    ) -> Result<()> {
+        // Download and run post install script if it exists
+        let script_path = install_meta.version_metadata.get_postinstall_script_path(&install_meta.target_bounds)?;
+        let downloaded_script =
+            scripts::download_script(self.repository_manager, &script_path, &package_id.name, &install_meta.repository_id)?;
+
+        let Some(script_file) = downloaded_script else { return Ok(()) };
+        let script_data = ScriptData::new(
+            &script_file,
+            &install_directory,
+            &package_id,
+            self.config,
+            &script_args,
+            self.options.verbose,
+        );
+
+        // Only show a spinner when not verbose
+        if self.options.verbose {
+            println!("Executing postinstall script of {}", package_id.style());
+            scripts::run_post_script(&script_data)?;
+            return Ok(());
+        }
+
+        // Run script with spinner shown
+        let spinner_message = format!("Executing postinstall of {}", package_id.style());
+        let spinner = Spinner::new(spinner_message);
+        spinner.show();
+        scripts::run_post_script(&script_data)?;
+        spinner.finish();
 
         Ok(())
     }
@@ -357,23 +422,66 @@ impl<'a> Installer<'a> {
         Ok(())
     }
 
-    /// Creates the symlinks for all package dependencies in the `dependencies` directory.
-    fn create_dependency_symlinks(&self, current_package: &PackageId, dependencies: &HashSet<PackageId>) -> Result<()> {
-        // Prevent creating an empty directory
-        if dependencies.is_empty() {
+    /// Executes the test for the given package if it exists.
+    fn execute_test(
+        &self,
+        package_id: &PackageId,
+        install_meta: &InstallMeta,
+        install_directory: &PathBuf,
+        script_args: &HashMap<&str, &str>,
+        target: &PackageTarget,
+    ) -> Result<()> {
+        // Download and run test script if it exists
+        let script_path = install_meta.version_metadata.get_test_script_path(&install_meta.target_bounds)?;
+        let downloaded_script =
+            scripts::download_script(self.repository_manager, &script_path, &package_id.name, &install_meta.repository_id)?;
+
+        let Some(script_file) = downloaded_script else { return Ok(()) };
+        let script_data = ScriptData::new(
+            &script_file,
+            &install_directory,
+            &package_id,
+            self.config,
+            &script_args,
+            self.options.verbose,
+        );
+
+        // Install external files necessary for testing
+        let external_files = install_meta.version_metadata.external_test_files.iter().chain(&target.external_test_files);
+        let mut read_files = Vec::new();
+        let mut skip_test = false;
+        for file in external_files {
+            let file_content =
+                self.repository_manager.read_file_bytes(&install_meta.repository_id, &install_meta.package_metadata.name, file)?;
+
+            match file_content {
+                Some(content) => read_files.push((file, content)),
+                None => {
+                    warning!("Skipping test, because the required files could not be downloaded.");
+                    skip_test = true;
+                    break;
+                },
+            }
+        }
+
+        // Return early if the test should be skipped
+        if skip_test {
             return Ok(());
         }
 
-        // Create package dependencies directory
-        let dependency_directory_path = self.config.prefix_directory.join("dependencies").join(current_package.to_string());
-        fs::create_dir_all(&dependency_directory_path).err_with_path("create dirs", &dependency_directory_path)?;
-
-        // Create symlinks to all dependencies
-        for dependency in dependencies {
-            let original = self.config.prefix_directory.join("packages").join(&dependency.name).join(dependency.version.to_string());
-            let link = dependency_directory_path.join(&dependency.name);
-            symlink::create_symlink(&original, &link)?;
+        // Only show a spinner when not verbose
+        if self.options.verbose {
+            println!("Testing {}", package_id.style());
+            scripts::run_test_script(&script_data, &read_files)?;
+            return Ok(());
         }
+
+        // Run script with spinner shown
+        let spinner_message = format!("Testing {}", package_id.style());
+        let spinner = Spinner::new(spinner_message);
+        spinner.show();
+        scripts::run_test_script(&script_data, &read_files)?;
+        spinner.finish();
 
         Ok(())
     }
@@ -403,35 +511,6 @@ impl<'a> Installer<'a> {
         for child in node.get_children() {
             self.remove_build_dependencies(*child, tree)?;
         }
-
-        Ok(())
-    }
-
-    /// Downloads a package pre-build and unpacks it into the given destination directory.
-    /// Returns an `InstallerError::ChecksumError` if the pre-build checksum doesn't match.
-    fn download_prebuild(&self, repository_id: &str, package: &PackageId, revision: u64, destination_dir: impl AsRef<Path>) -> Result<()> {
-        // Show download spinner
-        let spinner_message = format!("Downloading {} prebuild from '{}'", &package.name.style(), repository_id);
-        let spinner = Spinner::new(spinner_message);
-        spinner.show();
-
-        let (extension, bytes) = self.repository_manager.read_prebuild(repository_id, package, revision, &Target::current())?;
-        let checksum = self.repository_manager.get_prebuild_checksum(repository_id, package, revision, &Target::current())?;
-
-        // Finish download spinner
-        spinner.finish();
-
-        // Calculate the checksum
-        let calculated_checksum = Checksum::from_bytes(&bytes);
-
-        // Check equality of checksum
-        match checksum {
-            Some(checksum) if checksum == calculated_checksum => debug!("{} prebuild checksum matches", package.style()),
-            _ => return Err(InstallerError::ChecksumError),
-        }
-
-        // Unpack the prebuild to the destination
-        unpack(&package.name, extension, bytes, &destination_dir, false)?;
 
         Ok(())
     }
@@ -649,23 +728,37 @@ impl<'a> Installer<'a> {
         // Get script data from package version metadata
         let script_path = package_version.get_uninstall_script_path(&target_bounds)?;
 
-        // Download and run script
-        if let Some(script_text) = provider.read_file(&package_id.name, &script_path)? {
-            let script_path = scripts::write_script_to_tempfile(&script_text)?;
+        // Download and run script if it exists
+        let Some(script_text) = provider.read_file(&package_id.name, &script_path)? else {
+            return Ok(());
+        };
 
-            // Run script
-            let script_args = package_version.get_script_args(&target_bounds)?;
-            let script_data = ScriptData::new(
-                &script_path,
-                &install_directory,
-                package_id,
-                self.config,
-                &script_args,
-                self.options.verbose,
-            );
+        let script_path = scripts::write_script_to_tempfile(&script_text)?;
+
+        // Run script
+        let script_args = package_version.get_script_args(&target_bounds)?;
+        let script_data = ScriptData::new(
+            &script_path,
+            &install_directory,
+            package_id,
+            self.config,
+            &script_args,
+            self.options.verbose,
+        );
+
+        // Only show spinner when not verbose
+        if self.options.verbose {
             println!("Executing uninstall script of {}", package_id.style());
-            scripts::run_uninstall_script(&script_data)?
+            scripts::run_uninstall_script(&script_data)?;
+            return Ok(());
         }
+
+        // Run script with spinner shown
+        let spinner_message = format!("Executing uninstall script of {}", package_id.style());
+        let spinner = Spinner::new(spinner_message);
+        spinner.show();
+        scripts::run_uninstall_script(&script_data)?;
+        spinner.finish();
 
         Ok(())
     }
