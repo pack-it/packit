@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The Packit install scripts for Unix and Windows now cleanup the created Packit files in case of an error during installation.
 - Support for a separate verbose output from scripts, file descriptor 3 can now be used for verbose output.
 - When a build script exits with a non-zero status code, the last 10 lines of the scripts output is now shown.
+- The `disable_prebuilds` field to the config, which disables usage of prebuilds when set to true.
 
 ### Changes
 - The build system now includes a new `package-build` xtask to create a full Packit prebuild for the release.

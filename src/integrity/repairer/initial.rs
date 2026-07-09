@@ -113,6 +113,7 @@ fn get_used_repositories(register: &PackageRegister) -> Vec<Repository> {
             provider: package.metadata_repository_provider.clone(),
             prebuilds_url: package.prebuilds_repository_url.clone(),
             prebuilds_provider: package.prebuilds_repository_provider.clone(),
+            disable_prebuilds: false,
         };
 
         match seen_repositories.get_mut(&repository) {
