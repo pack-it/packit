@@ -15,7 +15,7 @@ use crate::{
     cli::display::{
         aligned_print::{self, PairAligner},
         logging::warning,
-        standard_print,
+        standard_print::DisplayOption,
     },
     platforms::{DEFAULT_CONFIG_DIR, DEFAULT_PREFIX},
     repositories::metadata::DEFAULT_METADATA_PROVIDER_ID,
@@ -158,14 +158,8 @@ impl Config {
             let mut pair_aligner = PairAligner::new();
             pair_aligner.add("Url", &repo.url);
             pair_aligner.add("Provider", &repo.provider);
-            pair_aligner.add(
-                "Prebuilds provider",
-                standard_print::get_string_option_display(repo.prebuilds_provider.clone()),
-            );
-            pair_aligner.add(
-                "Prebuilds url",
-                standard_print::get_string_option_display(repo.prebuilds_url.clone()),
-            );
+            pair_aligner.add("Prebuilds provider", repo.prebuilds_provider.display());
+            pair_aligner.add("Prebuilds url", repo.prebuilds_url.display());
             pair_aligner.display(aligned_print::VERTICAL_LINE_PREFIX);
         }
     }

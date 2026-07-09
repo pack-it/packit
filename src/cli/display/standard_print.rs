@@ -4,12 +4,20 @@ use std::fmt::Display;
 
 use colored::Colorize;
 
-/// Returns the correct string display for an `Option<String>`, dimmed when `None`.
-/// TODO: Impl trait
-pub fn get_string_option_display(string_option: Option<String>) -> String {
-    match string_option {
-        Some(string) => string,
-        None => "None".dimmed().to_string(),
+pub trait DisplayOption {
+    /// Returns the correct string display for an `Option<impl Display>`, dimmed when `None`.
+    fn display(&self) -> String;
+}
+
+impl<T> DisplayOption for Option<T>
+where
+    T: Display,
+{
+    fn display(&self) -> String {
+        match self {
+            Some(option) => option.to_string(),
+            None => "None".dimmed().to_string(),
+        }
     }
 }
 

@@ -10,7 +10,8 @@ use crate::{
         display::{
             aligned_print::{self, PairAligner},
             logging::error,
-            not_found, standard_print,
+            not_found,
+            standard_print::{self, DisplayOption},
             styled::Styled,
         },
     },
@@ -84,7 +85,7 @@ impl InfoArgs {
         println!("{}", package.description.italic().cyan());
 
         let mut pair_aligner = PairAligner::new();
-        pair_aligner.add("Homepage", standard_print::get_string_option_display(package.homepage.clone()));
+        pair_aligner.add("Homepage", package.homepage.display());
         pair_aligner.add(
             "Installed versions",
             package.versions.keys().map(|k| k.to_string()).collect::<Vec<String>>().join(" | "),
@@ -105,7 +106,7 @@ impl InfoArgs {
         println!("{}", package.description.italic().cyan());
 
         let mut pair_aligner = PairAligner::new();
-        pair_aligner.add("Homepage", standard_print::get_string_option_display(package.homepage.clone()));
+        pair_aligner.add("Homepage", package.homepage.display());
         pair_aligner.add("License", &package_version.license);
         pair_aligner.add("Install path", package_version.install_path.display());
         pair_aligner.add("Active", package.active_version == package_id.version);
