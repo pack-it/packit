@@ -242,7 +242,7 @@ pub fn fix_invalid_dependencies(invalid: Vec<(PackageId, PackageId)>, register: 
 pub fn fix_missing_dependents(missing: Vec<(PackageId, PackageId)>, register: &mut PackageRegister) {
     for (child, parent) in missing {
         let Some(package_version) = register.get_package_version_mut(&child) else {
-            warning!("Could not fix missing dependents for {child}");
+            warning!("Could not fix missing dependents for {}", child.style());
             continue;
         };
 
@@ -254,7 +254,7 @@ pub fn fix_missing_dependents(missing: Vec<(PackageId, PackageId)>, register: &m
 pub fn fix_invalid_dependents(invalid: Vec<(PackageId, PackageId)>, register: &mut PackageRegister) {
     for (child, parent) in invalid {
         let Some(package_version) = register.get_package_version_mut(&child) else {
-            warning!("Could not fix invalid dependents for {child}");
+            warning!("Could not fix invalid dependents for {}", child.style());
             continue;
         };
 

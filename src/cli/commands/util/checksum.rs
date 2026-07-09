@@ -22,7 +22,7 @@ pub struct ChecksumArgs {
 
 impl HandleCommand for ChecksumArgs {
     fn handle(&self) {
-        println!("Trying to request file from {}", self.url);
+        println!("Trying to request file from '{}'", self.url);
 
         let spinner = Spinner::new("Downloading file".into());
         spinner.show();
@@ -51,7 +51,7 @@ impl HandleCommand for ChecksumArgs {
         let checksum = Checksum::from_bytes(&bytes);
 
         spinner.finish();
-        println!("Found checksum {}", checksum);
-        println!("Size of file: {}", bytes.len());
+        println!("Checksum: {}", checksum);
+        println!("File size: {}", bytes.len());
     }
 }

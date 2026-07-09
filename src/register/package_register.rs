@@ -460,7 +460,7 @@ pub mod tests {
         let current_target_bounds =
             TargetBounds::from_str(&TargetArchitecture::current().to_string()).expect("Expected valid target bounds");
 
-        let version_intervals = VersionIntervals::from_str(&format!("{}", package_id.version)).expect("Expected valid version intervals.");
+        let version_intervals = VersionIntervals::from_str(&package_id.version.to_string()).expect("Expected valid version intervals.");
 
         PackageMeta {
             name: package_id.name.clone(),

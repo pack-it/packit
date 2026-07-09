@@ -40,7 +40,7 @@ impl<'a> RepositoryManager<'a> {
         for (id, repository) in &config.repositories {
             let provider = provider::create_metadata_provider(repository);
             let Some(provider) = provider else {
-                warning!("Cannot create repository provider for repository {id}.");
+                warning!("Cannot create repository provider for repository '{id}'.");
                 continue;
             };
 
@@ -48,7 +48,10 @@ impl<'a> RepositoryManager<'a> {
             let repository_meta = match provider.read_repository_metadata() {
                 Ok(repository_meta) => repository_meta,
                 Err(e) => {
-                    error!(e, "Cannot retrieve repository metadata of repository {id}, ignoring repository...");
+                    error!(
+                        e,
+                        "Cannot retrieve repository metadata of repository '{id}', ignoring repository..."
+                    );
                     continue;
                 },
             };
@@ -69,7 +72,7 @@ impl<'a> RepositoryManager<'a> {
             // Try to create the prebuild provider
             let prebuild_provider = provider::create_prebuild_provider(repository, repository_meta);
             let Some(prebuild_provider) = prebuild_provider else {
-                warning!("Cannot create prebuild provider for repository {id}.");
+                warning!("Cannot create prebuild provider for repository '{id}'.");
                 continue;
             };
 
@@ -131,7 +134,7 @@ impl<'a> RepositoryManager<'a> {
             let provider = match self.metadata_providers.get(repository_id) {
                 Some(provider) => provider,
                 None => {
-                    warning!("Cannot find provider for {repository_id}, while it should exist.");
+                    warning!("Cannot find provider for '{repository_id}', while it should exist.");
                     continue;
                 },
             };
@@ -139,7 +142,7 @@ impl<'a> RepositoryManager<'a> {
             let package = match provider.read_package(package) {
                 Ok(package) => package,
                 Err(e) => {
-                    debug!(err: e, "Unable to read {} from repository {repository_id}, continuing...", package.style());
+                    debug!(err: e, "Unable to read {} from repository '{repository_id}', continuing...", package.style());
                     continue;
                 },
             };
@@ -221,7 +224,7 @@ impl<'a> RepositoryManager<'a> {
             let provider = match self.metadata_providers.get(repository_id) {
                 Some(provider) => provider,
                 None => {
-                    warning!("Cannot find provider for {repository_id}, while it should exist.");
+                    warning!("Cannot find provider for '{repository_id}', while it should exist.");
                     continue;
                 },
             };
@@ -230,7 +233,7 @@ impl<'a> RepositoryManager<'a> {
                 Ok(package) => package,
                 Err(_) => {
                     debug!(
-                        "Cannot find package {} in repository {repository_id}, continuing.",
+                        "Cannot find package {} in repository '{repository_id}', continuing.",
                         package_id.style()
                     );
                     continue;

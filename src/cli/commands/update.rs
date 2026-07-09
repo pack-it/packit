@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use clap::Args;
+use colored::Colorize;
 use std::process::exit;
 
 use crate::{
@@ -112,7 +113,9 @@ impl HandleCommand for UpdateArgs {
 
             match new_package_id {
                 Some(new_package_id) => {
-                    println!("Successfully updated {} to {}", optional_id.style(), new_package_id.style());
+                    let styled_message =
+                        format!("Successfully updated {} to {}", optional_id.style(), new_package_id.style()).bold().green();
+                    println!("{styled_message}");
 
                     // Save changes
                     register.save_to(&register_dir).unwrap_or_exit(1);

@@ -82,10 +82,14 @@ impl HandleCommand for SwitchArgs {
         // Save package register
         register.save_to(&register_path).unwrap_or_exit(1);
 
-        println!(
+        let styled_message = format!(
             "Successfully switched {} active version to {}",
             self.package_name.style(),
             self.package_version.style()
         )
+        .bold()
+        .green();
+
+        println!("{styled_message}");
     }
 }

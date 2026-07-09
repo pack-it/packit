@@ -110,7 +110,7 @@ impl HandleCommand for InstallArgs {
                     let styled_message = format!("Successfully installed {}", installed_package.style()).bold().green();
                     println!("{styled_message}");
                 },
-                Err(error) => error!(error, "Cannot install package {}", optional_id),
+                Err(error) => error!(error, "Cannot install package {}", optional_id.style()),
             }
         }
 

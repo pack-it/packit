@@ -55,6 +55,6 @@ impl HandleCommand for PortableRepoArgs {
             .unwrap_or_exit_msg("Cannot create portable repository", 1);
 
         spinner.finish();
-        println!("Created portable repository at {}!", self.destination.display());
+        println!("Created portable repository at '{}'!", self.destination.display());
     }
 }

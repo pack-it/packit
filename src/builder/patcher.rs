@@ -159,7 +159,7 @@ impl<'a> BinaryPatcher<'a> {
             }
 
             if changed {
-                debug!("Changed binary {}, writing changes", path.display());
+                debug!("Changed binary '{}', writing changes", path.display());
 
                 let config = macho::builder::Config { linkedit: true };
                 binary.write_with_config(&path, config);
@@ -179,7 +179,7 @@ impl<'a> BinaryPatcher<'a> {
                     },
                     Ok(_) => (),
                     Err(e) => {
-                        error!(e, "Cannot resign binary {path}");
+                        error!(e, "Cannot resign binary '{path}'");
                         continue;
                     },
                 };
@@ -250,7 +250,7 @@ impl<'a> BinaryPatcher<'a> {
 
         // Add rpaths to binary
         if !rpaths.is_empty() {
-            debug!("Changed binary {}, writing changes", path.display());
+            debug!("Changed binary '{}', writing changes", path.display());
 
             for rpath in rpaths {
                 let mut string_path = rpath.to_str().ok_or(BinaryPatcherError::OsStringConversionError)?.to_string();

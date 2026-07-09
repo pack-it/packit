@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use clap::Args;
+use colored::Colorize;
 
 use crate::{
     cli::{
@@ -120,6 +121,7 @@ impl HandleCommand for LinkArgs {
         // Save package register
         register.save_to(&register_path).unwrap_or_exit(1);
 
-        println!("Successfully linked {}", self.package_name.style());
+        let styled_message = format!("Successfully linked {}", self.package_name.style()).bold().green();
+        println!("{styled_message}");
     }
 }

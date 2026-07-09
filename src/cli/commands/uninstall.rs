@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use clap::Args;
+use colored::Colorize;
 use std::process::exit;
 
 use crate::{
@@ -56,8 +57,10 @@ impl HandleCommand for UninstallArgs {
         for optional_id in &self.packages {
             match installer.uninstall(optional_id) {
                 Ok(uninstalled_packages) => {
-                    println!("Successfully uninstalled:");
-                    standard_print::print_list(uninstalled_packages.iter().map(|p| p.style()));
+                    for package in uninstalled_packages {
+                        let styled_message = format!("Successfully uninstalled {}", package.style()).bold().green();
+                        println!("{styled_message}");
+                    }
                 },
                 Err(error) => error!(error, "Cannot uninstall package {}", optional_id.style()),
             }

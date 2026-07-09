@@ -120,7 +120,8 @@ impl ConfigArgs {
 
         config.save_to(&Config::get_default_path()).unwrap_or_exit_msg("Cannot save config file", 1);
 
-        println!("Succesfully changed the prefix directory to {}!", new_prefix.display());
+        let styled_message = format!("Succesfully changed the prefix directory to '{}'!", new_prefix.display()).bold().green();
+        println!("{styled_message}");
     }
 
     /// Handles the config set-multiuser command.
@@ -145,12 +146,13 @@ impl ConfigArgs {
 
         config.save_to(&Config::get_default_path()).unwrap_or_exit_msg("Cannot save config file", 1);
 
-        print!("Succesfully changed the multiuser setting to ");
-        if multiuser {
-            println!("on!");
-        } else {
-            println!("off!");
-        }
+        let multiuser_state = match multiuser {
+            true => "on!",
+            false => "off!",
+        };
+
+        let styled_message = format!("Succesfully changed the multiuser setting to {}", multiuser_state).bold().green();
+        println!("{styled_message}")
     }
 
     /// Handles the config repositories list command.
@@ -207,7 +209,7 @@ impl ConfigArgs {
         for repo in new_rank {
             // Check for invalid repository ids
             if !config.get_config().repositories.contains_key(repo) {
-                error!(msg: "Repository {repo} does not exist. Please add it to the config first.");
+                error!(msg: "Repository '{repo}' does not exist. Please add it to the config first.");
                 exit(1);
             }
 
@@ -222,14 +224,15 @@ impl ConfigArgs {
 
         config.save_to(&Config::get_default_path()).unwrap_or_exit_msg("Cannot save config file", 1);
 
-        println!("Succesfully set the repository rank to '{}'!", new_rank.join(", "));
+        let styled_message = format!("Succesfully set the repository rank to '{}'!", new_rank.join(", ")).bold().green();
+        println!("{styled_message}");
     }
 
     /// Handles the config repositories add command.
     fn handle_add_repository(&self, mut config: EditableConfig, id: &str, url: &str, provider: &Option<String>) {
         // Check if the config already contains a repository with this id
         if config.get_config().repositories.contains_key(id) {
-            error!(msg: "A repository {id} with this id already exists.");
+            error!(msg: "A repository with id '{id}' already exists.");
             exit(1);
         }
 
@@ -247,8 +250,8 @@ impl ConfigArgs {
         if repo_meta.required_packit_version > current_packit_version() {
             warning!(
                 "This repository requires Packit version {}, while your current version is {}",
-                repo_meta.required_packit_version,
-                current_packit_version()
+                repo_meta.required_packit_version.style(),
+                current_packit_version().style()
             );
 
             if ask_user("Are you sure you want to add this repository?", QuestionResponse::No).unwrap_or_exit(1).is_no_or_invalid() {
@@ -263,20 +266,21 @@ impl ConfigArgs {
 
         config.save_to(&Config::get_default_path()).unwrap_or_exit_msg("Cannot save config file", 1);
 
-        println!("Succesfully added repository {id} to the config!");
+        let styled_message = format!("Succesfully added repository '{id}' to the config!").bold().green();
+        println!("{styled_message}");
     }
 
     /// Handles the config repositories remove command.
     fn handle_remove_repository(&self, mut config: EditableConfig, id: &str) {
         // Check if the config even contains this repository
         if !config.get_config().repositories.contains_key(id) {
-            error!(msg: "Repository {id} does not exist.");
+            error!(msg: "Repository '{id}' does not exist.");
             exit(1);
         }
 
         // Check if the config only contains this repository
         if config.get_config().repositories.len() == 1 {
-            error!(msg: "Repository {id} is the only repository in the config, please add another one before removing this one.");
+            error!(msg: "Repository '{id}' is the only repository in the config, please add another one before removing this one.");
             exit(1);
         }
 
@@ -284,6 +288,7 @@ impl ConfigArgs {
 
         config.save_to(&Config::get_default_path()).unwrap_or_exit_msg("Cannot save config file", 1);
 
-        println!("Succesfully removed repository {id} from the config!");
+        let styled_message = format!("Succesfully removed repository '{id}' from the config!").bold().green();
+        println!("{styled_message}");
     }
 }

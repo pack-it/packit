@@ -10,6 +10,7 @@ use crate::{
     cli::display::{
         QuestionResponse, Spinner, ask_user,
         logging::{debug, warning},
+        standard_print,
         styled::Styled,
     },
     config::{Config, Repository},
@@ -374,10 +375,8 @@ impl<'a> Installer<'a> {
         // Check if the package has conflicting packages
         let conflicts = self.register.get_conflicting_packages(&package_id.name, &install_meta.package_metadata.conflicts_with);
         if !conflicts.is_empty() {
-            warning!(
-                "Skipping symlinking because of conflicting packages: {}",
-                conflicts.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(", ")
-            );
+            warning!("Skipping symlinking because of conflicting packages:");
+            standard_print::print_list(conflicts.iter().map(|p| p.style()));
             should_symlink = false;
         }
 
@@ -390,7 +389,8 @@ impl<'a> Installer<'a> {
                 if installed_package.active_version > install_meta.version_metadata.version {
                     let question = format!(
                         "A newer version ({}) of this package is currently active, do you want to change the active version to the older version ({})?",
-                        installed_package.active_version, install_meta.version_metadata.version
+                        installed_package.active_version.style(),
+                        install_meta.version_metadata.version.style()
                     );
                     should_set_active = ask_user(&question, QuestionResponse::No)?.is_yes();
                 }
@@ -607,7 +607,7 @@ impl<'a> Installer<'a> {
             other_versions.sort_by_key(|x| &x.package_id.version);
 
             if let Some(newest) = other_versions.last() {
-                println!("Set active package to version `{}`", newest.package_id.style());
+                println!("Set active package to version {}", newest.package_id.style());
                 Symlinker::new(self.config).set_active(self.register, &newest.package_id.clone(), installed_package.symlinked)?;
             }
         }
@@ -867,7 +867,7 @@ impl<'a> Installer<'a> {
 
         println!(
             "The new package version {} has been succesfully installed, uninstalling the old version now.",
-            new_version.style()
+            new_version.style() // TODO?
         );
 
         // Remove the old package dependents, because the old package is no longer a dependency

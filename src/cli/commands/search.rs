@@ -116,7 +116,7 @@ impl SearchArgs {
         let target = match package_version.get_target(&target_bounds) {
             Ok(target) => target,
             Err(e) => {
-                error!(e, "Cannot read {} from repository {repository_id}", package_id.style());
+                error!(e, "Cannot read {} from repository '{repository_id}'", package_id.style());
                 return;
             },
         };

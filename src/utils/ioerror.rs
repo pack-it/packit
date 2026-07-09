@@ -17,7 +17,7 @@ pub enum IOError {
         source: std::io::Error,
     },
 
-    #[error("Failed to {operation} {}", path.display())]
+    #[error("Failed to {operation} '{}'", path.display())]
     WithPath {
         operation: String,
         path: PathBuf,
