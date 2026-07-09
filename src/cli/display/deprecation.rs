@@ -31,11 +31,11 @@ pub fn show_package_version_warnings(package_version: &PackageVersionMeta, packa
             None => String::default(),
         };
 
-        let package_str = format!("{package_name}@{}", package_version.version).bold().blue(); // TODO: Maybe make a display util for this
+        let styled_package = format!("{package_name}@{}", package_version.version).bold().blue();
         let deprecated_from = &deprecation.deprecated_from;
         match *deprecated_from <= Date::now() {
-            true => warning!("Package version {package_str} is deprecated since {}{reason}", deprecated_from),
-            false => warning!("Package version {package_str} will be deprecated at {}{reason}", deprecated_from),
+            true => warning!("Package version {styled_package} is deprecated since {}{reason}", deprecated_from),
+            false => warning!("Package version {styled_package} will be deprecated at {}{reason}", deprecated_from),
         }
     }
 }

@@ -73,13 +73,13 @@ impl PackageArgs {
         // Automatically create the destination directory
         fs::create_dir_all(destination).unwrap_or_exit_msg("Failed to create prebuild directory", 1);
 
-        let spinner = Spinner::new();
         let spinner_message = format!("Packaging {}", package_id.style());
-        spinner.show(spinner_message.clone());
+        let spinner = Spinner::new(spinner_message);
+        spinner.show();
 
         packager::package(config, package_id, destination, package_version.revisions.len() as u64).unwrap_or_exit(1);
 
-        spinner.finish(format!("{spinner_message} successful"));
+        spinner.finish();
         println!("Successfully packaged {} to {}", package_id.style(), destination.display());
     }
 }

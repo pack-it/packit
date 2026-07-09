@@ -97,7 +97,7 @@ impl<'a> Builder<'a> {
         debug!("Source size: {}", source.size);
 
         // Download the build files
-        let bytes = self.download_file(&source.url, &source.mirrors, &source.checksum, package_name)?;
+        let bytes = self.download_file(&source.url, &source.mirrors, &source.checksum, package_name.style().to_string())?;
 
         // Create temp directory to build in
         let build_directory = TempDir::new().err_operation("create temp dir")?;
@@ -158,16 +158,16 @@ impl<'a> Builder<'a> {
 
         // Show build spinner
         if !self.verbose {
-            let spinner = Spinner::new();
             let styled_package = format!("{package_name}@{version}").bold().blue();
             let spinner_message = format!("Building {styled_package}");
-            spinner.show(spinner_message.clone());
+            let spinner = Spinner::new(spinner_message);
+            spinner.show();
 
             // Run build script
             scripts::run_build_script(&script_data, &build_directory, env)?;
 
             // Finish build spinner
-            spinner.finish(format!("{spinner_message} successful"));
+            spinner.finish();
         } else {
             // Run build script
             scripts::run_build_script(&script_data, &build_directory, env)?;
@@ -184,15 +184,16 @@ impl<'a> Builder<'a> {
         // Download patch from the url if it starts with 'http://' or 'https://'
         if patch.url.starts_with("http://") || patch.url.starts_with("https://") {
             let download_description = format!("patch {id}' of {}", package_id.style());
-            return self.download_file(&patch.url, &patch.mirrors, &patch.checksum, &download_description);
+            return self.download_file(&patch.url, &patch.mirrors, &patch.checksum, download_description);
         }
 
         // Create download spinner
-        let spinner = Spinner::new();
-        spinner.show(format!(
+        let spinner_message = format!(
             "Downloading 'patch {id}' of {} from repository '{repository_id}'",
             package_id.style()
-        ));
+        );
+        let spinner = Spinner::new(spinner_message);
+        spinner.show();
 
         // Download patch file from the repository itself
         let file = self
@@ -209,20 +210,16 @@ impl<'a> Builder<'a> {
         }
 
         // Finish download spinner
-        spinner.finish(format!(
-            "Downloading 'patch {id}' of {} from repository '{repository_id}' successful",
-            package_id.style()
-        ));
+        spinner.finish();
 
         Ok(file)
     }
 
     /// Downloads a file from the url, or one of the mirrors. Checks against a checksum and shows a spinner.
-    fn download_file(&self, url: &str, mirrors: &[String], checksum: &Checksum, download_description: &str) -> Result<Bytes> {
+    fn download_file(&self, url: &str, mirrors: &[String], checksum: &Checksum, download_description: String) -> Result<Bytes> {
         // Show download spinner
-        let spinner = Spinner::new();
-        spinner.show(format!("Downloading '{download_description}' from {}", &url));
-        let mut finish_message = format!("Downloading '{download_description}' from {} successful", &url);
+        let mut spinner = Spinner::new(format!("Downloading {download_description} from {}", &url));
+        spinner.show();
 
         // Try to download from the main url
         let mut mirrors = mirrors.iter();
@@ -238,8 +235,7 @@ impl<'a> Builder<'a> {
             && let Some(mirror) = mirrors.next()
         {
             // Update spinner with new download url
-            spinner.show(format!("Downloading '{download_description}' from alternative {}", &mirror));
-            finish_message = format!("Downloading '{download_description}' from alternative {} successful", &mirror);
+            spinner.adjust_message(format!("Downloading {download_description} from alternative {}", &mirror));
 
             // Get response from alternative mirror
             response = requests::get(mirror).map_err(BuilderError::RequestError);
@@ -264,7 +260,7 @@ impl<'a> Builder<'a> {
         }
 
         // Finish download spinner
-        spinner.finish(finish_message);
+        spinner.finish();
 
         Ok(bytes)
     }

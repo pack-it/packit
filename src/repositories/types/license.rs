@@ -29,7 +29,7 @@ impl Licenses {
 impl Display for Licenses {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Licenses::Unknown => write!(f, "{}", "Unknown".dimmed().to_string()), // TODO: Check if this doesn't cause issue like PackageId display
+            Licenses::Unknown => write!(f, "{}", "Unknown".dimmed().to_string()),
             Licenses::Single(license) => write!(f, "{license}"),
             Licenses::Any { any } => write!(f, "any of: {}", any.join(", ")),
             Licenses::All { all } => write!(f, "all of: {}", all.join(", ")),

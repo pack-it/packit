@@ -132,6 +132,7 @@ impl SearchArgs {
         pair_aligner.add("Latest stable version", latest_version.version.style());
         pair_aligner.add("License", &package_version.license);
         pair_aligner.display(aligned_print::VERTICAL_LINE_PREFIX);
+        println!();
 
         print!("Dependencies: ");
         standard_print::print_list_or_none(dependencies.iter());
