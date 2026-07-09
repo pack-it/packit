@@ -60,6 +60,11 @@ impl<'a> RepositoryManager<'a> {
 
             metadata_providers.insert(id.clone(), provider);
 
+            // Skip prebuild provider creation if prebuilds are disabled
+            if repository.disable_prebuilds {
+                continue;
+            }
+
             // Try to create the prebuild provider
             let prebuild_provider = provider::create_prebuild_provider(repository, repository_meta);
             let Some(prebuild_provider) = prebuild_provider else {

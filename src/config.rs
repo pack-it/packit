@@ -61,6 +61,10 @@ pub struct Repository {
 
     /// The provider of the prebuild packages repository
     pub prebuilds_provider: Option<String>,
+
+    /// True to disable prebuild usage for the repository, false otherwise
+    #[serde(default)]
+    pub disable_prebuilds: bool,
 }
 
 impl Repository {
@@ -71,6 +75,7 @@ impl Repository {
             provider: provider.to_string(),
             prebuilds_url: None,
             prebuilds_provider: None,
+            disable_prebuilds: false,
         }
     }
 
@@ -169,6 +174,7 @@ impl Default for EditableConfig {
             provider: DEFAULT_METADATA_REPOSITORY_PROVIDER.to_string(),
             prebuilds_url: None,
             prebuilds_provider: None,
+            disable_prebuilds: false,
         };
 
         let config = Config {
@@ -247,6 +253,9 @@ impl EditableConfig {
         }
         if let Some(prebuilds_provider) = &repository.prebuilds_provider {
             new_value["prebuilds_provider"] = prebuilds_provider.into();
+        }
+        if repository.disable_prebuilds {
+            new_value["disable_prebuilds"] = true.into();
         }
         self.document["repositories"][id] = new_value.into();
 

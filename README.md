@@ -126,20 +126,21 @@ Initializes the Packit environment by setting up all required files and director
 ## Config
 All available fields in the config are listed below. The [`pit config`](#pit-config-show) command can also be used to change the config.
 
-| Field               | Explanation                                                                                                                  |
-|---------------------|------------------------------------------------------------------------------------------------------------------------------|
+| Field               | Explanation                                                       |
+| ------------------- | ----------------------------------------------------------------- |
 | `prefix_directory`  | Defines the directory used for installing packages, see [File structure](#file-structure) for the defaults on each platform. |
-| `repositories_rank` | Defines the order of repositories to search for a package.                                                                   |
-| `multiuser`         | True to run Packit in multiuser mode, false for single user mode.                                                            |
+| `repositories_rank` | Defines the order of repositories to search for a package.        |
+| `multiuser`         | True to run Packit in multiuser mode, false for single user mode. |
 
 ### Repositories
 
-| Field                | Explanation                                                              |
-|----------------------|--------------------------------------------------------------------------|
-| `url`                | Defines the url to the repository.                                       |
-| `provider`           | Defines the provider of the repository, defaults to `web`.               |
-| `prebuilds_url`      | Defines the url of the prebuilds repository for this package repository. |
-| `prebuilds_provider` | Defines the provider of the prebuilds repository, defaults to `fs`.      |
+| Field                | Explanation                                                                            |
+| -------------------- | -------------------------------------------------------------------------------------- |
+| `url`                | Defines the url to the repository.                                                     |
+| `provider`           | Defines the provider of the repository, defaults to `web`.                             |
+| `prebuilds_url`      | Defines the url of the prebuilds repository for this package repository.               |
+| `prebuilds_provider` | Defines the provider of the prebuilds repository, defaults to `fs`.                    |
+| `disable_prebuilds`  | True to disable prebuild usage for the repository, false to use prebuild if available. |
 
 Specifying a prebuild repository is optional and overrides the value specified in the repository metadata.
 
