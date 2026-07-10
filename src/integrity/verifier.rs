@@ -148,12 +148,10 @@ impl Verifier {
 
     /// Reverses the initial checks counter by 1. Except if the current is 0.
     /// Returns the new value of current_intial_check.
-    pub fn reverse_initial_check(&mut self) -> usize {
+    pub fn reverse_initial_check(&mut self) {
         if self.current_intial_check > 0 {
             self.current_intial_check -= 1;
         }
-
-        self.current_intial_check
     }
 
     /// Reverses the checks counter by 1. Except if the current is 0.

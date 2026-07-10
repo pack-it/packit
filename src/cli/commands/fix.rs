@@ -40,19 +40,18 @@ impl HandleCommand for FixArgs {
 impl FixArgs {
     /// Fixes the initial issues, which check basic files that Packit requires to run properly (for example Config.toml or Register.toml).
     fn fix_initial(&self, verifier: &mut Verifier, repairer: &mut Repairer) {
-        let mut issue_index = -1;
+        let mut fixed_issue = false;
         while verifier.get_initial_check_index() < verifier.get_initial_check_length() {
             let check_result = verifier.next_initial_check().unwrap_or_exit(1);
-            // TODO: REMOVE THIS: Check if the index is the same as the previously found issue (meaning the same issue is found and the fix didn't work)
             let issue = match check_result {
-                Some(_) if verifier.get_initial_check_index() as i32 - 1 == issue_index => {
+                Some(_) if fixed_issue => {
                     error!(msg: UNSUCCESSFUL_FIX_MESSAGE);
                     exit(1);
                 },
                 Some(issue) => issue,
-
-                None if verifier.get_initial_check_index() as i32 - 1 == issue_index => {
+                None if fixed_issue => {
                     println!("{}", "Successfully fixed the issue".bold().green());
+                    fixed_issue = false;
                     continue;
                 },
                 None => continue,
@@ -68,7 +67,9 @@ impl FixArgs {
             repairer.fix_initial_issues(issue).unwrap_or_exit(1);
 
             // Reverse the verifier to redo the check to make sure the fix worked
-            issue_index = verifier.reverse_initial_check() as i32;
+            verifier.reverse_initial_check();
+
+            fixed_issue = true;
         }
     }
 
@@ -89,19 +90,18 @@ impl FixArgs {
         };
 
         // Retrieve and fix the issues one by one
-        let mut issue_index = -1;
+        let mut fixed_issue = false;
         while verifier.get_check_index() < verifier.get_check_length() {
             let check_result = verifier.next_check(packages, &register, &config).unwrap_or_exit(1);
-            // TODO: REMOVE THIS: Check if the index is the same as the previously found issue (meaning the same issue is found and the fix didn't work)
             let issue = match check_result {
-                Some(_) if verifier.get_check_index() as i32 - 1 == issue_index => {
+                Some(_) if fixed_issue => {
                     error!(msg: UNSUCCESSFUL_FIX_MESSAGE);
                     exit(1);
                 },
                 Some(issue) => issue,
-
-                None if verifier.get_check_index() as i32 - 1 == issue_index => {
+                None if fixed_issue => {
                     println!("{}", "Successfully fixed the issue".bold().green());
+                    fixed_issue = false;
                     continue;
                 },
                 None => continue,
@@ -120,7 +120,9 @@ impl FixArgs {
             register.save_to(&register_dir).unwrap_or_exit(1);
 
             // Reverse the verifier to redo the check to make sure the fix worked
-            issue_index = verifier.reverse_check() as i32;
+            verifier.reverse_check();
+
+            fixed_issue = true;
         }
 
         if !verifier.issues_found() {
