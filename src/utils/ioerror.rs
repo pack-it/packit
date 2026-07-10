@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use thiserror::Error;
 
-/// Small std::io::Error wrapper with better messages
+/// Small `std::io::Error` wrapper with better messages
 #[derive(Error, Debug)]
 pub enum IOError {
     #[error(transparent)]
@@ -28,13 +28,13 @@ pub enum IOError {
 }
 
 pub trait IOResultExt<T> {
-    /// Wraps the std::io::Error directly, without context.
+    /// Wraps the `std::io::Error` directly, without context.
     fn err_std(self) -> Result<T, IOError>;
 
-    /// Wraps the std::io::Error directly, with an operation.
+    /// Wraps the `std::io::Error` directly, with an operation.
     fn err_operation(self, operation: &str) -> Result<T, IOError>;
 
-    /// Wraps the std::io::Error directly, with an operation and path context.
+    /// Wraps the `std::io::Error` directly, with an operation and path context.
     fn err_with_path(self, operation: &str, path: impl Into<PathBuf>) -> Result<T, IOError>;
 }
 

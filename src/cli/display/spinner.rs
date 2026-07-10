@@ -20,7 +20,7 @@ impl Spinner {
             .tick_chars("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏ ");
         progress_bar.set_style(style);
 
-        Self { progress_bar, message }
+        Self { message, progress_bar }
     }
 
     /// Shows the loading message.

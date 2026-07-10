@@ -96,7 +96,7 @@ pub fn remove_symlinks(search_dir: &Path, destination_dir: &Path) -> symlink::Re
 }
 
 /// Parses a path from an array of bytes.
-/// Can return a Utf8Error on Windows.
+/// Can return a `Utf8Error` on `Windows`.
 pub fn parse_path_from_bytes(bytes: &[u8]) -> Result<&Path, Utf8Error> {
     #[cfg(unix)]
     let string = OsStr::from_bytes(bytes);

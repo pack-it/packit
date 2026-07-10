@@ -35,6 +35,7 @@ pub struct BuildEnv<'a> {
     register: &'a PackageRegister,
 }
 
+#[expect(clippy::from_over_into)]
 impl<'a> Into<Environment> for BuildEnv<'a> {
     /// Converts the `BuildEnv` struct into a normalized `Environment` struct.
     fn into(self) -> Environment {

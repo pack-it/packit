@@ -19,7 +19,7 @@ impl ProgressBar {
         let style = ProgressStyle::with_template(&template).expect("Expected template to be correct.").progress_chars("\u{2501}\u{2501} ");
         bar.set_style(style);
 
-        Self { bar, size, prefix }
+        Self { prefix, bar, size }
     }
 
     /// Sets the position of the progress bar.

@@ -58,7 +58,7 @@ impl Os {
 }
 
 /// Represents an OS version. In case of Linux this also includes the distro and distro version.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 #[expect(dead_code)]
 pub enum OsVersion {
     MacOs {
@@ -82,7 +82,7 @@ static CURRENT_VERSION: LazyLock<OsVersion> = LazyLock::new(|| match OsVersion::
 });
 
 impl OsVersion {
-    /// Returns the OsVersion of the current system.
+    /// Returns the `OsVersion` of the current system.
     pub fn current() -> Self {
         CURRENT_VERSION.clone()
     }

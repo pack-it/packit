@@ -123,7 +123,7 @@ impl Hash for Version {
 }
 
 impl Display for Version {
-    /// Formats a `Version` into the following format: <version_number>[.version_number]...
+    /// Formats a `Version` into the following format: `<version_number>[.version_number]...`
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let version_string = self.numbers.iter().map(|d| d.to_string()).collect::<Vec<_>>().join(".");
         write!(f, "{}", version_string)

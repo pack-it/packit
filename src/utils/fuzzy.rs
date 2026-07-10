@@ -90,6 +90,7 @@ where
 /// Calculates the distance between two strings with a levenshtein like algorithm which allows
 /// for transpositions for characters which are next to each other (ideal for typo's).
 /// Returns the distance between two strings.
+#[expect(clippy::needless_range_loop)]
 fn calculate_distance(first_word: &str, second_word: &str) -> u64 {
     let first_word_char = first_word.as_bytes();
     let second_word_char = second_word.as_bytes();

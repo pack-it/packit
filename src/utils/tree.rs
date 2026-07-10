@@ -117,7 +117,7 @@ impl<V, L: Eq> Tree<V, L> {
 
     /// Checks if a given package id will create a cycle in the tree.
     /// Returns true if a cycle will be formed, false if not.
-    /// Returns `TreeError::NonExistentParent` if the given parent_index doesn't exist.
+    /// Returns `TreeError::NonExistentParent` if the given `parent_index` doesn't exist.
     fn is_cyclic(&self, parent_index: usize, package_id: &PackageId) -> Result<bool> {
         let mut current_parent = parent_index;
         while current_parent != 0 {
@@ -161,7 +161,7 @@ impl<V, L: Eq> Tree<V, L> {
 
 // Generic node implementation.
 impl<V, L: Eq> Node<V, L> {
-    /// Creates a new `Node`. Note that the parent_index is 0 by default. The root will have itself as parent
+    /// Creates a new `Node`. Note that the `parent_index` is 0 by default. The root will have itself as parent
     /// and when adding a node to a `Tree` the parent index will need to be adjusted.
     pub fn new(package_id: PackageId, value: V, label: L) -> Self {
         Self {

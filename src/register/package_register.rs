@@ -138,7 +138,7 @@ impl PackageRegister {
         )
     }
 
-    /// Adds a raw InstalledPackageVersion to the register storage.
+    /// Adds a raw `InstalledPackageVersion` to the register storage.
     /// Please note that this does not save the storage and does not read the currently installed packages from the toml.
     pub fn add_package_raw(
         &mut self,

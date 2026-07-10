@@ -195,7 +195,7 @@ impl<'a> InstallTreeBuilder<'a> {
     }
 
     /// Populates the tree with metadata info. If a package is already installed it is added
-    /// to the tree without a value and with LabelType::Installed.
+    /// to the tree without a value and with `LabelType::Installed`.
     fn populator(&mut self, dependency: &Dependency, label: InstallLabel) -> Result<(PackageId, Option<InstallMeta>, InstallLabel)> {
         // Return early with empty value if the package is already satisfied
         if let Some(package) = self.register.get_latest_satisfying_package(dependency) {

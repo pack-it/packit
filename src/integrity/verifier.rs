@@ -76,7 +76,7 @@ impl Verifier {
             self.issues_found = true;
         }
 
-        return Ok(issue);
+        Ok(issue)
     }
 
     /// Gets the next normal check result.
@@ -137,7 +137,7 @@ impl Verifier {
             self.issues_found = true;
         }
 
-        return Ok(issue);
+        Ok(issue)
     }
 
     /// Get the issues found state.
@@ -147,7 +147,6 @@ impl Verifier {
     }
 
     /// Reverses the initial checks counter by 1. Except if the current is 0.
-    /// Returns the new value of current_intial_check.
     pub fn reverse_initial_check(&mut self) {
         if self.current_initial_check > 0 {
             self.current_initial_check -= 1;
@@ -155,13 +154,10 @@ impl Verifier {
     }
 
     /// Reverses the checks counter by 1. Except if the current is 0.
-    /// Returns the new value of `current_check`.
-    pub fn reverse_check(&mut self) -> usize {
+    pub fn reverse_check(&mut self) {
         if self.current_check > 0 {
             self.current_check -= 1;
         }
-
-        self.current_check
     }
 
     /// Gets the current initial check index.

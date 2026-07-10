@@ -94,7 +94,7 @@ pub enum PackageNotFoundReason {
 
 impl PackageNotFoundReason {
     /// Gets the primary reason from an iterator over reasons
-    /// If the iterator has no items, PackageNotFoundReason::NotFound is returned.
+    /// If the iterator has no items, `PackageNotFoundReason::NotFound` is returned.
     pub fn get_primary_reason<'a>(reasons: impl Iterator<Item = &'a PackageNotFoundReason>) -> PackageNotFoundReason {
         let mut primary = PackageNotFoundReason::NotFound;
 

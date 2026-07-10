@@ -28,7 +28,7 @@ pub enum UnpackError {
 
 type Result<T> = core::result::Result<T, UnpackError>;
 
-/// The different supported ArchiveExtensions.
+/// The different supported archive extensions.
 #[expect(clippy::upper_case_acronyms)]
 pub enum ArchiveExtension {
     GZ,
@@ -38,7 +38,7 @@ pub enum ArchiveExtension {
 }
 
 impl ArchiveExtension {
-    /// Creates an ArchiveExtension from a path.
+    /// Creates an `ArchiveExtension` from a path.
     pub fn from_path(path: &str) -> Self {
         let extension_index = match path.chars().rev().position(|x| x == '.') {
             Some(index) => index,

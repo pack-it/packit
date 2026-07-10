@@ -68,7 +68,7 @@ impl FromStr for VersionNumber {
             return Err(VersionError::NoneError);
         }
 
-        if !string.chars().all(|c| c.is_digit(10)) {
+        if !string.chars().all(|c| c.is_ascii_digit()) {
             return Err(VersionError::IllegalCharacterError);
         }
 

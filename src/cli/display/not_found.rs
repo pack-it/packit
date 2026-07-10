@@ -95,7 +95,7 @@ pub fn repository_package_version(package_id: &PackageId, manager: &RepositoryMa
 }
 
 /// Shows an error that the package (with optional version) cannot be found and a fuzzy alternative when the given reason is `PackageNotFoundReason::NotFound`. Then exits at the end.
-/// When the package_id contains a version, a version suggestion is shown when the package name is found.
+/// When the `package_id` contains a version, a version suggestion is shown when the package name is found.
 pub fn repository_optional_package(package_id: &OptionalPackageId, manager: &RepositoryManager, reason: PackageNotFoundReason) -> ! {
     match package_id.versioned() {
         Some(package_id) => repository_package_version(&package_id, manager, reason),

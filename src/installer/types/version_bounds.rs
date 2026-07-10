@@ -26,11 +26,9 @@ impl FromStr for VersionBounds {
         // Check if the statement is a two sided range
         if let Some(index) = string.chars().position(|c| c == '-') {
             if let Some((lower, upper)) = string.split_at_checked(index) {
-                if upper.starts_with("-=") {
-                    return Ok(VersionBounds::IncludingRange(
-                        Version::from_str(lower)?,
-                        Version::from_str(&upper[2..])?,
-                    ));
+                // If the prefix is `-=`, strip it and return an `IncludingRange`
+                if let Some(upper) = upper.strip_prefix("-=") {
+                    return Ok(VersionBounds::IncludingRange(Version::from_str(lower)?, Version::from_str(upper)?));
                 }
 
                 // Remove '-' from upper before passing it to Version

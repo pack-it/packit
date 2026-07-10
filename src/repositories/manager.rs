@@ -31,7 +31,7 @@ pub struct RepositoryManager<'a> {
 }
 
 impl<'a> RepositoryManager<'a> {
-    /// Creates a new RepositoryManager.
+    /// Creates a new `RepositoryManager`.
     pub fn new(config: &'a Config) -> Self {
         let mut unsupported_repositories = HashMap::new();
         let mut metadata_providers = HashMap::new();
@@ -222,7 +222,7 @@ impl<'a> RepositoryManager<'a> {
 
     /// Reads package version metadata of the given package, containing dependencies and targets.
     /// Returns the id of the repository and the package version metadata.
-    /// Note that this does not check for compatibility of the corresponding PackageMeta.
+    /// Note that this does not check for compatibility of the corresponding `PackageMeta`.
     fn read_package_version(&self, package_id: &PackageId, target: &Target) -> Result<(String, PackageVersionMeta)> {
         let mut not_found_reasons = HashMap::new();
 
@@ -266,7 +266,7 @@ impl<'a> RepositoryManager<'a> {
     }
 
     /// Reads package version metadata of the given package from the given repository, containing dependencies and targets.
-    /// Also checks for package version compatibility. Note that this does not check for compatibility of the corresponding PackageMeta.
+    /// Also checks for package version compatibility. Note that this does not check for compatibility of the corresponding `PackageMeta`.
     /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     pub fn read_repo_package_version(&self, repository_id: &str, package_id: &PackageId) -> Result<PackageVersionMeta> {
         let provider = self.get_metadata_provider(repository_id)?;

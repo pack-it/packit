@@ -2,7 +2,7 @@
 use crate::platforms::{OsVersion, TargetArchitecture};
 
 /// Represents a target, which is its architecture and OS version combined.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Target {
     pub architecture: TargetArchitecture,
     pub os: OsVersion,

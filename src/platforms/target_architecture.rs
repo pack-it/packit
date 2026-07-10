@@ -71,7 +71,7 @@ impl TargetArchitecture {
         Self::Unknown(None)
     }
 
-    /// Gets the OS based on the TargetArchitecture.
+    /// Gets the OS based on the `TargetArchitecture`.
     pub fn get_os(&self) -> Os {
         match self {
             Self::MacOsX86_64 | Self::MacOsAarch64 => Os::MacOs,
@@ -86,7 +86,7 @@ impl TargetArchitecture {
         matches!(self, Self::Unknown(_))
     }
 
-    /// Creates a TargetArchitecture from a string. Returns an the TargetArchitecture, or an Unknown type
+    /// Creates a `TargetArchitecture` from a string. Returns the `TargetArchitecture`, or an Unknown type
     /// containing the string value if the given target is not supported.
     pub fn from_str(string: &str) -> Self {
         match string {

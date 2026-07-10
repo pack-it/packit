@@ -13,6 +13,7 @@ version = "0.0.2"
 license = "GPL-3.0-only"
 authors = ["The Packit Team"]
 repository = "https://github.com/pack-it/packit"
+keywords = ["package-manager", "packages"]
 categories = ["command-line-utilities", "development-tools"]
 edition.workspace = true
 rust-version.workspace = true
