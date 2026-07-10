@@ -22,22 +22,20 @@ pub struct ChecksumArgs {
 
 impl HandleCommand for ChecksumArgs {
     fn handle(&self) {
-        println!("Trying to request file from {}", self.url);
+        println!("Trying to request file from '{}'", self.url);
 
-        let spinner = Spinner::new();
-        spinner.show("Downloading file".into());
+        let spinner = Spinner::new("Downloading file".into());
+        spinner.show();
 
         let response = match requests::get(self.url.as_str()) {
             Ok(response) => response,
             Err(e) => {
-                spinner.finish("Downloading file unsuccessful".into());
                 error!(e, "Unable to request file");
                 exit(1);
             },
         };
 
         if !response.status().is_success() {
-            spinner.finish("Downloading file unsuccessful".into());
             error!(msg: "File request returned status code {}", response.status().as_u16());
             exit(1);
         }
@@ -45,7 +43,6 @@ impl HandleCommand for ChecksumArgs {
         let bytes = match response.bytes() {
             Ok(bytes) => bytes,
             Err(e) => {
-                spinner.finish("Downloading file unsuccessful".into());
                 error!(e, "Unable to get file bytes");
                 exit(1);
             },
@@ -53,8 +50,8 @@ impl HandleCommand for ChecksumArgs {
 
         let checksum = Checksum::from_bytes(&bytes);
 
-        spinner.finish("Downloading file successful".into());
-        println!("Found checksum {}", checksum);
-        println!("Size of file: {}", bytes.len());
+        spinner.finish();
+        println!("Checksum: {}", checksum);
+        println!("File size: {}", bytes.len());
     }
 }

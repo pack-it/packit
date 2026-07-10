@@ -2,7 +2,7 @@
 use std::{collections::HashSet, fs, str::FromStr};
 
 use crate::{
-    cli::display::logging::warning,
+    cli::display::{logging::warning, styled::Styled},
     config::Config,
     installer::{
         Installer, InstallerOptions, Symlinker,
@@ -242,7 +242,7 @@ pub fn fix_invalid_dependencies(invalid: Vec<(PackageId, PackageId)>, register: 
 pub fn fix_missing_dependents(missing: Vec<(PackageId, PackageId)>, register: &mut PackageRegister) {
     for (child, parent) in missing {
         let Some(package_version) = register.get_package_version_mut(&child) else {
-            warning!("Could not fix missing dependents for {child}");
+            warning!("Could not fix missing dependents for {}", child.style());
             continue;
         };
 
@@ -254,7 +254,7 @@ pub fn fix_missing_dependents(missing: Vec<(PackageId, PackageId)>, register: &m
 pub fn fix_invalid_dependents(invalid: Vec<(PackageId, PackageId)>, register: &mut PackageRegister) {
     for (child, parent) in invalid {
         let Some(package_version) = register.get_package_version_mut(&child) else {
-            warning!("Could not fix invalid dependents for {child}");
+            warning!("Could not fix invalid dependents for {}", child.style());
             continue;
         };
 
@@ -267,7 +267,7 @@ pub fn fix_invalid_active(invalid: Vec<PackageName>, register: &mut PackageRegis
     let symlinker = Symlinker::new(config);
     for package_name in invalid {
         let Some(package) = register.get_package_mut(&package_name) else {
-            warning!("Could not fix invalid active for {package_name}");
+            warning!("Could not fix invalid active for {}", package_name.style());
             continue;
         };
 
@@ -303,13 +303,13 @@ pub fn fix_missing_links(missing: Vec<PackageName>, register: &mut PackageRegist
     // Re-link all packages which have missing symlinks
     for package_name in &missing {
         let Some(package) = register.get_package(package_name) else {
-            warning!("Could not find package {package_name} for fix, skipping");
+            warning!("Could not find package {} for fix, skipping", package_name.style());
             continue;
         };
 
         let package_id = PackageId::new(package_name.clone(), package.active_version.clone());
         let Some(package_version) = register.get_package_version(&package_id) else {
-            warning!("Could not find package {package_id} for fix, skipping");
+            warning!("Could not find package {} for fix, skipping", package_id.style());
             continue;
         };
 

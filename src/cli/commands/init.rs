@@ -44,13 +44,13 @@ impl HandleCommand for InitArgs {
         // Check if config directory exists
         let config_dir = Path::new(DEFAULT_CONFIG_DIR);
         if !config_dir.exists() {
-            error!(msg: "Packit cannot be initialized: the config directory at {DEFAULT_CONFIG_DIR} does not exist yet, please create it first");
+            error!(msg: "Packit cannot be initialized: the config directory at '{DEFAULT_CONFIG_DIR}' does not exist yet, please create it first");
             exit(1);
         }
 
         // Check if config directory is writable
         if !permissions::is_writable(&config_dir.to_path_buf()).unwrap_or_exit_msg("Unable to check if config directory is writable", 1) {
-            error!(msg: "Packit cannot be initialized: the config directory at {DEFAULT_CONFIG_DIR} is not writable, please set the correct permissions");
+            error!(msg: "Packit cannot be initialized: the config directory at '{DEFAULT_CONFIG_DIR}' is not writable, please set the correct permissions");
             exit(1);
         }
 
@@ -67,13 +67,13 @@ impl HandleCommand for InitArgs {
 
         // Check if prefix directory exists
         if !prefix_directory.exists() {
-            error!(msg: "Packit cannot be initialized: the prefix directory at {} does not exist yet, please create it first", prefix_directory.display());
+            error!(msg: "Packit cannot be initialized: the prefix directory at '{}' does not exist yet, please create it first", prefix_directory.display());
             exit(1);
         }
 
         // Check if prefix directory is writable
         if !permissions::is_writable(&prefix_directory).unwrap_or_exit_msg("Unable to check if prefix directory is writable", 1) {
-            error!(msg: "Packit cannot be initialized: the prefix directory at {} is not writable, please set the correct permissions", prefix_directory.display());
+            error!(msg: "Packit cannot be initialized: the prefix directory at '{}' is not writable, please set the correct permissions", prefix_directory.display());
             exit(1);
         }
 
@@ -87,7 +87,7 @@ impl HandleCommand for InitArgs {
         let packit_package_path = prefix_directory.join("packages").join("packit").join(packit_version!());
         let packit_binary = packit_package_path.join("bin").join(PACKIT_BINARY_NAME);
         if !packit_binary.exists() {
-            error!(msg: "Packit cannot be initialized: expected packit binary at {}", packit_binary.display());
+            error!(msg: "Packit cannot be initialized: expected packit binary at '{}'", packit_binary.display());
             exit(1);
         }
 

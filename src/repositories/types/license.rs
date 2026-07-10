@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::fmt::Display;
-
 use serde::{Deserialize, Serialize};
+use std::fmt::Display;
 
 /// Wrapper to differentiate between different License types in metadata files.
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]

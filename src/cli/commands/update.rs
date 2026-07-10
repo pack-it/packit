@@ -1,12 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::process::exit;
-
 use clap::Args;
+use colored::Colorize;
+use std::process::exit;
 
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{QuestionResponse, ask_user, grid, logging::error, not_found},
+        display::{
+            QuestionResponse, ask_user, grid,
+            logging::error,
+            not_found,
+            standard_print::{self},
+            styled::{MapStyled, Styled},
+        },
         parameter_checks,
     },
     config::Config,
@@ -71,13 +77,8 @@ impl HandleCommand for UpdateArgs {
         // Check for duplicates, because updating twice will result in an error
         let duplicates = parameter_checks::get_duplicates(optional_ids);
         if !duplicates.is_empty() {
-            let mut duplicate_string = String::new();
-            for duplicate in duplicates {
-                duplicate_string.push_str(&duplicate.to_string());
-                duplicate_string.push(' ');
-            }
-
-            error!(msg: "Duplicate package arguments are not allowed. The following duplicates were found: {duplicate_string}");
+            error!(msg: "Duplicate package arguments are not allowed. The following duplicates were found:");
+            standard_print::print_list(duplicates.iter());
             exit(1);
         }
 
@@ -99,7 +100,7 @@ impl HandleCommand for UpdateArgs {
 
             // Check if the new version exists
             if !package_meta.versions.contains(new_version) {
-                error!(msg: "New package version '{new_version}' does not exist.");
+                error!(msg: "New package version {} does not exist.", new_version.style());
                 not_found::repository_version(&optional_id.name, &manager);
                 exit(1);
             }
@@ -111,19 +112,20 @@ impl HandleCommand for UpdateArgs {
             let new_package_id = match installer.update(&optional_id, new_version) {
                 Ok(new_package_id) => new_package_id,
                 Err(error) => {
-                    error!(error, "Cannot update package {optional_id}");
+                    error!(error, "Cannot update package {}", optional_id.style());
                     continue;
                 },
             };
 
             match new_package_id {
                 Some(new_package_id) => {
-                    println!("Successfully updated {} to {new_package_id}", optional_id);
+                    let styled_message = format!("Successfully updated {} to {}", optional_id.style(), new_package_id.style());
+                    println!("{}", styled_message.bold().green());
 
                     // Save changes
                     register.save_to(&register_dir).unwrap_or_exit(1);
                 },
-                None => println!("{} is up-to-date!", optional_id.name),
+                None => println!("{} is up-to-date!", optional_id.name.style()),
             }
         }
     }
@@ -149,7 +151,7 @@ impl UpdateArgs {
         }
 
         println!("The following packages will be updated:");
-        grid::print_grid(&filtered_updatables);
+        grid::print_grid(&filtered_updatables.iter().map_styled().collect());
 
         // Check if the user wants to proceed with the update of the found packages
         let question = "Do you wish to proceed?";

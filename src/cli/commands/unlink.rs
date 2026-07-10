@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use clap::Args;
+use colored::Colorize;
 
 use crate::{
-    cli::{commands::HandleCommand, display::not_found},
+    cli::{
+        commands::HandleCommand,
+        display::{not_found, styled::Styled},
+    },
     config::Config,
     installer::{Symlinker, types::PackageName},
     register::package_register::PackageRegister,
@@ -39,7 +43,8 @@ impl HandleCommand for UnlinkArgs {
             .unlink_package(&mut register, &self.package_name)
             .unwrap_or_exit_msg("Unable to unlink package", 1);
 
-        println!("Successfully unlinked {}", self.package_name);
+        let styled_message = format!("Successfully unlinked {}", self.package_name.style()).bold().green();
+        println!("{styled_message}");
 
         // Save package register
         register.save_to(&register_path).unwrap_or_exit(1);

@@ -1,10 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use clap::Args;
+use colored::Colorize;
 
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{logging::warning, not_found},
+        display::{
+            logging::warning,
+            not_found,
+            standard_print::{self},
+            styled::{MapStyled, Styled},
+        },
     },
     config::{Config, Repository},
     installer::{Symlinker, types::PackageName},
@@ -62,10 +68,8 @@ impl HandleCommand for LinkArgs {
             let conflicts = register.get_conflicting_packages(&self.package_name, &package.conflicts_with);
             if !conflicts.is_empty() {
                 println!("The package has conflicts with other packages, cancelling linking.");
-                println!(
-                    "Conflicting packages: {}",
-                    conflicts.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(", ")
-                );
+                println!("Conflicting packages:");
+                standard_print::print_list(conflicts.iter().map_styled());
                 return;
             }
 
@@ -122,6 +126,7 @@ impl HandleCommand for LinkArgs {
         // Save package register
         register.save_to(&register_path).unwrap_or_exit(1);
 
-        println!("Successfully linked {}", self.package_name);
+        let styled_message = format!("Successfully linked {}", self.package_name.style()).bold().green();
+        println!("{styled_message}");
     }
 }

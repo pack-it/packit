@@ -2,7 +2,7 @@
 use std::{collections::HashSet, fs};
 
 use crate::{
-    cli::display::not_found,
+    cli::display::{not_found, styled::Styled},
     config::Config,
     installer::types::{OptionalPackageId, PackageId},
     register::package_register::PackageRegister,
@@ -17,7 +17,7 @@ pub fn get_duplicates(packages: &Vec<OptionalPackageId>) -> HashSet<String> {
     for package in packages {
         if let Some(package_version) = package.versioned() {
             if !seen.insert(package_version) {
-                duplicates.insert(package.to_string());
+                duplicates.insert(package.style().to_string());
             }
 
             continue;
@@ -26,7 +26,7 @@ pub fn get_duplicates(packages: &Vec<OptionalPackageId>) -> HashSet<String> {
         // Check if any of the packages have the same name.
         // Also make sure not to match on the same package item in the vec by checking the pointer.
         if packages.iter().any(|p| !std::ptr::eq(p, package) && p.name == package.name) {
-            duplicates.insert(package.name.to_string());
+            duplicates.insert(package.name.style().to_string());
         }
     }
 

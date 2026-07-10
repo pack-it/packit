@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::sync::LazyLock;
 
-use crate::{cli::display::logging::debug, installer::types::Version};
+use crate::{
+    cli::display::{logging::debug, styled::Styled},
+    installer::types::Version,
+};
 
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 use std::str::FromStr;
@@ -114,7 +117,7 @@ impl OsVersion {
             },
         };
 
-        debug!("Retrieved current macOS version {version}");
+        debug!("Retrieved current macOS version {}", version.style());
 
         Some(Self::MacOs { version })
     }
@@ -146,7 +149,7 @@ impl OsVersion {
             },
         };
 
-        debug!("Retrieved current kernel version {kernel_version}");
+        debug!("Retrieved current kernel version {}", kernel_version.style());
 
         let distro_info = match fs::read_to_string("/etc/os-release") {
             Ok(info) => info,
@@ -206,7 +209,7 @@ impl OsVersion {
             },
         };
 
-        debug!("Retrieved current distro {distro} with version {distro_version}");
+        debug!("Retrieved current distro {distro} with version {}", distro_version.style());
 
         Some(Self::Linux {
             distro: distro.into(),
@@ -223,7 +226,8 @@ impl OsVersion {
         let version = Version::from(&[windows_version.major, windows_version.minor, windows_version.pack]);
 
         debug!(
-            "Retrieved current windows version version {version} with build version {}",
+            "Retrieved current windows version version {} with build version {}",
+            version.style(),
             windows_version.build
         );
 

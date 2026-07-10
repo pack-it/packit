@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-only
+use colored::Colorize;
 use thiserror::Error;
 
 use crate::{
     builder::error::BuilderError,
-    cli::display::error::DisplayError,
+    cli::display::{error::DisplayError, styled::Styled},
     installer::{
         scripts::ScriptError,
-        types::{PackageId, PackageIdError, Version},
+        types::{PackageId, PackageIdError, PackageName, Version},
         unpack::UnpackError,
     },
     platforms::{permissions::error::PermissionError, symlink::SymlinkError},
@@ -24,13 +25,13 @@ pub enum InstallerError {
     #[error("Prebuild checksum does not match")]
     ChecksumError,
 
-    #[error("Package '{package_name}' with version '{}' is not installed.", version.as_deref().unwrap_or("any"))]
+    #[error("Package {} with version '{}' is not installed.", package_name.style(), version.as_ref().map_or("any".normal(), |v| v.style()))]
     PackageNotFound {
-        package_name: String,
-        version: Option<String>,
+        package_name: PackageName,
+        version: Option<Version>,
     },
 
-    #[error("Package '{package_id}' is already installed.")]
+    #[error("Package {} is already installed.", package_id.style())]
     AlreadyInstalledError {
         package_id: PackageId,
     },
@@ -38,19 +39,19 @@ pub enum InstallerError {
     #[error("Multiple versions are installed, so only package name input is not specific enough. Please provide a version as well.")]
     SpecificityError,
 
-    #[error("The new version '{new_version}' of this package cannot satisfy all dependents from the old package version.")]
+    #[error("The new version {} of this package cannot satisfy all dependents from the old package version.", new_version.style())]
     SatisfyError {
         new_version: Version,
     },
 
-    #[error("Could not update, the given version '{new_version}' is lower then the current version.")]
+    #[error("Could not update, the given version {} is lower then the current version.", new_version.style())]
     VersionTooLowError {
         new_version: Version,
     },
 
-    #[error("Cannot delete package, '{package_name}' is a dependency.")]
+    #[error("Cannot delete package, {} is a dependency.", package_name.style())]
     DependencyError {
-        package_name: String,
+        package_name: PackageName,
     },
 
     #[error("Canceled package installation: {reason}.")]

@@ -1,9 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-only
+use std::{
+    collections::{HashMap, HashSet},
+    fs,
+    path::{Path, PathBuf},
+};
+
 use crate::{
     builder::Builder,
     cli::display::{
         QuestionResponse, Spinner, ask_user,
         logging::{debug, warning},
+        standard_print::{self},
+        styled::{MapStyled, Styled},
     },
     config::{Config, Repository},
     installer::{
@@ -24,12 +32,6 @@ use crate::{
         types::{Checksum, PackageTarget},
     },
     utils::{io, ioerror::IOResultExt},
-};
-
-use std::{
-    collections::HashSet,
-    fs,
-    path::{Path, PathBuf},
 };
 
 /// The installer of Packit, managing the installation of packages on the system.
@@ -83,7 +85,9 @@ impl<'a> Installer<'a> {
         // If the version isn't specified check if a package with this package name is already installed (otherwise a user can get two different version installed without knowing)
         if optional_id.version.is_none() && self.register.get_package(&optional_id.name).is_some() {
             let question = format!(
-                "The package '{optional_id}' is already installed, but a newer version '{version}' is available. Do you wish to install the latest version as well?"
+                "The package {} is already installed, but a newer version {} is available. Do you wish to install the latest version as well?",
+                optional_id.style(),
+                version.style()
             );
             if ask_user(&question, QuestionResponse::No)?.is_no_or_invalid() {
                 return Err(InstallerError::InstallationCanceled {
@@ -116,15 +120,17 @@ impl<'a> Installer<'a> {
         let install_label = InstallLabel::new(self.options.install_type.clone(), false);
 
         // Create the install tree based on the install type
-        println!("Building dependency tree for {package_id}");
+        println!("Building dependency tree for {}", package_id.style());
         let mut tree_builder = InstallTreeBuilder::new(self.register, self.repository_manager);
         let dependency_tree = tree_builder.create_tree(package_id.clone(), root_meta, install_label)?;
+        println!();
 
         self.install_nodes(&dependency_tree)?;
 
         if !self.options.keep_build {
-            println!("Removing build dependencies (if there are any");
-            self.remove_build_dependencies(0, &dependency_tree)?;
+            let removed = self.remove_build_dependencies(0, &dependency_tree)?;
+            print!("Removed build dependencies: ");
+            standard_print::print_list_or_none(removed.iter().map_styled());
         }
 
         Ok(package_id)
@@ -184,28 +190,10 @@ impl<'a> Installer<'a> {
         let version_meta = &install_meta.version_metadata;
         let script_args = version_meta.get_script_args(&install_meta.target_bounds)?;
 
-        // Download and run pre install script if it exists
-        let script_path = version_meta.get_preinstall_script_path(&install_meta.target_bounds)?;
-        let downloaded_script =
-            scripts::download_script(self.repository_manager, &script_path, &package_id.name, &install_meta.repository_id)?;
-        if let Some(script_file) = downloaded_script {
-            println!("Executing preinstall script of {package_id}");
-            let script_data = ScriptData::new(
-                &script_file,
-                &install_directory,
-                &package_id,
-                self.config,
-                &script_args,
-                self.options.verbose,
-            );
-            scripts::run_pre_script(&script_data, &install_directory)?;
-        }
+        self.execute_preinstall(&package_id, install_meta, &install_directory, &script_args)?;
 
         // Get source repository for installed storage before actually installing package
         let source_repository = self.config.repositories.get(&install_meta.repository_id).expect("Expected repository in config");
-
-        // Get the target information from the package version info
-        let target = version_meta.get_target(&install_meta.target_bounds)?;
 
         self.create_dependency_symlinks(&package_id, &dependencies)?;
 
@@ -235,120 +223,54 @@ impl<'a> Installer<'a> {
         )?;
         self.register.save_to(&PackageRegister::get_path(&self.config.prefix_directory))?;
 
-        // Download and run post install script if it exists
-        let script_path = version_meta.get_postinstall_script_path(&install_meta.target_bounds)?;
-        let downloaded_script =
-            scripts::download_script(self.repository_manager, &script_path, &package_id.name, &install_meta.repository_id)?;
-        if let Some(script_file) = downloaded_script {
-            println!("Executing postinstall script of {package_id}");
-            let script_data = ScriptData::new(
-                &script_file,
-                &install_directory,
-                &package_id,
-                self.config,
-                &script_args,
-                self.options.verbose,
-            );
-            scripts::run_post_script(&script_data)?;
-        }
+        self.execute_postinstall(&package_id, install_meta, &install_directory, &script_args)?;
+
+        // Get the target information from the package version info
+        let target = version_meta.get_target(&install_meta.target_bounds)?;
 
         self.determine_active(install_meta, &package_id, target)?;
 
-        // Download and run test script if it exists
-        let script_path = version_meta.get_test_script_path(&install_meta.target_bounds)?;
-        let downloaded_script =
-            scripts::download_script(self.repository_manager, &script_path, &package_id.name, &install_meta.repository_id)?;
-        if let Some(script_file) = downloaded_script {
-            println!("Executing test script of {package_id}");
-            let script_data = ScriptData::new(
-                &script_file,
-                &install_directory,
-                &package_id,
-                self.config,
-                &script_args,
-                self.options.verbose,
-            );
-
-            let external_files = version_meta.external_test_files.iter().chain(&target.external_test_files);
-            let mut read_files = Vec::new();
-            let mut skip_test = false;
-            for file in external_files {
-                let file_content =
-                    self.repository_manager.read_file_bytes(&install_meta.repository_id, &install_meta.package_metadata.name, file)?;
-
-                match file_content {
-                    Some(content) => read_files.push((file, content)),
-                    None => {
-                        warning!("Skipping test, because the required files could not be downloaded.");
-                        skip_test = true;
-                        break;
-                    },
-                }
-            }
-
-            if !skip_test {
-                scripts::run_test_script(&script_data, &read_files)?;
-            }
-        }
+        self.execute_test(&package_id, install_meta, &install_directory, &script_args, target)?;
 
         Ok(())
     }
 
-    /// Determines if a package should be active. If it should be, symlinks are created and the appropriate fields in the register are adjusted.
-    fn determine_active(&mut self, install_meta: &InstallMeta, package_id: &PackageId, target: &PackageTarget) -> Result<()> {
-        // Check if symlinking should be skipped
-        let mut should_symlink = !self.options.skip_symlinking
-            && !match target.skip_symlinking {
-                Some(skip_symlinking) => skip_symlinking,
-                None => install_meta.version_metadata.skip_symlinking,
-            };
+    /// Executes the preinstall script of the given package if it exists.
+    fn execute_preinstall(
+        &self,
+        package_id: &PackageId,
+        install_meta: &InstallMeta,
+        install_directory: &PathBuf,
+        script_args: &HashMap<&str, &str>,
+    ) -> Result<()> {
+        // Download and run preinstall script if it exists
+        let script_path = install_meta.version_metadata.get_preinstall_script_path(&install_meta.target_bounds)?;
+        let downloaded_script =
+            scripts::download_script(self.repository_manager, &script_path, &package_id.name, &install_meta.repository_id)?;
 
-        // Check if the package has conflicting packages
-        let conflicts = self.register.get_conflicting_packages(&package_id.name, &install_meta.package_metadata.conflicts_with);
-        if !conflicts.is_empty() {
-            warning!(
-                "Skipping symlinking because of conflicting packages: {}",
-                conflicts.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(", ")
-            );
-            should_symlink = false;
+        let Some(script_file) = downloaded_script else { return Ok(()) };
+        let script_data = ScriptData::new(
+            &script_file,
+            &install_directory,
+            &package_id,
+            self.config,
+            &script_args,
+            self.options.verbose,
+        );
+
+        // Only show a spinner when not verbose
+        if self.options.verbose {
+            println!("Executing preinstall script of {}", package_id.style());
+            scripts::run_pre_script(&script_data, &install_directory)?;
+            return Ok(());
         }
 
-        let mut should_set_active = !self.options.skip_active;
-
-        // Check if we have a previous active install
-        if let Some(installed_package) = self.register.get_package(&package_id.name) {
-            if installed_package.versions.len() > 1 {
-                // Prompt user if the installed version is newer than the version currently installing
-                if installed_package.active_version > install_meta.version_metadata.version {
-                    let question = format!(
-                        "A newer version ({}) of this package is currently active, do you want to change the active version to the older version ({})?",
-                        installed_package.active_version, install_meta.version_metadata.version
-                    );
-                    should_set_active = ask_user(&question, QuestionResponse::No)?.is_yes();
-                }
-
-                // Prompt user if the installed version is not symlinked and we're not skipping symlinking
-                if should_set_active && !installed_package.symlinked && should_symlink {
-                    let question = format!(
-                        "The current active version of '{}' ({}) is not symlinked, do you want to proceed with symlinking the newly installed version",
-                        package_id.name, installed_package.active_version
-                    );
-                    should_symlink = ask_user(&question, QuestionResponse::No)?.is_yes();
-                }
-
-                // Show warning if the not symlinking but package was previously symlinked
-                if should_set_active && installed_package.symlinked && !should_symlink {
-                    warning!(
-                        "The new active package version will not be symlinked, while the previously active version was symlinked. The package will not be automatically findable by your system anymore."
-                    );
-                }
-            }
-        }
-
-        // If package is installed succesfully, set it to active
-        if should_set_active {
-            Symlinker::new(self.config).set_active(self.register, package_id, should_symlink)?;
-        }
+        // Run script with spinner shown
+        let spinner_message = format!("Executing preinstall of {}", package_id.style());
+        let spinner = Spinner::new(spinner_message);
+        spinner.show();
+        scripts::run_pre_script(&script_data, &install_directory)?;
+        spinner.finish();
 
         Ok(())
     }
@@ -374,55 +296,26 @@ impl<'a> Installer<'a> {
         Ok(())
     }
 
-    /// Removes the build dependencies recursively. There are early returns to make sure that the
-    /// package is not removed if it was already installed, is not installed anymore or is a dependency.
-    fn remove_build_dependencies(&mut self, node_index: usize, tree: &InstallTree) -> Result<()> {
-        let node = tree.get_node_by_index(node_index).expect("Expected node to exist");
-
-        // Return early if the node value is None (meaning that the package was already installed)
-        if node.get_value().is_none() {
-            return Ok(());
-        }
-
-        // Return early if the package doesn't exist (removed in earlier iteration) or if it's a dependency
-        let optional_id = &OptionalPackageId::from(node.get_package_id().clone());
-        if self.register.get_package_version(node.get_package_id()).is_none() || self.register.is_dependency(optional_id) {
-            return Ok(());
-        }
-
-        // Don't remove the package if it's the root
-        if node_index != 0 {
-            println!("Remove build dependency {}", node.get_package_id());
-            self.uninstall(optional_id)?;
-        }
-
-        for child in node.get_children() {
-            self.remove_build_dependencies(*child, tree)?;
-        }
-
-        Ok(())
-    }
-
     /// Downloads a package pre-build and unpacks it into the given destination directory.
     /// Returns an `InstallerError::ChecksumError` if the pre-build checksum doesn't match.
     fn download_prebuild(&self, repository_id: &str, package: &PackageId, revision: u64, destination_dir: impl AsRef<Path>) -> Result<()> {
         // Show download spinner
-        let spinner = Spinner::new();
-        let spinner_message = format!("Downloading {} prebuild from '{}'", &package.name, repository_id);
-        spinner.show(spinner_message.clone());
+        let spinner_message = format!("Downloading {} prebuild from '{}'", &package.name.style(), repository_id);
+        let spinner = Spinner::new(spinner_message);
+        spinner.show();
 
         let (extension, bytes) = self.repository_manager.read_prebuild(repository_id, package, revision, &Target::current())?;
         let checksum = self.repository_manager.get_prebuild_checksum(repository_id, package, revision, &Target::current())?;
 
         // Finish download spinner
-        spinner.finish(format!("{spinner_message} successful"));
+        spinner.finish();
 
         // Calculate the checksum
         let calculated_checksum = Checksum::from_bytes(&bytes);
 
         // Check equality of checksum
         match checksum {
-            Some(checksum) if checksum == calculated_checksum => debug!("{package} prebuild checksum matches"),
+            Some(checksum) if checksum == calculated_checksum => debug!("{} prebuild checksum matches", package.style()),
             _ => return Err(InstallerError::ChecksumError),
         }
 
@@ -430,6 +323,200 @@ impl<'a> Installer<'a> {
         unpack(&package.name, extension, bytes, &destination_dir, false)?;
 
         Ok(())
+    }
+
+    /// Executes the postinstall script of the given package if it exists.
+    fn execute_postinstall(
+        &self,
+        package_id: &PackageId,
+        install_meta: &InstallMeta,
+        install_directory: &PathBuf,
+        script_args: &HashMap<&str, &str>,
+    ) -> Result<()> {
+        // Download and run post install script if it exists
+        let script_path = install_meta.version_metadata.get_postinstall_script_path(&install_meta.target_bounds)?;
+        let downloaded_script =
+            scripts::download_script(self.repository_manager, &script_path, &package_id.name, &install_meta.repository_id)?;
+
+        let Some(script_file) = downloaded_script else { return Ok(()) };
+        let script_data = ScriptData::new(
+            &script_file,
+            &install_directory,
+            &package_id,
+            self.config,
+            &script_args,
+            self.options.verbose,
+        );
+
+        // Only show a spinner when not verbose
+        if self.options.verbose {
+            println!("Executing postinstall script of {}", package_id.style());
+            scripts::run_post_script(&script_data)?;
+            return Ok(());
+        }
+
+        // Run script with spinner shown
+        let spinner_message = format!("Executing postinstall of {}", package_id.style());
+        let spinner = Spinner::new(spinner_message);
+        spinner.show();
+        scripts::run_post_script(&script_data)?;
+        spinner.finish();
+
+        Ok(())
+    }
+
+    /// Determines if a package should be active. If it should be, symlinks are created and the appropriate fields in the register are adjusted.
+    fn determine_active(&mut self, install_meta: &InstallMeta, package_id: &PackageId, target: &PackageTarget) -> Result<()> {
+        // Check if symlinking should be skipped
+        let mut should_symlink = !self.options.skip_symlinking
+            && !match target.skip_symlinking {
+                Some(skip_symlinking) => skip_symlinking,
+                None => install_meta.version_metadata.skip_symlinking,
+            };
+
+        // Check if the package has conflicting packages
+        let conflicts = self.register.get_conflicting_packages(&package_id.name, &install_meta.package_metadata.conflicts_with);
+        if !conflicts.is_empty() {
+            warning!("Skipping symlinking because of conflicting packages:");
+            standard_print::print_list(conflicts.iter().map_styled());
+            should_symlink = false;
+        }
+
+        let mut should_set_active = !self.options.skip_active;
+
+        // Check if we have a previous active install
+        if let Some(installed_package) = self.register.get_package(&package_id.name) {
+            if installed_package.versions.len() > 1 {
+                // Prompt user if the installed version is newer than the version currently installing
+                if installed_package.active_version > install_meta.version_metadata.version {
+                    let question = format!(
+                        "A newer version ({}) of this package is currently active, do you want to change the active version to the older version ({})?",
+                        installed_package.active_version.style(),
+                        install_meta.version_metadata.version.style()
+                    );
+                    should_set_active = ask_user(&question, QuestionResponse::No)?.is_yes();
+                }
+
+                // Prompt user if the installed version is not symlinked and we're not skipping symlinking
+                if should_set_active && !installed_package.symlinked && should_symlink {
+                    let question = format!(
+                        "The current active version of {} ({}) is not symlinked, do you want to proceed with symlinking the newly installed version",
+                        package_id.name.style(),
+                        installed_package.active_version.style()
+                    );
+                    should_symlink = ask_user(&question, QuestionResponse::No)?.is_yes();
+                }
+
+                // Show warning if the not symlinking but package was previously symlinked
+                if should_set_active && installed_package.symlinked && !should_symlink {
+                    warning!(
+                        "The new active package version will not be symlinked, while the previously active version was symlinked. The package will not be automatically findable by your system anymore."
+                    );
+                }
+            }
+        }
+
+        // If package is installed succesfully, set it to active
+        if should_set_active {
+            Symlinker::new(self.config).set_active(self.register, package_id, should_symlink)?;
+        }
+
+        Ok(())
+    }
+
+    /// Executes the test for the given package if it exists.
+    fn execute_test(
+        &self,
+        package_id: &PackageId,
+        install_meta: &InstallMeta,
+        install_directory: &PathBuf,
+        script_args: &HashMap<&str, &str>,
+        target: &PackageTarget,
+    ) -> Result<()> {
+        // Download and run test script if it exists
+        let script_path = install_meta.version_metadata.get_test_script_path(&install_meta.target_bounds)?;
+        let downloaded_script =
+            scripts::download_script(self.repository_manager, &script_path, &package_id.name, &install_meta.repository_id)?;
+
+        let Some(script_file) = downloaded_script else { return Ok(()) };
+        let script_data = ScriptData::new(
+            &script_file,
+            &install_directory,
+            &package_id,
+            self.config,
+            &script_args,
+            self.options.verbose,
+        );
+
+        // Download external files necessary for testing
+        let external_files = install_meta.version_metadata.external_test_files.iter().chain(&target.external_test_files);
+        let mut read_files = Vec::new();
+        let mut skip_test = false;
+        for file in external_files {
+            let file_content =
+                self.repository_manager.read_file_bytes(&install_meta.repository_id, &install_meta.package_metadata.name, file)?;
+
+            match file_content {
+                Some(content) => read_files.push((file, content)),
+                None => {
+                    warning!("Skipping test, because the required files could not be downloaded.");
+                    skip_test = true;
+                    break;
+                },
+            }
+        }
+
+        // Return early if the test should be skipped
+        if skip_test {
+            return Ok(());
+        }
+
+        // Only show a spinner when not verbose
+        if self.options.verbose {
+            println!("Testing {}", package_id.style());
+            scripts::run_test_script(&script_data, &read_files)?;
+            return Ok(());
+        }
+
+        // Run script with spinner shown
+        let spinner_message = format!("Testing {}", package_id.style());
+        let spinner = Spinner::new(spinner_message);
+        spinner.show();
+        scripts::run_test_script(&script_data, &read_files)?;
+        spinner.finish();
+
+        Ok(())
+    }
+
+    /// Removes the build dependencies recursively. There are early returns to make sure that the
+    /// package is not removed if it was already installed, is not installed anymore or is a dependency.
+    fn remove_build_dependencies(&mut self, node_index: usize, tree: &InstallTree) -> Result<Vec<PackageId>> {
+        let node = tree.get_node_by_index(node_index).expect("Expected node to exist");
+
+        // Return early if the node value is None (meaning that the package was already installed)
+        if node.get_value().is_none() {
+            return Ok(Vec::new());
+        }
+
+        // Return early if the package doesn't exist (removed in earlier iteration) or if it's a dependency
+        let optional_id = &OptionalPackageId::from(node.get_package_id().clone());
+        if self.register.get_package_version(node.get_package_id()).is_none() || self.register.is_dependency(optional_id) {
+            return Ok(Vec::new());
+        }
+
+        // Keep track of uninstall packages
+        let mut uninstalled = Vec::new();
+
+        // Don't remove the package if it's the root
+        if node_index != 0 {
+            uninstalled.extend(self.uninstall(optional_id)?);
+        }
+
+        for child in node.get_children() {
+            uninstalled.extend(self.remove_build_dependencies(*child, tree)?);
+        }
+
+        Ok(uninstalled)
     }
 
     /// Uninstalls a package version if specified, otherwise it will uninstall the entire package directory (after
@@ -446,7 +533,7 @@ impl<'a> Installer<'a> {
         // Check if the current package to delete is a dependency, if so, give dependency error
         if self.register.is_dependency(optional_id) {
             return Err(InstallerError::DependencyError {
-                package_name: optional_id.name.to_string(),
+                package_name: optional_id.name.clone(),
             });
         }
 
@@ -469,8 +556,8 @@ impl<'a> Installer<'a> {
         // Return an existError if the package to uninstall doesn't exist
         if self.register.get_package_version(&package_id).is_none() {
             return Err(InstallerError::PackageNotFound {
-                package_name: package_id.name.to_string(),
-                version: Some(package_id.version.to_string()),
+                package_name: package_id.name,
+                version: Some(package_id.version),
             });
         }
 
@@ -524,7 +611,7 @@ impl<'a> Installer<'a> {
             other_versions.sort_by_key(|x| &x.package_id.version);
 
             if let Some(newest) = other_versions.last() {
-                println!("Set active package to version `{}`", newest.package_id);
+                println!("Set active package to version {}", newest.package_id.style());
                 Symlinker::new(self.config).set_active(self.register, &newest.package_id.clone(), installed_package.symlinked)?;
             }
         }
@@ -536,7 +623,7 @@ impl<'a> Installer<'a> {
         fs::remove_dir_all(&directory).err_with_path("remove", &directory)?;
 
         // Remove package from the register
-        debug!("Removing {package_id} from the package register");
+        debug!("Removing {} from the package register", package_id.style());
         self.register.remove_package_version(&package_id);
 
         Ok(vec![package_id])
@@ -553,14 +640,14 @@ impl<'a> Installer<'a> {
         let question = "Version is not specified, do you wish to uninstall all versions of this package?";
         if installed_versions.len() > 1 && ask_user(question, QuestionResponse::No)?.is_no_or_invalid() {
             return Err(InstallerError::InstallationCanceled {
-                reason: format!("Prevent uninstall of all {package_name} versions"),
+                reason: format!("Prevent uninstall of all {} versions", package_name.style()),
             });
         }
 
         // Make sure at least one version exists
         if installed_versions.is_empty() {
             return Err(InstallerError::PackageNotFound {
-                package_name: package_name.to_string(),
+                package_name: package_name.clone(),
                 version: None,
             });
         }
@@ -579,7 +666,7 @@ impl<'a> Installer<'a> {
         // Check if package was symlinked
         if let Some(package) = self.register.get_package(package_name) {
             if package.symlinked {
-                debug!("Unlinking '{package_name}'");
+                debug!("Unlinking {}", package_name.style());
                 io::remove_symlinks(&self.config.prefix_directory, &directory)?;
             }
         }
@@ -610,7 +697,7 @@ impl<'a> Installer<'a> {
         let uninstalled = installed_versions.iter().map(|p| p.package_id.clone()).collect();
 
         // Delete the installed package from toml
-        debug!("Removing {package_name} from the package register");
+        debug!("Removing {} from the package register", package_name.style());
         self.register.remove_package(package_name);
 
         Ok(uninstalled)
@@ -645,23 +732,37 @@ impl<'a> Installer<'a> {
         // Get script data from package version metadata
         let script_path = package_version.get_uninstall_script_path(&target_bounds)?;
 
-        // Download and run script
-        if let Some(script_text) = provider.read_file(&package_id.name, &script_path)? {
-            let script_path = scripts::write_script_to_tempfile(&script_text)?;
+        // Download and run script if it exists
+        let Some(script_text) = provider.read_file(&package_id.name, &script_path)? else {
+            return Ok(());
+        };
 
-            // Run script
-            let script_args = package_version.get_script_args(&target_bounds)?;
-            let script_data = ScriptData::new(
-                &script_path,
-                &install_directory,
-                package_id,
-                self.config,
-                &script_args,
-                self.options.verbose,
-            );
-            println!("Executing uninstall script of {package_id}");
-            scripts::run_uninstall_script(&script_data)?
+        let script_path = scripts::write_script_to_tempfile(&script_text)?;
+
+        // Run script
+        let script_args = package_version.get_script_args(&target_bounds)?;
+        let script_data = ScriptData::new(
+            &script_path,
+            &install_directory,
+            package_id,
+            self.config,
+            &script_args,
+            self.options.verbose,
+        );
+
+        // Only show spinner when not verbose
+        if self.options.verbose {
+            println!("Executing uninstall script of {}", package_id.style());
+            scripts::run_uninstall_script(&script_data)?;
+            return Ok(());
         }
+
+        // Run script with spinner shown
+        let spinner_message = format!("Executing uninstall script of {}", package_id.style());
+        let spinner = Spinner::new(spinner_message);
+        spinner.show();
+        scripts::run_uninstall_script(&script_data)?;
+        spinner.finish();
 
         Ok(())
     }
@@ -701,8 +802,8 @@ impl<'a> Installer<'a> {
                 Some(dependency) => dependency,
                 None => {
                     warning!(
-                        "Dependent is not a dependent of '{}' eventhough it should be.",
-                        old_package.package_id
+                        "Dependent is not a dependent of {} eventhough it should be.",
+                        old_package.package_id.style()
                     );
                     continue;
                 },
@@ -739,7 +840,7 @@ impl<'a> Installer<'a> {
             None => {
                 // Theoretically unreachable
                 return Err(InstallerError::UnreachableError {
-                    msg: format!("New package version '{new_version}' cannot be retrieved from the register"),
+                    msg: format!("New package version {} cannot be retrieved from the register", new_version.style()),
                 });
             },
         };
@@ -768,7 +869,10 @@ impl<'a> Installer<'a> {
             Symlinker::new(self.config).set_active(self.register, &new_package_id, package.symlinked)?;
         }
 
-        println!("The new package version '{new_version}' has been succesfully installed, uninstalling the old version now.");
+        println!(
+            "The new package version {} has been succesfully installed, uninstalling the old version now.",
+            new_version.style()
+        );
 
         // Remove the old package dependents, because the old package is no longer a dependency
         // Note that this is necessary before doing an uninstall.
@@ -792,8 +896,8 @@ impl<'a> Installer<'a> {
         // Use the specified version if it exists
         if let Some(package_id) = optional_id.versioned() {
             return self.register.get_package_version(&package_id).ok_or(InstallerError::PackageNotFound {
-                package_name: package_id.name.to_string(),
-                version: Some(package_id.version.to_string()),
+                package_name: package_id.name,
+                version: Some(package_id.version),
             });
         }
 
@@ -803,16 +907,17 @@ impl<'a> Installer<'a> {
             Some(latest) => latest,
             None => {
                 return Err(InstallerError::PackageNotFound {
-                    package_name: optional_id.name.to_string(),
-                    version: Some("any".to_string()),
+                    package_name: optional_id.name.clone(),
+                    version: None,
                 });
             },
         };
 
         if installed_versions.len() > 1 && optional_id.version.is_none() {
             let question = format!(
-                "Multiple versions of '{}' are installed, the latest version '{}' will be updated, do you wish to continue?",
-                optional_id.name, latest_installed_version.package_id.version
+                "Multiple versions of {} are installed, the latest version {} will be updated, do you wish to continue?",
+                optional_id.name.style(),
+                latest_installed_version.package_id.version.style()
             );
             if ask_user(&question, QuestionResponse::Yes)?.is_no_or_invalid() {
                 return Err(InstallerError::InstallationCanceled {

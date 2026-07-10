@@ -18,7 +18,7 @@ pub struct CheckArgs {
 }
 
 const ISSUE_FOUND_MESSAGE: &str = "Consider running `pit fix` to resolve the issues above.";
-const NO_ISSUE_FOUND_MESSAGE: &str = "No issues were found";
+const NO_ISSUE_FOUND_MESSAGE: &str = "No issues were found!";
 
 impl HandleCommand for CheckArgs {
     fn handle(&self) {

@@ -206,10 +206,7 @@ fn run_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, env: Environm
     // Display status to user
     let status = process.wait().map_err(ScriptError::RunError)?;
     match status.code() {
-        Some(0) => {
-            println!("Script executed succesfully");
-            Ok(())
-        },
+        Some(0) => Ok(()),
         Some(code) => {
             warning!("Script executed with status code {code}");
             if !last_lines.is_empty() {

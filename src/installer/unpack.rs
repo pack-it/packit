@@ -8,7 +8,7 @@ use xz2::read::XzDecoder;
 use zip::ZipArchive;
 
 use crate::{
-    cli::display::ReaderWithProgress,
+    cli::display::{ReaderWithProgress, styled::Styled},
     installer::types::PackageName,
     utils::ioerror::{self, IOResultExt},
 };
@@ -66,7 +66,7 @@ pub fn unpack<P: AsRef<Path>>(
     let cursor = Cursor::new(bytes);
 
     // Initialize progress bar
-    let bar_prefix = format!("Unpacking {package}");
+    let bar_prefix = format!("Unpacking {}", package.style());
     let reader = ReaderWithProgress::new(cursor, size as u64, bar_prefix);
 
     match extension {

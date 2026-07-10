@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::process::exit;
-
 use clap::Args;
+use colored::Colorize;
+use std::process::exit;
 
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{logging::error, not_found},
+        display::{logging::error, not_found, standard_print, styled::Styled},
         parameter_checks,
     },
     config::Config,
@@ -31,13 +31,8 @@ impl HandleCommand for UninstallArgs {
         // Check for duplicates, because uninstalling twice will result in a confusing error
         let duplicates = parameter_checks::get_duplicates(&self.packages);
         if !duplicates.is_empty() {
-            let mut duplicate_string = String::new();
-            for duplicate in duplicates {
-                duplicate_string.push_str(&duplicate.to_string());
-                duplicate_string.push(' ');
-            }
-
-            error!(msg: "Duplicate package arguments are not allowed. The following duplicates were found: {duplicate_string}");
+            error!(msg: "Duplicate package arguments are not allowed. The following duplicates were found:");
+            standard_print::print_list(duplicates.iter());
             exit(1);
         }
 
@@ -62,14 +57,12 @@ impl HandleCommand for UninstallArgs {
         for optional_id in &self.packages {
             match installer.uninstall(optional_id) {
                 Ok(uninstalled_packages) => {
-                    let mut uninstalled_string = String::new();
                     for package in uninstalled_packages {
-                        uninstalled_string.push_str(&package.to_string());
-                        uninstalled_string.push(' ');
+                        let styled_message = format!("Successfully uninstalled {}", package.style()).bold().green();
+                        println!("{styled_message}");
                     }
-                    println!("Successfully uninstalled: {uninstalled_string}");
                 },
-                Err(error) => error!(error, "Cannot uninstall package {optional_id}"),
+                Err(error) => error!(error, "Cannot uninstall package {}", optional_id.style()),
             }
         }
 

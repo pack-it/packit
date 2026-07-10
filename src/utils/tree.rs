@@ -6,7 +6,10 @@ use std::{
 
 use thiserror::Error;
 
-use crate::{installer::types::PackageId, register::package_register::PackageRegister, repositories::error::RepositoryError};
+use crate::{
+    cli::display::styled::Styled, installer::types::PackageId, register::package_register::PackageRegister,
+    repositories::error::RepositoryError,
+};
 
 // Static string prefixes for the tree display
 const BRANCH: &str = "\u{251C}\u{2500}\u{2500}\u{2500} ";
@@ -17,13 +20,13 @@ const EMPTY_SPACE: &str = "     ";
 /// The errors that occur while doing tree operations.
 #[derive(Error, Debug)]
 pub enum TreeError {
-    #[error("Package id '{0}' cannot be found")]
+    #[error("Package id {} cannot be found", .0.style())]
     NotFound(PackageId),
 
     #[error("Parent with node id '{0}' cannot be found")]
     NonExistentParent(usize),
 
-    #[error("'{0}' has itself as a dependency, creating a cycle in the tree")]
+    #[error("{} has itself as a dependency, creating a cycle in the tree", .0.style())]
     CycleError(PackageId),
 
     #[error("Cannot create tree, because of an error reading the repository.")]
@@ -135,7 +138,7 @@ impl<V, L: Eq> Tree<V, L> {
     /// The implementation of the tree display.
     fn display_impl(&self, f: &mut std::fmt::Formatter<'_>, node_index: usize, prefix: &str) -> std::fmt::Result {
         let node = self.get_node_by_index(node_index).expect("Expected node to exist");
-        writeln!(f, "{prefix}{}", node.package_id)?;
+        writeln!(f, "{prefix}{}", node.package_id.style())?;
 
         // Note that when the input prefix is "" then this prefix will also be ""
         let prefix = match prefix.ends_with(BRANCH) {

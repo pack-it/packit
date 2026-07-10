@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{fs, path::PathBuf, process::exit};
-
 use clap::Args;
+use std::{fs, path::PathBuf, process::exit};
 
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{Spinner, logging::error, not_found},
+        display::{Spinner, logging::error, not_found, styled::Styled},
     },
     config::Config,
     installer::types::PackageId,
@@ -74,13 +73,10 @@ impl PackageArgs {
         // Automatically create the destination directory
         fs::create_dir_all(destination).unwrap_or_exit_msg("Failed to create prebuild directory", 1);
 
-        let spinner = Spinner::new();
-        let spinner_message = format!("Packaging {package_id}");
-        spinner.show(spinner_message.clone());
-
+        let spinner_message = format!("Packaging {} to '{}'", package_id.style(), destination.display());
+        let spinner = Spinner::new(spinner_message);
+        spinner.show();
         packager::package(config, package_id, destination, package_version.revisions.len() as u64).unwrap_or_exit(1);
-
-        spinner.finish(format!("{spinner_message} successful"));
-        println!("Successfully packaged {package_id} to {}", destination.display());
+        spinner.finish();
     }
 }

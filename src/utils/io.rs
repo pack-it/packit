@@ -48,12 +48,16 @@ pub fn create_folder_symlinks(original_dir: &Path, link_dir: &Path, overwrite: b
 
             // Show warning and continue if overwrite is disabled
             if !overwrite {
-                warning!("Symlink '{}' already exists in {}", file.file_name().display(), link_dir.display());
+                warning!(
+                    "Symlink '{}' already exists in '{}'",
+                    file.file_name().display(),
+                    link_dir.display()
+                );
                 continue;
             }
 
             // Remove existing symlink when overwrite is enabled
-            debug!("Overwriting symlink {}", link_path.display());
+            debug!("Overwriting symlink '{}'", link_path.display());
             symlink::remove_symlink(&link_path)?;
         }
 

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::process::exit;
-
 use clap::Args;
+use colored::Colorize;
+use std::process::exit;
 
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{deprecation, logging::error, not_found},
+        display::{deprecation, logging::error, not_found, standard_print, styled::Styled},
         parameter_checks,
     },
     config::Config,
@@ -56,13 +56,8 @@ impl HandleCommand for InstallArgs {
         // Check for duplicates, because installing twice will result in a confusing error
         let duplicates = parameter_checks::get_duplicates(&self.packages);
         if !duplicates.is_empty() {
-            let mut duplicate_string = String::new();
-            for duplicate in duplicates {
-                duplicate_string.push_str(&duplicate.to_string());
-                duplicate_string.push(' ');
-            }
-
-            error!(msg: "Duplicate package arguments are not allowed. The following duplicates were found: {duplicate_string}");
+            error!(msg: "Duplicate package arguments are not allowed. The following duplicates were found:");
+            standard_print::print_list(duplicates.iter());
             exit(1);
         }
 
@@ -109,10 +104,13 @@ impl HandleCommand for InstallArgs {
         // TODO: Check if this exists as an external package (possibly leading to conflicts) (if so, add to external packages)
 
         // Install all packages
-        for package_id in &self.packages {
-            match installer.install(package_id) {
-                Ok(installed_package) => println!("Successfully installed {installed_package}"),
-                Err(error) => error!(error, "Cannot install package {package_id}"),
+        for optional_id in &self.packages {
+            match installer.install(optional_id) {
+                Ok(installed_package) => {
+                    let styled_message = format!("Successfully installed {}", installed_package.style()).bold().green();
+                    println!("{styled_message}");
+                },
+                Err(error) => error!(error, "Cannot install package {}", optional_id.style()),
             }
         }
 

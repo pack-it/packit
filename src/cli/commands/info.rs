@@ -1,12 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::process::exit;
-
+use crate::cli::display::{standard_print::DisplayJoined, styled::MapStyled};
 use clap::Args;
+use colored::Colorize;
+use std::process::exit;
 
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{logging::error, not_found},
+        display::{
+            aligned_print::PairAligner,
+            logging::error,
+            not_found,
+            standard_print::{self, DisplayOption},
+            styled::Styled,
+        },
     },
     config::Config,
     installer::types::{OptionalPackageId, PackageId},
@@ -74,20 +81,15 @@ impl HandleCommand for InfoArgs {
 impl InfoArgs {
     /// Displays package info.
     fn display_package_info(&self, package: &InstalledPackage) {
-        println!("{}", self.package.name);
-        println!("{}", package.description);
-        if let Some(homepage) = &package.homepage {
-            println!("Homepage: {homepage}");
-        }
+        println!("{}", self.package.name.style());
+        println!("{}", package.description.italic().cyan());
 
-        print!("Installed versions:");
-        for version in package.versions.keys() {
-            print!(" {version}");
-        }
-        println!();
-
-        println!("Active version: {}", package.active_version);
-        println!("Symlinked: {}", package.symlinked);
+        let mut pair_aligner = PairAligner::new();
+        pair_aligner.add("Homepage", package.homepage.display());
+        pair_aligner.add("Installed versions", package.versions.keys().map_styled().display(" | "));
+        pair_aligner.add("Active version", &package.active_version);
+        pair_aligner.add("Symlinked", package.symlinked);
+        pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
     }
 
     /// Displays the package version info, also checking for the verbose flag for some info.
@@ -97,61 +99,36 @@ impl InfoArgs {
             None => not_found::register_package_version(package_id, register),
         };
 
-        println!("{}", package_id);
-        println!("{}", package.description);
-        if let Some(homepage) = &package.homepage {
-            println!("Homepage: {homepage}");
+        println!("{}", package_id.style());
+        println!("{}", package.description.italic().cyan());
+
+        let mut pair_aligner = PairAligner::new();
+        pair_aligner.add("Homepage", package.homepage.display());
+        pair_aligner.add("License", &package_version.license.style());
+        pair_aligner.add("Install path", package_version.install_path.display());
+        pair_aligner.add("Active", package.active_version == package_id.version);
+        pair_aligner.add("Symlinked", package.symlinked);
+
+        if self.verbose {
+            pair_aligner.add("Metadata repository provider", &package_version.metadata_repository_provider);
+            pair_aligner.add("Metadata repository url", &package_version.metadata_repository_url);
         }
 
-        if !package_version.license.is_unknown() {
-            println!("License: {}", package_version.license);
-        }
-
-        println!(
-            "Install path: {}",
-            package_version.install_path.to_str().unwrap_or_exit_msg("Invalid install path", 1)
-        );
-
-        println!("Active: {}", package.active_version == package_id.version);
-        println!("Symlinked: {}", package.symlinked);
+        pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
+        println!();
 
         print!("Dependencies: ");
-        if package_version.dependencies.is_empty() {
-            print!("None");
-        }
-
-        for dependency in &package_version.dependencies {
-            print!("\n  - {dependency}");
-        }
-        println!();
+        standard_print::print_list_or_none(package_version.dependencies.iter().map(|d| d.style()));
 
         // Early return if verbose is disabled
         if !self.verbose {
             return;
         }
 
-        print!("Dependent: ");
-        if package_version.dependents.is_empty() {
-            print!("None");
-        }
-
-        for dependent in &package_version.dependents {
-            print!("\n  - {dependent}");
-        }
-        println!();
-
-        println!("Metadata repository provider: {}", package_version.metadata_repository_provider);
-        println!("Metadata repository url: {}", package_version.metadata_repository_url);
+        print!("Dependents: ");
+        standard_print::print_list_or_none(package_version.dependents.iter().map(|d| d.style()));
 
         print!("Revisions: ");
-        if package_version.revisions.is_empty() {
-            print!("None");
-        }
-
-        for revision in &package_version.revisions {
-            print!("\n  - {revision}");
-        }
-
-        println!();
+        standard_print::print_list_or_none(package_version.revisions.iter());
     }
 }

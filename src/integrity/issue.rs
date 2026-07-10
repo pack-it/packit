@@ -2,7 +2,10 @@
 use colored::Colorize;
 use std::{collections::HashSet, fmt::Display, path::PathBuf};
 
-use crate::installer::types::{Dependency, PackageId, PackageName};
+use crate::{
+    cli::display::styled::Styled,
+    installer::types::{Dependency, PackageId, PackageName},
+};
 
 /// Holds a single issue and the data regarding that issue.
 pub enum Issue {
@@ -78,21 +81,21 @@ impl Display for Issue {
                 writeln!(f, "Invalid active version")?;
                 writeln!(f, "The following packages have an invalid active version:")?;
                 for package in invalid {
-                    writeln!(f, "  - {}", package.to_string().bold().blue())?;
+                    writeln!(f, "  - {}", package.style())?;
                 }
             },
             Issue::ForbiddenLink(forbidden) => {
                 writeln!(f, "Forbidden symlinks")?;
                 writeln!(f, "The following packages have a forbidden symlink:")?;
                 for package in forbidden {
-                    writeln!(f, "  - {}", package.to_string().bold().blue())?;
+                    writeln!(f, "  - {}", package.style())?;
                 }
             },
             Issue::MissingLinks(missing) => {
                 writeln!(f, "Missing symlinks")?;
                 writeln!(f, "The following packages have missing symlinks:")?;
                 for package in missing {
-                    writeln!(f, "  - {}", package.to_string().bold().blue())?;
+                    writeln!(f, "  - {}", package.style())?;
                 }
             },
             Issue::BrokenTree(missing) => {
@@ -100,11 +103,7 @@ impl Display for Issue {
                 writeln!(f, "The following dependencies are missing:")?;
 
                 for (parent, missing_package) in missing {
-                    let item = format!(
-                        "  - {} missing {}",
-                        parent.to_string().bold().blue(),
-                        missing_package.to_string().bold().blue()
-                    );
+                    let item = format!("  - {} missing {}", parent.style(), missing_package.style());
 
                     writeln!(f, "{}", item)?;
                 }
@@ -114,11 +113,7 @@ impl Display for Issue {
                 writeln!(f, "The following dependencies are missing in the register:")?;
 
                 for (package, missing_dependency) in missing {
-                    let item = format!(
-                        "  - {} missing {}",
-                        package.to_string().bold().blue(),
-                        missing_dependency.to_string().bold().blue()
-                    );
+                    let item = format!("  - {} missing {}", package.style(), missing_dependency);
 
                     writeln!(f, "{}", item)?;
                 }
@@ -129,11 +124,7 @@ impl Display for Issue {
                 writeln!(f, "{message}")?;
 
                 for (package, invalid_dependency) in invalid {
-                    let item = format!(
-                        "  - {} incorrectly has {}",
-                        package.to_string().bold().blue(),
-                        invalid_dependency.to_string().bold().blue()
-                    );
+                    let item = format!("  - {} incorrectly has {}", package.style(), invalid_dependency.style());
 
                     writeln!(f, "{}", item)?;
                 }
@@ -143,11 +134,7 @@ impl Display for Issue {
                 writeln!(f, "The following dependents are missing in the register:")?;
 
                 for (package, missing_dependent) in missing {
-                    let item = format!(
-                        "  - {} missing {}",
-                        package.to_string().bold().blue(),
-                        missing_dependent.to_string().bold().blue()
-                    );
+                    let item = format!("  - {} missing {}", package.style(), missing_dependent.style());
 
                     writeln!(f, "{}", item)?;
                 }
@@ -158,11 +145,7 @@ impl Display for Issue {
                 writeln!(f, "{message}")?;
 
                 for (package, invalid_dependent) in invalid {
-                    let item = format!(
-                        "  - {} incorrectly has {}",
-                        package.to_string().bold().blue(),
-                        invalid_dependent.to_string().bold().blue()
-                    );
+                    let item = format!("  - {} incorrectly has {}", package.style(), invalid_dependent.style());
 
                     writeln!(f, "{}", item)?;
                 }
@@ -173,7 +156,7 @@ impl Display for Issue {
                 writeln!(f, "{issue_explanation}")?;
 
                 for package in package_ids {
-                    writeln!(f, "  - {}", package.to_string().bold().blue())?;
+                    writeln!(f, "  - {}", package.style())?;
                 }
             },
             Issue::InconsistentRegister(package_ids) => {
@@ -182,7 +165,7 @@ impl Display for Issue {
                 writeln!(f, "{issue_explanation}")?;
 
                 for package in package_ids {
-                    writeln!(f, "  - {}", package.to_string().bold().blue())?;
+                    writeln!(f, "  - {}", package.style())?;
                 }
             },
             Issue::AlteredPackage(altered) => {
@@ -191,7 +174,7 @@ impl Display for Issue {
                 writeln!(f, "{issue_explanation}")?;
 
                 for package in altered {
-                    writeln!(f, "  - {}", package.to_string().bold().blue())?;
+                    writeln!(f, "  - {}", package.style())?;
                 }
             },
             Issue::MissingPackitGroup => {

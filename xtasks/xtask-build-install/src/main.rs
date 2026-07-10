@@ -62,7 +62,7 @@ fn main() {
     // Copy files to destination
     copy_binary_to_destination(&destination);
 
-    println!("Finished building and installing Packit to {}", destination.display())
+    println!("Finished building and installing Packit to '{}'", destination.display())
 }
 
 /// Runs the Packit build using `cargo build --release`.

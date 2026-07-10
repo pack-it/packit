@@ -3,7 +3,8 @@ use thiserror::Error;
 
 use crate::{
     builder::BinaryPatcherError,
-    installer::{scripts::ScriptError, unpack::UnpackError},
+    cli::display::styled::Styled,
+    installer::{scripts::ScriptError, types::PackageName, unpack::UnpackError},
     repositories::error::RepositoryError,
     utils::{ioerror, patches::PatchError},
 };
@@ -11,10 +12,10 @@ use crate::{
 /// The errors that occur during building.
 #[derive(Error, Debug)]
 pub enum BuilderError {
-    #[error("Dependency '{package_name}' of type '{dependency_type}' is not installed.")]
+    #[error("Dependency {} of type '{dependency_type}' is not installed.", package_name.style())]
     MissingDependencyError {
         dependency_type: String,
-        package_name: String,
+        package_name: PackageName,
     },
 
     #[error("Checksum does not match")]

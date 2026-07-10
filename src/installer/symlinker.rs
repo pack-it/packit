@@ -85,7 +85,7 @@ impl<'a> Symlinker<'a> {
             },
             None => {
                 return Err(InstallerError::PackageNotFound {
-                    package_name: package_id.name.to_string(),
+                    package_name: package_id.name.clone(),
                     version: None,
                 });
             },
@@ -101,7 +101,7 @@ impl<'a> Symlinker<'a> {
     /// Could return an `InstallerError::PackageNotFound`, a `RegisterError` or an IO error.
     pub fn unlink_package(&self, register: &mut PackageRegister, package_name: &PackageName) -> Result<()> {
         let package = register.get_package(package_name).ok_or(InstallerError::PackageNotFound {
-            package_name: package_name.to_string(),
+            package_name: package_name.clone(),
             version: None,
         })?;
 
@@ -112,8 +112,8 @@ impl<'a> Symlinker<'a> {
 
         // Get active package version
         let package_version = package.get_package_version(&package.active_version).ok_or(InstallerError::PackageNotFound {
-            package_name: package_name.to_string(),
-            version: Some(package.active_version.to_string()),
+            package_name: package_name.clone(),
+            version: Some(package.active_version.clone()),
         })?;
 
         // Remove all symlinks except for those in the active directory
@@ -132,7 +132,7 @@ impl<'a> Symlinker<'a> {
             None => {
                 warning!("Cannot get installed package after changing symlinks, please try running pit fix to fix your installation");
                 return Err(InstallerError::PackageNotFound {
-                    package_name: package_name.to_string(),
+                    package_name: package_name.clone(),
                     version: None,
                 });
             },

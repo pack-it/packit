@@ -38,8 +38,8 @@ impl HandleCommand for PortableRepoArgs {
         let register =
             PackageRegister::from(&PackageRegister::get_path(&config.prefix_directory)).unwrap_or_exit_msg("Cannot load register", 1);
 
-        let spinner = Spinner::new();
-        spinner.show("Generating portable repository".into());
+        let spinner = Spinner::new("Generating portable repository".into());
+        spinner.show();
 
         let creator = PortableRepoCreator::new(
             &config,
@@ -54,7 +54,7 @@ impl HandleCommand for PortableRepoArgs {
             .create_portable_repo(self.packages.iter().cloned().collect(), &self.destination)
             .unwrap_or_exit_msg("Cannot create portable repository", 1);
 
-        spinner.finish("Generating portable repository successful".into());
-        println!("Created portable repository at {}!", self.destination.display());
+        spinner.finish();
+        println!("Created portable repository at '{}'!", self.destination.display());
     }
 }

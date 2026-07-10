@@ -22,7 +22,7 @@ use crate::{
 /// The errors that occur while packaging a package.
 #[derive(Error, Debug)]
 pub enum PackagerError {
-    #[error("The destination directory {} does not exist or is not a directory", path.display())]
+    #[error("The destination directory '{}' does not exist or is not a directory", path.display())]
     InvalidDestination {
         path: PathBuf,
     },

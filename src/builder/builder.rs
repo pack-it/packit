@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use bytes::Bytes;
+use colored::Colorize;
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -12,7 +13,7 @@ use crate::{
         BinaryPatcher, BuildEnv,
         error::{BuilderError, Result},
     },
-    cli::display::{Spinner, logging::debug},
+    cli::display::{Spinner, logging::debug, styled::Styled},
     config::Config,
     installer::{
         install_tree::InstallMeta,
@@ -71,7 +72,7 @@ impl<'a> Builder<'a> {
             // Return error to indicate the dependency is not installed yet
             return Err(BuilderError::MissingDependencyError {
                 dependency_type: "normal".into(),
-                package_name: dependency.get_name().to_string(),
+                package_name: dependency.get_name().clone(),
             });
         }
 
@@ -87,7 +88,7 @@ impl<'a> Builder<'a> {
             // Return error to indicate the dependency is not installed yet
             return Err(BuilderError::MissingDependencyError {
                 dependency_type: "build".into(),
-                package_name: build_dependency.get_name().to_string(),
+                package_name: build_dependency.get_name().clone(),
             });
         }
 
@@ -96,7 +97,7 @@ impl<'a> Builder<'a> {
         debug!("Source size: {}", source.size);
 
         // Download the build files
-        let bytes = self.download_file(&source.url, &source.mirrors, &source.checksum, package_name)?;
+        let bytes = self.download_file(&source.url, &source.mirrors, &source.checksum, &package_name.style().to_string())?;
 
         // Create temp directory to build in
         let build_directory = TempDir::new().err_operation("create temp dir")?;
@@ -133,7 +134,7 @@ impl<'a> Builder<'a> {
             // Apply patch
             patches::apply_patch(patch_bytes, &apply_directory)?;
 
-            println!("Applied patch '{id}' to '{package_id}'");
+            println!("Applied patch '{id}' to {}", package_id.style());
         }
 
         // Create build env
@@ -153,20 +154,21 @@ impl<'a> Builder<'a> {
             .ok_or(ScriptError::ScriptNotFound("build".into()))?;
         let script_data = ScriptData::new(&script_path, &destination_dir, &package_id, self.config, &script_args, self.verbose);
 
-        println!("Executing build script of {package_id}");
-
         // Show build spinner
         if !self.verbose {
-            let spinner = Spinner::new();
-            let spinner_message = format!("Building {package_name}@{version}");
-            spinner.show(spinner_message.clone());
+            let styled_package = format!("{package_name}@{version}").bold().blue();
+            let spinner_message = format!("Building {styled_package}");
+            let spinner = Spinner::new(spinner_message);
+            spinner.show();
 
             // Run build script
             scripts::run_build_script(&script_data, &build_directory, env)?;
 
             // Finish build spinner
-            spinner.finish(format!("{spinner_message} successful"));
+            spinner.finish();
         } else {
+            println!("Executing build script of {}", package_id.style());
+
             // Run build script
             scripts::run_build_script(&script_data, &build_directory, env)?;
         }
@@ -181,15 +183,14 @@ impl<'a> Builder<'a> {
     fn download_patch(&self, id: u32, patch: &Patch, package_id: &PackageId, repository_id: &str) -> Result<Bytes> {
         // Download patch from the url if it starts with 'http://' or 'https://'
         if patch.url.starts_with("http://") || patch.url.starts_with("https://") {
-            let download_description = format!("patch {id}' of '{package_id}");
+            let download_description = format!("patch {id} of {}", package_id.style());
             return self.download_file(&patch.url, &patch.mirrors, &patch.checksum, &download_description);
         }
 
         // Create download spinner
-        let spinner = Spinner::new();
-        spinner.show(format!(
-            "Downloading 'patch {id}' of '{package_id}' from repository '{repository_id}'"
-        ));
+        let spinner_message = format!("Downloading patch {id} of {} from repository '{repository_id}'", package_id.style());
+        let spinner = Spinner::new(spinner_message);
+        spinner.show();
 
         // Download patch file from the repository itself
         let file = self
@@ -206,9 +207,7 @@ impl<'a> Builder<'a> {
         }
 
         // Finish download spinner
-        spinner.finish(format!(
-            "Downloading 'patch {id}' of '{package_id}' from repository '{repository_id}' successful"
-        ));
+        spinner.finish();
 
         Ok(file)
     }
@@ -216,9 +215,8 @@ impl<'a> Builder<'a> {
     /// Downloads a file from the url, or one of the mirrors. Checks against a checksum and shows a spinner.
     fn download_file(&self, url: &str, mirrors: &[String], checksum: &Checksum, download_description: &str) -> Result<Bytes> {
         // Show download spinner
-        let spinner = Spinner::new();
-        spinner.show(format!("Downloading '{download_description}' from {}", &url));
-        let mut finish_message = format!("Downloading '{download_description}' from {} successful", &url);
+        let mut spinner = Spinner::new(format!("Downloading {download_description} from '{}'", url.cyan()));
+        spinner.show();
 
         // Try to download from the main url
         let mut mirrors = mirrors.iter();
@@ -234,8 +232,7 @@ impl<'a> Builder<'a> {
             && let Some(mirror) = mirrors.next()
         {
             // Update spinner with new download url
-            spinner.show(format!("Downloading '{download_description}' from alternative {}", &mirror));
-            finish_message = format!("Downloading '{download_description}' from alternative {} successful", &mirror);
+            spinner.adjust_message(format!("Downloading {download_description} from alternative '{}'", &mirror.cyan()));
 
             // Get response from alternative mirror
             response = requests::get(mirror).map_err(BuilderError::RequestError);
@@ -260,7 +257,7 @@ impl<'a> Builder<'a> {
         }
 
         // Finish download spinner
-        spinner.finish(finish_message);
+        spinner.finish();
 
         Ok(bytes)
     }

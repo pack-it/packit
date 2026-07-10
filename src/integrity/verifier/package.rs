@@ -6,7 +6,10 @@ use std::{
 };
 
 use crate::{
-    cli::display::logging::{debug, warning},
+    cli::display::{
+        logging::{debug, warning},
+        styled::Styled,
+    },
     config::{Config, Repository},
     installer::{
         self,
@@ -54,7 +57,10 @@ fn check_package_alterations(package_id: &PackageId, register: &PackageRegister,
 
     // Get the installed package from the register
     let Some(package_version) = register.get_package_version(package_id) else {
-        warning!("Cannot retrieve package '{package_id}' from register for package alterations check, skipping check");
+        warning!(
+            "Cannot retrieve package {} from register for package alterations check, skipping check",
+            package_id.style()
+        );
         return Ok(false);
     };
 
@@ -68,14 +74,14 @@ fn check_package_alterations(package_id: &PackageId, register: &PackageRegister,
         );
 
         let Some(provider) = provider::create_metadata_provider(&repository) else {
-            warning!("Cannot create metadata provider for '{package_id}', skipping check");
+            warning!("Cannot create metadata provider for {}, skipping check", package_id.style());
             return Ok(false);
         };
 
         let repo_metadata = match provider.read_repository_metadata() {
             Ok(meta) => meta,
             Err(e) => {
-                warning!("Cannot retrieve repository metadata for '{package_id}', skipping check");
+                warning!("Cannot retrieve repository metadata for {}, skipping check", package_id.style());
                 debug!(err: e, "Retrieving repository metadata failed");
                 return Ok(false);
             },
@@ -87,7 +93,8 @@ fn check_package_alterations(package_id: &PackageId, register: &PackageRegister,
 
     let Some(prebuilds_url) = &prebuilds_url else {
         warning!(
-            "Cannot perform alterations check for package '{package_id}', because no prebuild repository for the package can be found, skipping check"
+            "Cannot perform alterations check for package {}, because no prebuild repository for the package can be found, skipping check",
+            package_id.style()
         );
         return Ok(false);
     };
@@ -95,7 +102,7 @@ fn check_package_alterations(package_id: &PackageId, register: &PackageRegister,
     let provider = match provider::create_prebuild_provider_from_url(prebuilds_url, prebuilds_provider) {
         Some(provider) => provider,
         None => {
-            warning!("Cannot create prebuild provider for '{package_id}', skipping check");
+            warning!("Cannot create prebuild provider for {}, skipping check", package_id.style());
             return Ok(false);
         },
     };
@@ -105,12 +112,16 @@ fn check_package_alterations(package_id: &PackageId, register: &PackageRegister,
         Ok(Some(checksum)) => checksum,
         Ok(None) => {
             warning!(
-                "Cannot perform alterations check for package '{package_id}', because no checksum of the prebuild can be found, skipping check"
+                "Cannot perform alterations check for package {}, because no checksum of the prebuild can be found, skipping check",
+                package_id.style()
             );
             return Ok(false);
         },
         Err(e) => {
-            warning!("Cannot perform alterations check for package '{package_id}', because checksum cannot be read, skipping check");
+            warning!(
+                "Cannot perform alterations check for package {}, because checksum cannot be read, skipping check",
+                package_id.style()
+            );
             debug!(err: e, "Failed to read prebuild checksum");
             return Ok(false);
         },
@@ -530,7 +541,7 @@ fn check_package_dependency_tree(package_id: &PackageId, register: &PackageRegis
     let package = match register.get_package_version(package_id) {
         Some(package) => package,
         None => {
-            debug!("Parent node '{package_id}' doesn't exist, while checking dependency tree.");
+            debug!("Parent node {} doesn't exist, while checking dependency tree.", package_id.style());
             return Vec::new();
         },
     };

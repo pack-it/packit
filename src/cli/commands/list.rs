@@ -2,7 +2,13 @@
 use clap::Args;
 
 use crate::{
-    cli::{commands::HandleCommand, display},
+    cli::{
+        commands::HandleCommand,
+        display::{
+            self,
+            styled::{MapStyled, Styled},
+        },
+    },
     config::Config,
     installer::{
         Installer, InstallerOptions,
@@ -38,14 +44,14 @@ impl HandleCommand for ListArgs {
         }
 
         if self.active {
-            display::print_grid(&register.iterate_active_packages().collect());
+            display::print_grid(&register.iterate_active_packages().map_styled().collect());
 
             return;
         }
 
         let mut packages: Vec<&InstalledPackageVersion> = register.iterate_all().collect();
         packages.sort_by_key(|a| a.package_id.to_string());
-        display::print_grid(&packages.iter().map(|p| &p.package_id).collect());
+        display::print_grid(&packages.iter().map(|p| p.package_id.style()).collect());
     }
 }
 
@@ -68,7 +74,7 @@ impl ListArgs {
             for version in register.get_package(&package.name).expect("Expected package to exist").versions.keys() {
                 let package_id = PackageId::new(package.name.clone(), version.clone());
                 let optional_id = OptionalPackageId::from(package_id);
-                expanded_updatables.push(optional_id);
+                expanded_updatables.push(optional_id.style());
             }
         }
 

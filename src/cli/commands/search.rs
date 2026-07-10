@@ -7,7 +7,15 @@ use std::{collections::HashSet, str::FromStr};
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{deprecation, logging::error, not_found, print_grid},
+        display::{
+            self,
+            aligned_print::PairAligner,
+            deprecation,
+            logging::error,
+            not_found,
+            standard_print::{self},
+            styled::{MapStyled, Styled},
+        },
     },
     config::Config,
     installer::types::OptionalPackageId,
@@ -63,14 +71,14 @@ impl SearchArgs {
             return;
         }
 
-        print_grid(&matches.into_iter().collect());
+        display::print_grid(&matches.into_iter().map_styled().collect());
     }
 
     /// Searches information of a package based on the provided `OptionalPackageId`.
     /// Fails if the given query is not a valid `OptionalPackageId`.
     fn search_package(&self) {
         // Get the optional id
-        let message = "The given search query isn't a valid `OptionalPackageId`. For regex use `--regex`.";
+        let message = "The given search query isn't a valid package. For regex use `--regex`.";
         let optional_id = OptionalPackageId::from_str(&self.query).unwrap_or_exit_msg(message, 1);
 
         let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
@@ -108,7 +116,7 @@ impl SearchArgs {
         let target = match package_version.get_target(&target_bounds) {
             Ok(target) => target,
             Err(e) => {
-                error!(e, "Cannot read {package_id} from repository {repository_id}");
+                error!(e, "Cannot read {} from repository '{repository_id}'", package_id.style());
                 return;
             },
         };
@@ -117,19 +125,20 @@ impl SearchArgs {
         let dependencies: Vec<String> = dependencies.iter().map(|d| d.to_string()).collect();
 
         // Print package information
-        println!("{} ({})", package.name.bold().blue(), package_version.version);
-        println!("{}", package.description.green());
-        println!("Latest stable version: {}", latest_version.version.to_string().red());
-        println!("Dependencies: {}", dependencies.join(", ").red());
-        println!("License: {}", package_version.license.to_string().red());
+        let styled_package = format!("{}@{}", package.name, package_version.version).bold().blue();
+        println!("{styled_package}");
+        println!("{}", package.description.italic().cyan());
+        let mut pair_aligner = PairAligner::new();
+        pair_aligner.add("Latest stable version", latest_version.version.style());
+        pair_aligner.add("License", &package_version.license);
+        pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
+        println!();
 
-        // Also print revisions if there are any
-        if !package_version.revisions.is_empty() {
-            println!("Revisions:");
-            for revision in &package_version.revisions {
-                println!("  - {revision}");
-            }
-        }
+        print!("Dependencies: ");
+        standard_print::print_list_or_none(dependencies.iter());
+
+        print!("Revisions: ");
+        standard_print::print_list_or_none(package_version.revisions.iter());
 
         // Check if the package or version is deprecated
         deprecation::show_package_warnings(&package);
