@@ -12,7 +12,8 @@ use crate::{
             aligned_print::{self, PairAligner},
             deprecation,
             logging::error,
-            not_found, standard_print,
+            not_found,
+            standard_print::{self, MapStyled},
             styled::Styled,
         },
     },
@@ -70,7 +71,7 @@ impl SearchArgs {
             return;
         }
 
-        display::print_grid(&matches.into_iter().map(|p| p.style()).collect());
+        display::print_grid(&matches.into_iter().map_styled().collect());
     }
 
     /// Searches information of a package based on the provided `OptionalPackageId`.

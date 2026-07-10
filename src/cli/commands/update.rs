@@ -6,7 +6,13 @@ use std::process::exit;
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{QuestionResponse, ask_user, grid, logging::error, not_found, standard_print, styled::Styled},
+        display::{
+            QuestionResponse, ask_user, grid,
+            logging::error,
+            not_found,
+            standard_print::{self, MapStyled},
+            styled::Styled,
+        },
         parameter_checks,
     },
     config::Config,
@@ -146,7 +152,7 @@ impl UpdateArgs {
         }
 
         println!("The following packages will be updated:");
-        grid::print_grid(&filtered_updatables.iter().map(|p| p.style()).collect());
+        grid::print_grid(&filtered_updatables.iter().map_styled().collect());
 
         // Check if the user wants to proceed with the update of the found packages
         let question = "Do you wish to proceed?";

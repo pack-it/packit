@@ -5,7 +5,12 @@ use colored::Colorize;
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{logging::warning, not_found, standard_print, styled::Styled},
+        display::{
+            logging::warning,
+            not_found,
+            standard_print::{self, MapStyled},
+            styled::Styled,
+        },
     },
     config::{Config, Repository},
     installer::{Symlinker, types::PackageName},
@@ -64,7 +69,7 @@ impl HandleCommand for LinkArgs {
             if !conflicts.is_empty() {
                 println!("The package has conflicts with other packages, cancelling linking.");
                 println!("Conflicting packages:");
-                standard_print::print_list(conflicts.iter().map(|p| p.style()));
+                standard_print::print_list(conflicts.iter().map_styled());
                 return;
             }
 

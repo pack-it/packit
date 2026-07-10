@@ -10,7 +10,7 @@ use crate::{
     cli::display::{
         QuestionResponse, Spinner, ask_user,
         logging::{debug, warning},
-        standard_print,
+        standard_print::{self, MapStyled},
         styled::Styled,
     },
     config::{Config, Repository},
@@ -130,7 +130,7 @@ impl<'a> Installer<'a> {
         if !self.options.keep_build {
             let removed = self.remove_build_dependencies(0, &dependency_tree)?;
             print!("Removed build dependencies: ");
-            standard_print::print_list_or_none(removed.iter().map(|p| p.style()));
+            standard_print::print_list_or_none(removed.iter().map_styled());
         }
 
         Ok(package_id)
@@ -378,7 +378,7 @@ impl<'a> Installer<'a> {
         let conflicts = self.register.get_conflicting_packages(&package_id.name, &install_meta.package_metadata.conflicts_with);
         if !conflicts.is_empty() {
             warning!("Skipping symlinking because of conflicting packages:");
-            standard_print::print_list(conflicts.iter().map(|p| p.style()));
+            standard_print::print_list(conflicts.iter().map_styled());
             should_symlink = false;
         }
 

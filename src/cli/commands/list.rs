@@ -4,7 +4,7 @@ use clap::Args;
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{self, styled::Styled},
+        display::{self, standard_print::MapStyled, styled::Styled},
     },
     config::Config,
     installer::{
@@ -41,7 +41,7 @@ impl HandleCommand for ListArgs {
         }
 
         if self.active {
-            display::print_grid(&register.iterate_active_packages().map(|p| p.style()).collect());
+            display::print_grid(&register.iterate_active_packages().map_styled().collect());
 
             return;
         }

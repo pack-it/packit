@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+use crate::cli::display::standard_print::{DisplayJoined, MapStyled};
+use clap::Args;
 use colored::Colorize;
 use std::process::exit;
-
-use clap::Args;
 
 use crate::{
     cli::{
@@ -86,10 +86,7 @@ impl InfoArgs {
 
         let mut pair_aligner = PairAligner::new();
         pair_aligner.add("Homepage", package.homepage.display());
-        pair_aligner.add(
-            "Installed versions",
-            package.versions.keys().map(|k| k.to_string()).collect::<Vec<String>>().join(" | "),
-        );
+        pair_aligner.add("Installed versions", package.versions.keys().map_styled().display(" | "));
         pair_aligner.add("Active version", &package.active_version);
         pair_aligner.add("Symlinked", package.symlinked);
         pair_aligner.display(aligned_print::VERTICAL_LINE_PREFIX);
