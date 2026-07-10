@@ -81,12 +81,16 @@ impl HandleCommand for InfoArgs {
 impl InfoArgs {
     /// Displays package info.
     fn display_package_info(&self, package: &InstalledPackage) {
+        // Sort installed versions for display
+        let mut installed_versions: Vec<_> = package.versions.keys().collect();
+        installed_versions.sort();
+
         println!("{}", self.package.name.style());
         println!("{}", package.description.italic().cyan());
 
         let mut pair_aligner = PairAligner::new();
         pair_aligner.add("Homepage", package.homepage.display());
-        pair_aligner.add("Installed versions", package.versions.keys().map_styled().display(" | "));
+        pair_aligner.add("Installed versions", installed_versions.iter().map_styled().display(" | "));
         pair_aligner.add("Active version", &package.active_version);
         pair_aligner.add("Symlinked", package.symlinked);
         pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
