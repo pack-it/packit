@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use std::{cmp::Ordering, fmt::Display, hash::Hash, str::FromStr};
 
 use crate::installer::types::VersionError;

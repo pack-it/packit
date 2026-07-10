@@ -12,8 +12,8 @@ pub trait Styled: Display {
     fn style(&self) -> ColoredString;
 }
 
+// Implements `Styled` for all references of T that implement Styled.
 impl<T: Styled> Styled for &T {
-    /// Implements `Styled` for all references of T: Styled.
     fn style(&self) -> ColoredString {
         (*self).style()
     }

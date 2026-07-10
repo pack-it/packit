@@ -4,7 +4,7 @@ use std::{error::Error, sync::LazyLock};
 use colored::Colorize;
 
 fn log_impl(level: String, message: std::fmt::Arguments) {
-    println!("{}: {message}", level.bold());
+    eprintln!("{}: {message}", level.bold());
 }
 
 pub fn warning_impl(message: std::fmt::Arguments) {

@@ -51,7 +51,7 @@ impl<'a> Symlinker<'a> {
         let package_version = match register.get_package_version(package_id) {
             Some(package) => package,
             None => {
-                warning!("Cannot get installed package from installed storage... Please check installation with 'pit list'");
+                warning!("Cannot get installed package from register... Please check installation with 'pit list'");
                 return Ok(());
             },
         };

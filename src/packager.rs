@@ -166,7 +166,7 @@ fn add_file(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, file_
 
 /// Adds a normalized symlink to a tar file.
 fn add_symlink(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, file_path: &PathBuf) -> Result<()> {
-    let target = fs::read_link(file_path).err_with_path("read", file_path)?;
+    let target = fs::read_link(file_path).err_with_path("read link", file_path)?;
 
     // Create symlink header
     let mut header = Header::new_ustar();

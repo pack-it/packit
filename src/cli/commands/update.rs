@@ -9,8 +9,7 @@ use crate::{
         display::{
             QuestionResponse, ask_user, grid,
             logging::error,
-            not_found,
-            standard_print::{self},
+            not_found, standard_print,
             styled::{MapStyled, Styled},
         },
         parameter_checks,

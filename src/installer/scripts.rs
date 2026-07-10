@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::{
     collections::{HashMap, VecDeque},
-    fs::{self},
+    fs,
     io::{BufRead, BufReader},
     path::{self, Path, PathBuf},
     process::{Command, Stdio},
