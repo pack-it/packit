@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #![allow(clippy::module_inception)]
 #![allow(clippy::enum_variant_names)]
+#![allow(clippy::collapsible_if)] // Allowed because of rustfmt formatting incompatibilities
 mod builder;
 mod cli;
 mod config;

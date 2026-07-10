@@ -29,6 +29,7 @@ pub enum UnpackError {
 type Result<T> = core::result::Result<T, UnpackError>;
 
 /// The different supported ArchiveExtensions.
+#[expect(clippy::upper_case_acronyms)]
 pub enum ArchiveExtension {
     GZ,
     ZIP,

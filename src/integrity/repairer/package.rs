@@ -361,7 +361,7 @@ fn reinstall_package(package_id: PackageId, register: &mut PackageRegister, mana
 
     // Re-add package as dependent
     for dependent in &dependents {
-        let Some(package_version) = register.get_package_version_mut(&dependent) else {
+        let Some(package_version) = register.get_package_version_mut(dependent) else {
             return Ok(());
         };
 

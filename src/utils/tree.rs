@@ -83,7 +83,7 @@ impl<V, L: Eq> Tree<V, L> {
     /// Gets the root of the tree.
     #[expect(unused)]
     pub fn get_root(&self) -> &Node<V, L> {
-        self.nodes.get(0).expect("Expected root to exist")
+        self.nodes.first().expect("Expected root to exist")
     }
 
     /// Returns a reference to a list which contains the nodes of the tree.
@@ -209,7 +209,7 @@ impl EmptyTree {
         let root = Node::new(package_id, (), ());
         let mut tree = Tree::new(root);
 
-        let mut package_queue = VecDeque::from([0 as usize]);
+        let mut package_queue = VecDeque::from([0]);
         while let Some(node_index) = package_queue.pop_front() {
             let node = tree.get_node_by_index_mut(node_index).expect("Expected node to exist");
             let dependencies = &register

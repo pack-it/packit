@@ -205,7 +205,7 @@ impl PackageVersionMeta {
         // If we have a single source, we don't allow referencing sources in the targets
         if let Sources::Single(_) = self.sources {
             if self.targets.iter().any(|(_, target)| target.source.is_some()) {
-                let msg = format!("using `source = ` in a target is not allowed when a single source is defined");
+                let msg = "using `source = ` in a target is not allowed when a single source is defined".to_string();
                 return Err(RepositoryError::ValidationError(msg));
             }
         }

@@ -68,7 +68,7 @@ impl HandleCommand for InstallArgs {
 
         // Check if all packages exist before starting installation
         for optional_id in &self.packages {
-            let (_, package, package_version) = match manager.read_package_and_version(&optional_id, &Target::current()) {
+            let (_, package, package_version) = match manager.read_package_and_version(optional_id, &Target::current()) {
                 Ok(package) => package,
                 Err(RepositoryError::PackageNotFoundError { reason, .. }) => {
                     not_found::repository_optional_package(optional_id, &manager, reason)

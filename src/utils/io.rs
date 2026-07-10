@@ -50,7 +50,7 @@ pub fn create_folder_symlinks(original_dir: &Path, link_dir: &Path, overwrite: b
             if !overwrite {
                 warning!(
                     "Symlink '{}' already exists in '{}'",
-                    file.file_name().display(),
+                    file.file_name().display(), // TODO: display requires MSRV 1.87.0
                     link_dir.display()
                 );
                 continue;

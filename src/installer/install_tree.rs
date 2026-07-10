@@ -113,7 +113,7 @@ impl<'a> InstallTreeBuilder<'a> {
         let mut tree = Tree::new(root);
         tree_display_string = self.update_tree_display(&tree_display_string, &tree)?;
 
-        let mut package_queue = VecDeque::from([0 as usize]);
+        let mut package_queue = VecDeque::from([0]);
         while let Some(node_index) = package_queue.pop_front() {
             let node = tree.get_node_by_index_mut(node_index).expect("Expected node to exist");
 
@@ -238,7 +238,7 @@ impl<'a> InstallTreeBuilder<'a> {
 
         // Check if a prebuild for the package is available
         let revision = install_meta.version_metadata.get_revision_count();
-        match self.repository_manager.get_prebuild_url(&install_meta.repository_id, &package_id, revision, &Target::current()) {
+        match self.repository_manager.get_prebuild_url(&install_meta.repository_id, package_id, revision, &Target::current()) {
             Ok(Some(_)) => return Ok(None),
             Ok(None) | Err(RepositoryError::RepositoryNotFoundError { .. }) => {},
             Err(e) => error!(e),

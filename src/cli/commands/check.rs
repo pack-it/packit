@@ -49,7 +49,7 @@ impl HandleCommand for CheckArgs {
         };
 
         while verifier.get_check_index() < verifier.get_check_length() {
-            if let Some(issue) = verifier.next_check(&packages, &register, &config).unwrap_or_exit(1) {
+            if let Some(issue) = verifier.next_check(packages, &register, &config).unwrap_or_exit(1) {
                 println!("{issue}")
             }
         }

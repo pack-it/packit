@@ -35,13 +35,13 @@ pub fn get_duplicates(packages: &Vec<OptionalPackageId>) -> HashSet<String> {
 
 /// Expands all the optional ids to package ids. Will exit with a not found error if the given optional id doesn't exist in the register.
 /// Returns a list of `PackageId`.
-pub fn expand_optional_ids(register: &PackageRegister, config: &Config, packages: &Vec<OptionalPackageId>) -> Vec<PackageId> {
+pub fn expand_optional_ids(register: &PackageRegister, config: &Config, packages: &[OptionalPackageId]) -> Vec<PackageId> {
     let mut package_ids = Vec::new();
     for optional_id in packages {
         if let Some(package_id) = optional_id.versioned() {
             let installed_directory = config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
             if register.get_package_version(&package_id).is_none() && !fs::exists(installed_directory).unwrap_or_exit(1) {
-                not_found::register_package_version(&package_id, &register);
+                not_found::register_package_version(&package_id, register);
             }
 
             package_ids.push(package_id);
@@ -50,7 +50,7 @@ pub fn expand_optional_ids(register: &PackageRegister, config: &Config, packages
 
         let installed_directory = config.prefix_directory.join("packages").join(&optional_id.name);
         if register.get_package(&optional_id.name).is_none() && !fs::exists(installed_directory).unwrap_or_exit(1) {
-            not_found::register_package(&optional_id.name, &register);
+            not_found::register_package(&optional_id.name, register);
         }
 
         let package = register.get_package(&optional_id.name).unwrap();

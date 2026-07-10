@@ -95,6 +95,7 @@ impl PackageRegister {
 
     /// Adds a package to the register storage.
     /// Please note that this does not save the storage and does not read the currently installed packages from the toml.
+    #[expect(clippy::too_many_arguments)]
     pub fn add_package(
         &mut self,
         package: &PackageMeta,
@@ -314,7 +315,7 @@ impl PackageRegister {
 
     /// Checks if a package has conflicts with any package that is installed.
     /// Returns a list of the names of all conflicting packages.
-    pub fn get_conflicting_packages(&self, package_name: &PackageName, package_conflicts: &Vec<PackageName>) -> Vec<&PackageName> {
+    pub fn get_conflicting_packages(&self, package_name: &PackageName, package_conflicts: &[PackageName]) -> Vec<&PackageName> {
         let mut conflicts = Vec::new();
 
         for (name, package) in &self.packages {

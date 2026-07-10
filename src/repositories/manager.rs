@@ -189,6 +189,7 @@ impl<'a> RepositoryManager<'a> {
     /// - It's not disabled
     /// - It contains the current target
     /// - The package is supported by the current Packit version
+    ///
     /// Returns Some(PackageNotFoundReason) if the package is not compatible, None otherwise.
     fn check_package_compatibility(&self, package: &PackageMeta) -> Option<PackageNotFoundReason> {
         // Check if the package is disabled
@@ -290,6 +291,7 @@ impl<'a> RepositoryManager<'a> {
     /// - It's not disabled
     /// - It contains the current target
     /// - The package version is supported by the current Packit version
+    ///
     /// Returns Some(PackageNotFoundReason) if the package version is not compatible, None otherwise.
     fn check_package_version_compatibility(&self, package_version: &PackageVersionMeta, target: &Target) -> Option<PackageNotFoundReason> {
         // Check if the package is disabled
@@ -401,13 +403,13 @@ impl<'a> RepositoryManager<'a> {
         &self,
         repository_id: &str,
         package: &PackageMeta,
-        mut supported_versions: impl Iterator<Item = &'v Version>,
+        supported_versions: impl Iterator<Item = &'v Version>,
     ) -> Result<PackageVersionMeta> {
         let mut reasons = Vec::new();
         let mut latest_deprecated: Option<PackageVersionMeta> = None;
-        while let Some(latest_version) = supported_versions.next() {
+        for latest_version in supported_versions {
             let package_id = PackageId::new(package.name.clone(), latest_version.clone());
-            let package_version = match self.read_repo_package_version(&repository_id, &package_id) {
+            let package_version = match self.read_repo_package_version(repository_id, &package_id) {
                 Ok(package_version) => package_version,
                 Err(RepositoryError::PackageNotFoundError { reason, .. }) => {
                     reasons.push(reason);
@@ -459,6 +461,7 @@ impl<'a> RepositoryManager<'a> {
 
     /// A helper method to get the metadata provider.
     /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
+    #[expect(clippy::borrowed_box)]
     fn get_metadata_provider(&self, repository_id: &str) -> Result<&Box<dyn MetadataProvider>> {
         // Check if repository is unsupported
         if self.unsupported_repositories.contains_key(repository_id) {
@@ -477,6 +480,7 @@ impl<'a> RepositoryManager<'a> {
 
     /// A helper method to get the prebuild provider.
     /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
+    #[expect(clippy::borrowed_box)]
     fn get_prebuid_provider(&self, repository_id: &str) -> Result<&Box<dyn PrebuildProvider>> {
         // Check if repository is unsupported
         if self.unsupported_repositories.contains_key(repository_id) {

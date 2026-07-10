@@ -56,7 +56,7 @@ where
     T: Display,
 {
     for item in items {
-        print!(" - {}\n", item);
+        println!(" - {}", item);
     }
 
     println!();

@@ -174,7 +174,7 @@ impl ConfigArgs {
                 pair_aligner.add("Maintainers", metadata.maintainers.join(", "));
                 pair_aligner.add("Repository provider", &repository.provider);
                 pair_aligner.add("Repository url", &repository.url);
-                pair_aligner.add("Required Packit Version", &metadata.required_packit_version.style().red());
+                pair_aligner.add("Required Packit Version", metadata.required_packit_version.style().red());
                 pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
                 continue;
             }

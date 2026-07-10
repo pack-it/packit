@@ -110,7 +110,7 @@ impl InfoArgs {
 
         let mut pair_aligner = PairAligner::new();
         pair_aligner.add("Homepage", package.homepage.display());
-        pair_aligner.add("License", &package_version.license.style());
+        pair_aligner.add("License", package_version.license.style());
         pair_aligner.add("Install path", package_version.install_path.display());
         pair_aligner.add("Active", package.active_version == package_id.version);
         pair_aligner.add("Symlinked", package.symlinked);

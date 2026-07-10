@@ -67,7 +67,7 @@ pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool, recurse: bool)
         false => None,
     };
 
-    let metadata = fs::metadata(&path).err_with_path("read metadata of", path)?;
+    let metadata = fs::metadata(path).err_with_path("read metadata of", path)?;
     set_file_permissions(path, metadata.permissions(), group_id, recurse)
 }
 
@@ -91,7 +91,7 @@ fn set_file_permissions(path: &PathBuf, mut old_permissions: Permissions, group_
         old_permissions.set_mode(0o755);
     }
 
-    fs::set_permissions(&path, old_permissions).err_with_path("set permissions of", path)?;
+    fs::set_permissions(path, old_permissions).err_with_path("set permissions of", path)?;
 
     if !recurse || !path.is_dir() {
         return Ok(());

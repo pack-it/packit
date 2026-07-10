@@ -144,7 +144,7 @@ fn check_package_alterations(package_id: &PackageId, register: &PackageRegister,
 pub fn check_storage_consistency(packages: &Vec<PackageId>, config: &Config) -> Result<Option<Issue>> {
     let mut missing = Vec::new();
     for package_id in packages {
-        if !package_storage_is_consistent(&package_id, config)? {
+        if !package_storage_is_consistent(package_id, config)? {
             missing.push(package_id.clone());
         }
     }
@@ -614,7 +614,7 @@ fn check_package_test(package_id: &PackageId, register: &PackageRegister, config
     let script_data = ScriptData::new(
         &downloaded_script,
         &package_version.install_path,
-        &package_id,
+        package_id,
         config,
         &script_args,
         false,
@@ -639,7 +639,7 @@ fn check_package_test(package_id: &PackageId, register: &PackageRegister, config
     match scripts::run_test_script(&script_data, &read_files) {
         Ok(_) => Ok(false),
         Err(ScriptError::ScriptFailed(..)) => Ok(true),
-        Err(e) => return Err(VerifierError::ScriptError(e)),
+        Err(e) => Err(VerifierError::ScriptError(e)),
     }
 }
 

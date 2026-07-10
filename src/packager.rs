@@ -150,7 +150,7 @@ fn add_directory(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, 
 
 /// Adds a normalized file to a tar file.
 fn add_file(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, file_path: &PathBuf) -> Result<()> {
-    let file = File::open(file_path).err_with_path("open", &file_path)?;
+    let file = File::open(file_path).err_with_path("open", file_path)?;
     let metadata = file.metadata().err_with_path("read metadata of", file_path)?;
 
     // Create regular file header

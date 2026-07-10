@@ -71,7 +71,7 @@ impl<'a> Installer<'a> {
 
         // Read package and version metadata
         let (repository_id, package_metadata, version_metadata) =
-            self.repository_manager.read_package_and_version(&optional_id, &Target::current())?;
+            self.repository_manager.read_package_and_version(optional_id, &Target::current())?;
 
         // Create a package id of the current package
         let version = &version_metadata.version;
@@ -252,16 +252,16 @@ impl<'a> Installer<'a> {
         let script_data = ScriptData::new(
             &script_file,
             &install_directory,
-            &package_id,
+            package_id,
             self.config,
-            &script_args,
+            script_args,
             self.options.verbose,
         );
 
         // Only show a spinner when not verbose
         if self.options.verbose {
             println!("Executing preinstall script of {}", package_id.style());
-            scripts::run_pre_script(&script_data, &install_directory)?;
+            scripts::run_pre_script(&script_data, install_directory)?;
             return Ok(());
         }
 
@@ -269,7 +269,7 @@ impl<'a> Installer<'a> {
         let spinner_message = format!("Executing preinstall of {}", package_id.style());
         let spinner = Spinner::new(spinner_message);
         spinner.show();
-        scripts::run_pre_script(&script_data, &install_directory)?;
+        scripts::run_pre_script(&script_data, install_directory)?;
         spinner.finish();
 
         Ok(())
@@ -342,9 +342,9 @@ impl<'a> Installer<'a> {
         let script_data = ScriptData::new(
             &script_file,
             &install_directory,
-            &package_id,
+            package_id,
             self.config,
-            &script_args,
+            script_args,
             self.options.verbose,
         );
 
@@ -447,9 +447,9 @@ impl<'a> Installer<'a> {
         let script_data = ScriptData::new(
             &script_file,
             &install_directory,
-            &package_id,
+            package_id,
             self.config,
-            &script_args,
+            script_args,
             self.options.verbose,
         );
 
@@ -940,7 +940,7 @@ impl<'a> Installer<'a> {
     pub fn get_updatables(&self) -> Result<Vec<PackageId>> {
         let mut updatables = Vec::new();
         for (package_name, package) in self.register.iterate_packages() {
-            let (repository_id, package_meta) = self.repository_manager.read_package(&package_name)?;
+            let (repository_id, package_meta) = self.repository_manager.read_package(package_name)?;
             let latest_available_version =
                 self.repository_manager.read_latest_supported_version(&repository_id, &package_meta, &Target::current())?;
 

@@ -159,6 +159,7 @@ fn run_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, env: Environm
         command.stdout(Stdio::inherit()).stderr(Stdio::inherit());
     } else {
         // Create pipe to capture both stdout and stderr together
+        // TODO: pipe requires MSRV 1.87.0
         let (reader, writer) = std::io::pipe().err_operation("create pipe")?;
         let writer_clone = writer.try_clone().err_operation("clone pipe writer")?;
         command.stdout(writer).stderr(writer_clone);
