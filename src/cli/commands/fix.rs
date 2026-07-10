@@ -44,16 +44,23 @@ impl FixArgs {
         while verifier.get_initial_check_index() < verifier.get_initial_check_length() {
             let check_result = verifier.next_initial_check().unwrap_or_exit(1);
             let issue = match check_result {
+                // If there is an issue and we previously attempted to fix it, error and exit
                 Some(_) if fixed_issue => {
                     error!(msg: UNSUCCESSFUL_FIX_MESSAGE);
                     exit(1);
                 },
+
+                // If there is an issue, return the issue to fix it
                 Some(issue) => issue,
+
+                // If there is no issue and we previously attempted to fix it, show a success message and reset `fixed_issue`
                 None if fixed_issue => {
                     println!("{}", "Successfully fixed the issue".bold().green());
                     fixed_issue = false;
                     continue;
                 },
+
+                // If there is no issue, continue
                 None => continue,
             };
 
@@ -94,16 +101,23 @@ impl FixArgs {
         while verifier.get_check_index() < verifier.get_check_length() {
             let check_result = verifier.next_check(packages, &register, &config).unwrap_or_exit(1);
             let issue = match check_result {
+                // If there is an issue and we previously attempted to fix it, error and exit
                 Some(_) if fixed_issue => {
                     error!(msg: UNSUCCESSFUL_FIX_MESSAGE);
                     exit(1);
                 },
+
+                // If there is an issue, return the issue to fix it
                 Some(issue) => issue,
+
+                // If there is no issue and we previously attempted to fix it, show a success message and reset `fixed_issue`
                 None if fixed_issue => {
                     println!("{}", "Successfully fixed the issue".bold().green());
                     fixed_issue = false;
                     continue;
                 },
+
+                // If there is no issue, continue
                 None => continue,
             };
 
