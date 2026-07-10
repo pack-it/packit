@@ -62,11 +62,11 @@ If the `--verbose` option is given, extra verbose output is shown, like build ou
 #### `pit uninstall <PACKAGE-NAME>[@<VERSION>] ...`
 Uninstalls the specified packages, if a version is given that version will be uninstalled, if not, you will be asked if you want to delete all versions of `<PACKAGE-NAME>` in case there are multiple versions installed. Multiple packages can be specified by entering multiple names, split by a space.
 
-#### `pit list`
-Lists all the installed packages.
+#### `pit list [--updatables] [--active]`
+Lists all the installed packages. If the `--updatables` flag is specified, all updatable packages are listed. If the `--active` flag is specified, only the active package versions are listed.
 
-#### `pit search <PACKAGE-NAME>[@<VERSION>] [--verbose]`
-Searches a package with `<PACKAGE-NAME>` and shows information based on the package metadata. If the version is given that specific version is searched for. The `--verbose` flag can be used to show more output.
+#### `pit search <QUERY> [--regex] [--verbose]`
+Searches a package with `<QUERY>`. If `--regex` is not enabled, the query is expected to be `<PACKAGE-NAME>[@<VERSION>]` and information based on the package metadata is shown, if the version is given that specific version is searched for. If `--regex` is given, all packages that match the given regular expression query are shown. The `--verbose` flag can be used to show more output.
 
 #### `pit update [<PACKAGE-NAME>[@<VERSION>] ...] [--new-version <NEW-VERSION>] [--all] [--exclude <PACKAGE-NAME> ...]`
 Updates the specified package to the new version, or the latest version if no new version is specified. If multiple packages are specified they are all updated to the latest version (and `--new-version` cannot be used). If multiple versions of the same package are installed, the latest installed version is assumed. The `--new-version` flag can be used to specify the new version to install. The `--all` flag can be used to update all packages (the latest installed version will be updated). The `--exclude` flag can be used to exclude certain packages when using the `--all` flag.
