@@ -97,7 +97,7 @@ impl<'a> Builder<'a> {
         debug!("Source size: {}", source.size);
 
         // Download the build files
-        let bytes = self.download_file(&source.url, &source.mirrors, &source.checksum, package_name.style().to_string())?;
+        let bytes = self.download_file(&source.url, &source.mirrors, &source.checksum, &package_name.style().to_string())?;
 
         // Create temp directory to build in
         let build_directory = TempDir::new().err_operation("create temp dir")?;
@@ -184,7 +184,7 @@ impl<'a> Builder<'a> {
         // Download patch from the url if it starts with 'http://' or 'https://'
         if patch.url.starts_with("http://") || patch.url.starts_with("https://") {
             let download_description = format!("patch {id} of {}", package_id.style());
-            return self.download_file(&patch.url, &patch.mirrors, &patch.checksum, download_description);
+            return self.download_file(&patch.url, &patch.mirrors, &patch.checksum, &download_description);
         }
 
         // Create download spinner
@@ -213,7 +213,7 @@ impl<'a> Builder<'a> {
     }
 
     /// Downloads a file from the url, or one of the mirrors. Checks against a checksum and shows a spinner.
-    fn download_file(&self, url: &str, mirrors: &[String], checksum: &Checksum, download_description: String) -> Result<Bytes> {
+    fn download_file(&self, url: &str, mirrors: &[String], checksum: &Checksum, download_description: &str) -> Result<Bytes> {
         // Show download spinner
         let mut spinner = Spinner::new(format!("Downloading {download_description} from '{}'", url.cyan()));
         spinner.show();

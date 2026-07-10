@@ -8,8 +8,8 @@ use crate::{
         display::{
             logging::warning,
             not_found,
-            standard_print::{self, MapStyled},
-            styled::Styled,
+            standard_print::{self},
+            styled::{MapStyled, Styled},
         },
     },
     config::{Config, Repository},

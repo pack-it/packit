@@ -2,8 +2,6 @@
 use colored::Colorize;
 use std::fmt::Display;
 
-use crate::cli::display::styled::Styled;
-
 pub trait DisplayOption {
     /// Returns the correct string display for an `Option<impl Display>`, dimmed when `None`.
     fn display(&self) -> String;
@@ -22,26 +20,14 @@ where
 }
 
 pub trait DisplayJoined {
+    /// Joins all items together with a given separator.
+    /// Returns a joined `String`.
     fn display(self, separator: &str) -> String;
 }
 
 impl<T: Iterator<Item = impl Display>> DisplayJoined for T {
-    /// Joins all items together with a given separator.
-    /// Returns a joined `String`.
     fn display(self, separator: &str) -> String {
         self.map(|p| p.to_string()).collect::<Vec<String>>().join(separator)
-    }
-}
-
-pub trait MapStyled {
-    /// Maps all iterators which have items which implement `Styled` to their styled version.
-    /// Returns an iterator with items which implement `Display`.
-    fn map_styled(self) -> impl Iterator<Item = impl Display>;
-}
-
-impl<T: Iterator<Item = impl Styled>> MapStyled for T {
-    fn map_styled(self) -> impl Iterator<Item = impl Display> {
-        self.map(|p| p.style())
     }
 }
 

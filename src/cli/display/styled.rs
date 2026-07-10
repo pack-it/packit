@@ -12,10 +12,22 @@ pub trait Styled: Display {
     fn style(&self) -> ColoredString;
 }
 
-// Implements Styled for all references of T: Styled
 impl<T: Styled> Styled for &T {
+    /// Implements `Styled` for all references of T: Styled.
     fn style(&self) -> ColoredString {
         (*self).style()
+    }
+}
+
+pub trait MapStyled {
+    /// Maps all iterators which have items which implement `Styled` to their styled version.
+    /// Returns an iterator with items which implement `Display`.
+    fn map_styled(self) -> impl Iterator<Item = impl Display>;
+}
+
+impl<T: Iterator<Item = impl Styled>> MapStyled for T {
+    fn map_styled(self) -> impl Iterator<Item = impl Display> {
+        self.map(|p| p.style())
     }
 }
 

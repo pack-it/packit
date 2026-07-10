@@ -10,8 +10,8 @@ use crate::{
     cli::display::{
         QuestionResponse, Spinner, ask_user,
         logging::{debug, warning},
-        standard_print::{self, MapStyled},
-        styled::Styled,
+        standard_print::{self},
+        styled::{MapStyled, Styled},
     },
     config::{Config, Repository},
     installer::{

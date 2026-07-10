@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::fmt::Display;
 
+/// Holds pairs which have the `Display` trait.
 pub struct PairAligner {
     pairs: Vec<(String, String)>,
 }
@@ -8,6 +9,7 @@ pub struct PairAligner {
 impl PairAligner {
     pub const VERTICAL_LINE_PREFIX: &str = " \u{2502} ";
 
+    /// Creates a new `PairAligner`.
     pub fn new() -> Self {
         Self { pairs: Vec::new() }
     }

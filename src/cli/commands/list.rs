@@ -4,7 +4,10 @@ use clap::Args;
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{self, standard_print::MapStyled, styled::Styled},
+        display::{
+            self,
+            styled::{MapStyled, Styled},
+        },
     },
     config::Config,
     installer::{

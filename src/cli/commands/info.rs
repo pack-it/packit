@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use crate::cli::display::standard_print::{DisplayJoined, MapStyled};
+use crate::cli::display::{standard_print::DisplayJoined, styled::MapStyled};
 use clap::Args;
 use colored::Colorize;
 use std::process::exit;
