@@ -71,8 +71,8 @@ pub fn debug_impl(message: std::fmt::Arguments) {
 }
 
 pub fn debug_error_impl<T: Error>(message: std::fmt::Arguments, error: T) {
-    let message = format_args!("{message}\nCaused by: {}", trace_error(error));
-    log_impl("DEBUG ERROR".purple().to_string(), message);
+    let trace = trace_error(error);
+    log_impl("DEBUG ERROR".purple().to_string(), format_args!("{message}\nCaused by: {trace}"));
 }
 
 pub static DEBUG_ENABLED: LazyLock<bool> = LazyLock::new(|| match std::env::var("PACKIT_DEBUG") {
