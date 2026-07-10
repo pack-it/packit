@@ -45,6 +45,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Fix `--updatables` flag listing older installed package versions when a newer up-to-date version is installed.
 - Fix checksum check for patch files that are downloaded from the metadata repository.
 - Fix empty directories (`lib`, `share`) in the prefix, by not creating them anymore.
+- Fix skip active install option, by only skipping when multiple versions are installed.
 
 
 ## [v0.0.2](https://github.com/pack-it/packit/compare/0.0.1...0.0.2) - 2026-05-14
