@@ -113,7 +113,7 @@ impl Display for Issue {
                 writeln!(f, "The following dependencies are missing in the register:")?;
 
                 for (package, missing_dependency) in missing {
-                    let item = format!("  - {} missing {}", package.style(), missing_dependency.to_string().bold().blue()); // TODO: Dependency styling (also blue?)
+                    let item = format!("  - {} missing {}", package.style(), missing_dependency);
 
                     writeln!(f, "{}", item)?;
                 }

@@ -9,7 +9,7 @@ use crate::{
         commands::HandleCommand,
         display::{
             self,
-            aligned_print::{self, PairAligner},
+            aligned_print::PairAligner,
             deprecation,
             logging::error,
             not_found,
@@ -76,10 +76,9 @@ impl SearchArgs {
 
     /// Searches information of a package based on the provided `OptionalPackageId`.
     /// Fails if the given query is not a valid `OptionalPackageId`.
-    /// TODO: Search command should accept an optional id arg instead (similar to the info command)
     fn search_package(&self) {
         // Get the optional id
-        let message = "The given search query isn't a valid `OptionalPackageId`. For regex use `--regex`.";
+        let message = "The given search query isn't a valid package. For regex use `--regex`.";
         let optional_id = OptionalPackageId::from_str(&self.query).unwrap_or_exit_msg(message, 1);
 
         let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
@@ -132,7 +131,7 @@ impl SearchArgs {
         let mut pair_aligner = PairAligner::new();
         pair_aligner.add("Latest stable version", latest_version.version.style());
         pair_aligner.add("License", &package_version.license);
-        pair_aligner.display(aligned_print::VERTICAL_LINE_PREFIX);
+        pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
         println!();
 
         print!("Dependencies: ");

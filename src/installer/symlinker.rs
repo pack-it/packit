@@ -113,7 +113,7 @@ impl<'a> Symlinker<'a> {
         // Get active package version
         let package_version = package.get_package_version(&package.active_version).ok_or(InstallerError::PackageNotFound {
             package_name: package_name.clone(),
-            version: Some(package.active_version.to_string()),
+            version: Some(package.active_version.clone()),
         })?;
 
         // Remove all symlinks except for those in the active directory

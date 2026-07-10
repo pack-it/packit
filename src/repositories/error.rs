@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+use colored::Colorize;
 use thiserror::Error;
 
 use crate::{
@@ -21,10 +22,10 @@ pub enum RepositoryError {
         repository_id: String,
     },
 
-    #[error("Cannot find package {} with version '{}': {reason}", package_name.style(), version.as_deref().unwrap_or("any"))]
+    #[error("Cannot find package {} with version '{}': {reason}", package_name.style(), version.as_ref().map_or("any".normal(), |v| v.style()))]
     PackageNotFoundError {
         package_name: PackageName,
-        version: Option<String>,
+        version: Option<Version>,
         reason: PackageNotFoundReason,
     },
 

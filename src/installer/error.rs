@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+use colored::Colorize;
 use thiserror::Error;
 
 use crate::{
@@ -24,10 +25,10 @@ pub enum InstallerError {
     #[error("Prebuild checksum does not match")]
     ChecksumError,
 
-    #[error("Package {} with version '{}' is not installed.", package_name.style(), version.as_deref().unwrap_or("any"))]
+    #[error("Package {} with version '{}' is not installed.", package_name.style(), version.as_ref().map_or("any".normal(), |v| v.style()))]
     PackageNotFound {
         package_name: PackageName,
-        version: Option<String>,
+        version: Option<Version>,
     },
 
     #[error("Package {} is already installed.", package_id.style())]

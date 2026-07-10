@@ -119,9 +119,8 @@ impl HandleCommand for UpdateArgs {
 
             match new_package_id {
                 Some(new_package_id) => {
-                    let styled_message =
-                        format!("Successfully updated {} to {}", optional_id.style(), new_package_id.style()).bold().green();
-                    println!("{styled_message}");
+                    let styled_message = format!("Successfully updated {} to {}", optional_id.style(), new_package_id.style());
+                    println!("{}", styled_message.bold().green());
 
                     // Save changes
                     register.save_to(&register_dir).unwrap_or_exit(1);

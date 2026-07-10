@@ -9,7 +9,7 @@ use crate::{
         commands::HandleCommand,
         display::{
             QuestionResponse,
-            aligned_print::{self, PairAligner},
+            aligned_print::PairAligner,
             ask_user,
             logging::{error, warning},
             styled::Styled,
@@ -175,7 +175,7 @@ impl ConfigArgs {
                 pair_aligner.add("Repository provider", &repository.provider);
                 pair_aligner.add("Repository url", &repository.url);
                 pair_aligner.add("Required Packit Version", &metadata.required_packit_version.style().red());
-                pair_aligner.display(aligned_print::VERTICAL_LINE_PREFIX);
+                pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
                 continue;
             }
 
@@ -199,7 +199,7 @@ impl ConfigArgs {
             pair_aligner.add("Repository provider", &repository.provider);
             pair_aligner.add("Repository url", &repository.url);
             pair_aligner.add("Required Packit Version", metadata.required_packit_version.style());
-            pair_aligner.display(aligned_print::VERTICAL_LINE_PREFIX);
+            pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
         }
     }
 

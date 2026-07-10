@@ -104,7 +104,7 @@ impl FixArgs {
         }
 
         if !verifier.issues_found() {
-            println!("No issues were found");
+            println!("No issues were found!");
         }
     }
 }

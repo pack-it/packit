@@ -448,7 +448,7 @@ impl<'a> Installer<'a> {
             self.options.verbose,
         );
 
-        // Install external files necessary for testing
+        // Download external files necessary for testing
         let external_files = install_meta.version_metadata.external_test_files.iter().chain(&target.external_test_files);
         let mut read_files = Vec::new();
         let mut skip_test = false;
@@ -557,7 +557,7 @@ impl<'a> Installer<'a> {
         if self.register.get_package_version(&package_id).is_none() {
             return Err(InstallerError::PackageNotFound {
                 package_name: package_id.name,
-                version: Some(package_id.version.style().to_string()),
+                version: Some(package_id.version),
             });
         }
 
@@ -897,7 +897,7 @@ impl<'a> Installer<'a> {
         if let Some(package_id) = optional_id.versioned() {
             return self.register.get_package_version(&package_id).ok_or(InstallerError::PackageNotFound {
                 package_name: package_id.name,
-                version: Some(package_id.version.style().to_string()),
+                version: Some(package_id.version),
             });
         }
 

@@ -37,6 +37,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The package metadata resolving algorithm is improved and now shows a clear reason when a package cannot be found.
 - The `util checksum` command now also shows the size of the file.
 - When the `repository.toml` file of a metadata repository cannot be fetched, the repository will not be loaded anymore.
+- Improved UI with colors and text styling.
 
 ### Fixed
 - Fix package not found issue when multiple repositories have the same package but different versions.

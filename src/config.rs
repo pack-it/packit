@@ -12,11 +12,7 @@ use thiserror::Error;
 use toml_edit::DocumentMut;
 
 use crate::{
-    cli::display::{
-        aligned_print::{self, PairAligner},
-        logging::warning,
-        standard_print::DisplayOption,
-    },
+    cli::display::{aligned_print::PairAligner, logging::warning, standard_print::DisplayOption},
     platforms::{DEFAULT_CONFIG_DIR, DEFAULT_PREFIX},
     repositories::metadata::DEFAULT_METADATA_PROVIDER_ID,
     utils::{
@@ -160,7 +156,7 @@ impl Config {
             pair_aligner.add("Provider", &repo.provider);
             pair_aligner.add("Prebuilds provider", repo.prebuilds_provider.display());
             pair_aligner.add("Prebuilds url", repo.prebuilds_url.display());
-            pair_aligner.display(aligned_print::VERTICAL_LINE_PREFIX);
+            pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
         }
     }
 }

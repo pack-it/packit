@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use crate::installer::types::{OptionalPackageId, PackageId, PackageName, Version};
+use crate::{
+    installer::types::{OptionalPackageId, PackageId, PackageName, Version},
+    repositories::types::Licenses,
+};
 use colored::{ColoredString, Colorize};
 use std::fmt::Display;
 
@@ -37,5 +40,14 @@ impl Styled for PackageName {
 impl Styled for Version {
     fn style(&self) -> ColoredString {
         self.to_string().bold().blue()
+    }
+}
+
+impl Styled for Licenses {
+    fn style(&self) -> ColoredString {
+        match self {
+            Licenses::Unknown => self.to_string().dimmed(),
+            _ => self.to_string().normal(),
+        }
     }
 }

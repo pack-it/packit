@@ -8,7 +8,7 @@ use crate::{
     cli::{
         commands::HandleCommand,
         display::{
-            aligned_print::{self, PairAligner},
+            aligned_print::PairAligner,
             logging::error,
             not_found,
             standard_print::{self, DisplayOption},
@@ -89,7 +89,7 @@ impl InfoArgs {
         pair_aligner.add("Installed versions", package.versions.keys().map_styled().display(" | "));
         pair_aligner.add("Active version", &package.active_version);
         pair_aligner.add("Symlinked", package.symlinked);
-        pair_aligner.display(aligned_print::VERTICAL_LINE_PREFIX);
+        pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
     }
 
     /// Displays the package version info, also checking for the verbose flag for some info.
@@ -104,7 +104,7 @@ impl InfoArgs {
 
         let mut pair_aligner = PairAligner::new();
         pair_aligner.add("Homepage", package.homepage.display());
-        pair_aligner.add("License", &package_version.license);
+        pair_aligner.add("License", &package_version.license.style());
         pair_aligner.add("Install path", package_version.install_path.display());
         pair_aligner.add("Active", package.active_version == package_id.version);
         pair_aligner.add("Symlinked", package.symlinked);
@@ -114,7 +114,7 @@ impl InfoArgs {
             pair_aligner.add("Metadata repository url", &package_version.metadata_repository_url);
         }
 
-        pair_aligner.display(aligned_print::VERTICAL_LINE_PREFIX);
+        pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
         println!();
 
         print!("Dependencies: ");

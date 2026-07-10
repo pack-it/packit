@@ -86,10 +86,8 @@ impl HandleCommand for SwitchArgs {
             "Successfully switched {} active version to {}",
             self.package_name.style(),
             self.package_version.style()
-        )
-        .bold()
-        .green();
+        );
 
-        println!("{styled_message}");
+        println!("{}", styled_message.bold().green());
     }
 }

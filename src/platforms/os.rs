@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::sync::LazyLock;
 
-use crate::{cli::display::logging::debug, installer::types::Version};
+use crate::{
+    cli::display::{logging::debug, styled::Styled},
+    installer::types::Version,
+};
 
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 use std::str::FromStr;
@@ -89,8 +92,6 @@ impl OsVersion {
     #[cfg(target_os = "macos")]
     fn get_version() -> Option<Self> {
         use std::process::Command;
-
-        use crate::cli::display::styled::Styled;
 
         let output = match Command::new("/usr/bin/sw_vers").arg("-productVersion").output() {
             Ok(output) => output,

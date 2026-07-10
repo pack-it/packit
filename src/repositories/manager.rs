@@ -256,7 +256,7 @@ impl<'a> RepositoryManager<'a> {
 
         Err(RepositoryError::PackageNotFoundError {
             package_name: package_id.name.clone(),
-            version: Some(package_id.version.style().to_string()),
+            version: Some(package_id.version.clone()),
             reason: PackageNotFoundReason::get_primary_reason(not_found_reasons.values()),
         })
     }
@@ -272,7 +272,7 @@ impl<'a> RepositoryManager<'a> {
         if let Some(reason) = self.check_package_version_compatibility(&package, &Target::current()) {
             return Err(RepositoryError::PackageNotFoundError {
                 package_name: package_id.name.clone(),
-                version: Some(package_id.version.style().to_string()),
+                version: Some(package_id.version.clone()),
                 reason,
             });
         }
