@@ -16,7 +16,11 @@ use crate::{
         scripts::{self, ScriptData, ScriptError},
         types::{Dependency, PackageId, PackageName},
     },
-    integrity::{Issue, error::Result, utils::get_storage_packages},
+    integrity::{
+        Issue,
+        error::{Result, VerifierError},
+        utils::get_storage_packages,
+    },
     packager,
     platforms::Target,
     register::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
@@ -596,15 +600,17 @@ fn check_package_test(package_id: &PackageId, register: &PackageRegister, config
         },
     };
 
-    // Get the test script data
+    // Get the target
     let version_meta = provider.read_package_version(&package_id.name, &package_id.version)?;
     let target_bounds = version_meta.get_best_target(&Target::current())?;
     let target = version_meta.get_target(&target_bounds)?;
+
+    // Get the test script data
     let script_path = version_meta.get_test_script_path(&target_bounds)?;
-    let script_text = provider.read_file(&package_id.name, &script_path)?;
     let script_args = version_meta.get_script_args(&target_bounds)?;
-    let Some(script_file) = script_text else { return Ok(false) };
-    let downloaded_script = scripts::write_script_to_tempfile(&script_file)?;
+    let script_text = provider.read_file(&package_id.name, &script_path)?;
+    let Some(script_text) = script_text else { return Ok(false) };
+    let downloaded_script = scripts::write_script_to_tempfile(&script_text)?;
     let script_data = ScriptData::new(
         &downloaded_script,
         &package_version.install_path,
@@ -633,7 +639,7 @@ fn check_package_test(package_id: &PackageId, register: &PackageRegister, config
     match scripts::run_test_script(&script_data, &read_files) {
         Ok(_) => Ok(false),
         Err(ScriptError::ScriptFailed(..)) => Ok(true),
-        Err(e) => return Err(crate::integrity::error::VerifierError::ScriptError(e)),
+        Err(e) => return Err(VerifierError::ScriptError(e)),
     }
 }
 

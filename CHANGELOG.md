@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Support for a separate verbose output from scripts, file descriptor 3 can now be used for verbose output.
 - When a build script exits with a non-zero status code, the last 10 lines of the scripts output is now shown.
 - The `disable_prebuilds` field to the config, which disables usage of prebuilds when set to true.
+- The test script checks in the verifier, which use the metadata test scripts to test if packages work.
 
 ### Changes
 - The build system now includes a new `package-build` xtask to create a full Packit prebuild for the release.

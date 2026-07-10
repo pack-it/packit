@@ -199,7 +199,7 @@ impl Display for Issue {
                 writeln!(f, "{issue_explanation}")?;
 
                 for package in packages {
-                    writeln!(f, "  - {package}")?;
+                    writeln!(f, "  - {}", package.style())?;
                 }
             },
         }
