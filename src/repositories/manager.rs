@@ -252,9 +252,7 @@ impl<'a> RepositoryManager<'a> {
             }
 
             // Validate the package before returning
-            if package.is_metadata_valid() {
-                return Err(RepositoryError::ValidationError("Package has conflicts in metadata.".to_string()));
-            }
+            package.validate_metadata()?;
 
             return Ok((repository_id.clone(), package));
         }
@@ -283,9 +281,7 @@ impl<'a> RepositoryManager<'a> {
         }
 
         // Validate the package before returning
-        if package.is_metadata_valid() {
-            return Err(RepositoryError::ValidationError("Package has conflicts in metadata.".to_string()));
-        }
+        package.validate_metadata()?;
 
         Ok(package)
     }

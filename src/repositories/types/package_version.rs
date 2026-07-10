@@ -173,14 +173,15 @@ impl PackageVersionMeta {
     }
 
     /// Checks if there are conflicts in the package version metadata.
-    /// Returns true if the metadata is valid and thus contains no conflicts.
-    pub fn is_metadata_valid(&self) -> bool {
+    /// Returns `Ok` if the metadata is valid and thus contains no conflicts, or an `Err` if the metadata is invalid.
+    pub fn validate_metadata(&self) -> Result<()> {
         // Check if a global dependency is also specified as target specific dependency
         for dependency in &self.dependencies {
             for target in self.targets.values() {
                 for target_dependency in &target.dependencies {
                     if dependency.get_name() == target_dependency.get_name() {
-                        return true;
+                        let msg = format!("dependency {} is specified in both global and target fields", dependency.get_name());
+                        return Err(RepositoryError::ValidationError(msg));
                     }
                 }
             }
@@ -191,7 +192,11 @@ impl PackageVersionMeta {
             for target in self.targets.values() {
                 for target_dependency in &target.build_dependencies {
                     if dependency.get_name() == target_dependency.get_name() {
-                        return true;
+                        let msg = format!(
+                            "build dependency {} is specified in both global and target fields",
+                            dependency.get_name()
+                        );
+                        return Err(RepositoryError::ValidationError(msg));
                     }
                 }
             }
@@ -200,22 +205,25 @@ impl PackageVersionMeta {
         // If we have a single source, we don't allow referencing sources in the targets
         if let Sources::Single(_) = self.sources {
             if self.targets.iter().any(|(_, target)| target.source.is_some()) {
-                return true;
+                let msg = format!("using `source = ` in a target is not allowed when a single source is defined");
+                return Err(RepositoryError::ValidationError(msg));
             }
         }
 
         // If we have named sources, we check for valid referencing in the targets
         if let Sources::Named(sources) = &self.sources {
-            for target in self.targets.values() {
+            for (bounds, target) in self.targets.iter() {
                 match &target.source {
-                    Some(source) if !sources.contains_key(source) => return true,
-                    None => return true,
+                    Some(source) if !sources.contains_key(source) => {
+                        return Err(RepositoryError::ValidationError(format!("source '{source}' is not defined")));
+                    },
+                    None => return Err(RepositoryError::ValidationError(format!("target '{bounds}' has no source"))),
                     _ => continue,
                 }
             }
         }
 
-        false
+        Ok(())
     }
 
     fn default_skip_symlinking() -> bool {

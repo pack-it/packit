@@ -35,7 +35,7 @@ pub enum RepositoryError {
         revision: u64,
     },
 
-    #[error("Package metadata is not valid")]
+    #[error("Package metadata is not valid: {0}")]
     ValidationError(String),
 
     #[error("Cannot find target for package.")]
