@@ -382,13 +382,18 @@ impl<'a> Installer<'a> {
             should_symlink = false;
         }
 
-        let mut should_set_active = !self.options.skip_active;
+        let mut should_set_active = true;
 
         // Check if we have a previous active install
         if let Some(installed_package) = self.register.get_package(&package_id.name) {
             if installed_package.versions.len() > 1 {
+                // Skip if skip active is specified in the install options
+                if self.options.skip_active {
+                    should_set_active = false;
+                }
+
                 // Prompt user if the installed version is newer than the version currently installing
-                if installed_package.active_version > install_meta.version_metadata.version {
+                if should_set_active && installed_package.active_version > install_meta.version_metadata.version {
                     let question = format!(
                         "A newer version ({}) of this package is currently active, do you want to change the active version to the older version ({})?",
                         installed_package.active_version.style(),

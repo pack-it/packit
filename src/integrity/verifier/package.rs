@@ -13,9 +13,14 @@ use crate::{
     config::{Config, Repository},
     installer::{
         self,
+        scripts::{self, ScriptData, ScriptError},
         types::{Dependency, PackageId, PackageName},
     },
-    integrity::{Issue, error::Result, utils::get_storage_packages},
+    integrity::{
+        Issue,
+        error::{Result, VerifierError},
+        utils::get_storage_packages,
+    },
     packager,
     platforms::Target,
     register::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
@@ -521,7 +526,7 @@ fn invalid_dependencies_impl(package: &InstalledPackageVersion) -> Result<Vec<(P
 }
 
 /// Checks the completeness of the depedency trees from the given packages.
-/// Returns a dependency tree issue or `None` if there are no packages missing from the dependency trees.
+/// Returns an `Issue::BrokenTree` or `None` if there are no packages missing from the dependency trees.
 pub fn check_dependency_tree(packages: &Vec<PackageId>, register: &PackageRegister) -> Option<Issue> {
     let mut missing = Vec::new();
     for package_id in packages {
@@ -558,6 +563,84 @@ fn check_package_dependency_tree(package_id: &PackageId, register: &PackageRegis
     }
 
     missing
+}
+
+/// Checks if the tests for the given packages work.
+/// Returns an `Issue::FailedTest` or `None` if there are no failing tests.
+pub fn check_test(packages: &Vec<PackageId>, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
+    let mut failed = Vec::new();
+    for package_id in packages {
+        if check_package_test(package_id, register, config)? {
+            failed.push(package_id.clone());
+        }
+    }
+
+    if failed.is_empty() {
+        return Ok(None);
+    }
+
+    Ok(Some(Issue::FailedTest(failed)))
+}
+
+/// Checks if the test for a specific package works.
+/// Returns true if the package test failed, false otherwise.
+fn check_package_test(package_id: &PackageId, register: &PackageRegister, config: &Config) -> Result<bool> {
+    let package_version = register.get_package_version(package_id).expect("Expected package to exist");
+
+    let repository = Repository::new(
+        &package_version.metadata_repository_url,
+        &package_version.metadata_repository_provider,
+    );
+
+    let provider = match provider::create_metadata_provider(&repository) {
+        Some(provider) => provider,
+        None => {
+            warning!("Cannot create metadata provider for '{package_id}', skipping check");
+            return Ok(false);
+        },
+    };
+
+    // Get the target
+    let version_meta = provider.read_package_version(&package_id.name, &package_id.version)?;
+    let target_bounds = version_meta.get_best_target(&Target::current())?;
+    let target = version_meta.get_target(&target_bounds)?;
+
+    // Get the test script data
+    let script_path = version_meta.get_test_script_path(&target_bounds)?;
+    let script_args = version_meta.get_script_args(&target_bounds)?;
+    let script_text = provider.read_file(&package_id.name, &script_path)?;
+    let Some(script_text) = script_text else { return Ok(false) };
+    let downloaded_script = scripts::write_script_to_tempfile(&script_text)?;
+    let script_data = ScriptData::new(
+        &downloaded_script,
+        &package_version.install_path,
+        &package_id,
+        config,
+        &script_args,
+        false,
+    );
+
+    // Get the external test files
+    let external_files = version_meta.external_test_files.iter().chain(&target.external_test_files);
+    let mut read_files = Vec::new();
+    for file in external_files {
+        let file_content = provider.read_file_bytes(&package_id.name, file)?;
+
+        match file_content {
+            Some(content) => read_files.push((file, content)),
+            None => {
+                warning!("Skipping test, because the required files could not be downloaded.");
+                return Ok(false);
+            },
+        }
+    }
+
+    // Run the test script and only return true if the test itself failed
+    match scripts::run_test_script(&script_data, &read_files) {
+        Ok(_) => Ok(false),
+        Err(ScriptError::ScriptFailed(..)) => Ok(true),
+        Err(e) => return Err(VerifierError::ScriptError(e)),
+    }
 }
 
 /// Gets the package version meta, or `None` if the provider cannot be found.

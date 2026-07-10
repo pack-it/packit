@@ -128,6 +128,7 @@ impl Verifier {
                 },
                 Check::ForbiddenLink => package::check_forbidden_link(packages, register)?,
                 Check::MissingLink => package::check_missing_link(packages, register, config)?,
+                Check::Test => package::check_test(packages, register, config)?,
 
                 // Return `VerifierError::UnimplementedCheck` if the current check is a general check (meaning it's not implemented).
                 _ if Check::get_checks().contains(check) => return Err(VerifierError::UnimplementedCheck),

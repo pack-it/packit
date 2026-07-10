@@ -48,6 +48,8 @@ impl Repairer {
             Issue::InvalidActive(invalid) => package::fix_invalid_active(invalid, register, config)?,
             Issue::ForbiddenLink(forbidden) => package::fix_forbidden_link(forbidden, register, config)?,
             Issue::MissingLinks(missing) => package::fix_missing_links(missing, register, config)?,
+            Issue::FailedTest(failing) => package::try_reinstall(failing, register, manager, config)?,
+            Issue::AlteredPackage(altered) => package::try_reinstall(altered, register, manager, config)?,
             _ => warning!("Fix not executed, because the issue fix is not yet implemented"),
         }
 

@@ -26,6 +26,7 @@ pub enum Check {
     MissingLink,
     MissingDependencies,
     InvalidDependencies,
+    Test,
 }
 
 impl Check {
@@ -50,10 +51,10 @@ impl Check {
 
             // Package checks
             Self::ForbiddenLink => &[],
-            Self::MissingLink => &[Self::ForbiddenLink],
-            Self::InvalidActive => &[],
+            Self::MissingLink => &[],
             Self::StorageConsistency => &[Self::StrayDirectory],
             Self::RegisterConsistency => &[Self::StrayDirectory],
+            Self::InvalidActive => &[Self::StorageConsistency, Self::RegisterConsistency],
             Self::MissingDependencies => &[Self::StorageConsistency, Self::RegisterConsistency],
             Self::InvalidDependencies => &[Self::StorageConsistency, Self::RegisterConsistency],
             Self::MissingDependents => &[
@@ -77,6 +78,7 @@ impl Check {
                 Self::InvalidDependents,
             ],
             Self::Alterations => &[Self::StorageConsistency, Self::RegisterConsistency],
+            Self::Test => &[Self::ForbiddenLink, Self::MissingLink, Self::DependencyTree, Self::Alterations],
         }
     }
 
@@ -107,6 +109,7 @@ impl Check {
             Self::MissingLink,
             Self::MissingDependencies,
             Self::InvalidDependencies,
+            Self::Test,
         ]
     }
 

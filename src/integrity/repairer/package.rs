@@ -6,7 +6,7 @@ use crate::{
     config::Config,
     installer::{
         Installer, InstallerOptions, Symlinker,
-        types::{Dependency, PackageId, PackageName, Version},
+        types::{Dependency, OptionalPackageId, PackageId, PackageName, Version},
     },
     integrity::{
         error::{Result, VerifierError},
@@ -320,6 +320,62 @@ pub fn fix_missing_links(missing: Vec<PackageName>, register: &mut PackageRegist
         if let Some(package) = register.get_package_mut(package_name) {
             package.symlinked = true;
         };
+    }
+
+    Ok(())
+}
+
+/// Tries to fix packages by re-installing those packages.
+pub fn try_reinstall(packages: Vec<PackageId>, register: &mut PackageRegister, manager: &RepositoryManager, config: &Config) -> Result<()> {
+    for package in packages {
+        reinstall_package(package, register, manager, config)?;
+    }
+
+    Ok(())
+}
+
+/// Uninstalls a package and then reinstalls it.
+fn reinstall_package(package_id: PackageId, register: &mut PackageRegister, manager: &RepositoryManager, config: &Config) -> Result<()> {
+    // Figure out the active version
+    let Some(package) = register.get_package(&package_id.name) else {
+        return Ok(());
+    };
+
+    // Check if the package should be the active and symlinked package when installed
+    let active = package_id.version == package.active_version;
+    let symlinked = package.symlinked;
+
+    // Gather dependents
+    let Some(package_version) = register.get_package_version(&package_id) else {
+        return Ok(());
+    };
+    let dependents = package_version.dependents.clone();
+
+    // Temporarily remove the package
+    let installer_options = InstallerOptions::default().skip_symlinking(!package.symlinked).skip_active(true);
+    let mut installer = Installer::new(config, register, manager, installer_options);
+    installer.uninstall(&OptionalPackageId::from(package_id.clone()))?;
+
+    // Re-install the package
+    installer.install(&OptionalPackageId::from(package_id.clone()))?;
+
+    // Re-add package as dependent
+    for dependent in &dependents {
+        let Some(package_version) = register.get_package_version_mut(&dependent) else {
+            return Ok(());
+        };
+
+        package_version.dependencies.insert(package_id.clone());
+    }
+
+    // Add the dependents to the package
+    if let Some(package_version) = register.get_package_version_mut(&package_id) {
+        package_version.dependents = dependents;
+    }
+
+    // Set the package as the active package if active before
+    if active {
+        Symlinker::new(config).set_active(register, &package_id, symlinked)?;
     }
 
     Ok(())
