@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::process::exit;
-
 use clap::Args;
+use colored::Colorize;
+use std::process::exit;
 
 use crate::{
     cli::{
@@ -40,13 +40,29 @@ impl HandleCommand for FixArgs {
 impl FixArgs {
     /// Fixes the initial issues, which check basic files that Packit requires to run properly (for example Config.toml or Register.toml).
     fn fix_initial(&self, verifier: &mut Verifier, repairer: &mut Repairer) {
-        let mut issue_index = -1;
-        while let Some(issue) = verifier.next_initial_issue().unwrap_or_exit(1) {
-            // Check if the index is the same as the previously found issue (meaning the same issue is found and the fix didn't work)
-            if verifier.get_initial_check_index() as i32 - 1 == issue_index {
-                error!(msg: UNSUCCESSFUL_FIX_MESSAGE);
-                exit(1);
-            }
+        let mut fixed_issue = false;
+        while verifier.get_initial_check_index() < verifier.get_initial_check_length() {
+            let check_result = verifier.next_initial_check().unwrap_or_exit(1);
+            let issue = match check_result {
+                // If there is an issue and we previously attempted to fix it, error and exit
+                Some(_) if fixed_issue => {
+                    error!(msg: UNSUCCESSFUL_FIX_MESSAGE);
+                    exit(1);
+                },
+
+                // If there is an issue, return the issue to fix it
+                Some(issue) => issue,
+
+                // If there is no issue and we previously attempted to fix it, show a success message and reset `fixed_issue`
+                None if fixed_issue => {
+                    println!("{}", "Successfully fixed the issue".bold().green());
+                    fixed_issue = false;
+                    continue;
+                },
+
+                // If there is no issue, continue
+                None => continue,
+            };
 
             println!("{issue}");
             println!("{}", issue.get_fix_message());
@@ -58,7 +74,9 @@ impl FixArgs {
             repairer.fix_initial_issues(issue).unwrap_or_exit(1);
 
             // Reverse the verifier to redo the check to make sure the fix worked
-            issue_index = verifier.reverse_initial_check() as i32;
+            verifier.reverse_initial_check();
+
+            fixed_issue = true;
         }
     }
 
@@ -79,13 +97,29 @@ impl FixArgs {
         };
 
         // Retrieve and fix the issues one by one
-        let mut issue_index = -1;
-        while let Some(issue) = verifier.next_issue(packages, &register, &config).unwrap_or_exit(1) {
-            // Check if the index is the same as the previously found issue (meaning the same issue is found and the fix didn't work)
-            if verifier.get_check_index() as i32 - 1 == issue_index {
-                error!(msg: UNSUCCESSFUL_FIX_MESSAGE);
-                exit(1);
-            }
+        let mut fixed_issue = false;
+        while verifier.get_check_index() < verifier.get_check_length() {
+            let check_result = verifier.next_check(packages, &register, &config).unwrap_or_exit(1);
+            let issue = match check_result {
+                // If there is an issue and we previously attempted to fix it, error and exit
+                Some(_) if fixed_issue => {
+                    error!(msg: UNSUCCESSFUL_FIX_MESSAGE);
+                    exit(1);
+                },
+
+                // If there is an issue, return the issue to fix it
+                Some(issue) => issue,
+
+                // If there is no issue and we previously attempted to fix it, show a success message and reset `fixed_issue`
+                None if fixed_issue => {
+                    println!("{}", "Successfully fixed the issue".bold().green());
+                    fixed_issue = false;
+                    continue;
+                },
+
+                // If there is no issue, continue
+                None => continue,
+            };
 
             println!("{issue}");
             println!("{}", issue.get_fix_message());
@@ -100,7 +134,9 @@ impl FixArgs {
             register.save_to(&register_dir).unwrap_or_exit(1);
 
             // Reverse the verifier to redo the check to make sure the fix worked
-            issue_index = verifier.reverse_check() as i32;
+            verifier.reverse_check();
+
+            fixed_issue = true;
         }
 
         if !verifier.issues_found() {
