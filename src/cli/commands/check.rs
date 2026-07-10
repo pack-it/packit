@@ -18,14 +18,15 @@ pub struct CheckArgs {
 }
 
 const ISSUE_FOUND_MESSAGE: &str = "Consider running `pit fix` to resolve the issues above.";
-const NO_ISSUE_FOUND_MESSAGE: &str = "No issues were found!";
 
 impl HandleCommand for CheckArgs {
     fn handle(&self) {
         // Always do initial checks first
         let mut verifier = Verifier::new();
-        while let Some(issue) = verifier.next_initial_issue().unwrap_or_exit(1) {
-            println!("{issue}")
+        while verifier.get_initial_check_index() < verifier.get_initial_check_length() {
+            if let Some(issue) = verifier.next_initial_check().unwrap_or_exit(1) {
+                println!("{issue}")
+            }
         }
 
         // Return correct message based on found issues
@@ -47,15 +48,17 @@ impl HandleCommand for CheckArgs {
             false => &package_ids,
         };
 
-        while let Some(issue) = verifier.next_issue(&packages, &register, &config).unwrap_or_exit(1) {
-            println!("{issue}")
+        while verifier.get_check_index() < verifier.get_check_length() {
+            if let Some(issue) = verifier.next_check(&packages, &register, &config).unwrap_or_exit(1) {
+                println!("{issue}")
+            }
         }
 
         // Return correct message based on found issues
         if verifier.issues_found() {
             println!("{ISSUE_FOUND_MESSAGE}");
         } else {
-            println!("{NO_ISSUE_FOUND_MESSAGE}");
+            println!("No issues were found!");
         }
     }
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::process::exit;
-
 use clap::Args;
+use colored::Colorize;
+use std::process::exit;
 
 use crate::{
     cli::{
@@ -41,12 +41,22 @@ impl FixArgs {
     /// Fixes the initial issues, which check basic files that Packit requires to run properly (for example Config.toml or Register.toml).
     fn fix_initial(&self, verifier: &mut Verifier, repairer: &mut Repairer) {
         let mut issue_index = -1;
-        while let Some(issue) = verifier.next_initial_issue().unwrap_or_exit(1) {
-            // Check if the index is the same as the previously found issue (meaning the same issue is found and the fix didn't work)
-            if verifier.get_initial_check_index() as i32 - 1 == issue_index {
-                error!(msg: UNSUCCESSFUL_FIX_MESSAGE);
-                exit(1);
-            }
+        while verifier.get_initial_check_index() < verifier.get_initial_check_length() {
+            let check_result = verifier.next_initial_check().unwrap_or_exit(1);
+            // TODO: REMOVE THIS: Check if the index is the same as the previously found issue (meaning the same issue is found and the fix didn't work)
+            let issue = match check_result {
+                Some(_) if verifier.get_initial_check_index() as i32 - 1 == issue_index => {
+                    error!(msg: UNSUCCESSFUL_FIX_MESSAGE);
+                    exit(1);
+                },
+                Some(issue) => issue,
+
+                None if verifier.get_initial_check_index() as i32 - 1 == issue_index => {
+                    println!("{}", "Successfully fixed the issue".bold().green());
+                    continue;
+                },
+                None => continue,
+            };
 
             println!("{issue}");
             println!("{}", issue.get_fix_message());
@@ -80,12 +90,22 @@ impl FixArgs {
 
         // Retrieve and fix the issues one by one
         let mut issue_index = -1;
-        while let Some(issue) = verifier.next_issue(packages, &register, &config).unwrap_or_exit(1) {
-            // Check if the index is the same as the previously found issue (meaning the same issue is found and the fix didn't work)
-            if verifier.get_check_index() as i32 - 1 == issue_index {
-                error!(msg: UNSUCCESSFUL_FIX_MESSAGE);
-                exit(1);
-            }
+        while verifier.get_check_index() < verifier.get_check_length() {
+            let check_result = verifier.next_check(packages, &register, &config).unwrap_or_exit(1);
+            // TODO: REMOVE THIS: Check if the index is the same as the previously found issue (meaning the same issue is found and the fix didn't work)
+            let issue = match check_result {
+                Some(_) if verifier.get_check_index() as i32 - 1 == issue_index => {
+                    error!(msg: UNSUCCESSFUL_FIX_MESSAGE);
+                    exit(1);
+                },
+                Some(issue) => issue,
+
+                None if verifier.get_check_index() as i32 - 1 == issue_index => {
+                    println!("{}", "Successfully fixed the issue".bold().green());
+                    continue;
+                },
+                None => continue,
+            };
 
             println!("{issue}");
             println!("{}", issue.get_fix_message());
