@@ -173,8 +173,6 @@ impl SearchArgs {
             None => "None".dimmed(),
         };
 
-        let skip_symlinking = if package_version.skip_symlinking { "on" } else { "off" };
-
         // Show package version information
         println!("{}", package_id.style());
         println!("{}", package.description.italic().cyan());
@@ -182,7 +180,7 @@ impl SearchArgs {
         pair_aligner.add("Homepage", package.homepage.display());
         pair_aligner.add("License", &package_version.license);
         pair_aligner.add("Required Packit version", required_packit_version);
-        pair_aligner.add("Skip symlinking", skip_symlinking);
+        pair_aligner.add("Skip symlinking", if package_version.skip_symlinking { "on" } else { "off" });
         pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
         println!();
 
