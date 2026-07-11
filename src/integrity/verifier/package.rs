@@ -585,6 +585,8 @@ pub fn check_test(packages: &Vec<PackageId>, register: &PackageRegister, config:
 /// Checks if the test for a specific package works.
 /// Returns true if the package test failed, false otherwise.
 fn check_package_test(package_id: &PackageId, register: &PackageRegister, config: &Config) -> Result<bool> {
+    debug!("Testing package {}", package_id.style());
+
     let package_version = register.get_package_version(package_id).expect("Expected package to exist");
 
     let repository = Repository::new(

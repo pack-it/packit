@@ -145,7 +145,7 @@ impl SearchArgs {
         let (repository_id, package, package_version) = match package_and_version {
             Ok(package) => package,
             Err(RepositoryError::PackageNotFoundError { reason, .. }) => {
-                not_found::repository_package_version(&package_id, &manager, reason)
+                not_found::repository_package_version(package_id, &manager, reason)
             },
             Err(e) => {
                 error!(e, "Cannot read package");

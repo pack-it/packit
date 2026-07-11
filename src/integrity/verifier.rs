@@ -58,6 +58,8 @@ impl Verifier {
         // Increase current issue
         self.current_initial_check += 1;
 
+        debug!("Performing check '{check:?}'");
+
         let issue = match check {
             Check::Permissions => initial::check_permissions()?,
             Check::ConfigExistence => initial::check_config_existence()?,
@@ -109,6 +111,8 @@ impl Verifier {
 
         // Increase current issue
         self.current_check += 1;
+
+        debug!("Performing check '{check:?}'");
 
         let issue = match check {
             Check::PackitGroup => general::check_packit_group(config)?,

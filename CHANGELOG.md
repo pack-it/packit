@@ -53,6 +53,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Fix empty directories (`lib`, `share`) in the prefix, by not creating them anymore.
 - Fix skip active install option, by only skipping when multiple versions are installed.
 - All warnings, errors and debug logs are now outputted to stderr instead of stdout.
+- Fix Permissions verifier check, by allowing readonly flag on files.
 
 
 ## [v0.0.2](https://github.com/pack-it/packit/compare/0.0.1...0.0.2) - 2026-05-14
