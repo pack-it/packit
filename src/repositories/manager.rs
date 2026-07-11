@@ -31,7 +31,7 @@ pub struct RepositoryManager<'a> {
 }
 
 impl<'a> RepositoryManager<'a> {
-    /// Creates a new RepositoryManager.
+    /// Creates a new `RepositoryManager`.
     pub fn new(config: &'a Config) -> Self {
         let mut unsupported_repositories = HashMap::new();
         let mut metadata_providers = HashMap::new();
@@ -75,7 +75,7 @@ impl<'a> RepositoryManager<'a> {
             }
 
             // Try to create the prebuild provider
-            let prebuild_provider = provider::create_prebuild_provider(repository, repository_meta);
+            let prebuild_provider = provider::create_prebuild_provider(repository, &repository_meta);
             let Some(prebuild_provider) = prebuild_provider else {
                 warning!("Cannot create prebuild provider for repository '{id}'.");
                 continue;
@@ -189,7 +189,8 @@ impl<'a> RepositoryManager<'a> {
     /// - It's not disabled
     /// - It contains the current target
     /// - The package is supported by the current Packit version
-    /// Returns Some(PackageNotFoundReason) if the package is not compatible, None otherwise.
+    ///
+    /// Returns `Some(PackageNotFoundReason)` if the package is not compatible, `None` otherwise.
     fn check_package_compatibility(&self, package: &PackageMeta) -> Option<PackageNotFoundReason> {
         // Check if the package is disabled
         if let Some(deprecation) = &package.deprecation
@@ -221,7 +222,7 @@ impl<'a> RepositoryManager<'a> {
 
     /// Reads package version metadata of the given package, containing dependencies and targets.
     /// Returns the id of the repository and the package version metadata.
-    /// Note that this does not check for compatibility of the corresponding PackageMeta.
+    /// Note that this does not check for compatibility of the corresponding `PackageMeta`.
     fn read_package_version(&self, package_id: &PackageId, target: &Target) -> Result<(String, PackageVersionMeta)> {
         let mut not_found_reasons = HashMap::new();
 
@@ -252,9 +253,7 @@ impl<'a> RepositoryManager<'a> {
             }
 
             // Validate the package before returning
-            if package.is_metadata_valid() {
-                return Err(RepositoryError::ValidationError("Package has conflicts in metadata.".to_string()));
-            }
+            package.validate_metadata()?;
 
             return Ok((repository_id.clone(), package));
         }
@@ -267,7 +266,7 @@ impl<'a> RepositoryManager<'a> {
     }
 
     /// Reads package version metadata of the given package from the given repository, containing dependencies and targets.
-    /// Also checks for package version compatibility. Note that this does not check for compatibility of the corresponding PackageMeta.
+    /// Also checks for package version compatibility. Note that this does not check for compatibility of the corresponding `PackageMeta`.
     /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     pub fn read_repo_package_version(&self, repository_id: &str, package_id: &PackageId) -> Result<PackageVersionMeta> {
         let provider = self.get_metadata_provider(repository_id)?;
@@ -283,9 +282,7 @@ impl<'a> RepositoryManager<'a> {
         }
 
         // Validate the package before returning
-        if package.is_metadata_valid() {
-            return Err(RepositoryError::ValidationError("Package has conflicts in metadata.".to_string()));
-        }
+        package.validate_metadata()?;
 
         Ok(package)
     }
@@ -294,7 +291,8 @@ impl<'a> RepositoryManager<'a> {
     /// - It's not disabled
     /// - It contains the current target
     /// - The package version is supported by the current Packit version
-    /// Returns Some(PackageNotFoundReason) if the package version is not compatible, None otherwise.
+    ///
+    /// Returns `Some(PackageNotFoundReason)` if the package version is not compatible, `None` otherwise.
     fn check_package_version_compatibility(&self, package_version: &PackageVersionMeta, target: &Target) -> Option<PackageNotFoundReason> {
         // Check if the package is disabled
         if let Some(deprecation) = &package_version.deprecation
@@ -338,14 +336,14 @@ impl<'a> RepositoryManager<'a> {
     }
 
     /// Retrieves the prebuild url for the given package version.
-    /// Returns the url, or None if a prebuild is not available for the package.
+    /// Returns the url, or `None` if a prebuild is not available for the package.
     /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     pub fn get_prebuild_url(&self, repository_id: &str, package: &PackageId, revision: u64, target: &Target) -> Result<Option<String>> {
         self.get_prebuid_provider(repository_id)?.get_prebuild_url(package, revision, target)
     }
 
     /// Retrieves the prebuild checksum for the given package version.
-    /// Returns the checksum, or None if a prebuild is not available for the package.
+    /// Returns the checksum, or `None` if a prebuild is not available for the package.
     /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     pub fn get_prebuild_checksum(
         &self,
@@ -405,13 +403,13 @@ impl<'a> RepositoryManager<'a> {
         &self,
         repository_id: &str,
         package: &PackageMeta,
-        mut supported_versions: impl Iterator<Item = &'v Version>,
+        supported_versions: impl Iterator<Item = &'v Version>,
     ) -> Result<PackageVersionMeta> {
         let mut reasons = Vec::new();
         let mut latest_deprecated: Option<PackageVersionMeta> = None;
-        while let Some(latest_version) = supported_versions.next() {
+        for latest_version in supported_versions {
             let package_id = PackageId::new(package.name.clone(), latest_version.clone());
-            let package_version = match self.read_repo_package_version(&repository_id, &package_id) {
+            let package_version = match self.read_repo_package_version(repository_id, &package_id) {
                 Ok(package_version) => package_version,
                 Err(RepositoryError::PackageNotFoundError { reason, .. }) => {
                     reasons.push(reason);
@@ -425,7 +423,7 @@ impl<'a> RepositoryManager<'a> {
                 None => return Ok(package_version),
             };
 
-            // Update the latest_deprecated if it was None or if the current version deprecates at a later moment
+            // Update the `latest_deprecated` if it was `None` or if the current version deprecates at a later moment
             match &latest_deprecated {
                 Some(latest_deprecation) => {
                     if let Some(latest_deprecation) = &latest_deprecation.deprecation
@@ -435,7 +433,7 @@ impl<'a> RepositoryManager<'a> {
                     }
                 },
                 None => latest_deprecated = Some(package_version),
-            };
+            }
         }
 
         // If all versions deprecate, take the latest deprecated version
@@ -463,6 +461,7 @@ impl<'a> RepositoryManager<'a> {
 
     /// A helper method to get the metadata provider.
     /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
+    #[expect(clippy::borrowed_box)]
     fn get_metadata_provider(&self, repository_id: &str) -> Result<&Box<dyn MetadataProvider>> {
         // Check if repository is unsupported
         if self.unsupported_repositories.contains_key(repository_id) {
@@ -481,6 +480,7 @@ impl<'a> RepositoryManager<'a> {
 
     /// A helper method to get the prebuild provider.
     /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
+    #[expect(clippy::borrowed_box)]
     fn get_prebuid_provider(&self, repository_id: &str) -> Result<&Box<dyn PrebuildProvider>> {
         // Check if repository is unsupported
         if self.unsupported_repositories.contains_key(repository_id) {

@@ -72,18 +72,18 @@ impl Drop for Sid {
     }
 }
 
-/// Wrapper struct to handle freeing of PSECURITY_DESCRIPTOR buffer
+/// Wrapper struct to handle freeing of `PSECURITY_DESCRIPTOR` buffer
 pub struct SecurityDescriptor {
     ptr: PSECURITY_DESCRIPTOR,
 }
 
 impl SecurityDescriptor {
-    /// Creates a new SecurityDescriptor from the given PSECURITY_DESCRIPTOR
+    /// Creates a new `SecurityDescriptor` from the given `PSECURITY_DESCRIPTOR`
     pub fn from_psecurity_descriptor(psecurity_descriptor: PSECURITY_DESCRIPTOR) -> Self {
         Self { ptr: psecurity_descriptor }
     }
 
-    /// Gets the SecurityDescriptor as PSECURITY_DESCRIPTOR
+    /// Gets the `SecurityDescriptor` as `PSECURITY_DESCRIPTOR`
     pub fn as_psecurity_descriptor(&self) -> PSECURITY_DESCRIPTOR {
         self.ptr
     }
@@ -235,10 +235,10 @@ pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool, recurse: bool)
         let mut new_acl = ptr::null_mut();
         let result = SetEntriesInAclW(Some(&[explicit_access]), Some(acl), &mut new_acl);
         if result.0 != ERROR_SUCCESS.0 {
-            return Err(PlatformError::SecurityInfoError {
+            return Err(PermissionError::PlatformError(PlatformError::SecurityInfoError {
                 message: "Settings ACL entries failed".to_string(),
                 code: result.0,
-            })?;
+            }));
         }
 
         // Set the new ACL
@@ -253,10 +253,10 @@ pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool, recurse: bool)
         );
 
         if result.0 != ERROR_SUCCESS.0 {
-            return Err(PlatformError::SecurityInfoError {
+            return Err(PermissionError::PlatformError(PlatformError::SecurityInfoError {
                 message: "Setting security info failed".to_string(),
                 code: result.0,
-            })?;
+            }));
         }
 
         // Free the new acl
@@ -313,10 +313,10 @@ fn set_ownership(path: &PathBuf, sid: PSID, recurse: bool) -> Result<()> {
     // Set the ownership for the given `PSID`
     let result = unsafe { SetNamedSecurityInfoW(wide_path, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION, Some(sid), None, None, None) };
     if result.0 != ERROR_SUCCESS.0 {
-        return Err(PlatformError::SecurityInfoError {
+        return Err(PermissionError::PlatformError(PlatformError::SecurityInfoError {
             message: "Setting security info for group ownership failed".to_string(),
             code: result.0,
-        })?;
+        }));
     }
 
     if !recurse || !path.is_dir() {
@@ -324,7 +324,7 @@ fn set_ownership(path: &PathBuf, sid: PSID, recurse: bool) -> Result<()> {
     }
 
     // Recurse the directory
-    for entry in fs::read_dir(&path).err_with_path("read", path)? {
+    for entry in fs::read_dir(path).err_with_path("read", path)? {
         let entry = entry.err_with_path("iterate", path)?;
 
         set_ownership(&entry.path(), sid, recurse)?;

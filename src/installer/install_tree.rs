@@ -113,11 +113,11 @@ impl<'a> InstallTreeBuilder<'a> {
         let mut tree = Tree::new(root);
         tree_display_string = self.update_tree_display(&tree_display_string, &tree)?;
 
-        let mut package_queue = VecDeque::from([0 as usize]);
+        let mut package_queue = VecDeque::from([0]);
         while let Some(node_index) = package_queue.pop_front() {
             let node = tree.get_node_by_index_mut(node_index).expect("Expected node to exist");
 
-            // Expand with register if the node value is None and has the Installed label type (meaning that the package is already installed)
+            // Expand with register if the node value is `None` and has the Installed label type (meaning that the package is already installed)
             let install_meta = match node.get_value() {
                 Some(install_meta) => install_meta,
                 None if node.get_label().install_type == InstallType::Installed => {
@@ -195,7 +195,7 @@ impl<'a> InstallTreeBuilder<'a> {
     }
 
     /// Populates the tree with metadata info. If a package is already installed it is added
-    /// to the tree without a value and with LabelType::Installed.
+    /// to the tree without a value and with `LabelType::Installed`.
     fn populator(&mut self, dependency: &Dependency, label: InstallLabel) -> Result<(PackageId, Option<InstallMeta>, InstallLabel)> {
         // Return early with empty value if the package is already satisfied
         if let Some(package) = self.register.get_latest_satisfying_package(dependency) {
@@ -238,7 +238,7 @@ impl<'a> InstallTreeBuilder<'a> {
 
         // Check if a prebuild for the package is available
         let revision = install_meta.version_metadata.get_revision_count();
-        match self.repository_manager.get_prebuild_url(&install_meta.repository_id, &package_id, revision, &Target::current()) {
+        match self.repository_manager.get_prebuild_url(&install_meta.repository_id, package_id, revision, &Target::current()) {
             Ok(Some(_)) => return Ok(None),
             Ok(None) | Err(RepositoryError::RepositoryNotFoundError { .. }) => {},
             Err(e) => error!(e),

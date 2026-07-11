@@ -13,13 +13,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The update command now accepts multiple packages as input instead of just one.
 - The `--all` flag for the update command flag to update all packages which are not up-to-date.
 - The `--exclude` flag for the update command to exclude certain packages when using the `--all` flag.
-- The `required_packit_version` field to describe the minimum required Packit version for a package in `repository.toml`, `package.toml` and `targets.toml` metadata files.
-- The `conflicts_with` fields to describe conflicting packages in the `package.toml` metadata file. Two conflicting packages cannot be symlinked at the same time.
-- The `size` field in the source fields in the `targets.toml` metadata file.
-- Deprecation information fields (deprecated_from, disabled_from and reason), to allow specifying deprecation and disabling dates of packages or specific versions.
+- The `required_packit_version` field to describe the minimum required Packit version for a package in `repository.toml`, `package.toml` and `targets.toml` metadata files. (BREAKING)
+- The `conflicts_with` fields to describe conflicting packages in the `package.toml` metadata file. Two conflicting packages cannot be symlinked at the same time. (BREAKING)
+- The `size` field in the source fields in the `targets.toml` metadata file. (BREAKING)
+- Deprecation information fields (deprecated_from, disabled_from and reason), to allow specifying deprecation and disabling dates of packages or specific versions. (BREAKING)
 - The `--overwrite` flag to the link command to overwrite existing links from another package that are conflicting.
+- The install script now asks for administrator privileges on Windows and shows a proper prompt on Unix.
 - The Packit install scripts for Unix and Windows now cleanup the created Packit files in case of an error during installation.
-- Support for a separate verbose output from scripts, file descriptor 3 can now be used for verbose output.
+- Support for a separate verbose output from scripts, file descriptor 3 can now be used for verbose output. (BREAKING)
 - When a build script exits with a non-zero status code, the last 10 lines of the scripts output is now shown.
 - The `disable_prebuilds` field to the config, which disables usage of prebuilds when set to true.
 - The test script checks in the verifier, which use the metadata test scripts to test if packages work.
@@ -31,7 +32,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The patch apply process now uses a more advanced file path resolver, which ensures better patch compatibility.
 - The install tree is now fully expanded before installation, making it clearer what will be installed.
 - Trees now perform a check for cycles, throwing an error if they detect one.
-- Update all dependencies, remove unnecessary dependency features and ensure all dependencies support MSRV 1.85.
+- Update all dependencies, remove unnecessary dependency features and ensure all dependencies support MSRV 1.88.0.
 - When packages are specified for the `check` and `fix` commands, only those are checked when doing a package related check. Initial and general checks are now done as well in the case.
 - Improve IOError messages by including information about the operation that failed.
 - The `gnubin` directory of a package is now also symlinked into `<prefix>/gnubin`.
@@ -43,6 +44,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Improved UI with colors and text styling.
 - The `search` command now outputs more and different information based on the given package input.
 - The `info` command now shows conflicting packages when verbose is specified.
+- Packit now has a MSRV of 1.88.0 (BREAKING)
 
 ### Fixed
 - Fix package not found issue when multiple repositories have the same package but different versions.
@@ -50,6 +52,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Fix checksum check for patch files that are downloaded from the metadata repository.
 - Fix empty directories (`lib`, `share`) in the prefix, by not creating them anymore.
 - Fix skip active install option, by only skipping when multiple versions are installed.
+- All warnings, errors and debug logs are now outputted to stderr instead of stdout.
+- Fix Permissions verifier check, by allowing readonly flag on files.
+- Fix InvalidDependencies verifier check, by also checking for target specific dependencies.
 
 
 ## [v0.0.2](https://github.com/pack-it/packit/compare/0.0.1...0.0.2) - 2026-05-14

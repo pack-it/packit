@@ -7,8 +7,7 @@ use crate::{
         commands::HandleCommand,
         display::{
             logging::warning,
-            not_found,
-            standard_print::{self},
+            not_found, standard_print,
             styled::{MapStyled, Styled},
         },
     },
@@ -16,7 +15,7 @@ use crate::{
     installer::{Symlinker, types::PackageName},
     platforms::Target,
     register::package_register::PackageRegister,
-    repositories::{provider, types::PackageVersionMeta},
+    repositories::provider,
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
@@ -83,11 +82,10 @@ impl HandleCommand for LinkArgs {
                 1,
             );
 
-            let package_version_meta: PackageVersionMeta =
-                provider.read_package_version(&self.package_name, &package.active_version).unwrap_or_exit_msg(
-                    "Unable to read package metadata for package, try --force if you're sure you want to link.",
-                    1,
-                );
+            let package_version_meta = provider.read_package_version(&self.package_name, &package.active_version).unwrap_or_exit_msg(
+                "Unable to read package metadata for package, try --force if you're sure you want to link.",
+                1,
+            );
 
             // Skip if the package version metadata defines skip_symlinking
             if package_version_meta.skip_symlinking {

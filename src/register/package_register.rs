@@ -8,7 +8,10 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    cli::display::{logging::warning, styled::Styled},
+    cli::display::{
+        logging::{error, warning},
+        styled::Styled,
+    },
     config::Repository,
     installer::types::{Dependency, OptionalPackageId, PackageId, PackageName},
     register::{
@@ -92,6 +95,7 @@ impl PackageRegister {
 
     /// Adds a package to the register storage.
     /// Please note that this does not save the storage and does not read the currently installed packages from the toml.
+    #[expect(clippy::too_many_arguments)]
     pub fn add_package(
         &mut self,
         package: &PackageMeta,
@@ -134,7 +138,7 @@ impl PackageRegister {
         )
     }
 
-    /// Adds a raw InstalledPackageVersion to the register storage.
+    /// Adds a raw `InstalledPackageVersion` to the register storage.
     /// Please note that this does not save the storage and does not read the currently installed packages from the toml.
     pub fn add_package_raw(
         &mut self,
@@ -150,8 +154,7 @@ impl PackageRegister {
             if let Some(package) = self.get_package_version_mut(dependency) {
                 package.dependents.insert(installed_package_version.package_id.clone());
             } else {
-                // TODO: This should be an error
-                warning!("Cannot retrieve package {} from register to insert dependents", dependency.style());
+                error!(msg: "Cannot retrieve package {} from register to insert dependents", dependency.style());
             }
         }
 
@@ -236,7 +239,7 @@ impl PackageRegister {
     }
 
     /// Gets a specific version of a certain package from the storage.
-    /// Returns the package version, or None if the package version is not installed.
+    /// Returns the package version, or `None` if the package version is not installed.
     pub fn get_package_version(&self, package_id: &PackageId) -> Option<&InstalledPackageVersion> {
         if let Some(package) = self.packages.get(&package_id.name) {
             return package.get_package_version(&package_id.version);
@@ -246,7 +249,7 @@ impl PackageRegister {
     }
 
     /// Gets a specific version of a certain package from the storage.
-    /// Returns a mutable reference to the package version, or None if the package version is not installed.
+    /// Returns a mutable reference to the package version, or `None` if the package version is not installed.
     pub fn get_package_version_mut(&mut self, package_id: &PackageId) -> Option<&mut InstalledPackageVersion> {
         if let Some(package) = self.packages.get_mut(&package_id.name) {
             return package.get_package_version_mut(&package_id.version);
@@ -255,12 +258,12 @@ impl PackageRegister {
         None
     }
 
-    /// Gets a package, returns None if it doesn't exist.
+    /// Gets a package, returns `None` if it doesn't exist.
     pub fn get_package(&self, package_name: &PackageName) -> Option<&InstalledPackage> {
         self.packages.get(package_name)
     }
 
-    /// Gets a package mutably, returns None if it doesn't exist.
+    /// Gets a package mutably, returns `None` if it doesn't exist.
     pub fn get_package_mut(&mut self, package_name: &PackageName) -> Option<&mut InstalledPackage> {
         self.packages.get_mut(package_name)
     }
@@ -312,7 +315,7 @@ impl PackageRegister {
 
     /// Checks if a package has conflicts with any package that is installed.
     /// Returns a list of the names of all conflicting packages.
-    pub fn get_conflicting_packages(&self, package_name: &PackageName, package_conflicts: &Vec<PackageName>) -> Vec<&PackageName> {
+    pub fn get_conflicting_packages(&self, package_name: &PackageName, package_conflicts: &[PackageName]) -> Vec<&PackageName> {
         let mut conflicts = Vec::new();
 
         for (name, package) in &self.packages {

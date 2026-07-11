@@ -10,7 +10,7 @@ use crate::{
     cli::display::{
         QuestionResponse, Spinner, ask_user,
         logging::{debug, warning},
-        standard_print::{self},
+        standard_print,
         styled::{MapStyled, Styled},
     },
     config::{Config, Repository},
@@ -71,7 +71,7 @@ impl<'a> Installer<'a> {
 
         // Read package and version metadata
         let (repository_id, package_metadata, version_metadata) =
-            self.repository_manager.read_package_and_version(&optional_id, &Target::current())?;
+            self.repository_manager.read_package_and_version(optional_id, &Target::current())?;
 
         // Create a package id of the current package
         let version = &version_metadata.version;
@@ -192,7 +192,7 @@ impl<'a> Installer<'a> {
 
         self.execute_preinstall(&package_id, install_meta, &install_directory, &script_args)?;
 
-        // Get source repository for installed storage before actually installing package
+        // Get source repository for register before actually installing package
         let source_repository = self.config.repositories.get(&install_meta.repository_id).expect("Expected repository in config");
 
         self.create_dependency_symlinks(&package_id, &dependencies)?;
@@ -210,7 +210,7 @@ impl<'a> Installer<'a> {
         // Set correct permissions for the installed package
         permissions::set_packit_permissions(&install_directory, self.config.multiuser, true)?;
 
-        // Add and save package to installed storage toml
+        // Add and save package to register
         self.register.add_package(
             &install_meta.package_metadata,
             &install_meta.version_metadata,
@@ -252,16 +252,16 @@ impl<'a> Installer<'a> {
         let script_data = ScriptData::new(
             &script_file,
             &install_directory,
-            &package_id,
+            package_id,
             self.config,
-            &script_args,
+            script_args,
             self.options.verbose,
         );
 
         // Only show a spinner when not verbose
         if self.options.verbose {
             println!("Executing preinstall script of {}", package_id.style());
-            scripts::run_pre_script(&script_data, &install_directory)?;
+            scripts::run_pre_script(&script_data, install_directory)?;
             return Ok(());
         }
 
@@ -269,7 +269,7 @@ impl<'a> Installer<'a> {
         let spinner_message = format!("Executing preinstall of {}", package_id.style());
         let spinner = Spinner::new(spinner_message);
         spinner.show();
-        scripts::run_pre_script(&script_data, &install_directory)?;
+        scripts::run_pre_script(&script_data, install_directory)?;
         spinner.finish();
 
         Ok(())
@@ -342,9 +342,9 @@ impl<'a> Installer<'a> {
         let script_data = ScriptData::new(
             &script_file,
             &install_directory,
-            &package_id,
+            package_id,
             self.config,
-            &script_args,
+            script_args,
             self.options.verbose,
         );
 
@@ -447,9 +447,9 @@ impl<'a> Installer<'a> {
         let script_data = ScriptData::new(
             &script_file,
             &install_directory,
-            &package_id,
+            package_id,
             self.config,
-            &script_args,
+            script_args,
             self.options.verbose,
         );
 
@@ -498,7 +498,7 @@ impl<'a> Installer<'a> {
     fn remove_build_dependencies(&mut self, node_index: usize, tree: &InstallTree) -> Result<Vec<PackageId>> {
         let node = tree.get_node_by_index(node_index).expect("Expected node to exist");
 
-        // Return early if the node value is None (meaning that the package was already installed)
+        // Return early if the node value is `None` (meaning that the package was already installed)
         if node.get_value().is_none() {
             return Ok(Vec::new());
         }
@@ -601,7 +601,7 @@ impl<'a> Installer<'a> {
         // Remove the dependency symlinks if they exist
         let dependency_directory_path = self.config.prefix_directory.join("dependencies").join(package_id.to_string());
         if fs::exists(&dependency_directory_path).err_with_path("check existence of", &dependency_directory_path)? {
-            fs::remove_dir_all(&dependency_directory_path).err_with_path("remove", &dependency_directory_path)?;
+            fs::remove_dir_all(&dependency_directory_path).err_with_path("remove dirs", &dependency_directory_path)?;
         }
 
         // Check if the package was symlinked
@@ -625,7 +625,7 @@ impl<'a> Installer<'a> {
         if let Some(directory) = directory.to_str() {
             debug!("Removing the package directory: {directory}");
         }
-        fs::remove_dir_all(&directory).err_with_path("remove", &directory)?;
+        fs::remove_dir_all(&directory).err_with_path("remove dirs", &directory)?;
 
         // Remove package from the register
         debug!("Removing {} from the package register", package_id.style());
@@ -687,7 +687,7 @@ impl<'a> Installer<'a> {
             // Remove the dependency symlinks
             let dependency_directory_path = self.config.prefix_directory.join("dependencies").join(package_version.package_id.to_string());
             if fs::exists(&dependency_directory_path).err_with_path("check existence of", &dependency_directory_path)? {
-                fs::remove_dir_all(&dependency_directory_path).err_with_path("remove", &dependency_directory_path)?;
+                fs::remove_dir_all(&dependency_directory_path).err_with_path("remove dirs", &dependency_directory_path)?;
             }
 
             // Run uninstall script
@@ -697,7 +697,7 @@ impl<'a> Installer<'a> {
         if let Some(directory) = directory.to_str() {
             debug!("Removing the package directory: {directory}");
         }
-        fs::remove_dir_all(&directory).err_with_path("remove", &directory)?;
+        fs::remove_dir_all(&directory).err_with_path("remove dirs", &directory)?;
 
         let uninstalled = installed_versions.iter().map(|p| p.package_id.clone()).collect();
 
@@ -940,7 +940,7 @@ impl<'a> Installer<'a> {
     pub fn get_updatables(&self) -> Result<Vec<PackageId>> {
         let mut updatables = Vec::new();
         for (package_name, package) in self.register.iterate_packages() {
-            let (repository_id, package_meta) = self.repository_manager.read_package(&package_name)?;
+            let (repository_id, package_meta) = self.repository_manager.read_package(package_name)?;
             let latest_available_version =
                 self.repository_manager.read_latest_supported_version(&repository_id, &package_meta, &Target::current())?;
 

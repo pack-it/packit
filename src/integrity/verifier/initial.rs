@@ -36,6 +36,15 @@ fn check_permissions_impl(directory: &PathBuf) -> Result<Vec<PathBuf>> {
         return Ok(unwritable);
     }
 
+    // Skip file if it has the read only flag enabled on Windows
+    #[cfg(windows)]
+    {
+        let metadata = fs::metadata(directory).err_with_path("read metadata of", directory)?;
+        if !directory.is_dir() && metadata.permissions().readonly() {
+            return Ok(unwritable);
+        }
+    }
+
     if !is_writable(directory)? {
         unwritable.push(directory.clone());
     }

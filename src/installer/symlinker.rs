@@ -51,7 +51,7 @@ impl<'a> Symlinker<'a> {
         let package_version = match register.get_package_version(package_id) {
             Some(package) => package,
             None => {
-                warning!("Cannot get installed package from installed storage... Please check installation with 'pit list'");
+                warning!("Cannot get installed package from register... Please check installation with 'pit list'");
                 return Ok(());
             },
         };
@@ -120,7 +120,7 @@ impl<'a> Symlinker<'a> {
         for entry in fs::read_dir(&self.config.prefix_directory).err_with_path("read", &self.config.prefix_directory)? {
             let entry = entry.err_with_path("iterate", &self.config.prefix_directory)?;
 
-            let file_type = entry.file_type().err_with_path("get filetype of", &entry.path())?;
+            let file_type = entry.file_type().err_with_path("get filetype of", entry.path())?;
             if file_type.is_dir() && entry.file_name() != "active" {
                 io::remove_symlinks(&entry.path(), &package_version.install_path)?;
             }

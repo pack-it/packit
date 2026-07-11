@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use std::{cmp::Ordering, fmt::Display, hash::Hash, str::FromStr};
 
 use crate::installer::types::VersionError;
@@ -37,7 +38,7 @@ impl PartialEq for VersionNumber {
 
 impl PartialOrd for VersionNumber {
     /// Gets an ordering between this `VersionNumber` and another `VersionNumber`.
-    /// An ordering can always be found, None is never returned.
+    /// An ordering can always be found, `None` is never returned.
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
@@ -67,7 +68,7 @@ impl FromStr for VersionNumber {
             return Err(VersionError::NoneError);
         }
 
-        if !string.chars().all(|c| c.is_digit(10)) {
+        if !string.chars().all(|c| c.is_ascii_digit()) {
             return Err(VersionError::IllegalCharacterError);
         }
 

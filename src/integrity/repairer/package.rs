@@ -328,14 +328,14 @@ pub fn fix_missing_links(missing: Vec<PackageName>, register: &mut PackageRegist
 /// Tries to fix packages by re-installing those packages.
 pub fn try_reinstall(packages: Vec<PackageId>, register: &mut PackageRegister, manager: &RepositoryManager, config: &Config) -> Result<()> {
     for package in packages {
-        reinstall_package(package, register, manager, config)?;
+        reinstall_package(&package, register, manager, config)?;
     }
 
     Ok(())
 }
 
 /// Uninstalls a package and then reinstalls it.
-fn reinstall_package(package_id: PackageId, register: &mut PackageRegister, manager: &RepositoryManager, config: &Config) -> Result<()> {
+fn reinstall_package(package_id: &PackageId, register: &mut PackageRegister, manager: &RepositoryManager, config: &Config) -> Result<()> {
     // Figure out the active version
     let Some(package) = register.get_package(&package_id.name) else {
         return Ok(());
@@ -346,7 +346,7 @@ fn reinstall_package(package_id: PackageId, register: &mut PackageRegister, mana
     let symlinked = package.symlinked;
 
     // Gather dependents
-    let Some(package_version) = register.get_package_version(&package_id) else {
+    let Some(package_version) = register.get_package_version(package_id) else {
         return Ok(());
     };
     let dependents = package_version.dependents.clone();
@@ -361,7 +361,7 @@ fn reinstall_package(package_id: PackageId, register: &mut PackageRegister, mana
 
     // Re-add package as dependent
     for dependent in &dependents {
-        let Some(package_version) = register.get_package_version_mut(&dependent) else {
+        let Some(package_version) = register.get_package_version_mut(dependent) else {
             return Ok(());
         };
 
@@ -369,13 +369,13 @@ fn reinstall_package(package_id: PackageId, register: &mut PackageRegister, mana
     }
 
     // Add the dependents to the package
-    if let Some(package_version) = register.get_package_version_mut(&package_id) {
+    if let Some(package_version) = register.get_package_version_mut(package_id) {
         package_version.dependents = dependents;
     }
 
     // Set the package as the active package if active before
     if active {
-        Symlinker::new(config).set_active(register, &package_id, symlinked)?;
+        Symlinker::new(config).set_active(register, package_id, symlinked)?;
     }
 
     Ok(())

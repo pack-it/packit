@@ -7,7 +7,7 @@ use crate::{
     repositories::types::{Date, PackageMeta, PackageVersionMeta},
 };
 
-/// Shows a warning if the given PackageMeta is deprecated or will be deprecated soon.
+/// Shows a warning if the given `PackageMeta` is deprecated or will be deprecated soon.
 pub fn show_package_warnings(package: &PackageMeta) {
     let Some(deprecation) = &package.deprecation else { return };
     let reason = match &deprecation.reason {
@@ -22,7 +22,7 @@ pub fn show_package_warnings(package: &PackageMeta) {
     }
 }
 
-/// Shows a warning if the given PackageVersionMeta is deprecated or will be deprecated soon.
+/// Shows a warning if the given `PackageVersionMeta` is deprecated or will be deprecated soon.
 pub fn show_package_version_warnings(package_version: &PackageVersionMeta, package_name: &PackageName) {
     let Some(deprecation) = &package_version.deprecation else { return };
     let reason = match &deprecation.reason {

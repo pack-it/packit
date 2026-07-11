@@ -36,9 +36,6 @@ pub enum InstallerError {
         package_id: PackageId,
     },
 
-    #[error("Multiple versions are installed, so only package name input is not specific enough. Please provide a version as well.")]
-    SpecificityError,
-
     #[error("The new version {} of this package cannot satisfy all dependents from the old package version.", new_version.style())]
     SatisfyError {
         new_version: Version,

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::{
     collections::{HashMap, VecDeque},
-    fs::{self},
+    fs,
     io::{BufRead, BufReader},
     path::{self, Path, PathBuf},
     process::{Command, Stdio},
@@ -60,7 +60,7 @@ pub enum ScriptError {
 
 pub type Result<T> = core::result::Result<T, ScriptError>;
 
-/// Describes the number of lines that should be captured from a script that has show_output disabled.
+/// Describes the number of lines that should be captured from a script that has `show_output` disabled.
 const MAX_CAPTURED_OUTPUT_LINES: usize = 10;
 
 /// Holds data necessary for script execution.
@@ -109,7 +109,7 @@ pub fn run_build_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, bui
 /// Runs the given post install script, in the package install directory.
 /// Note that the script should be a `.sh` script on Linux and macOS and a `.bat` on Windows.
 pub fn run_post_script(script_data: &ScriptData) -> Result<()> {
-    run_script(script_data, &script_data.package_install_path, Environment::new(), true)
+    run_script(script_data, script_data.package_install_path, Environment::new(), true)
 }
 
 /// Runs the given test script, in a newly created temp directory.
@@ -237,7 +237,7 @@ pub fn download_script(
 ) -> Result<Option<NamedTempFile>> {
     let script_text = match repository_manager.read_file(repository_id, package_name, script_path)? {
         Some(script_text) => script_text,
-        None => return Ok(None), // Script not found, so return None
+        None => return Ok(None), // Script not found, so return `None`
     };
 
     // Write script to file

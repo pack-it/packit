@@ -3,7 +3,7 @@ resolver = "3"
 members = ["xtasks/*"]
 
 [workspace.package]
-rust-version = "1.85.0"
+rust-version = "1.88.0"
 edition = "2024"
 
 [package]
@@ -13,6 +13,7 @@ version = "0.0.2"
 license = "GPL-3.0-only"
 authors = ["The Packit Team"]
 repository = "https://github.com/pack-it/packit"
+keywords = ["package-manager", "packages"]
 categories = ["command-line-utilities", "development-tools"]
 edition.workspace = true
 rust-version.workspace = true
@@ -25,22 +26,22 @@ clap = { version = "4.6.1", features = ["derive"] }
 reqwest = { version = "0.13.4", features = ["blocking"] }
 tar = "0.4.46"
 flate2 = "1.1.9"
-indicatif = { version = "0.18.4", default-features = false, features = ["unicode-width"] }
-bytes = "1.12.0"
+indicatif = { version = "0.18.6", default-features = false, features = ["unicode-width"] }
+bytes = "1.12.1"
 colored = "3.1.1"
 tempfile = "3.27.0"
 sha2 = "0.11.0"
 hex = "0.4.3"
-zip = { version = "7.2.0", default-features = false, features = ["deflate", "deflate64"] }
-regex = "1.12.4"
+zip = { version = "8.6.0", default-features = false, features = ["deflate", "deflate64"] }
+regex = "1.13.0"
 xz2 = "0.1.7"
-lief = { git = "https://github.com/lief-project/LIEF.git", rev = "00341b040edda834dd5c001b0d2e4e019bae288f" }
+lief = { git = "https://github.com/lief-project/LIEF.git", rev = "2a95290b7efd7ca7153ff13b458bcd1e56d9a11b" }
 url = "2.5.8"
 toml_edit = "0.25.12"
 terminal_size = "0.4.4"
 diffy = { version = "0.5.0", features = ["binary"] }
-contextdiff-parser = { git = "https://github.com/pack-it/contextdiff-parser.git" }
-console = "0.16.3"
+contextdiff-parser = { git = "https://github.com/pack-it/contextdiff-parser.git", tag = "0.0.1" }
+console = "0.16.4"
 chrono = { version = "0.4.45", default-features = false, features = ["alloc", "now", "serde"] }
 
 # macOS and Linux dependencies

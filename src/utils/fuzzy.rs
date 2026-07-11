@@ -28,7 +28,7 @@ pub fn repository_search(manager: &RepositoryManager, package_name: &PackageName
             if let Some(current_distance) = best_distance {
                 if distance < current_distance {
                     best_distance = Some(distance);
-                    best_word = Some(fuzzy_match)
+                    best_word = Some(fuzzy_match);
                 }
             } else {
                 best_distance = Some(distance);
@@ -42,7 +42,7 @@ pub fn repository_search(manager: &RepositoryManager, package_name: &PackageName
 
 /// Wraps around the `fuzzy_search` method and gets the fuzzy match with
 /// the lowest distance to the given string.
-/// Returns None if there are no fuzzy matches and a `PackageName` if there is at least one fuzzy match.
+/// Returns `None` if there are no fuzzy matches and a `PackageName` if there is at least one fuzzy match.
 pub fn min_search<'a, I>(words: I, string: &str) -> Option<PackageName>
 where
     I: IntoIterator<Item = &'a PackageName>,
@@ -53,7 +53,7 @@ where
         if let Some(current_distance) = best_distance {
             if distance < current_distance {
                 best_distance = Some(distance);
-                best_word = Some(fuzzy_match)
+                best_word = Some(fuzzy_match);
             }
         } else {
             best_distance = Some(distance);
@@ -90,6 +90,7 @@ where
 /// Calculates the distance between two strings with a levenshtein like algorithm which allows
 /// for transpositions for characters which are next to each other (ideal for typo's).
 /// Returns the distance between two strings.
+#[expect(clippy::needless_range_loop)]
 fn calculate_distance(first_word: &str, second_word: &str) -> u64 {
     let first_word_char = first_word.as_bytes();
     let second_word_char = second_word.as_bytes();

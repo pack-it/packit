@@ -26,7 +26,7 @@ pub enum TargetBoundsError {
     VersionError(#[from] VersionError),
 }
 
-/// Represents a target, a target can be a group (e.g. Unix for MacOs and Linux), an operating system or a specific architecture.
+/// Represents a target, a target can be a group (e.g. `Unix` for `MacOs` and `Linux`), an operating system or a specific architecture.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TargetName {
     Architecture(TargetArchitecture),
@@ -37,7 +37,7 @@ pub enum TargetName {
 impl FromStr for TargetName {
     type Err = TargetBoundsError;
 
-    /// Converts a string to a TargetName struct. A `TargetBoundsError::InvalidTargetName` is
+    /// Converts a string to a `TargetName` struct. A `TargetBoundsError::InvalidTargetName` is
     /// returned if the given string is not a valid target.
     fn from_str(string: &str) -> Result<Self, Self::Err> {
         if string == "unix" {
@@ -101,7 +101,7 @@ pub struct TargetBounds {
 }
 
 impl<'de> Deserialize<'de> for TargetBounds {
-    /// Deserializes a string into a TargetBounds struct.
+    /// Deserializes a string into a `TargetBounds` struct.
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -124,7 +124,7 @@ impl Serialize for TargetBounds {
 impl FromStr for TargetBounds {
     type Err = TargetBoundsError;
 
-    /// Parses a string into a TargetBounds struct. Returns an error if the version intervals or target name are invalid.
+    /// Parses a string into a `TargetBounds` struct. Returns an error if the version intervals or target name are invalid.
     fn from_str(string: &str) -> Result<Self, Self::Err> {
         // Split name and version_bounds
         let (name, version_bounds) = match string.split_once('@') {
@@ -209,7 +209,7 @@ impl TargetBounds {
     }
 
     /// Calculates the priority of the current target bound. The more specific target bound will
-    /// have a higher priority and vice versa (e.g. 'MacOs' has a higher priority then 'Unix').
+    /// have a higher priority and vice versa (e.g. `MacOs` has a higher priority then `Unix`).
     fn calculate_priority(&self) -> u32 {
         if self.addition.is_none() && self.version_intervals.is_empty() {
             match self.name {
@@ -237,7 +237,7 @@ impl TargetBounds {
     }
 
     /// Gets the best satisfying target bound. The best meaning the bound with the highest priority.
-    /// None will be returned if no satisfying target bounds can be found.
+    /// `None` will be returned if no satisfying target bounds can be found.
     pub fn get_best_target<'a>(specific_target: &Target, targets: Vec<&'a TargetBounds>) -> Option<&'a TargetBounds> {
         let mut current_best = None;
         let mut current_best_priority = 0;

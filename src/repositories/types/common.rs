@@ -123,7 +123,7 @@ impl<'de> Deserialize<'de> for Sources {
 impl Display for FileSize {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut unit = 0;
-        let mut value = self.0 as f64;
+        let mut value: f64 = self.0.into();
 
         // Adjust unit and value to order of size
         while unit < Self::UNITS.len() && value > 1750.0 {

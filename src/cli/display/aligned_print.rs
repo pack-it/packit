@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::fmt::Display;
 
-/// Holds pairs which have the `Display` trait.
+/// Utility to print key value pairs in an aligned format.
 pub struct PairAligner {
     pairs: Vec<(String, String)>,
 }

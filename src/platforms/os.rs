@@ -58,7 +58,7 @@ impl Os {
 }
 
 /// Represents an OS version. In case of Linux this also includes the distro and distro version.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 #[expect(dead_code)]
 pub enum OsVersion {
     MacOs {
@@ -82,7 +82,7 @@ static CURRENT_VERSION: LazyLock<OsVersion> = LazyLock::new(|| match OsVersion::
 });
 
 impl OsVersion {
-    /// Returns the OsVersion of the current system.
+    /// Returns the `OsVersion` of the current system.
     pub fn current() -> Self {
         CURRENT_VERSION.clone()
     }
@@ -123,7 +123,7 @@ impl OsVersion {
     }
 
     /// Gets the Linux version, represented with the distro name, distro version and kernel version.
-    /// Returns None if version information cannot be read or parsed, although an error message might sometimes be shown.
+    /// Returns `None` if version information cannot be read or parsed, although an error message might sometimes be shown.
     #[cfg(target_os = "linux")]
     fn get_version() -> Option<Self> {
         use std::fs;
@@ -234,7 +234,7 @@ impl OsVersion {
         Some(Self::Windows { version })
     }
 
-    /// Returns None for any unsupported OS.
+    /// Returns `None` for any unsupported OS.
     #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
     fn get_version() -> Option<Self> {
         None

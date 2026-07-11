@@ -86,7 +86,7 @@ impl<'a> BinaryPatcher<'a> {
         Ok(())
     }
 
-    /// Patches the binary at the given path. Currently supports ELF and MachO binaries.
+    /// Patches the binary at the given path. Currently supports `ELF` and `MachO` binaries.
     fn patch_binary(&self, path: PathBuf, package: &PackageId, dependencies: &Vec<&InstalledPackageVersion>) -> Result<()> {
         match Binary::parse(&path) {
             Some(Binary::ELF(binary)) => {
@@ -113,7 +113,7 @@ impl<'a> BinaryPatcher<'a> {
         Ok(())
     }
 
-    /// Patches the given MachO binary.
+    /// Patches the given `MachO` binary.
     fn patch_macho(&self, binary: macho::FatBinary, path: PathBuf, package: &PackageId) -> Result<()> {
         for mut binary in binary.iter() {
             let mut changed = false;
@@ -189,7 +189,7 @@ impl<'a> BinaryPatcher<'a> {
         Ok(())
     }
 
-    /// Patches the given ELF binary.
+    /// Patches the given `ELF` binary.
     fn patch_elf(
         &self,
         mut binary: elf::Binary,

@@ -10,7 +10,7 @@ pub struct Environment {
 impl Environment {
     /// Creates a new empty environment.
     pub fn new() -> Self {
-        Environment {
+        Self {
             env_vars: HashMap::new(),
             stripped_vars: Vec::new(),
         }

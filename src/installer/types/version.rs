@@ -104,7 +104,7 @@ impl PartialEq for Version {
 
 impl PartialOrd for Version {
     /// Gets an ordering between this `Version` and another `Version`.
-    /// An ordering can always be found, None is never returned.
+    /// An ordering can always be found, `None` is never returned.
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
@@ -123,7 +123,7 @@ impl Hash for Version {
 }
 
 impl Display for Version {
-    /// Formats a `Version` into the following format: <version_number>[.version_number]...
+    /// Formats a `Version` into the following format: `<version_number>[.version_number]...`
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let version_string = self.numbers.iter().map(|d| d.to_string()).collect::<Vec<_>>().join(".");
         write!(f, "{}", version_string)

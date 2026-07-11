@@ -55,7 +55,7 @@ impl PrebuildProvider for FileSystemPrebuildProvider {
 
 impl FileSystemPrebuildProvider {
     /// Creates a new filesystem prebuild provider for the given url.
-    /// Returns None if the url is invalid
+    /// Returns `None` if the url is invalid
     pub fn from_url(url: &str) -> Option<Self> {
         Some(Self { path: PathBuf::from(url) })
     }

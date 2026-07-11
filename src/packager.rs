@@ -150,7 +150,7 @@ fn add_directory(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, 
 
 /// Adds a normalized file to a tar file.
 fn add_file(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, file_path: &PathBuf) -> Result<()> {
-    let file = File::open(file_path).err_with_path("open", &file_path)?;
+    let file = File::open(file_path).err_with_path("open", file_path)?;
     let metadata = file.metadata().err_with_path("read metadata of", file_path)?;
 
     // Create regular file header
@@ -166,7 +166,7 @@ fn add_file(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, file_
 
 /// Adds a normalized symlink to a tar file.
 fn add_symlink(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, file_path: &PathBuf) -> Result<()> {
-    let target = fs::read_link(file_path).err_with_path("read", file_path)?;
+    let target = fs::read_link(file_path).err_with_path("read link", file_path)?;
 
     // Create symlink header
     let mut header = Header::new_ustar();
@@ -181,8 +181,10 @@ fn add_symlink(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, fi
 
 /// Normalizes a tar header. Most fields are set to zero. The data length and path fields are set based on
 /// the given parameters. The mode field is set based on the entry type of the existing/given header.
-#[cfg_attr(target_os = "windows", expect(unused_variables))] // Ignore unused file_path variable on windows
 fn normalize_header(header: &mut Header, data_length: u64, tar_path: &PathBuf, file_path: &PathBuf) -> Result<()> {
+    #[cfg(target_os = "windows")]
+    let _ = file_path; // Ignore file_path on Windows
+
     #[cfg(target_family = "unix")]
     {
         // For symlink do symlink_metadata() instead of metadata()

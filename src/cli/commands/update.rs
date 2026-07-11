@@ -9,8 +9,7 @@ use crate::{
         display::{
             QuestionResponse, ask_user, grid,
             logging::error,
-            not_found,
-            standard_print::{self},
+            not_found, standard_print,
             styled::{MapStyled, Styled},
         },
         parameter_checks,
@@ -109,7 +108,7 @@ impl HandleCommand for UpdateArgs {
             let mut installer = Installer::new(&config, &mut register, &manager, options);
 
             // Do the update, and in case of an error throw the error, but continue
-            let new_package_id = match installer.update(&optional_id, new_version) {
+            let new_package_id = match installer.update(optional_id, new_version) {
                 Ok(new_package_id) => new_package_id,
                 Err(error) => {
                     error!(error, "Cannot update package {}", optional_id.style());
@@ -160,6 +159,6 @@ impl UpdateArgs {
             exit(0);
         }
 
-        filtered_updatables.into_iter().map(|p| OptionalPackageId::from(p)).collect()
+        filtered_updatables.into_iter().map(OptionalPackageId::from).collect()
     }
 }

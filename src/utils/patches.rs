@@ -122,11 +122,11 @@ fn handle_file_operation(operation: &FileOperation<[u8]>, patch: &FilePatch<[u8]
                 debug!("Modifying file '{}' to '{}'", source.display(), destination.display());
             }
 
-            apply_path(patch.patch(), Some(&source), &destination)?;
+            apply_path(patch.patch(), Some(source), destination)?;
 
             // If the source and destination are not the same, the file is also moved.
             if source != destination {
-                fs::remove_file(&source).err_with_path("remove", source)?;
+                fs::remove_file(source).err_with_path("remove", source)?;
             }
         },
         FileOperation::Rename { from, to } => {
@@ -139,7 +139,7 @@ fn handle_file_operation(operation: &FileOperation<[u8]>, patch: &FilePatch<[u8]
                 fs::create_dir_all(parent).err_with_path("create dirs", parent)?;
             }
 
-            fs::rename(&source, &destination).err_with_path("rename", source)?;
+            fs::rename(source, destination).err_with_path("rename", source)?;
         },
         FileOperation::Copy { from, to } => {
             let source = create_path(directory, from)?;
@@ -151,7 +151,7 @@ fn handle_file_operation(operation: &FileOperation<[u8]>, patch: &FilePatch<[u8]
                 fs::create_dir_all(parent).err_with_path("create dirs", parent)?;
             }
 
-            fs::copy(&source, &destination).err_with_path("copy", source)?;
+            fs::copy(source, destination).err_with_path("copy", source)?;
         },
     }
 

@@ -30,7 +30,7 @@ pub struct PackageMeta {
 }
 
 impl PackageMeta {
-    /// Gets a list of all supported versions for the given target.
+    /// Gets a sorted list of all supported versions for the given target.
     pub fn get_supported_versions(&self, target: &Target) -> Result<Vec<&Version>> {
         let target = match TargetBounds::get_best_target(target, self.supported_versions.keys().collect()) {
             Some(target) => target,

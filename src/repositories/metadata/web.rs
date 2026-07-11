@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use bytes::Bytes;
-use reqwest::StatusCode;
+use reqwest::{IntoUrl, StatusCode};
 
 use crate::{
     config::Repository,
     installer::types::{PackageName, Version},
     repositories::{
-        error::Result,
+        error::{RepositoryError, Result},
         provider::MetadataProvider,
         types::{IndexMeta, PackageMeta, PackageVersionMeta, RepositoryMeta},
     },
@@ -22,25 +22,25 @@ pub struct WebMetadataProvider {
 
 impl MetadataProvider for WebMetadataProvider {
     fn read_repository_metadata(&self) -> Result<RepositoryMeta> {
-        let data = requests::get(format!("{}/repository.toml", self.url))?.text()?;
+        let data = self.request_metadata(format!("{}/repository.toml", self.url))?;
 
         Ok(toml::de::from_str(&data)?)
     }
 
     fn read_index_metadata(&self) -> Result<IndexMeta> {
-        let data = requests::get(format!("{}/index.toml", self.url))?.text()?;
+        let data = self.request_metadata(format!("{}/index.toml", self.url))?;
 
         Ok(toml::de::from_str(&data)?)
     }
 
     fn read_package(&self, package: &PackageName) -> Result<PackageMeta> {
-        let data = requests::get(format!("{}/packages/{package}/package.toml", self.url))?.text()?;
+        let data = self.request_metadata(format!("{}/packages/{package}/package.toml", self.url))?;
 
         Ok(toml::de::from_str(&data)?)
     }
 
     fn read_package_version(&self, package: &PackageName, version: &Version) -> Result<PackageVersionMeta> {
-        let data = requests::get(format!("{}/packages/{package}/{version}/targets.toml", self.url))?.text()?;
+        let data = self.request_metadata(format!("{}/packages/{package}/{version}/targets.toml", self.url))?;
 
         Ok(toml::de::from_str(&data)?)
     }
@@ -50,6 +50,11 @@ impl MetadataProvider for WebMetadataProvider {
 
         if response.status() == StatusCode::NOT_FOUND {
             return Ok(None);
+        }
+
+        // Return an error if something went wrong with the request (apart from not found error)
+        if !response.status().is_success() {
+            return Err(RepositoryError::UnsuccessfulRequest(response.status()));
         }
 
         Ok(Some(response.bytes()?))
@@ -62,13 +67,18 @@ impl MetadataProvider for WebMetadataProvider {
             return Ok(None);
         }
 
+        // Return an error if something went wrong with the request (apart from not found error)
+        if !response.status().is_success() {
+            return Err(RepositoryError::UnsuccessfulRequest(response.status()));
+        }
+
         Ok(Some(response.text()?))
     }
 }
 
 impl WebMetadataProvider {
     /// Creates a new web repository provider for the given repository.
-    /// Returns None if the repository is not of the correct type.
+    /// Returns `None` if the repository is not of the correct type.
     pub fn from_repository(repository: &Repository) -> Option<Self> {
         if repository.provider != WEB_METADATA_PROVIDER_ID {
             return None;
@@ -77,5 +87,19 @@ impl WebMetadataProvider {
         Some(Self {
             url: repository.url.clone(),
         })
+    }
+
+    /// Requests metadata from the given url.
+    /// Returns an `Err(RepositoryError::UnsuccessfulRequest)` if the reponse is not a success.
+    /// Returns the metadata as String.
+    fn request_metadata<T: IntoUrl>(&self, url: T) -> Result<String> {
+        let response = requests::get(url)?;
+
+        // Return an error if something went wrong with the request
+        if !response.status().is_success() {
+            return Err(RepositoryError::UnsuccessfulRequest(response.status()));
+        }
+
+        Ok(response.text()?)
     }
 }

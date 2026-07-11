@@ -36,6 +36,7 @@ pub(super) fn is_writable(_path: &PathBuf, metadata: Metadata) -> Result<bool> {
     }
 
     // Check if path is writable for current group
+    // SAFETY: `getegid` is always successful, has no safety preconditions and thus cannot fail
     let current_group = unsafe { libc::getegid() };
     let group = metadata.gid();
     if current_group == group && mode & 0o020 != 0 {
@@ -43,6 +44,7 @@ pub(super) fn is_writable(_path: &PathBuf, metadata: Metadata) -> Result<bool> {
     }
 
     // Check if path is writable for current user
+    // SAFETY: `geteuid` is always successful, has no safety preconditions and thus cannot fail
     let current_user = unsafe { libc::geteuid() };
     let user = metadata.uid();
     if current_user == user && mode & 0o200 != 0 {
@@ -67,7 +69,7 @@ pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool, recurse: bool)
         false => None,
     };
 
-    let metadata = fs::metadata(&path).err_with_path("read metadata of", path)?;
+    let metadata = fs::metadata(path).err_with_path("read metadata of", path)?;
     set_file_permissions(path, metadata.permissions(), group_id, recurse)
 }
 
@@ -91,7 +93,7 @@ fn set_file_permissions(path: &PathBuf, mut old_permissions: Permissions, group_
         old_permissions.set_mode(0o755);
     }
 
-    fs::set_permissions(&path, old_permissions).err_with_path("set permissions of", path)?;
+    fs::set_permissions(path, old_permissions).err_with_path("set permissions of", path)?;
 
     if !recurse || !path.is_dir() {
         return Ok(());
@@ -126,11 +128,15 @@ pub fn set_ownership(path: &PathBuf, uid: Option<u32>, gid: Option<u32>) -> Resu
 /// Gets the group id based on the given name.
 pub fn get_group_id(name: &str) -> Result<u32> {
     let c_name = CString::new(name).map_err(PlatformError::from)?;
-    let group = unsafe { libc::getgrnam(c_name.as_ptr()) };
 
+    // SAFETY: `c_name` is valid nul terminated string created by `CString`
+    // SAFETY: `getgrnam` returns either a valid pointer or a null pointer, which we check
+    let group = unsafe { libc::getgrnam(c_name.as_ptr()) };
     if group.is_null() {
         return Err(PermissionError::GroupDoesNotExist);
     }
 
+    // SAFETY: the group pointer is not null, because we check for this and return an error if it is
+    // SAFETY: no free is needed, since the `getgrnam` man page explicitly forbids this
     unsafe { Ok((*group).gr_gid) }
 }

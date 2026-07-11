@@ -60,7 +60,7 @@ impl ListArgs {
     fn updatables_list(&self, config: &Config, register: &mut PackageRegister) {
         let manager = RepositoryManager::new(config);
         let options = InstallerOptions::default();
-        let installer = Installer::new(&config, register, &manager, options);
+        let installer = Installer::new(config, register, &manager, options);
 
         let updatables = installer.get_updatables().unwrap_or_exit(1);
         if updatables.is_empty() {

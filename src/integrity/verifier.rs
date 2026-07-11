@@ -17,7 +17,7 @@ use crate::{
 
 /// Verifier that scans the Packit environment for issues.
 pub struct Verifier {
-    current_intial_check: usize,
+    current_initial_check: usize,
     current_check: usize,
     issues_found: bool,
 }
@@ -26,7 +26,7 @@ impl Verifier {
     /// Creates a new verifier.
     pub fn new() -> Self {
         Self {
-            current_intial_check: 0,
+            current_initial_check: 0,
             current_check: 0,
             issues_found: false,
         }
@@ -39,7 +39,7 @@ impl Verifier {
             Ok(issue) => Ok(issue),
             Err(e) if self.issues_found => {
                 debug!(err: e, "An error occured when issues were already found, skipping remaining checks.");
-                self.current_intial_check = Check::get_initial_checks().len();
+                self.current_initial_check = Check::get_initial_checks().len();
                 Ok(None)
             },
             Err(e) => Err(e),
@@ -50,13 +50,15 @@ impl Verifier {
     /// Returns and `Issue` if an issue is found, `None` if no issues are found.
     fn next_initial_check_impl(&mut self) -> Result<Option<Issue>> {
         let ordered_checks = Check::get_ordered_checks(Check::get_initial_checks());
-        let check = match ordered_checks.get(self.current_intial_check) {
+        let check = match ordered_checks.get(self.current_initial_check) {
             Some(check) => check,
             None => return Ok(None),
         };
 
         // Increase current issue
-        self.current_intial_check += 1;
+        self.current_initial_check += 1;
+
+        debug!("Performing check '{check:?}'");
 
         let issue = match check {
             Check::Permissions => initial::check_permissions()?,
@@ -76,14 +78,14 @@ impl Verifier {
             self.issues_found = true;
         }
 
-        return Ok(issue);
+        Ok(issue)
     }
 
     /// Gets the next normal check result.
     /// If an error occurs during the check it's only returned if no previous issues were found.
     pub fn next_check(&mut self, packages: &Vec<PackageId>, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
         // Make sure the initial checks have been run before doing general checks
-        if self.current_intial_check != Check::get_initial_checks().len() {
+        if self.current_initial_check != Check::get_initial_checks().len() {
             return Err(VerifierError::InitialChecksSkipped);
         }
 
@@ -109,6 +111,8 @@ impl Verifier {
 
         // Increase current issue
         self.current_check += 1;
+
+        debug!("Performing check '{check:?}'");
 
         let issue = match check {
             Check::PackitGroup => general::check_packit_group(config)?,
@@ -137,7 +141,7 @@ impl Verifier {
             self.issues_found = true;
         }
 
-        return Ok(issue);
+        Ok(issue)
     }
 
     /// Get the issues found state.
@@ -147,26 +151,22 @@ impl Verifier {
     }
 
     /// Reverses the initial checks counter by 1. Except if the current is 0.
-    /// Returns the new value of current_intial_check.
     pub fn reverse_initial_check(&mut self) {
-        if self.current_intial_check > 0 {
-            self.current_intial_check -= 1;
+        if self.current_initial_check > 0 {
+            self.current_initial_check -= 1;
         }
     }
 
     /// Reverses the checks counter by 1. Except if the current is 0.
-    /// Returns the new value of `current_check`.
-    pub fn reverse_check(&mut self) -> usize {
+    pub fn reverse_check(&mut self) {
         if self.current_check > 0 {
             self.current_check -= 1;
         }
-
-        self.current_check
     }
 
     /// Gets the current initial check index.
     pub fn get_initial_check_index(&self) -> usize {
-        self.current_intial_check
+        self.current_initial_check
     }
 
     /// Gets the current check index.

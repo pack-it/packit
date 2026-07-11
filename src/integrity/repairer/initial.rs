@@ -43,7 +43,7 @@ pub fn fix_missing_config() -> Result<()> {
             },
 
             // Return if no valid prefix path can be found (no possibility for reconstruction)
-            None => return confirm_config_construction(&mut default_config),
+            None => return confirm_config_construction(&default_config),
         }
     }
 
@@ -55,7 +55,7 @@ pub fn fix_missing_config() -> Result<()> {
     // Set multi-user to true if the packit group exists
     default_config.set_multiuser(does_packit_group_exist()?);
 
-    confirm_config_construction(&mut default_config)
+    confirm_config_construction(&default_config)
 }
 
 /// Sets the repositories field, if they can be found with the `get_used_repositories`.
@@ -89,7 +89,7 @@ fn set_config_repositories(prefix_path: &PathBuf, default_config: &mut EditableC
 }
 
 /// Saves the reconstructed Config.toml to the default config path if the user confirms it.
-fn confirm_config_construction(default_config: &mut EditableConfig) -> Result<()> {
+fn confirm_config_construction(default_config: &EditableConfig) -> Result<()> {
     println!();
     println!("Reconstructed Config.toml");
     default_config.get_config().display();
