@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased](https://github.com/pack-it/packit/compare/0.0.3...HEAD)
 
+### Changes
+- Change display of true and false values in the `info` and `search` commands.
+
 
 ## [v0.0.3](https://github.com/pack-it/packit/compare/0.0.2...0.0.3) - 2026-07-11
 
