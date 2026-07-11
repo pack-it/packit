@@ -28,7 +28,7 @@ pub fn repository_search(manager: &RepositoryManager, package_name: &PackageName
             if let Some(current_distance) = best_distance {
                 if distance < current_distance {
                     best_distance = Some(distance);
-                    best_word = Some(fuzzy_match)
+                    best_word = Some(fuzzy_match);
                 }
             } else {
                 best_distance = Some(distance);
@@ -53,7 +53,7 @@ where
         if let Some(current_distance) = best_distance {
             if distance < current_distance {
                 best_distance = Some(distance);
-                best_word = Some(fuzzy_match)
+                best_word = Some(fuzzy_match);
             }
         } else {
             best_distance = Some(distance);

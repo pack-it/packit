@@ -205,7 +205,7 @@ pub type EmptyTree = Tree<(), ()>;
 // An empty node implementation, without any values or labels.
 impl EmptyTree {
     /// Builds a simple tree based on the installed packages.
-    pub fn new_empty(package_id: PackageId, register: &PackageRegister) -> Result<EmptyTree> {
+    pub fn new_empty(package_id: PackageId, register: &PackageRegister) -> Result<Self> {
         let root = Node::new(package_id, (), ());
         let mut tree = Tree::new(root);
 

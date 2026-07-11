@@ -73,14 +73,14 @@ pub fn create_prebuild_provider_from_url(url: &str, provider: Option<String>) ->
 }
 
 /// Creates a prebuild repository provider for the given repository.
-pub fn create_prebuild_provider(repository: &Repository, repo_metadata: RepositoryMeta) -> Option<Box<dyn PrebuildProvider>> {
+pub fn create_prebuild_provider(repository: &Repository, repo_metadata: &RepositoryMeta) -> Option<Box<dyn PrebuildProvider>> {
     let (url, provider) = get_prebuild_repository_info(repository, repo_metadata)?;
 
     create_prebuild_provider_from_url(&url, Some(provider))
 }
 
 /// Gets pre-build info from a repositiry. Returns a tuple with the pre-build url and the pre-build provider.
-fn get_prebuild_repository_info(repository: &Repository, repo_metadata: RepositoryMeta) -> Option<(String, String)> {
+fn get_prebuild_repository_info(repository: &Repository, repo_metadata: &RepositoryMeta) -> Option<(String, String)> {
     if let Some(url) = &repository.prebuilds_url {
         let provider = repository.prebuilds_provider.clone().unwrap_or(DEFAULT_PREBUILD_PROVIDER_ID.into());
 

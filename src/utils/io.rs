@@ -88,7 +88,7 @@ pub fn remove_symlinks(search_dir: &Path, destination_dir: &Path) -> symlink::Re
         }
 
         if file_type.is_symlink() && fs::read_link(file.path()).err_with_path("read link", file.path())?.starts_with(destination_dir) {
-            symlink::remove_symlink(&file.path())?
+            symlink::remove_symlink(&file.path())?;
         }
     }
 

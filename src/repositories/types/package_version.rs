@@ -212,7 +212,7 @@ impl PackageVersionMeta {
 
         // If we have named sources, we check for valid referencing in the targets
         if let Sources::Named(sources) = &self.sources {
-            for (bounds, target) in self.targets.iter() {
+            for (bounds, target) in &self.targets {
                 match &target.source {
                     Some(source) if !sources.contains_key(source) => {
                         return Err(RepositoryError::ValidationError(format!("source '{source}' is not defined")));

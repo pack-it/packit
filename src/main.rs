@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #![warn(clippy::doc_markdown, clippy::inconsistent_struct_constructor, clippy::derive_partial_eq_without_eq)]
-#![warn(clippy::cargo_common_metadata, clippy::perf, clippy::complexity)]
+#![warn(clippy::cast_lossless, clippy::cargo_common_metadata, clippy::perf, clippy::complexity, clippy::suspicious)]
 #![allow(clippy::module_inception)]
 #![allow(clippy::enum_variant_names)]
 #![allow(clippy::collapsible_if)] // Allowed because of rustfmt formatting incompatibilities
