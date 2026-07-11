@@ -2,7 +2,7 @@
 use clap::Args;
 use colored::Colorize;
 use regex::Regex;
-use std::{collections::HashSet, str::FromStr};
+use std::{cmp::max, collections::HashSet, str::FromStr};
 
 use crate::{
     cli::{
@@ -35,6 +35,10 @@ pub struct SearchArgs {
     /// True if the query should be interpreted as regex
     #[arg(long, default_value = "false")]
     regex: bool,
+
+    /// True if verbose information should be shown
+    #[arg(short, long, default_value = "false")]
+    verbose: bool,
 }
 
 impl HandleCommand for SearchArgs {
@@ -124,8 +128,10 @@ impl SearchArgs {
         pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
         println!();
 
-        print!("Conflicts with: ");
-        standard_print::print_list_or_none(package.conflicts_with.iter());
+        if self.verbose {
+            print!("Conflicts with: ");
+            standard_print::print_list_or_none(package.conflicts_with.iter());
+        }
 
         // Check if the package is deprecated
         deprecation::show_package_warnings(&package);
@@ -162,7 +168,12 @@ impl SearchArgs {
         let dependencies = package_version.dependencies.iter().chain(target.dependencies.iter());
         let build_dependencies = package_version.build_dependencies.iter().chain(target.build_dependencies.iter());
 
-        let required_packit_version = package_version.required_packit_version.display().bold().blue();
+        let required_packit_version = match max(&package.required_packit_version, &package_version.required_packit_version) {
+            Some(version) => version.style(),
+            None => "None".dimmed(),
+        };
+
+        let skip_symlinking = if package_version.skip_symlinking { "on" } else { "off" };
 
         // Show package version information
         println!("{}", package_id.style());
@@ -171,18 +182,20 @@ impl SearchArgs {
         pair_aligner.add("Homepage", package.homepage.display());
         pair_aligner.add("License", &package_version.license);
         pair_aligner.add("Required Packit version", required_packit_version);
-        pair_aligner.add("Skip symlinking", &package_version.skip_symlinking);
+        pair_aligner.add("Skip symlinking", skip_symlinking);
         pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
         println!();
 
         print!("Dependencies: ");
         standard_print::print_list_or_none(dependencies);
 
-        print!("Build dependencies: ");
-        standard_print::print_list_or_none(build_dependencies);
+        if self.verbose {
+            print!("Build dependencies: ");
+            standard_print::print_list_or_none(build_dependencies);
 
-        print!("Revisions: ");
-        standard_print::print_list_or_none(package_version.revisions.iter());
+            print!("Revisions: ");
+            standard_print::print_list_or_none(package_version.revisions.iter());
+        }
 
         // Check if the package is deprecated
         deprecation::show_package_version_warnings(&package_version, &package_id.name);
