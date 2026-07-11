@@ -48,7 +48,7 @@ if exist "%CONFIG_DIR%" (
 exit /b %STATUS_CODE%
 :cleanup_end
 
-set "VERSION=0.0.2"
+set "VERSION=0.0.3"
 set "REVISION=0"
 
 echo Installing Packit %VERSION% (%REVISION%)

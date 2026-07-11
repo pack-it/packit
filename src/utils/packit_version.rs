@@ -13,7 +13,7 @@ pub(crate) use packit_version;
 
 macro_rules! packit_version_name {
     () => {
-        "The Fuzzy Traveling Handyman"
+        "The Vibrant Administrator"
     };
 }
 pub(crate) use packit_version_name;
