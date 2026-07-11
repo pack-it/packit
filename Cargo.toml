@@ -35,7 +35,7 @@ hex = "0.4.3"
 zip = { version = "8.6.0", default-features = false, features = ["deflate", "deflate64"] }
 regex = "1.13.0"
 xz2 = "0.1.7"
-lief = { git = "https://github.com/lief-project/LIEF.git", rev = "00341b040edda834dd5c001b0d2e4e019bae288f" }
+lief = { git = "https://github.com/lief-project/LIEF.git", rev = "2a95290b7efd7ca7153ff13b458bcd1e56d9a11b" }
 url = "2.5.8"
 toml_edit = "0.25.12"
 terminal_size = "0.4.4"
