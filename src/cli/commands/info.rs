@@ -90,6 +90,12 @@ impl InfoArgs {
         pair_aligner.add("Active version", &package.active_version);
         pair_aligner.add("Symlinked", package.symlinked);
         pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
+        println!();
+
+        if self.verbose {
+            print!("Conflicts with: ");
+            standard_print::print_list_or_none(package.conflicts_with.iter());
+        }
     }
 
     /// Displays the package version info, also checking for the verbose flag for some info.

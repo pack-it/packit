@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - When a build script exits with a non-zero status code, the last 10 lines of the scripts output is now shown.
 - The `disable_prebuilds` field to the config, which disables usage of prebuilds when set to true.
 - The test script checks in the verifier, which use the metadata test scripts to test if packages work.
+- The `--verbose` flag for the `search` command.
 
 ### Changes
 - The build system now includes a new `package-build` xtask to create a full Packit prebuild for the release.
@@ -40,6 +41,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The `util checksum` command now also shows the size of the file.
 - When the `repository.toml` file of a metadata repository cannot be fetched, the repository will not be loaded anymore.
 - Improved UI with colors and text styling.
+- The `search` command now outputs more and different information based on the given package input.
+- The `info` command now shows conflicting packages when verbose is specified.
 
 ### Fixed
 - Fix package not found issue when multiple repositories have the same package but different versions.
