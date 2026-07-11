@@ -508,10 +508,15 @@ fn invalid_dependencies_impl(package: &InstalledPackageVersion) -> Result<Vec<(P
         return Ok(Vec::new());
     };
 
+    // Get current target
+    let target_bounds = package_version_meta.get_best_target(&Target::current())?;
+    let target = package_version_meta.get_target(&target_bounds)?;
+    let dependencies: Vec<_> = package_version_meta.dependencies.iter().chain(target.dependencies.iter()).collect();
+
     // Check if there is a package dependency which doesn't satisfy any of the metadata dependencies
     for dependency in &package.dependencies {
         let mut satisfied = false;
-        for metadata_dependency in &package_version_meta.dependencies {
+        for metadata_dependency in &dependencies {
             if metadata_dependency.satisfied(&dependency.name, &dependency.version) {
                 satisfied = true;
             }
