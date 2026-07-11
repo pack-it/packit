@@ -25,7 +25,7 @@ pub struct TaskCommand {
     overwrite: bool,
 }
 
-const PACKIT_VERSION: &str = "0.0.2";
+const PACKIT_VERSION: &str = "0.0.3";
 const PACKIT_REVISION: &str = "0";
 
 fn main() {

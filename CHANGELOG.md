@@ -4,7 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
-## [Unreleased](https://github.com/pack-it/packit/compare/0.0.2...HEAD)
+## [Unreleased](https://github.com/pack-it/packit/compare/0.0.3...HEAD)
+
+
+## [v0.0.3](https://github.com/pack-it/packit/compare/0.0.2...0.0.3) - 2026-07-11
 
 ### Added
 - Support for loading non-text external test files.
@@ -53,8 +56,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Fix empty directories (`lib`, `share`) in the prefix, by not creating them anymore.
 - Fix skip active install option, by only skipping when multiple versions are installed.
 - All warnings, errors and debug logs are now outputted to stderr instead of stdout.
-- Fix Permissions verifier check, by allowing readonly flag on files.
-- Fix InvalidDependencies verifier check, by also checking for target specific dependencies.
+- Fix `Permissions` verifier check, by allowing readonly flag on files.
+- Fix `InvalidDependencies` verifier check, by also checking for target specific dependencies.
 
 
 ## [v0.0.2](https://github.com/pack-it/packit/compare/0.0.1...0.0.2) - 2026-05-14
