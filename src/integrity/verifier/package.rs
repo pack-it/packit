@@ -140,7 +140,7 @@ fn check_package_alterations(package_id: &PackageId, register: &PackageRegister,
 }
 
 /// Checks if the given packages in the register also exist in the package storage in the prefix directory.
-/// Returns a storage consistency issue or None if there are no packages missing from storage.
+/// Returns a storage consistency issue or `None` if there are no packages missing from storage.
 pub fn check_storage_consistency(packages: &Vec<PackageId>, config: &Config) -> Result<Option<Issue>> {
     let mut missing = Vec::new();
     for package_id in packages {
@@ -174,7 +174,7 @@ fn package_storage_is_consistent(package_id: &PackageId, config: &Config) -> Res
 /// Checks if the given packages in storage also exist in the register.
 /// Note that this is a package related check, but not from the register and it would be weird to only check the specified packages.
 /// As we would get all the packages from storage and then ignore unspecified packages (failing when no packages are specified by the user).
-/// Returns a register consistency issue or None if there are packages missing from the register.
+/// Returns a register consistency issue or `None` if there are packages missing from the register.
 pub fn check_register_consistency(register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
     let storage_packages = get_storage_packages(config)?;
     let mut missing = HashSet::new();
@@ -285,7 +285,7 @@ fn check_forbidden_package_link(package_id: &PackageId, register: &PackageRegist
 }
 
 /// Checks for the given packages if symlinks are missing.
-/// Returns an `Issue::MissingLinks` if symlinks are missing, None otherwise.
+/// Returns an `Issue::MissingLinks` if symlinks are missing, `None` otherwise.
 pub fn check_missing_link(packages: &Vec<PackageId>, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
     let mut missing = Vec::new();
     for package_id in packages {

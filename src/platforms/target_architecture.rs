@@ -3,7 +3,7 @@ use std::fmt::Display;
 
 use crate::platforms::Os;
 
-/// Represents all supported architectures, contains an Unknown type which could hold an unknown architecture as a string.
+/// Represents all supported architectures, contains an `Unknown` type which could hold an unknown architecture as a string.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TargetArchitecture {
     MacOsX86_64,
@@ -36,7 +36,7 @@ impl Display for TargetArchitecture {
 }
 
 impl TargetArchitecture {
-    /// Gets the architecture of the current machine. Returns Unknown if the type isn't supported.
+    /// Gets the architecture of the current machine. Returns `Unknown` if the type isn't supported.
     pub fn current() -> Self {
         #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
         return Self::MacOsX86_64;
@@ -86,7 +86,7 @@ impl TargetArchitecture {
         matches!(self, Self::Unknown(_))
     }
 
-    /// Creates a `TargetArchitecture` from a string. Returns the `TargetArchitecture`, or an Unknown type
+    /// Creates a `TargetArchitecture` from a string. Returns the `TargetArchitecture`, or an `Unknown` type
     /// containing the string value if the given target is not supported.
     pub fn from_str(string: &str) -> Self {
         match string {

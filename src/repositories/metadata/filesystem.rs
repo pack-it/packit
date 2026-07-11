@@ -72,7 +72,7 @@ impl MetadataProvider for FileSystemMetadataProvider {
 
 impl FileSystemMetadataProvider {
     /// Creates a new filesystem repository provider for the given repository.
-    /// Returns None if the repository is not of the correct type.
+    /// Returns `None` if the repository is not of the correct type.
     pub fn from_repository(repository: &Repository) -> Option<Self> {
         if repository.provider != FILESYSTEM_METADATA_PROVIDER_ID {
             return None;

@@ -190,7 +190,7 @@ impl<'a> RepositoryManager<'a> {
     /// - It contains the current target
     /// - The package is supported by the current Packit version
     ///
-    /// Returns Some(PackageNotFoundReason) if the package is not compatible, None otherwise.
+    /// Returns `Some(PackageNotFoundReason)` if the package is not compatible, `None` otherwise.
     fn check_package_compatibility(&self, package: &PackageMeta) -> Option<PackageNotFoundReason> {
         // Check if the package is disabled
         if let Some(deprecation) = &package.deprecation
@@ -292,7 +292,7 @@ impl<'a> RepositoryManager<'a> {
     /// - It contains the current target
     /// - The package version is supported by the current Packit version
     ///
-    /// Returns Some(PackageNotFoundReason) if the package version is not compatible, None otherwise.
+    /// Returns `Some(PackageNotFoundReason)` if the package version is not compatible, `None` otherwise.
     fn check_package_version_compatibility(&self, package_version: &PackageVersionMeta, target: &Target) -> Option<PackageNotFoundReason> {
         // Check if the package is disabled
         if let Some(deprecation) = &package_version.deprecation
@@ -336,14 +336,14 @@ impl<'a> RepositoryManager<'a> {
     }
 
     /// Retrieves the prebuild url for the given package version.
-    /// Returns the url, or None if a prebuild is not available for the package.
+    /// Returns the url, or `None` if a prebuild is not available for the package.
     /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     pub fn get_prebuild_url(&self, repository_id: &str, package: &PackageId, revision: u64, target: &Target) -> Result<Option<String>> {
         self.get_prebuid_provider(repository_id)?.get_prebuild_url(package, revision, target)
     }
 
     /// Retrieves the prebuild checksum for the given package version.
-    /// Returns the checksum, or None if a prebuild is not available for the package.
+    /// Returns the checksum, or `None` if a prebuild is not available for the package.
     /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     pub fn get_prebuild_checksum(
         &self,
@@ -423,7 +423,7 @@ impl<'a> RepositoryManager<'a> {
                 None => return Ok(package_version),
             };
 
-            // Update the latest_deprecated if it was None or if the current version deprecates at a later moment
+            // Update the `latest_deprecated` if it was `None` or if the current version deprecates at a later moment
             match &latest_deprecated {
                 Some(latest_deprecation) => {
                     if let Some(latest_deprecation) = &latest_deprecation.deprecation

@@ -56,7 +56,7 @@ impl Display for OptionalPackageId {
 }
 
 impl OptionalPackageId {
-    /// Returns a `PackageId` or None if the version is not specified in `Self`.
+    /// Returns a `PackageId` or `None` if the version is not specified in `Self`.
     #[expect(clippy::manual_map)]
     pub fn versioned(&self) -> Option<PackageId> {
         match &self.version {

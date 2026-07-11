@@ -59,7 +59,7 @@ impl PrebuildProvider for WebPrebuildProvider {
 
 impl WebPrebuildProvider {
     /// Creates a new web prebuild provider for the given url.
-    /// Returns None if the url is invalid.
+    /// Returns `None` if the url is invalid.
     pub fn from_url(url: &str) -> Option<Self> {
         // Ensure the url ends in a '/', so the join function adds the path on top of the existing path
         let url = Url::from_str(&format!("{url}/")).ok()?;
@@ -68,7 +68,7 @@ impl WebPrebuildProvider {
     }
 
     /// Reads a file from the repository and return the url and response.
-    /// Returns None if the file cannot be found in the repository.
+    /// Returns `None` if the file cannot be found in the repository.
     /// Returns a `UrlParseError` if the created url cannot be parsed.
     fn read_file_path(&self, package_id: &PackageId, revision: u64, target: &Target, extension: &str) -> Result<Option<(Url, Response)>> {
         let prefix = package_id.name.get_prefix().to_string();

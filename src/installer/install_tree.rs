@@ -117,7 +117,7 @@ impl<'a> InstallTreeBuilder<'a> {
         while let Some(node_index) = package_queue.pop_front() {
             let node = tree.get_node_by_index_mut(node_index).expect("Expected node to exist");
 
-            // Expand with register if the node value is None and has the Installed label type (meaning that the package is already installed)
+            // Expand with register if the node value is `None` and has the Installed label type (meaning that the package is already installed)
             let install_meta = match node.get_value() {
                 Some(install_meta) => install_meta,
                 None if node.get_label().install_type == InstallType::Installed => {

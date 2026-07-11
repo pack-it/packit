@@ -237,7 +237,7 @@ impl TargetBounds {
     }
 
     /// Gets the best satisfying target bound. The best meaning the bound with the highest priority.
-    /// None will be returned if no satisfying target bounds can be found.
+    /// `None` will be returned if no satisfying target bounds can be found.
     pub fn get_best_target<'a>(specific_target: &Target, targets: Vec<&'a TargetBounds>) -> Option<&'a TargetBounds> {
         let mut current_best = None;
         let mut current_best_priority = 0;

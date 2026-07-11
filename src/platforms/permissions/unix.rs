@@ -36,7 +36,7 @@ pub(super) fn is_writable(_path: &PathBuf, metadata: Metadata) -> Result<bool> {
     }
 
     // Check if path is writable for current group
-    // SAFETY: getegid is always successful, has no safety preconditions and thus cannot fail
+    // SAFETY: `getegid` is always successful, has no safety preconditions and thus cannot fail
     let current_group = unsafe { libc::getegid() };
     let group = metadata.gid();
     if current_group == group && mode & 0o020 != 0 {
@@ -44,7 +44,7 @@ pub(super) fn is_writable(_path: &PathBuf, metadata: Metadata) -> Result<bool> {
     }
 
     // Check if path is writable for current user
-    // SAFETY: geteuid is always successful, has no safety preconditions and thus cannot fail
+    // SAFETY: `geteuid` is always successful, has no safety preconditions and thus cannot fail
     let current_user = unsafe { libc::geteuid() };
     let user = metadata.uid();
     if current_user == user && mode & 0o200 != 0 {
@@ -130,13 +130,13 @@ pub fn get_group_id(name: &str) -> Result<u32> {
     let c_name = CString::new(name).map_err(PlatformError::from)?;
 
     // SAFETY: `c_name` is valid nul terminated string created by `CString`
-    // SAFETY: getgrnam returns either a valid pointer or a null pointer, which we check
+    // SAFETY: `getgrnam` returns either a valid pointer or a null pointer, which we check
     let group = unsafe { libc::getgrnam(c_name.as_ptr()) };
     if group.is_null() {
         return Err(PermissionError::GroupDoesNotExist);
     }
 
     // SAFETY: the group pointer is not null, because we check for this and return an error if it is
-    // SAFETY: no free is needed, since the getgrnam man page explicitly forbids this
+    // SAFETY: no free is needed, since the `getgrnam` man page explicitly forbids this
     unsafe { Ok((*group).gr_gid) }
 }

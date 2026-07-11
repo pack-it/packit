@@ -104,7 +104,7 @@ impl PartialEq for Version {
 
 impl PartialOrd for Version {
     /// Gets an ordering between this `Version` and another `Version`.
-    /// An ordering can always be found, None is never returned.
+    /// An ordering can always be found, `None` is never returned.
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }

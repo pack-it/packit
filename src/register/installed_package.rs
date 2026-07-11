@@ -47,13 +47,13 @@ impl InstalledPackage {
     }
 
     /// Gets a package version if it exists.
-    /// Returns a reference to the package version or None of the package is not installed.
+    /// Returns a reference to the package version or `None` of the package is not installed.
     pub fn get_package_version(&self, version: &Version) -> Option<&InstalledPackageVersion> {
         self.versions.get(version)
     }
 
     /// Gets a package version if it exists.
-    /// Returns a mutable reference to the package version or None of the package is not installed.
+    /// Returns a mutable reference to the package version or `None` of the package is not installed.
     pub fn get_package_version_mut(&mut self, version: &Version) -> Option<&mut InstalledPackageVersion> {
         self.versions.get_mut(version)
     }

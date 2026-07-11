@@ -123,7 +123,7 @@ impl OsVersion {
     }
 
     /// Gets the Linux version, represented with the distro name, distro version and kernel version.
-    /// Returns None if version information cannot be read or parsed, although an error message might sometimes be shown.
+    /// Returns `None` if version information cannot be read or parsed, although an error message might sometimes be shown.
     #[cfg(target_os = "linux")]
     fn get_version() -> Option<Self> {
         use std::fs;
@@ -234,7 +234,7 @@ impl OsVersion {
         Some(Self::Windows { version })
     }
 
-    /// Returns None for any unsupported OS.
+    /// Returns `None` for any unsupported OS.
     #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
     fn get_version() -> Option<Self> {
         None

@@ -498,7 +498,7 @@ impl<'a> Installer<'a> {
     fn remove_build_dependencies(&mut self, node_index: usize, tree: &InstallTree) -> Result<Vec<PackageId>> {
         let node = tree.get_node_by_index(node_index).expect("Expected node to exist");
 
-        // Return early if the node value is None (meaning that the package was already installed)
+        // Return early if the node value is `None` (meaning that the package was already installed)
         if node.get_value().is_none() {
             return Ok(Vec::new());
         }

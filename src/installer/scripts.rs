@@ -237,7 +237,7 @@ pub fn download_script(
 ) -> Result<Option<NamedTempFile>> {
     let script_text = match repository_manager.read_file(repository_id, package_name, script_path)? {
         Some(script_text) => script_text,
-        None => return Ok(None), // Script not found, so return None
+        None => return Ok(None), // Script not found, so return `None`
     };
 
     // Write script to file

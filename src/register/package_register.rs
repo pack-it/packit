@@ -239,7 +239,7 @@ impl PackageRegister {
     }
 
     /// Gets a specific version of a certain package from the storage.
-    /// Returns the package version, or None if the package version is not installed.
+    /// Returns the package version, or `None` if the package version is not installed.
     pub fn get_package_version(&self, package_id: &PackageId) -> Option<&InstalledPackageVersion> {
         if let Some(package) = self.packages.get(&package_id.name) {
             return package.get_package_version(&package_id.version);
@@ -249,7 +249,7 @@ impl PackageRegister {
     }
 
     /// Gets a specific version of a certain package from the storage.
-    /// Returns a mutable reference to the package version, or None if the package version is not installed.
+    /// Returns a mutable reference to the package version, or `None` if the package version is not installed.
     pub fn get_package_version_mut(&mut self, package_id: &PackageId) -> Option<&mut InstalledPackageVersion> {
         if let Some(package) = self.packages.get_mut(&package_id.name) {
             return package.get_package_version_mut(&package_id.version);
@@ -258,12 +258,12 @@ impl PackageRegister {
         None
     }
 
-    /// Gets a package, returns None if it doesn't exist.
+    /// Gets a package, returns `None` if it doesn't exist.
     pub fn get_package(&self, package_name: &PackageName) -> Option<&InstalledPackage> {
         self.packages.get(package_name)
     }
 
-    /// Gets a package mutably, returns None if it doesn't exist.
+    /// Gets a package mutably, returns `None` if it doesn't exist.
     pub fn get_package_mut(&mut self, package_name: &PackageName) -> Option<&mut InstalledPackage> {
         self.packages.get_mut(package_name)
     }
