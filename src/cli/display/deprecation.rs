@@ -9,33 +9,31 @@ use crate::{
 
 /// Shows a warning if the given PackageMeta is deprecated or will be deprecated soon.
 pub fn show_package_warnings(package: &PackageMeta) {
-    if let Some(deprecation) = &package.deprecation {
-        let reason = match &deprecation.reason {
-            Some(reason) => format!(" with reason '{reason}'"),
-            None => String::default(),
-        };
+    let Some(deprecation) = &package.deprecation else { return };
+    let reason = match &deprecation.reason {
+        Some(reason) => format!(" with reason '{reason}'"),
+        None => String::default(),
+    };
 
-        let deprecated_from = &deprecation.deprecated_from;
-        match *deprecated_from <= Date::now() {
-            true => warning!("Package {} is deprecated since {}{reason}", package.name, deprecated_from),
-            false => warning!("Package {} will be deprecated at {}{reason}", package.name, deprecated_from),
-        }
+    let deprecated_from = &deprecation.deprecated_from;
+    match *deprecated_from <= Date::now() {
+        true => warning!("Package {} is deprecated since {}{reason}", package.name, deprecated_from),
+        false => warning!("Package {} will be deprecated at {}{reason}", package.name, deprecated_from),
     }
 }
 
 /// Shows a warning if the given PackageVersionMeta is deprecated or will be deprecated soon.
 pub fn show_package_version_warnings(package_version: &PackageVersionMeta, package_name: &PackageName) {
-    if let Some(deprecation) = &package_version.deprecation {
-        let reason = match &deprecation.reason {
-            Some(reason) => format!(" with reason '{reason}'"),
-            None => String::default(),
-        };
+    let Some(deprecation) = &package_version.deprecation else { return };
+    let reason = match &deprecation.reason {
+        Some(reason) => format!(" with reason '{reason}'"),
+        None => String::default(),
+    };
 
-        let styled_package = format!("{package_name}@{}", package_version.version).bold().blue();
-        let deprecated_from = &deprecation.deprecated_from;
-        match *deprecated_from <= Date::now() {
-            true => warning!("Package version {styled_package} is deprecated since {}{reason}", deprecated_from),
-            false => warning!("Package version {styled_package} will be deprecated at {}{reason}", deprecated_from),
-        }
+    let styled_package = format!("{package_name}@{}", package_version.version).bold().blue();
+    let deprecated_from = &deprecation.deprecated_from;
+    match *deprecated_from <= Date::now() {
+        true => warning!("Package version {styled_package} is deprecated since {}{reason}", deprecated_from),
+        false => warning!("Package version {styled_package} will be deprecated at {}{reason}", deprecated_from),
     }
 }
