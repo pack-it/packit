@@ -8,7 +8,10 @@ use thiserror::Error;
 
 use crate::{
     cli::display::{logging::warning, styled::Styled},
-    platforms::tool_detection::{self, error::ToolDetectionError},
+    platforms::{
+        Target,
+        tool_detection::{self, error::ToolDetectionError},
+    },
     register::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
     repositories::types::Requirement,
     utils::env::Environment,
@@ -309,12 +312,20 @@ impl<'a> BuildEnv<'a> {
         for requirement in self.build_requirements {
             match requirement {
                 Requirement::Msvc => {
+                    // Detect MSVC toolchain
                     let Some(msvc) = tool_detection::detect_msvc()? else {
                         return Err(BuildEnvError::ToolNotFound("msvc".into()));
                     };
 
+                    // Get target, skip requirement if target is `None`.
+                    let Some(target) = msvc.get_vcvarsall_target(&Target::current()) else {
+                        warning!("Tried to load MSVC for an unsupported target, skipping adding to build env");
+                        continue;
+                    };
+
                     vars.insert("PACKIT_VS_PATH", path_to_string(msvc.get_vs_path(), "PACKIT_VS_PATH")?);
                     vars.insert("PACKIT_VCVARSALL", path_to_string(&msvc.get_vcvarsall_path(), "PACKIT_VCVARSALL")?);
+                    vars.insert("PACKIT_VCVARSALL_TARGET", target.into());
                 },
             }
         }
