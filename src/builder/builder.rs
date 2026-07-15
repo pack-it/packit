@@ -92,6 +92,15 @@ impl<'a> Builder<'a> {
             });
         }
 
+        // Check if all build requirements are satisfied
+        for requirement in &target.build_requirements {
+            if !requirement.is_satisfied()? {
+                return Err(BuilderError::MissingRequirementError {
+                    requirement: requirement.clone(),
+                });
+            }
+        }
+
         // Get source from the package version
         let source = install_meta.version_metadata.get_source(&install_meta.target_bounds)?;
         debug!("Source size: {}", source.size);

@@ -3,7 +3,10 @@ use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{installer::types::Dependency, repositories::types::Script};
+use crate::{
+    installer::types::Dependency,
+    repositories::types::{Requirement, Script},
+};
 
 /// Represents the package target data, containing the download url and installer type.
 #[derive(Serialize, Deserialize, Debug)]
@@ -13,6 +16,9 @@ pub struct PackageTarget {
 
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub build_dependencies: Vec<Dependency>,
+
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub build_requirements: Vec<Requirement>,
 
     pub skip_symlinking: Option<bool>,
 
