@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{path::PathBuf, process::Command};
+use std::{fs, path::PathBuf, process::Command, str::FromStr};
 
 use crate::{
     cli::display::logging::debug,
+    installer::types::Version,
     platforms::tool_detection::{error::Result, tools::Msvc},
     utils::ioerror::IOResultExt,
 };
@@ -30,7 +31,12 @@ pub fn detect_msvc() -> Result<Option<Msvc>> {
         return Ok(None);
     }
 
-    let msvc = Msvc::new(vs_path);
+    // Read MSVC version
+    let version_path = vs_path.join("VC").join("Auxiliary").join("Build").join("Microsoft.VCToolsVersion.default.txt");
+    let version_str = fs::read_to_string(&version_path).err_with_path("read", version_path)?;
+    let version = Version::from_str(&version_str)?;
+
+    let msvc = Msvc::new(vs_path, version);
 
     // Check if vcvarsall.bat exists
     let vcvarsall = msvc.get_vcvarsall_path();

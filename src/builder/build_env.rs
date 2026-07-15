@@ -317,15 +317,17 @@ impl<'a> BuildEnv<'a> {
                         return Err(BuildEnvError::ToolNotFound("msvc".into()));
                     };
 
-                    // Get target, skip requirement if target is `None`.
-                    let Some(target) = msvc.get_vcvarsall_target(&Target::current()) else {
+                    // Get arch, skip requirement if arch is `None`.
+                    let Some(arch) = msvc.get_vcvarsall_arch(&Target::current()) else {
                         warning!("Tried to load MSVC for an unsupported target, skipping adding to build env");
                         continue;
                     };
 
+                    // Add requirement specific environment vars to result
                     vars.insert("PACKIT_VS_PATH", path_to_string(msvc.get_vs_path(), "PACKIT_VS_PATH")?);
                     vars.insert("PACKIT_VCVARSALL", path_to_string(&msvc.get_vcvarsall_path(), "PACKIT_VCVARSALL")?);
-                    vars.insert("PACKIT_VCVARSALL_TARGET", target.into());
+                    vars.insert("PACKIT_VCVARSALL_ARCH", arch.into());
+                    vars.insert("PACKIT_MSVC_VERSION", msvc.get_version().to_string());
                 },
             }
         }
