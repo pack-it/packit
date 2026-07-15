@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{collections::HashMap, path::PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 use thiserror::Error;
 
@@ -58,7 +61,6 @@ pub struct BuildEnv<'a> {
     register: &'a PackageRegister,
 }
 
-#[expect(clippy::from_over_into)]
 impl<'a> TryInto<Environment> for BuildEnv<'a> {
     type Error = BuildEnvError;
 
@@ -307,13 +309,12 @@ impl<'a> BuildEnv<'a> {
         for requirement in self.build_requirements {
             match requirement {
                 Requirement::Msvc => {
-                    let Some(vspath) = tool_detection::detect_msvc()? else {
+                    let Some(msvc) = tool_detection::detect_msvc()? else {
                         return Err(BuildEnvError::ToolNotFound("msvc".into()));
                     };
-                    let vcvarsall = vspath.join("VC").join("Auxiliary").join("Build").join("vcvarsall.bat");
 
-                    vars.insert("PACKIT_VS_PATH", path_to_string(&vspath, "PACKIT_VS_PATH")?.into());
-                    vars.insert("PACKIT_VCVARSALL", path_to_string(&vcvarsall, "PACKIT_VCVARSALL")?.into());
+                    vars.insert("PACKIT_VS_PATH", path_to_string(msvc.get_vs_path(), "PACKIT_VS_PATH")?);
+                    vars.insert("PACKIT_VCVARSALL", path_to_string(&msvc.get_vcvarsall_path(), "PACKIT_VCVARSALL")?);
                 },
             }
         }
@@ -324,11 +325,11 @@ impl<'a> BuildEnv<'a> {
 
 /// Converts a `PathBuf` to a string.
 /// Returns an `Err` if the path cannot be converted.
-fn path_to_string<'a>(path: &'a PathBuf, env_var: &str) -> Result<&'a str> {
+fn path_to_string(path: &Path, env_var: &str) -> Result<String> {
     match path.to_str() {
-        Some(string) => Ok(string),
+        Some(string) => Ok(string.into()),
         None => Err(BuildEnvError::PathBufConversion {
-            path: path.clone(),
+            path: path.to_path_buf(),
             variable: env_var.into(),
         }),
     }
