@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::{collections::HashMap, path::PathBuf};
 
+use thiserror::Error;
+
 use crate::{
     cli::display::{logging::warning, styled::Styled},
+    platforms::tool_detection::{self, error::ToolDetectionError},
     register::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
+    repositories::types::Requirement,
     utils::env::Environment,
 };
 
@@ -27,18 +31,39 @@ const PATH_SEPARATOR: &str = ":";
 #[cfg(target_os = "windows")]
 const PATH_SEPARATOR: &str = ";";
 
+/// The errors that occur during creating the build environment.
+#[derive(Error, Debug)]
+pub enum BuildEnvError {
+    #[error("Cannot add {} to build env {variable}: cannot convert PathBuf to string", path.display())]
+    PathBufConversion {
+        path: PathBuf,
+        variable: String,
+    },
+
+    #[error("Cannot find tool {0} on the system")]
+    ToolNotFound(String),
+
+    #[error("Error while detecting tool on the system")]
+    ToolDetectionError(#[from] ToolDetectionError),
+}
+
+pub type Result<T> = core::result::Result<T, BuildEnvError>;
+
 /// Holds all the data necessary to build a normalized build environment.
 pub struct BuildEnv<'a> {
     prefix_directory: &'a PathBuf,
     dependencies: &'a Vec<&'a InstalledPackageVersion>,
     build_dependencies: Vec<&'a InstalledPackageVersion>,
+    build_requirements: &'a Vec<Requirement>,
     register: &'a PackageRegister,
 }
 
 #[expect(clippy::from_over_into)]
-impl<'a> Into<Environment> for BuildEnv<'a> {
+impl<'a> TryInto<Environment> for BuildEnv<'a> {
+    type Error = BuildEnvError;
+
     /// Converts the `BuildEnv` struct into a normalized `Environment` struct.
-    fn into(self) -> Environment {
+    fn try_into(self) -> Result<Environment> {
         let mut env = Environment::new();
 
         // TODO: maybe also sandbox TMPDIR variable
@@ -65,6 +90,9 @@ impl<'a> Into<Environment> for BuildEnv<'a> {
             };
         }
 
+        // Add requirement specific vars to the build env
+        env.insert_vars(self.create_requirements_vars()?);
+
         // Add macos specific environment variables
         #[cfg(target_os = "macos")]
         {
@@ -74,7 +102,7 @@ impl<'a> Into<Environment> for BuildEnv<'a> {
             // TODO: add xcode paths
         }
 
-        env
+        Ok(env)
     }
 }
 
@@ -84,12 +112,14 @@ impl<'a> BuildEnv<'a> {
         prefix_directory: &'a PathBuf,
         dependencies: &'a Vec<&'a InstalledPackageVersion>,
         build_dependencies: Vec<&'a InstalledPackageVersion>,
+        build_requirements: &'a Vec<Requirement>,
         register: &'a PackageRegister,
     ) -> Self {
         Self {
             prefix_directory,
             dependencies,
             build_dependencies,
+            build_requirements,
             register,
         }
     }
@@ -268,5 +298,38 @@ impl<'a> BuildEnv<'a> {
         };
 
         parts.join(PATH_SEPARATOR)
+    }
+
+    /// Creates environment variables from the specified build requirements.
+    fn create_requirements_vars(&self) -> Result<HashMap<&str, String>> {
+        let mut vars = HashMap::new();
+
+        for requirement in self.build_requirements {
+            match requirement {
+                Requirement::Msvc => {
+                    let Some(vspath) = tool_detection::detect_msvc()? else {
+                        return Err(BuildEnvError::ToolNotFound("msvc".into()));
+                    };
+                    let vcvarsall = vspath.join("VC").join("Auxiliary").join("Build").join("vcvarsall.bat");
+
+                    vars.insert("PACKIT_VS_PATH", path_to_string(&vspath, "PACKIT_VS_PATH")?.into());
+                    vars.insert("PACKIT_VCVARSALL", path_to_string(&vcvarsall, "PACKIT_VCVARSALL")?.into());
+                },
+            }
+        }
+
+        Ok(vars)
+    }
+}
+
+/// Converts a `PathBuf` to a string.
+/// Returns an `Err` if the path cannot be converted.
+fn path_to_string<'a>(path: &'a PathBuf, env_var: &str) -> Result<&'a str> {
+    match path.to_str() {
+        Some(string) => Ok(string),
+        None => Err(BuildEnvError::PathBufConversion {
+            path: path.clone(),
+            variable: env_var.into(),
+        }),
     }
 }

@@ -4,7 +4,7 @@ use std::{path::PathBuf, process::Command};
 use crate::{cli::display::logging::debug, platforms::tool_detection::error::Result, utils::ioerror::IOResultExt};
 
 /// Detects if MSVC is installed on the system.
-/// Returns the path to vcvarsall.bat if it is found, or `None` if MSVC is not found.
+/// Returns the installation path of Visual Studio if it is found, or `None` if MSVC is not found.
 pub fn detect_msvc() -> Result<Option<PathBuf>> {
     // Check if `vswhere` exists
     let vswhere = PathBuf::from("C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\vswhere.exe");
@@ -33,5 +33,5 @@ pub fn detect_msvc() -> Result<Option<PathBuf>> {
         return Ok(None);
     }
 
-    Ok(Some(vcvarsall))
+    Ok(Some(path))
 }

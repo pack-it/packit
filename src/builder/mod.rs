@@ -7,6 +7,7 @@ mod patcher;
 pub use self::builder::Builder;
 
 pub use self::build_env::BuildEnv;
+pub use self::build_env::BuildEnvError;
 
 pub use self::patcher::BinaryPatcher;
 pub use self::patcher::BinaryPatcherError;

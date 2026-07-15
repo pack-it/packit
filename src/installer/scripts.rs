@@ -12,7 +12,7 @@ use tempfile::{NamedTempFile, TempDir};
 use thiserror::Error;
 
 use crate::{
-    builder::BuildEnv,
+    builder::{BuildEnv, BuildEnvError},
     cli::display::logging::warning,
     config::Config,
     installer::types::{PackageId, PackageName},
@@ -53,6 +53,9 @@ pub enum ScriptError {
 
     #[error("Cannot fetch script from repository")]
     FetchScriptError(#[from] RepositoryError),
+
+    #[error("Cannot create build environment")]
+    BuildEnvError(#[from] BuildEnvError),
 
     #[error("IOError during a script operation")]
     IOError(#[from] ioerror::IOError),
@@ -103,7 +106,7 @@ pub fn run_pre_script(script_data: &ScriptData, run_dir: impl AsRef<Path>) -> Re
 /// Runs the given build script, in the given directory.
 /// Note that the script should be a `.sh` script on Linux and macOS and a `.bat` on Windows.
 pub fn run_build_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, build_env: BuildEnv) -> Result<()> {
-    run_script(script_data, run_dir, build_env.into(), script_data.verbose)
+    run_script(script_data, run_dir, build_env.try_into()?, script_data.verbose)
 }
 
 /// Runs the given post install script, in the package install directory.

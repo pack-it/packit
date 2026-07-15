@@ -51,7 +51,7 @@ pub enum BuilderError {
     #[error("Cannot apply patch file")]
     ApplyPatchError(#[from] PatchError),
 
-    #[error("Cannot detect tool on the system")]
+    #[error("Error while detecting tool on the system")]
     ToolDetectionError(#[from] ToolDetectionError),
 
     #[error("Cannot request files for building")]
