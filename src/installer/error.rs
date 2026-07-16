@@ -10,7 +10,7 @@ use crate::{
         types::{PackageId, PackageIdError, PackageName, Version},
         unpack::UnpackError,
     },
-    platforms::{permissions::error::PermissionError, symlink::SymlinkError},
+    platforms::{permissions::error::PermissionError, symlink::SymlinkError, tool_detection::error::ToolDetectionError},
     register::error::RegisterError,
     repositories::error::RepositoryError,
     utils::{ioerror, tree::TreeError},
@@ -91,6 +91,9 @@ pub enum InstallerError {
 
     #[error("Cannot set or get permissions")]
     PermissionError(#[from] PermissionError),
+
+    #[error("Error while detecting tool on the system")]
+    ToolDetectionError(#[from] ToolDetectionError),
 
     #[error("Error while interacting with filesystem")]
     IOError(#[from] ioerror::IOError),

@@ -20,6 +20,9 @@ pub struct PackageTarget {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub build_requirements: Vec<Requirement>,
 
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub test_requirements: Vec<Requirement>,
+
     pub skip_symlinking: Option<bool>,
 
     pub source: Option<String>,

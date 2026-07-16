@@ -456,7 +456,6 @@ impl<'a> Installer<'a> {
         // Download external files necessary for testing
         let external_files = install_meta.version_metadata.external_test_files.iter().chain(&target.external_test_files);
         let mut read_files = Vec::new();
-        let mut skip_test = false;
         for file in external_files {
             let file_content =
                 self.repository_manager.read_file_bytes(&install_meta.repository_id, &install_meta.package_metadata.name, file)?;
@@ -465,21 +464,26 @@ impl<'a> Installer<'a> {
                 Some(content) => read_files.push((file, content)),
                 None => {
                     warning!("Skipping test, because the required files could not be downloaded.");
-                    skip_test = true;
-                    break;
+                    return Ok(());
                 },
             }
         }
 
-        // Return early if the test should be skipped
-        if skip_test {
-            return Ok(());
+        // Check if all test requirements are satisfied
+        for requirement in &target.test_requirements {
+            if !requirement.is_satisfied()? {
+                warning!(
+                    "Skipping test, because requirement '{requirement}' is not satisfied.\n{}",
+                    requirement.get_not_satisfied_message()
+                );
+                return Ok(());
+            }
         }
 
         // Only show a spinner when not verbose
         if self.options.verbose {
             println!("Testing {}", package_id.style());
-            scripts::run_test_script(&script_data, &read_files)?;
+            scripts::run_test_script(&script_data, &read_files, &target.test_requirements)?;
             return Ok(());
         }
 
@@ -487,7 +491,7 @@ impl<'a> Installer<'a> {
         let spinner_message = format!("Testing {}", package_id.style());
         let spinner = Spinner::new(spinner_message);
         spinner.show();
-        scripts::run_test_script(&script_data, &read_files)?;
+        scripts::run_test_script(&script_data, &read_files, &target.test_requirements)?;
         spinner.finish();
 
         Ok(())

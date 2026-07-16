@@ -93,7 +93,7 @@ impl<'a> TryInto<Environment> for BuildEnv<'a> {
         }
 
         // Add requirement specific vars to the build env
-        env.insert_vars(self.create_requirements_vars()?);
+        env.expand(Self::create_requirement_environment(self.build_requirements)?);
 
         // Add macos specific environment variables
         #[cfg(target_os = "macos")]
@@ -249,11 +249,11 @@ impl<'a> BuildEnv<'a> {
         Ok(parts.join(PATH_SEPARATOR))
     }
 
-    /// Creates environment variables from the specified build requirements.
-    fn create_requirements_vars(&self) -> Result<HashMap<&str, String>> {
-        let mut vars = HashMap::new();
+    /// Creates an environment from the given requirements.
+    pub fn create_requirement_environment(requirements: &Vec<Requirement>) -> Result<Environment> {
+        let mut environment = Environment::new();
 
-        for requirement in self.build_requirements {
+        for requirement in requirements {
             match requirement {
                 Requirement::Msvc => {
                     // Detect MSVC toolchain
@@ -263,20 +263,22 @@ impl<'a> BuildEnv<'a> {
 
                     // Get arch, skip requirement if arch is `None`.
                     let Some(arch) = msvc.get_vcvarsall_arch(&Target::current()) else {
-                        warning!("Tried to load MSVC for an unsupported target, skipping adding to build env");
+                        warning!("Tried to load MSVC for an unsupported target, skipping adding to env");
                         continue;
                     };
 
                     // Add requirement specific environment vars to result
-                    vars.insert("PACKIT_VS_PATH", path_to_string(msvc.get_vs_path(), "PACKIT_VS_PATH")?);
-                    vars.insert("PACKIT_VCVARSALL", path_to_string(&msvc.get_vcvarsall_path(), "PACKIT_VCVARSALL")?);
-                    vars.insert("PACKIT_VCVARSALL_ARCH", arch.into());
-                    vars.insert("PACKIT_MSVC_VERSION", msvc.get_version().to_string());
+                    environment.insert_vars(HashMap::from([
+                        ("PACKIT_VS_PATH", path_to_string(msvc.get_vs_path(), "PACKIT_VS_PATH")?),
+                        ("PACKIT_VCVARSALL", path_to_string(&msvc.get_vcvarsall_path(), "PACKIT_VCVARSALL")?),
+                        ("PACKIT_VCVARSALL_ARCH", arch.into()),
+                        ("PACKIT_MSVC_VERSION", msvc.get_version().to_string()),
+                    ]));
                 },
             }
         }
 
-        Ok(vars)
+        Ok(environment)
     }
 }
 

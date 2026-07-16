@@ -40,4 +40,13 @@ impl Environment {
         self.env_vars.remove(&key);
         self.stripped_vars.push(key);
     }
+
+    /// Expands the environment with another environment.
+    pub fn expand(&mut self, other_environment: Environment) {
+        self.insert_vars(other_environment.env_vars);
+
+        for stripped_var in other_environment.stripped_vars {
+            self.strip_var(stripped_var);
+        }
+    }
 }
