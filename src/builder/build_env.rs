@@ -7,7 +7,7 @@ use std::{
 use thiserror::Error;
 
 use crate::{
-    cli::display::{logging::warning, styled::Styled},
+    cli::display::logging::warning,
     platforms::{
         Target,
         tool_detection::{self, error::ToolDetectionError},
@@ -74,11 +74,11 @@ impl<'a> TryInto<Environment> for BuildEnv<'a> {
         // TODO: maybe also sandbox TMPDIR variable
         // TODO: maybe use active version path instead of real version path for all dependencies
         env.insert_vars(HashMap::from([
-            ("PATH", self.create_path()),
-            ("PKG_CONFIG_PATH", self.create_pkg_config_path()),
+            ("PATH", self.create_path()?),
+            ("PKG_CONFIG_PATH", self.create_pkg_config_path()?),
             ("PKG_CONFIG_LIBDIR", "".into()),
-            ("CMAKE_PREFIX_PATH", self.create_cmake_prefix_path()),
-            ("ACLOCAL_PATH", self.create_aclocal_path()),
+            ("CMAKE_PREFIX_PATH", self.create_cmake_prefix_path()?),
+            ("ACLOCAL_PATH", self.create_aclocal_path()?),
             ("TZ", "UTC0".into()), // Ensure timezone is the same across all builds
         ]));
 
@@ -89,10 +89,7 @@ impl<'a> TryInto<Environment> for BuildEnv<'a> {
 
         // Add M4 variable if m4 is a build dependency
         if let Some(m4) = self.build_dependencies.iter().find(|x| *x.package_id.name == "m4") {
-            match m4.install_path.to_str() {
-                Some(path) => env.insert_var("M4", path),
-                None => warning!("Cannot add M4 var to build env: cannot convert PathBuf to string"),
-            };
+            env.insert_var("M4", path_to_string(&m4.install_path, "M4")?);
         }
 
         // Add requirement specific vars to the build env
@@ -131,7 +128,7 @@ impl<'a> BuildEnv<'a> {
 
     /// Creates the `PATH` for the `Environment`. The path will include the bin directories
     /// of all (build) dependencies and standard Unix system bin paths (if on Unix).
-    fn create_path(&self) -> String {
+    fn create_path(&self) -> Result<String> {
         let mut parts = Vec::new();
 
         //TODO: add compiler wrappers to path
@@ -146,16 +143,7 @@ impl<'a> BuildEnv<'a> {
                 continue;
             }
 
-            match bin_path.to_str() {
-                Some(path) => parts.push(path.into()),
-                None => {
-                    warning!(
-                        "Cannot add dependency {} to build env PATH: cannot convert PathBuf to string",
-                        dependency.package_id.style()
-                    );
-                    continue;
-                },
-            };
+            parts.push(path_to_string(&bin_path, "PATH")?);
         }
 
         // Add standard Unix system bin paths to PATH
@@ -180,12 +168,12 @@ impl<'a> BuildEnv<'a> {
             );
         }
 
-        parts.join(PATH_SEPARATOR)
+        Ok(parts.join(PATH_SEPARATOR))
     }
 
     /// Creates the `PKG_CONFIG_PATH` to pkgconfig inside of the lib and share directories of the (build) dependencies.
     /// It also adds the necessary platform specific paths.
-    fn create_pkg_config_path(&self) -> String {
+    fn create_pkg_config_path(&self) -> Result<String> {
         let mut parts: Vec<String> = Vec::new();
 
         // Add dependencies to PKG_CONFIG_PATH
@@ -195,30 +183,12 @@ impl<'a> BuildEnv<'a> {
 
             // Add lib dir to PKG_CONFIG_PATH if it exists and is a directory
             if lib_path.is_dir() {
-                match lib_path.to_str() {
-                    Some(path) => parts.push(path.into()),
-                    None => {
-                        warning!(
-                            "Cannot add dependency {} lib/pkgconfig to build env PKG_CONFIG_PATH: cannot convert PathBuf to string",
-                            dependency.package_id.style()
-                        );
-                        continue;
-                    },
-                };
+                parts.push(path_to_string(&lib_path, "PKG_CONFIG_PATH")?);
             }
 
             // Add share dir to PKG_CONFIG_PATH if it exists and is a directory
             if share_path.is_dir() {
-                match share_path.to_str() {
-                    Some(path) => parts.push(path.into()),
-                    None => {
-                        warning!(
-                            "Cannot add dependency {} share/pkgconfig to build env PKG_CONFIG_PATH: cannot convert PathBuf to string",
-                            dependency.package_id.style()
-                        );
-                        continue;
-                    },
-                };
+                parts.push(path_to_string(&share_path, "PKG_CONFIG_PATH")?);
             }
         }
 
@@ -228,11 +198,11 @@ impl<'a> BuildEnv<'a> {
             parts.push("/usr/lib/pkgconfig".into());
         }
 
-        parts.join(PATH_SEPARATOR)
+        Ok(parts.join(PATH_SEPARATOR))
     }
 
     /// Creates the `CMAKE_PREFIX_PATH` with the (build) dependency install paths.
-    fn create_cmake_prefix_path(&self) -> String {
+    fn create_cmake_prefix_path(&self) -> Result<String> {
         let mut parts: Vec<String> = Vec::new();
 
         // Add non symlinked dependencies to CMAKE_PREFIX_PATH
@@ -243,30 +213,17 @@ impl<'a> BuildEnv<'a> {
                 }
             }
 
-            let path = &dependency.install_path;
-            match path.to_str() {
-                Some(path) => parts.push(path.into()),
-                None => {
-                    warning!(
-                        "Cannot add dependency {} to build env CMAKE_PREFIX_PATH: cannot convert PathBuf to string",
-                        dependency.package_id.style()
-                    );
-                    continue;
-                },
-            };
+            parts.push(path_to_string(&dependency.install_path, "CMAKE_PREFIX_PATH")?);
         }
 
         // Add prefix directory to CMAKE_PREFIX_PATH
-        match self.prefix_directory.to_str() {
-            Some(path) => parts.push(path.into()),
-            None => warning!("Cannot add Packit prefix directory to build env CMAKE_PREFIX_PATH: cannot convert PathBuf to string"),
-        };
+        parts.push(path_to_string(self.prefix_directory, "CMAKE_PREFIX_PATH")?);
 
-        parts.join(PATH_SEPARATOR)
+        Ok(parts.join(PATH_SEPARATOR))
     }
 
     /// Creates the `ACLOCAL_PATH` from the share/aclocal in each (build) dependency.
-    fn create_aclocal_path(&self) -> String {
+    fn create_aclocal_path(&self) -> Result<String> {
         let mut parts: Vec<String> = Vec::new();
 
         // Add non symlinked dependencies to ACLOCAL_PATH
@@ -279,30 +236,17 @@ impl<'a> BuildEnv<'a> {
 
             let share_path = dependency.install_path.join("share").join("aclocal");
 
-            // Skip adding if the share dir does not exist
-            if !share_path.exists() {
-                continue;
+            // Adding the share dir if it exists
+            if share_path.exists() {
+                parts.push(path_to_string(&share_path, "ACLOCAL_PATH")?);
             }
-
-            match share_path.to_str() {
-                Some(path) => parts.push(path.into()),
-                None => {
-                    warning!(
-                        "Cannot add dependency {} to build env ACLOCAL_PATH: cannot convert PathBuf to string",
-                        dependency.package_id.style()
-                    );
-                    continue;
-                },
-            };
         }
 
         // Add prefix directory to ACLOCAL_PATH
-        match self.prefix_directory.join("share").join("aclocal").to_str() {
-            Some(path) => parts.push(path.into()),
-            None => warning!("Cannot add Packit prefix directory to build env ACLOCAL_PATH: cannot convert PathBuf to string"),
-        };
+        let global_aclocal = self.prefix_directory.join("share").join("aclocal");
+        parts.push(path_to_string(&global_aclocal, "ACLOCAL_PATH")?);
 
-        parts.join(PATH_SEPARATOR)
+        Ok(parts.join(PATH_SEPARATOR))
     }
 
     /// Creates environment variables from the specified build requirements.

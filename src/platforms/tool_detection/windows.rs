@@ -34,7 +34,7 @@ pub fn detect_msvc() -> Result<Option<Msvc>> {
     // Read MSVC version
     let version_path = vs_path.join("VC").join("Auxiliary").join("Build").join("Microsoft.VCToolsVersion.default.txt");
     let version_str = fs::read_to_string(&version_path).err_with_path("read", version_path)?;
-    let version = Version::from_str(&version_str)?;
+    let version = Version::from_str(&version_str.trim())?;
 
     let msvc = Msvc::new(vs_path, version);
 
