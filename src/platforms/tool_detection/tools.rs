@@ -14,7 +14,7 @@ pub struct Msvc {
 
 impl Msvc {
     /// Creates a new `Msvc`, holding the path to the toolchain.
-    #[cfg(windows)]
+    #[cfg(target_os = "windows")]
     pub fn new(vs_path: PathBuf, version: Version) -> Self {
         Self { vs_path, version }
     }

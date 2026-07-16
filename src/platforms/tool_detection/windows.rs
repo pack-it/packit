@@ -27,21 +27,25 @@ pub fn detect_msvc() -> Result<Option<Msvc>> {
 
     // Check if install path exists
     if !vs_path.exists() {
-        debug!("The Visual Studio install does not exist at '{}'", vs_path.display());
+        debug!("Visual Studio install does not exist at '{}'", vs_path.display());
         return Ok(None);
     }
 
     // Read MSVC version
     let version_path = vs_path.join("VC").join("Auxiliary").join("Build").join("Microsoft.VCToolsVersion.default.txt");
+    if !version_path.exists() {
+        debug!("MSVC version cannot be read from '{}'", version_path.display());
+        return Ok(None);
+    }
     let version_str = fs::read_to_string(&version_path).err_with_path("read", version_path)?;
-    let version = Version::from_str(&version_str.trim())?;
+    let version = Version::from_str(version_str.trim())?;
 
     let msvc = Msvc::new(vs_path, version);
 
     // Check if vcvarsall.bat exists
     let vcvarsall = msvc.get_vcvarsall_path();
     if !vcvarsall.exists() {
-        debug!("The vcvarsall.bat script does not exist at '{}'", vcvarsall.display());
+        debug!("vcvarsall.bat script does not exist at '{}'", vcvarsall.display());
         return Ok(None);
     }
 
