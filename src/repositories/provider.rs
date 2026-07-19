@@ -7,7 +7,6 @@ use crate::{
         types::{PackageId, PackageName, Version},
         unpack::ArchiveExtension,
     },
-    platforms::Target,
     repositories::{
         error::Result,
         metadata::{FILESYSTEM_METADATA_PROVIDER_ID, FileSystemMetadataProvider, WEB_METADATA_PROVIDER_ID, WebMetadataProvider},
@@ -43,13 +42,13 @@ pub trait MetadataProvider {
 /// Generic prebuild repository provider trait, reading prebuild packages from a repository.
 pub trait PrebuildProvider {
     /// Gets the url of a prebuild package, returns `None` if the prebuild package does not exist.
-    fn get_prebuild_url(&self, package_id: &PackageId, revision: u64, target: &Target) -> Result<Option<String>>;
+    fn get_prebuild_url(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<Option<String>>;
 
     /// Gets the checksum of a prebuild package, returns `None` if the prebuild package does not exist.
-    fn get_prebuild_checksum(&self, package_id: &PackageId, revision: u64, target: &Target) -> Result<Option<Checksum>>;
+    fn get_prebuild_checksum(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<Option<Checksum>>;
 
     /// Reads the prebuild package as bytes, returns a tuple containing the origin url and the bytes.
-    fn read_prebuild(&self, package_id: &PackageId, revision: u64, target: &Target) -> Result<(ArchiveExtension, Bytes)>;
+    fn read_prebuild(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<(ArchiveExtension, Bytes)>;
 }
 
 /// Creates a metadata repository provider for the given repository.

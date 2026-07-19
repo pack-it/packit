@@ -304,8 +304,9 @@ impl<'a> Installer<'a> {
         let spinner = Spinner::new(spinner_message);
         spinner.show();
 
-        let (extension, bytes) = self.repository_manager.read_prebuild(repository_id, package, revision, &Target::current())?;
-        let checksum = self.repository_manager.get_prebuild_checksum(repository_id, package, revision, &Target::current())?;
+        let prebuild_id = Target::current().architecture.to_string();
+        let (extension, bytes) = self.repository_manager.read_prebuild(repository_id, package, revision, &prebuild_id)?;
+        let checksum = self.repository_manager.get_prebuild_checksum(repository_id, package, revision, &prebuild_id)?;
 
         // Finish download spinner
         spinner.finish();

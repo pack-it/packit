@@ -119,7 +119,7 @@ impl<'a> PortableRepoCreator<'a> {
                     &repository_id,
                     &package_id,
                     package_version.get_revision_count(),
-                    &self.target,
+                    &self.target.architecture.to_string(),
                 )?;
 
                 // Check if prebuild is downloadable, or if package is installed
@@ -295,7 +295,8 @@ impl<'a> PortableRepoCreator<'a> {
 
         // Get checksum
         let revision = package_version.get_revision_count();
-        let checksum = match self.repository_manager.get_prebuild_checksum(repository_id, package_id, revision, &self.target) {
+        let prebuild_id = self.target.architecture.to_string();
+        let checksum = match self.repository_manager.get_prebuild_checksum(repository_id, package_id, revision, &prebuild_id) {
             Ok(Some(checksum)) => checksum,
             // Only try to package locally if the current target is the target we generate a portable repo for
             Ok(None) if self.target == Target::current() => {
@@ -310,7 +311,7 @@ impl<'a> PortableRepoCreator<'a> {
             Err(e) => return Err(e.into()),
         };
 
-        let (_, prebuild) = self.repository_manager.read_prebuild(repository_id, package_id, revision, &self.target)?;
+        let (_, prebuild) = self.repository_manager.read_prebuild(repository_id, package_id, revision, &prebuild_id)?;
 
         // Write to file
         let prebuild_name = format!("{package_id}-{revision}-{target}.tar.gz");

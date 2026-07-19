@@ -113,7 +113,8 @@ fn check_package_alterations(package_id: &PackageId, register: &PackageRegister,
     };
 
     let revision = package_version.revisions.len() as u64;
-    let correct_checksum = match provider.get_prebuild_checksum(package_id, revision, &Target::current()) {
+    let prebuild_id = Target::current().architecture.to_string();
+    let correct_checksum = match provider.get_prebuild_checksum(package_id, revision, &prebuild_id) {
         Ok(Some(checksum)) => checksum,
         Ok(None) => {
             warning!(

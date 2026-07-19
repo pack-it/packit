@@ -7,7 +7,6 @@ use url::Url;
 
 use crate::{
     installer::{types::PackageId, unpack::ArchiveExtension},
-    platforms::Target,
     repositories::{
         error::{RepositoryError, Result},
         provider::PrebuildProvider,
@@ -24,15 +23,15 @@ pub struct WebPrebuildProvider {
 }
 
 impl PrebuildProvider for WebPrebuildProvider {
-    fn get_prebuild_url(&self, package_id: &PackageId, revision: u64, target: &Target) -> Result<Option<String>> {
-        match self.read_file_path(package_id, revision, target, "tar.gz")? {
+    fn get_prebuild_url(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<Option<String>> {
+        match self.read_file_path(package_id, revision, prebuild_id, "tar.gz")? {
             Some((url, _)) => Ok(Some(url.to_string())),
             None => Ok(None),
         }
     }
 
-    fn get_prebuild_checksum(&self, package_id: &PackageId, revision: u64, target: &Target) -> Result<Option<Checksum>> {
-        let response = match self.read_file_path(package_id, revision, target, "sha256")? {
+    fn get_prebuild_checksum(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<Option<Checksum>> {
+        let response = match self.read_file_path(package_id, revision, prebuild_id, "sha256")? {
             Some((_, response)) => response,
             None => return Ok(None),
         };
@@ -42,8 +41,8 @@ impl PrebuildProvider for WebPrebuildProvider {
         Ok(Some(Checksum::from_str(&checksum_string)?))
     }
 
-    fn read_prebuild(&self, package_id: &PackageId, revision: u64, target: &Target) -> Result<(ArchiveExtension, Bytes)> {
-        let (url, bytes) = match self.read_file_path(package_id, revision, target, "tar.gz")? {
+    fn read_prebuild(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<(ArchiveExtension, Bytes)> {
+        let (url, bytes) = match self.read_file_path(package_id, revision, prebuild_id, "tar.gz")? {
             Some((url, response)) => (url, response.bytes()?),
             None => {
                 return Err(RepositoryError::PrebuildNotFound {
@@ -70,12 +69,11 @@ impl WebPrebuildProvider {
     /// Reads a file from the repository and return the url and response.
     /// Returns `None` if the file cannot be found in the repository.
     /// Returns a `UrlParseError` if the created url cannot be parsed.
-    fn read_file_path(&self, package_id: &PackageId, revision: u64, target: &Target, extension: &str) -> Result<Option<(Url, Response)>> {
+    fn read_file_path(&self, package_id: &PackageId, revision: u64, prebuild_id: &str, extension: &str) -> Result<Option<(Url, Response)>> {
         let prefix = package_id.name.get_prefix().to_string();
-        let target = target.architecture.to_string();
         let package_name = &package_id.name;
         let package_version = &package_id.version.to_string();
-        let file_name = format!("{package_id}-{revision}-{target}.{extension}");
+        let file_name = format!("{package_id}-{revision}-{prebuild_id}.{extension}");
 
         let path = format!("packages/{prefix}/{package_name}/{package_version}/{file_name}");
         let url = self.url.join(&path)?;

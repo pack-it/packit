@@ -118,7 +118,8 @@ pub fn fix_inconsistent_register(
         let install_path = &package_directory.join(&package_id.name).join(package_id.version.to_string());
         let (repository_id, _, package_version_meta) = manager.read_package_and_version(&package_id.clone().into(), &Target::current())?;
         let revisions = package_version_meta.get_revision_count();
-        let used_prebuild = match manager.get_prebuild_checksum(&repository_id, package_id, revisions, &Target::current()) {
+        let prebuild_id = Target::current().architecture.to_string();
+        let used_prebuild = match manager.get_prebuild_checksum(&repository_id, package_id, revisions, &prebuild_id) {
             Ok(Some(correct_checksum)) => {
                 let compressed = packager::compress(install_path)?;
                 let checksum = Checksum::from_bytes(&compressed);

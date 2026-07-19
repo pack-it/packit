@@ -338,8 +338,8 @@ impl<'a> RepositoryManager<'a> {
     /// Retrieves the prebuild url for the given package version.
     /// Returns the url, or `None` if a prebuild is not available for the package.
     /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
-    pub fn get_prebuild_url(&self, repository_id: &str, package: &PackageId, revision: u64, target: &Target) -> Result<Option<String>> {
-        self.get_prebuid_provider(repository_id)?.get_prebuild_url(package, revision, target)
+    pub fn get_prebuild_url(&self, repository_id: &str, package: &PackageId, revision: u64, prebuild_id: &str) -> Result<Option<String>> {
+        self.get_prebuid_provider(repository_id)?.get_prebuild_url(package, revision, prebuild_id)
     }
 
     /// Retrieves the prebuild checksum for the given package version.
@@ -350,9 +350,9 @@ impl<'a> RepositoryManager<'a> {
         repository_id: &str,
         package: &PackageId,
         revision: u64,
-        target: &Target,
+        prebuild_id: &str,
     ) -> Result<Option<Checksum>> {
-        self.get_prebuid_provider(repository_id)?.get_prebuild_checksum(package, revision, target)
+        self.get_prebuid_provider(repository_id)?.get_prebuild_checksum(package, revision, prebuild_id)
     }
 
     /// Reads the prebuild of the given package version as bytes, returns a tuple containing the archive extension and the bytes.
@@ -362,9 +362,9 @@ impl<'a> RepositoryManager<'a> {
         repository_id: &str,
         package: &PackageId,
         revision: u64,
-        target: &Target,
+        prebuild_id: &str,
     ) -> Result<(ArchiveExtension, Bytes)> {
-        self.get_prebuid_provider(repository_id)?.read_prebuild(package, revision, target)
+        self.get_prebuid_provider(repository_id)?.read_prebuild(package, revision, prebuild_id)
     }
 
     /// Gets the latest supported package version for the given package metadata.

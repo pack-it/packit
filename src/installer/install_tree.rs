@@ -238,7 +238,8 @@ impl<'a> InstallTreeBuilder<'a> {
 
         // Check if a prebuild for the package is available
         let revision = install_meta.version_metadata.get_revision_count();
-        match self.repository_manager.get_prebuild_url(&install_meta.repository_id, package_id, revision, &Target::current()) {
+        let prebuild_id = Target::current().architecture.to_string();
+        match self.repository_manager.get_prebuild_url(&install_meta.repository_id, package_id, revision, &prebuild_id) {
             Ok(Some(_)) => return Ok(None),
             Ok(None) | Err(RepositoryError::RepositoryNotFoundError { .. }) => {},
             Err(e) => error!(e),
