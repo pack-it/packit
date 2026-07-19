@@ -60,7 +60,7 @@ impl Serialize for Requirement {
 
 impl Requirement {
     /// Checks if a requirement is satisfied.
-    /// Returns true if the requirement is satisfied, false otherwise
+    /// Returns true if the requirement is satisfied, false otherwise.
     pub fn is_satisfied(&self) -> tool_detection::error::Result<bool> {
         match self {
             Requirement::Msvc => Ok(tool_detection::detect_msvc()?.is_some()),
@@ -70,7 +70,7 @@ impl Requirement {
     /// Gets the message that should be shown when the requirement is not satisfied.
     pub fn get_not_satisfied_message(&self) -> &str {
         match self {
-            Requirement::Msvc => "Microsoft Visual C++ cannot be found, please install it first.",
+            Requirement::Msvc => "Microsoft Visual C++ cannot be found, please install it from the Microsoft website first.",
         }
     }
 }

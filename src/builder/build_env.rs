@@ -283,7 +283,7 @@ impl<'a> BuildEnv<'a> {
 }
 
 /// Converts a `PathBuf` to a string.
-/// Returns an `Err` if the path cannot be converted.
+/// Returns a `BuildEnvError::PathBufConversion` if the path cannot be converted.
 fn path_to_string(path: &Path, env_var: &str) -> Result<String> {
     match path.to_str() {
         Some(string) => Ok(string.into()),

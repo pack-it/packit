@@ -42,10 +42,10 @@ pub fn detect_msvc() -> Result<Option<Msvc>> {
 
     let msvc = Msvc::new(vs_path, version);
 
-    // Check if vcvarsall.bat exists
+    // Check if `vcvarsall.bat` exists
     let vcvarsall = msvc.get_vcvarsall_path();
     if !vcvarsall.exists() {
-        debug!("vcvarsall.bat script does not exist at '{}'", vcvarsall.display());
+        debug!("'vcvarsall.bat' script does not exist at '{}'", vcvarsall.display());
         return Ok(None);
     }
 

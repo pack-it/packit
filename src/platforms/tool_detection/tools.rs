@@ -29,12 +29,12 @@ impl Msvc {
         &self.version
     }
 
-    /// Gets the path of the vcvarsall.bat script.
+    /// Gets the path of the `vcvarsall.bat` script.
     pub fn get_vcvarsall_path(&self) -> PathBuf {
         self.vs_path.join("VC").join("Auxiliary").join("Build").join("vcvarsall.bat")
     }
 
-    /// Gets the arch needed for the vcvarsall.bat execution.
+    /// Gets the arch needed for the `vcvarsall.bat` execution.
     /// Returns `None` if the given target is not supported
     pub fn get_vcvarsall_arch(&self, target: &Target) -> Option<&str> {
         match target.architecture {
