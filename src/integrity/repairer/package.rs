@@ -119,11 +119,11 @@ pub fn fix_inconsistent_register(
         let (repository_id, _, package_version_meta) = manager.read_package_and_version(&package_id.clone().into(), &Target::current())?;
         let revisions = package_version_meta.get_revision_count();
         let prebuild_id = Target::current().architecture.to_string();
-        let used_prebuild = match manager.get_prebuild_checksum(&repository_id, package_id, revisions, &prebuild_id) {
-            Ok(Some(correct_checksum)) => {
+        let used_prebuild = match manager.get_prebuild_meta(&repository_id, package_id, revisions, &prebuild_id) {
+            Ok(Some(prebuild_meta)) => {
                 let compressed = packager::compress(install_path)?;
                 let checksum = Checksum::from_bytes(&compressed);
-                correct_checksum == checksum
+                prebuild_meta.checksum == checksum
             },
             Ok(None) => false,
             Err(RepositoryError::RepositoryNotFoundError { .. }) => false,

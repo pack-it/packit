@@ -15,7 +15,10 @@ use crate::{
     config::Config,
     installer::types::PackageId,
     platforms::TargetArchitecture,
-    repositories::{error::RepositoryError, types::Checksum},
+    repositories::{
+        error::RepositoryError,
+        types::{Checksum, FileSize, PrebuildFileMeta},
+    },
     utils::ioerror::{self, IOResultExt},
 };
 
@@ -32,6 +35,12 @@ pub enum PackagerError {
 
     #[error("Cannot get revisions from repository manager")]
     RepositoryError(#[from] RepositoryError),
+
+    #[error("Cannot parse package size to u32")]
+    SizeParseError(#[source] std::num::TryFromIntError),
+
+    #[error("Cannot serialize package metadata")]
+    MetadataSerializeError(#[from] toml::ser::Error),
 
     #[error("Failed to finish creating tar file")]
     TarFinishError(#[source] std::io::Error),
@@ -57,22 +66,26 @@ pub fn package(config: &Config, package_id: &PackageId, destination: &Path, revi
     // Compress the package
     let compressed = compress(&install_directory)?;
 
-    // Calculate checksum for the compressed package
+    // Calculate checksum and size for the compressed package
     let checksum = Checksum::from_bytes(&compressed);
+    let size = FileSize(compressed.len().try_into().map_err(PackagerError::SizeParseError)?);
+
+    let metadata = PrebuildFileMeta { checksum, size };
+    let metadata_string = toml::ser::to_string(&metadata)?;
 
     // Create the file names
     let target_architecture = TargetArchitecture::current().to_string();
     let filename = format!("{package_id}-{revisions}-{target_architecture}");
     let compressed_filename = format!("{filename}.tar.gz");
     let prepackage_file = destination.join(compressed_filename);
-    let checksum_filename = format!("{filename}.sha256");
-    let checksum_file_path = destination.join(checksum_filename);
+    let metadata_filename = format!("{filename}.toml");
+    let metadata_file_path = destination.join(metadata_filename);
 
-    // Store the compressed package and checksum
+    // Store the compressed package and metadata
     let mut compressed_file = File::create(&prepackage_file).err_with_path("create", &prepackage_file)?;
-    let mut checksum_file = File::create(&checksum_file_path).err_with_path("create", &checksum_file_path)?;
+    let mut metadata_file = File::create(&metadata_file_path).err_with_path("create", &metadata_file_path)?;
     compressed_file.write_all(&compressed).err_with_path("write", &prepackage_file)?;
-    checksum_file.write_all(checksum.to_string().as_bytes()).err_with_path("write", &checksum_file_path)?;
+    metadata_file.write_all(metadata_string.as_bytes()).err_with_path("write", &metadata_file_path)?;
 
     Ok(())
 }

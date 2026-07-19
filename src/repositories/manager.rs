@@ -17,7 +17,7 @@ use crate::{
     repositories::{
         error::{PackageNotFoundReason, RepositoryError, Result},
         provider::{self, MetadataProvider, PrebuildProvider},
-        types::{Checksum, Date, IndexMeta, PackageMeta, PackageVersionMeta, RepositoryMeta},
+        types::{Date, IndexMeta, PackageMeta, PackageVersionMeta, PrebuildFileMeta, RepositoryMeta},
     },
     utils::packit_version::current_packit_version,
 };
@@ -345,14 +345,14 @@ impl<'a> RepositoryManager<'a> {
     /// Retrieves the prebuild checksum for the given package version.
     /// Returns the checksum, or `None` if a prebuild is not available for the package.
     /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
-    pub fn get_prebuild_checksum(
+    pub fn get_prebuild_meta(
         &self,
         repository_id: &str,
         package: &PackageId,
         revision: u64,
         prebuild_id: &str,
-    ) -> Result<Option<Checksum>> {
-        self.get_prebuid_provider(repository_id)?.get_prebuild_checksum(package, revision, prebuild_id)
+    ) -> Result<Option<PrebuildFileMeta>> {
+        self.get_prebuid_provider(repository_id)?.get_prebuild_meta(package, revision, prebuild_id)
     }
 
     /// Reads the prebuild of the given package version as bytes, returns a tuple containing the archive extension and the bytes.

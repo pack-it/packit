@@ -14,7 +14,7 @@ use crate::{
             DEFAULT_PREBUILD_PROVIDER_ID, FILESYSTEM_PREBUILD_PROVIDER_ID, FileSystemPrebuildProvider, WEB_PREBUILD_PROVIDER_ID,
             WebPrebuildProvider,
         },
-        types::{Checksum, IndexMeta, PackageMeta, PackageVersionMeta, RepositoryMeta},
+        types::{IndexMeta, PackageMeta, PackageVersionMeta, PrebuildFileMeta, RepositoryMeta},
     },
 };
 
@@ -44,8 +44,8 @@ pub trait PrebuildProvider {
     /// Gets the url of a prebuild package, returns `None` if the prebuild package does not exist.
     fn get_prebuild_url(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<Option<String>>;
 
-    /// Gets the checksum of a prebuild package, returns `None` if the prebuild package does not exist.
-    fn get_prebuild_checksum(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<Option<Checksum>>;
+    /// Gets the metadata of a prebuild package, returns `None` if the prebuild package does not exist.
+    fn get_prebuild_meta(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<Option<PrebuildFileMeta>>;
 
     /// Reads the prebuild package as bytes, returns a tuple containing the origin url and the bytes.
     fn read_prebuild(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<(ArchiveExtension, Bytes)>;

@@ -296,8 +296,8 @@ impl<'a> PortableRepoCreator<'a> {
         // Get checksum
         let revision = package_version.get_revision_count();
         let prebuild_id = self.target.architecture.to_string();
-        let checksum = match self.repository_manager.get_prebuild_checksum(repository_id, package_id, revision, &prebuild_id) {
-            Ok(Some(checksum)) => checksum,
+        let prebuild_meta = match self.repository_manager.get_prebuild_meta(repository_id, package_id, revision, &prebuild_id) {
+            Ok(Some(prebuild_meta)) => prebuild_meta,
             // Only try to package locally if the current target is the target we generate a portable repo for
             Ok(None) if self.target == Target::current() => {
                 packager::package(self.config, package_id, &destination, revision)?;
@@ -316,10 +316,10 @@ impl<'a> PortableRepoCreator<'a> {
         // Write to file
         let prebuild_name = format!("{package_id}-{revision}-{target}.tar.gz");
         let prebuild_path = destination.join(prebuild_name);
-        let checksum_name = format!("{package_id}-{revision}-{target}.sha256");
-        let checksum_path = destination.join(checksum_name);
+        let prebuild_meta_name = format!("{package_id}-{revision}-{target}.toml");
+        let prebuild_meta_path = destination.join(prebuild_meta_name);
         fs::write(&prebuild_path, &prebuild).err_with_path("write", prebuild_path)?;
-        fs::write(&checksum_path, checksum.to_string().as_bytes()).err_with_path("write", checksum_path)?;
+        self.write_metadata(prebuild_meta, prebuild_meta_path, false)?;
 
         Ok(())
     }

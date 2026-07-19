@@ -10,7 +10,7 @@ use crate::{
     repositories::{
         error::{RepositoryError, Result},
         provider::PrebuildProvider,
-        types::Checksum,
+        types::PrebuildFileMeta,
     },
     utils::requests,
 };
@@ -30,15 +30,15 @@ impl PrebuildProvider for WebPrebuildProvider {
         }
     }
 
-    fn get_prebuild_checksum(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<Option<Checksum>> {
-        let response = match self.read_file_path(package_id, revision, prebuild_id, "sha256")? {
+    fn get_prebuild_meta(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<Option<PrebuildFileMeta>> {
+        let response = match self.read_file_path(package_id, revision, prebuild_id, "toml")? {
             Some((_, response)) => response,
             None => return Ok(None),
         };
 
-        let checksum_string = response.text()?;
+        let metadata_string = response.text()?;
 
-        Ok(Some(Checksum::from_str(&checksum_string)?))
+        Ok(Some(toml::de::from_str(&metadata_string)?))
     }
 
     fn read_prebuild(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<(ArchiveExtension, Bytes)> {

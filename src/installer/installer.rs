@@ -306,7 +306,7 @@ impl<'a> Installer<'a> {
 
         let prebuild_id = Target::current().architecture.to_string();
         let (extension, bytes) = self.repository_manager.read_prebuild(repository_id, package, revision, &prebuild_id)?;
-        let checksum = self.repository_manager.get_prebuild_checksum(repository_id, package, revision, &prebuild_id)?;
+        let prebuild_meta = self.repository_manager.get_prebuild_meta(repository_id, package, revision, &prebuild_id)?;
 
         // Finish download spinner
         spinner.finish();
@@ -315,8 +315,8 @@ impl<'a> Installer<'a> {
         let calculated_checksum = Checksum::from_bytes(&bytes);
 
         // Check equality of checksum
-        match checksum {
-            Some(checksum) if checksum == calculated_checksum => debug!("{} prebuild checksum matches", package.style()),
+        match prebuild_meta {
+            Some(prebuild_meta) if prebuild_meta.checksum == calculated_checksum => debug!("{} prebuild checksum matches", package.style()),
             _ => return Err(InstallerError::ChecksumError),
         }
 
