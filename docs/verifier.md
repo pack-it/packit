@@ -43,6 +43,4 @@ This is a list of checks which are currently implemented in the verifier. With a
 | MissingLink         | Package | Checks if symlinks are missing for packages.                                                                                                                                                                             |
 | MissingDependencies | Package | Checks for missing dependencies in packages. A dependency is missing if one of the dependencies specified in the repository metadata is not satisfied by the dependencies from the register.                             |
 | InvalidDependencies | Package | Checks for invalid dependencies in packages. A dependency from the register is invalid if it doesn't satisfy any of the dependencies specified in the repository metadata.                                               |
-| Test                | Package | Checks if the test from the repository metadata for a package works.                                                                                                                                                     |
-
-
+| Test                | Package | Checks if the test from the repository metadata for a package works. Check is skipped when the `test_requirements` are not satisfied.                                                                                    |

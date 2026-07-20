@@ -1,9 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{collections::HashMap, path::PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
+
+use thiserror::Error;
 
 use crate::{
-    cli::display::{logging::warning, styled::Styled},
+    cli::display::logging::warning,
+    platforms::{
+        Target,
+        tool_detection::{self, error::ToolDetectionError},
+    },
     register::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
+    repositories::types::Requirement,
     utils::env::Environment,
 };
 
@@ -27,28 +37,48 @@ const PATH_SEPARATOR: &str = ":";
 #[cfg(target_os = "windows")]
 const PATH_SEPARATOR: &str = ";";
 
+/// The errors that occur during creating the build environment.
+#[derive(Error, Debug)]
+pub enum BuildEnvError {
+    #[error("Cannot add {} to build env {variable}: cannot convert PathBuf to string", path.display())]
+    PathBufConversion {
+        path: PathBuf,
+        variable: String,
+    },
+
+    #[error("Cannot find tool {0} on the system")]
+    ToolNotFound(String),
+
+    #[error("Error while detecting tool on the system")]
+    ToolDetectionError(#[from] ToolDetectionError),
+}
+
+pub type Result<T> = core::result::Result<T, BuildEnvError>;
+
 /// Holds all the data necessary to build a normalized build environment.
 pub struct BuildEnv<'a> {
     prefix_directory: &'a PathBuf,
     dependencies: &'a Vec<&'a InstalledPackageVersion>,
     build_dependencies: Vec<&'a InstalledPackageVersion>,
+    build_requirements: &'a Vec<Requirement>,
     register: &'a PackageRegister,
 }
 
-#[expect(clippy::from_over_into)]
-impl<'a> Into<Environment> for BuildEnv<'a> {
+impl<'a> TryInto<Environment> for BuildEnv<'a> {
+    type Error = BuildEnvError;
+
     /// Converts the `BuildEnv` struct into a normalized `Environment` struct.
-    fn into(self) -> Environment {
+    fn try_into(self) -> Result<Environment> {
         let mut env = Environment::new();
 
         // TODO: maybe also sandbox TMPDIR variable
         // TODO: maybe use active version path instead of real version path for all dependencies
         env.insert_vars(HashMap::from([
-            ("PATH", self.create_path()),
-            ("PKG_CONFIG_PATH", self.create_pkg_config_path()),
+            ("PATH", self.create_path()?),
+            ("PKG_CONFIG_PATH", self.create_pkg_config_path()?),
             ("PKG_CONFIG_LIBDIR", "".into()),
-            ("CMAKE_PREFIX_PATH", self.create_cmake_prefix_path()),
-            ("ACLOCAL_PATH", self.create_aclocal_path()),
+            ("CMAKE_PREFIX_PATH", self.create_cmake_prefix_path()?),
+            ("ACLOCAL_PATH", self.create_aclocal_path()?),
             ("TZ", "UTC0".into()), // Ensure timezone is the same across all builds
         ]));
 
@@ -59,11 +89,11 @@ impl<'a> Into<Environment> for BuildEnv<'a> {
 
         // Add M4 variable if m4 is a build dependency
         if let Some(m4) = self.build_dependencies.iter().find(|x| *x.package_id.name == "m4") {
-            match m4.install_path.to_str() {
-                Some(path) => env.insert_var("M4", path),
-                None => warning!("Cannot add M4 var to build env: cannot convert PathBuf to string"),
-            };
+            env.insert_var("M4", path_to_string(&m4.install_path, "M4")?);
         }
+
+        // Add requirement specific vars to the build env
+        env.expand(Self::create_requirement_environment(self.build_requirements)?);
 
         // Add macos specific environment variables
         #[cfg(target_os = "macos")]
@@ -74,7 +104,7 @@ impl<'a> Into<Environment> for BuildEnv<'a> {
             // TODO: add xcode paths
         }
 
-        env
+        Ok(env)
     }
 }
 
@@ -84,19 +114,21 @@ impl<'a> BuildEnv<'a> {
         prefix_directory: &'a PathBuf,
         dependencies: &'a Vec<&'a InstalledPackageVersion>,
         build_dependencies: Vec<&'a InstalledPackageVersion>,
+        build_requirements: &'a Vec<Requirement>,
         register: &'a PackageRegister,
     ) -> Self {
         Self {
             prefix_directory,
             dependencies,
             build_dependencies,
+            build_requirements,
             register,
         }
     }
 
     /// Creates the `PATH` for the `Environment`. The path will include the bin directories
     /// of all (build) dependencies and standard Unix system bin paths (if on Unix).
-    fn create_path(&self) -> String {
+    fn create_path(&self) -> Result<String> {
         let mut parts = Vec::new();
 
         //TODO: add compiler wrappers to path
@@ -111,16 +143,7 @@ impl<'a> BuildEnv<'a> {
                 continue;
             }
 
-            match bin_path.to_str() {
-                Some(path) => parts.push(path.into()),
-                None => {
-                    warning!(
-                        "Cannot add dependency {} to build env PATH: cannot convert PathBuf to string",
-                        dependency.package_id.style()
-                    );
-                    continue;
-                },
-            };
+            parts.push(path_to_string(&bin_path, "PATH")?);
         }
 
         // Add standard Unix system bin paths to PATH
@@ -145,12 +168,12 @@ impl<'a> BuildEnv<'a> {
             );
         }
 
-        parts.join(PATH_SEPARATOR)
+        Ok(parts.join(PATH_SEPARATOR))
     }
 
     /// Creates the `PKG_CONFIG_PATH` to pkgconfig inside of the lib and share directories of the (build) dependencies.
     /// It also adds the necessary platform specific paths.
-    fn create_pkg_config_path(&self) -> String {
+    fn create_pkg_config_path(&self) -> Result<String> {
         let mut parts: Vec<String> = Vec::new();
 
         // Add dependencies to PKG_CONFIG_PATH
@@ -160,30 +183,12 @@ impl<'a> BuildEnv<'a> {
 
             // Add lib dir to PKG_CONFIG_PATH if it exists and is a directory
             if lib_path.is_dir() {
-                match lib_path.to_str() {
-                    Some(path) => parts.push(path.into()),
-                    None => {
-                        warning!(
-                            "Cannot add dependency {} lib/pkgconfig to build env PKG_CONFIG_PATH: cannot convert PathBuf to string",
-                            dependency.package_id.style()
-                        );
-                        continue;
-                    },
-                };
+                parts.push(path_to_string(&lib_path, "PKG_CONFIG_PATH")?);
             }
 
             // Add share dir to PKG_CONFIG_PATH if it exists and is a directory
             if share_path.is_dir() {
-                match share_path.to_str() {
-                    Some(path) => parts.push(path.into()),
-                    None => {
-                        warning!(
-                            "Cannot add dependency {} share/pkgconfig to build env PKG_CONFIG_PATH: cannot convert PathBuf to string",
-                            dependency.package_id.style()
-                        );
-                        continue;
-                    },
-                };
+                parts.push(path_to_string(&share_path, "PKG_CONFIG_PATH")?);
             }
         }
 
@@ -193,11 +198,11 @@ impl<'a> BuildEnv<'a> {
             parts.push("/usr/lib/pkgconfig".into());
         }
 
-        parts.join(PATH_SEPARATOR)
+        Ok(parts.join(PATH_SEPARATOR))
     }
 
     /// Creates the `CMAKE_PREFIX_PATH` with the (build) dependency install paths.
-    fn create_cmake_prefix_path(&self) -> String {
+    fn create_cmake_prefix_path(&self) -> Result<String> {
         let mut parts: Vec<String> = Vec::new();
 
         // Add non symlinked dependencies to CMAKE_PREFIX_PATH
@@ -208,30 +213,17 @@ impl<'a> BuildEnv<'a> {
                 }
             }
 
-            let path = &dependency.install_path;
-            match path.to_str() {
-                Some(path) => parts.push(path.into()),
-                None => {
-                    warning!(
-                        "Cannot add dependency {} to build env CMAKE_PREFIX_PATH: cannot convert PathBuf to string",
-                        dependency.package_id.style()
-                    );
-                    continue;
-                },
-            };
+            parts.push(path_to_string(&dependency.install_path, "CMAKE_PREFIX_PATH")?);
         }
 
         // Add prefix directory to CMAKE_PREFIX_PATH
-        match self.prefix_directory.to_str() {
-            Some(path) => parts.push(path.into()),
-            None => warning!("Cannot add Packit prefix directory to build env CMAKE_PREFIX_PATH: cannot convert PathBuf to string"),
-        };
+        parts.push(path_to_string(self.prefix_directory, "CMAKE_PREFIX_PATH")?);
 
-        parts.join(PATH_SEPARATOR)
+        Ok(parts.join(PATH_SEPARATOR))
     }
 
     /// Creates the `ACLOCAL_PATH` from the share/aclocal in each (build) dependency.
-    fn create_aclocal_path(&self) -> String {
+    fn create_aclocal_path(&self) -> Result<String> {
         let mut parts: Vec<String> = Vec::new();
 
         // Add non symlinked dependencies to ACLOCAL_PATH
@@ -244,29 +236,60 @@ impl<'a> BuildEnv<'a> {
 
             let share_path = dependency.install_path.join("share").join("aclocal");
 
-            // Skip adding if the share dir does not exist
-            if !share_path.exists() {
-                continue;
+            // Adding the share dir if it exists
+            if share_path.exists() {
+                parts.push(path_to_string(&share_path, "ACLOCAL_PATH")?);
             }
-
-            match share_path.to_str() {
-                Some(path) => parts.push(path.into()),
-                None => {
-                    warning!(
-                        "Cannot add dependency {} to build env ACLOCAL_PATH: cannot convert PathBuf to string",
-                        dependency.package_id.style()
-                    );
-                    continue;
-                },
-            };
         }
 
         // Add prefix directory to ACLOCAL_PATH
-        match self.prefix_directory.join("share").join("aclocal").to_str() {
-            Some(path) => parts.push(path.into()),
-            None => warning!("Cannot add Packit prefix directory to build env ACLOCAL_PATH: cannot convert PathBuf to string"),
-        };
+        let global_aclocal = self.prefix_directory.join("share").join("aclocal");
+        parts.push(path_to_string(&global_aclocal, "ACLOCAL_PATH")?);
 
-        parts.join(PATH_SEPARATOR)
+        Ok(parts.join(PATH_SEPARATOR))
+    }
+
+    /// Creates an environment from the given requirements.
+    pub fn create_requirement_environment(requirements: &Vec<Requirement>) -> Result<Environment> {
+        let mut environment = Environment::new();
+
+        for requirement in requirements {
+            match requirement {
+                Requirement::Msvc => {
+                    // Detect MSVC toolchain
+                    let Some(msvc) = tool_detection::detect_msvc()? else {
+                        return Err(BuildEnvError::ToolNotFound("msvc".into()));
+                    };
+
+                    // Get arch, skip requirement if arch is `None`.
+                    let Some(arch) = msvc.get_vcvarsall_arch(&Target::current()) else {
+                        warning!("Tried to load MSVC for an unsupported target, skipping adding to env");
+                        continue;
+                    };
+
+                    // Add requirement specific environment vars to result
+                    environment.insert_vars(HashMap::from([
+                        ("PACKIT_VS_PATH", path_to_string(msvc.get_vs_path(), "PACKIT_VS_PATH")?),
+                        ("PACKIT_VCVARSALL", path_to_string(&msvc.get_vcvarsall_path(), "PACKIT_VCVARSALL")?),
+                        ("PACKIT_VCVARSALL_ARCH", arch.into()),
+                        ("PACKIT_MSVC_VERSION", msvc.get_version().to_string()),
+                    ]));
+                },
+            }
+        }
+
+        Ok(environment)
+    }
+}
+
+/// Converts a `PathBuf` to a string.
+/// Returns a `BuildEnvError::PathBufConversion` if the path cannot be converted.
+fn path_to_string(path: &Path, env_var: &str) -> Result<String> {
+    match path.to_str() {
+        Some(string) => Ok(string.into()),
+        None => Err(BuildEnvError::PathBufConversion {
+            path: path.to_path_buf(),
+            variable: env_var.into(),
+        }),
     }
 }

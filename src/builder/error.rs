@@ -5,7 +5,8 @@ use crate::{
     builder::BinaryPatcherError,
     cli::display::styled::Styled,
     installer::{scripts::ScriptError, types::PackageName, unpack::UnpackError},
-    repositories::error::RepositoryError,
+    platforms::tool_detection::error::ToolDetectionError,
+    repositories::{error::RepositoryError, types::Requirement},
     utils::{ioerror, patches::PatchError},
 };
 
@@ -16,6 +17,11 @@ pub enum BuilderError {
     MissingDependencyError {
         dependency_type: String,
         package_name: PackageName,
+    },
+
+    #[error("Requirement '{requirement}' is not satisfied.\n{}", requirement.get_not_satisfied_message())]
+    MissingRequirementError {
+        requirement: Requirement,
     },
 
     #[error("Checksum does not match")]
@@ -44,6 +50,9 @@ pub enum BuilderError {
 
     #[error("Cannot apply patch file")]
     ApplyPatchError(#[from] PatchError),
+
+    #[error("Error while detecting tool on the system")]
+    ToolDetectionError(#[from] ToolDetectionError),
 
     #[error("Cannot request files for building")]
     RequestError(#[from] reqwest::Error),

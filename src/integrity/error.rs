@@ -61,11 +61,11 @@ pub enum VerifierError {
     #[error("Could not use repository manager for check or fix")]
     RepositoryError(#[from] RepositoryError),
 
-    #[error("Cannot perform check or fix, because of an error while interacting with the filesystem")]
-    IOError(#[from] ioerror::IOError),
-
     #[error("Cannot perform check, because of an error when executing a script")]
     ScriptError(#[from] ScriptError),
+
+    #[error("Cannot perform check or fix, because of an error while interacting with the filesystem")]
+    IOError(#[from] ioerror::IOError),
 }
 
 pub(super) type Result<T> = std::result::Result<T, VerifierError>;

@@ -92,18 +92,26 @@ The `deprecation` fields in package.toml and targets.toml describe when a packag
 | `reason`          | Defines the reason the package is deprecated.                                    |
 
 #### Target fields
-
 Targets are specified as `[targets.<bounds>]`, where bounds specify the support target as described in [Target bounds](#target-bounds).
 
 | Field                           | Explanation                                                                          |
 | ------------------------------- | ------------------------------------------------------------------------------------ |
 | `dependencies`                  | Defines all the dependencies of the package for the target, additional to the dependencies specified in the global field. |
 | `build_dependencies`            | Defines all build dependencies of the package for the target, additional to the build dependencies specified in the global field. |
+| `build_requirements`            | Defines all requirements that are needed on the system for building the package, these need to be installed by the user manually. |
+| `test_requirements`             | Defines all requirements that are needed on the system for testing the package, these need to be installed by the user manually. |
 | `skip_symlinking`               | When set to yes, the package is not symlinked after installation, preventing the package to be detectable through the PATH. Overrides the value defined in the global field. |
 | `<script-type>_script`          | Defines the name of the script to use instead of the default script name.            |
 | `script_args`                   | A table of key-value pairs containing arguments passed to scripts, additional to the args defined in the global field. |
 | `source`                        | Defines which source to use, required when multiple sources are defined.             |
 | `external_test_files`           | A list of external test files that are needed for executing the test script for this target, additional to the files specified in the global field. These files are automatically downloaded. |
+
+#### Available requirements
+All available requirements for use with the `build_requirements` and `test_requirements` fields. Requirements are things that need to be available on the system before building or testing, they need to be installed by the user manually.
+
+| Field  | Explanation                                                                                                   |
+| ------ | ------------------------------------------------------------------------------------------------------------- |
+| `msvc` | The Microsoft Visual C++ toolchain, automatically adds `PACKIT_VS_PATH`, `PACKIT_VCVARSALL`, `PACKIT_VCVARSALL_ARCH` and `PACKIT_MSVC_VERSION` to the build environment. (Windows only) |
 
 
 ### Target bounds

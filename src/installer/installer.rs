@@ -19,7 +19,7 @@ use crate::{
         error::{InstallerError, Result},
         install_tree::{InstallMeta, InstallTree, InstallTreeBuilder, InstallType},
         options::InstallerOptions,
-        scripts::{self, ScriptData},
+        scripts::{self, ScriptData, ScriptError},
         symlinker::Symlinker,
         types::{OptionalPackageId, PackageId, PackageName, Version},
         unpack::unpack,
@@ -456,7 +456,6 @@ impl<'a> Installer<'a> {
         // Download external files necessary for testing
         let external_files = install_meta.version_metadata.external_test_files.iter().chain(&target.external_test_files);
         let mut read_files = Vec::new();
-        let mut skip_test = false;
         for file in external_files {
             let file_content =
                 self.repository_manager.read_file_bytes(&install_meta.repository_id, &install_meta.package_metadata.name, file)?;
@@ -465,30 +464,41 @@ impl<'a> Installer<'a> {
                 Some(content) => read_files.push((file, content)),
                 None => {
                     warning!("Skipping test, because the required files could not be downloaded.");
-                    skip_test = true;
-                    break;
+                    return Ok(());
                 },
             }
         }
 
-        // Return early if the test should be skipped
-        if skip_test {
-            return Ok(());
+        // Only create a spinner when not verbose
+        let spinner = match self.options.verbose {
+            true => {
+                println!("Testing {}", package_id.style());
+                None
+            },
+            false => {
+                let spinner_message = format!("Testing {}", package_id.style());
+                let spinner = Spinner::new(spinner_message);
+                spinner.show();
+                Some(spinner)
+            },
+        };
+
+        // Run script
+        match scripts::run_test_script(&script_data, &read_files, &target.test_requirements) {
+            Ok(_) => (),
+            Err(ScriptError::RequirementNotSatisfied(requirement)) => {
+                warning!(
+                    "Skipping test, because requirement '{requirement}' is not satisfied.\n{}",
+                    requirement.get_not_satisfied_message()
+                );
+            },
+            Err(e) => return Err(e.into()),
         }
 
-        // Only show a spinner when not verbose
-        if self.options.verbose {
-            println!("Testing {}", package_id.style());
-            scripts::run_test_script(&script_data, &read_files)?;
-            return Ok(());
+        // Finish spinner if it was created
+        if let Some(spinner) = spinner {
+            spinner.finish();
         }
-
-        // Run script with spinner shown
-        let spinner_message = format!("Testing {}", package_id.style());
-        let spinner = Spinner::new(spinner_message);
-        spinner.show();
-        scripts::run_test_script(&script_data, &read_files)?;
-        spinner.finish();
 
         Ok(())
     }

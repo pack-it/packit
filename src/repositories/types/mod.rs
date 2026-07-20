@@ -7,6 +7,7 @@ mod package;
 mod package_target;
 mod package_version;
 mod repository;
+mod requirement;
 mod target_bounds;
 
 pub use self::repository::RepositoryMeta;
@@ -32,3 +33,7 @@ pub use self::index::IndexMeta;
 pub use self::license::Licenses;
 
 pub use self::target_bounds::TargetBounds;
+
+pub use self::requirement::Requirement;
+#[expect(unused_imports)]
+pub use self::requirement::RequirementError;

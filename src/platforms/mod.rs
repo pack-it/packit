@@ -5,6 +5,7 @@ pub mod permissions;
 pub mod symlink;
 mod target;
 mod target_architecture;
+pub mod tool_detection;
 
 pub use defaults::DEFAULT_CONFIG_DIR;
 pub use defaults::DEFAULT_PREFIX;
