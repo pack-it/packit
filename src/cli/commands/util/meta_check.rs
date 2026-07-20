@@ -12,8 +12,11 @@ use crate::{
     },
     config::{Config, Repository},
     installer::types::{PackageId, PackageName},
-    repositories::provider,
-    utils::unwrap_or_exit::UnwrapOrExit,
+    repositories::{
+        provider,
+        types::{PackageMeta, PackageVersionMeta, Patch, Source, Sources},
+    },
+    utils::{requests, unwrap_or_exit::UnwrapOrExit},
 };
 
 /// Checks the metedata of the given package in a repository or all packages in a repository if no package has been given.
@@ -63,18 +66,23 @@ impl HandleCommand for MetaCheckArgs {
                 },
             };
 
+            self.check_package_meta(&package);
+
             for version in package.versions {
                 let package_id = PackageId::new(package_name.clone(), version.clone());
-                match provider.read_package_version(&package_name, &version) {
-                    Ok(_) => {
+                let package_version = match provider.read_package_version(&package_name, &version) {
+                    Ok(package_version) => {
                         let success_message = format!("Successfully parsed {}", package_id.style()).bold().green();
-                        println!("{success_message}")
+                        println!("{success_message}");
+                        package_version
                     },
                     Err(e) => {
                         error!(e, "Package {} could not be parsed", package_id.style());
                         continue;
                     },
-                }
+                };
+
+                self.check_package_version_meta(&package_name, &package_version);
             }
         }
     }
@@ -92,5 +100,59 @@ impl MetaCheckArgs {
         };
 
         Repository::new(&self.repository, provider_type)
+    }
+
+    fn check_package_meta(&self, package_meta: &PackageMeta) {
+        if let Some(homepage) = &package_meta.homepage {
+            if !requests::check_url(homepage).unwrap_or_exit(1) {
+                println!("The homepage URL of {} does not exist", package_meta.name.style());
+            }
+        }
+    }
+
+    fn check_package_version_meta(&self, package_name: &PackageName, package_version_meta: &PackageVersionMeta) {
+        let package_id = PackageId::new(package_name.clone(), package_version_meta.version.clone());
+
+        // Check sources
+        let sources = match &package_version_meta.sources {
+            Sources::Single(source) => vec![("all", source)],
+            Sources::Named(sources) => sources.into_iter().map(|(k, v)| (k.as_str(), v)).collect(),
+        };
+
+        // Check all sources
+        for (target, source) in sources {
+            self.check_source(&package_id, target, source);
+        }
+
+        // TODO: Check targets
+    }
+
+    fn check_source(&self, package_id: &PackageId, target: &str, source: &Source) {
+        // Check all source URL's
+        for url in source.mirrors.iter().chain(std::iter::once(&source.url)) {
+            if !requests::check_url(url).unwrap_or_exit(1) {
+                println!("The URL '{}' of {} target '{}' does not exist", url, package_id.style(), target);
+            }
+        }
+
+        // Check all source patches
+        for (patch_number, patch) in &source.patches {
+            self.check_patch(package_id, patch_number, patch, target);
+        }
+    }
+
+    fn check_patch(&self, package_id: &PackageId, patch_number: &u32, patch: &Patch, target: &str) {
+        // Check all patch URL's
+        for url in patch.mirrors.iter().chain(std::iter::once(&patch.url)) {
+            if !requests::check_url(url).unwrap_or_exit(1) {
+                println!(
+                    "The URL '{}' of {} target '{}' patch {} does not exist",
+                    url,
+                    package_id.style(),
+                    target,
+                    patch_number
+                );
+            }
+        }
     }
 }
