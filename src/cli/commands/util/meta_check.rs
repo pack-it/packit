@@ -90,6 +90,11 @@ impl MetaCheckArgs {
             if !requests::check_url(homepage).unwrap_or_exit(1) {
                 println!("The homepage URL of {} does not exist", package_meta.name.style());
             }
+
+            // Check if URL is https
+            if !homepage.starts_with("https") {
+                println!("The homepage URL '{}' of {} is not https", homepage, package_meta.name.style());
+            }
         }
 
         // Check if listed versions exist (cannot be parsed) and do package version specific metadata checks
@@ -148,6 +153,11 @@ impl MetaCheckArgs {
                 },
             };
 
+            // Check if URL is https
+            if !url.starts_with("https") {
+                println!("The URL '{}' of {} target '{}' is not https", url, package_id.style(), target);
+            }
+
             // Get bytes from response
             let bytes = match response.bytes() {
                 Ok(bytes) => bytes,
@@ -203,6 +213,17 @@ impl MetaCheckArgs {
                     continue;
                 },
             };
+
+            // Check if URL is https
+            if !url.starts_with("https") {
+                println!(
+                    "The URL '{}' of {} target '{}' patch {} is not https",
+                    url,
+                    package_id.style(),
+                    target,
+                    patch_number
+                );
+            }
 
             // Get bytes from response
             let bytes = match response.bytes() {
