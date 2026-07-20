@@ -14,7 +14,7 @@ use crate::{
     installer::types::{PackageId, PackageName},
     repositories::{
         provider,
-        types::{PackageMeta, PackageVersionMeta, Patch, Source, Sources},
+        types::{Checksum, PackageMeta, PackageVersionMeta, Patch, Source, Sources},
     },
     utils::{requests, unwrap_or_exit::UnwrapOrExit},
 };
@@ -128,10 +128,45 @@ impl MetaCheckArgs {
     }
 
     fn check_source(&self, package_id: &PackageId, target: &str, source: &Source) {
-        // Check all source URL's
         for url in source.mirrors.iter().chain(std::iter::once(&source.url)) {
-            if !requests::check_url(url).unwrap_or_exit(1) {
-                println!("The URL '{}' of {} target '{}' does not exist", url, package_id.style(), target);
+            // Check source URL existence
+            let response = match requests::get(url) {
+                Ok(response) if response.status().is_success() => response,
+                _ => {
+                    println!("The URL '{}' of {} target '{}' does not exist", url, package_id.style(), target);
+                    continue;
+                },
+            };
+
+            // Get bytes from response
+            let bytes = match response.bytes() {
+                Ok(bytes) => bytes,
+                Err(e) => {
+                    error!(e, "Unable to get file bytes");
+                    exit(1);
+                },
+            };
+
+            // Check source checksum
+            if source.checksum != Checksum::from_bytes(&bytes) {
+                println!(
+                    "Checksum '{}' of {} target '{}' with url '{}' is incorrect",
+                    source.checksum,
+                    package_id.style(),
+                    target,
+                    url
+                );
+            }
+
+            // Check source bytes
+            if source.size.0 != bytes.len() as u32 {
+                println!(
+                    "Size '{}' of {} target '{}' with url '{}' is incorrect",
+                    source.size,
+                    package_id.style(),
+                    target,
+                    url
+                );
             }
         }
 
@@ -144,13 +179,39 @@ impl MetaCheckArgs {
     fn check_patch(&self, package_id: &PackageId, patch_number: &u32, patch: &Patch, target: &str) {
         // Check all patch URL's
         for url in patch.mirrors.iter().chain(std::iter::once(&patch.url)) {
-            if !requests::check_url(url).unwrap_or_exit(1) {
+            // Check source URL existence
+            let response = match requests::get(url) {
+                Ok(response) if response.status().is_success() => response,
+                _ => {
+                    println!(
+                        "The URL '{}' of {} target '{}' patch {} does not exist",
+                        url,
+                        package_id.style(),
+                        target,
+                        patch_number
+                    );
+                    continue;
+                },
+            };
+
+            // Get bytes from response
+            let bytes = match response.bytes() {
+                Ok(bytes) => bytes,
+                Err(e) => {
+                    error!(e, "Unable to get file bytes");
+                    exit(1);
+                },
+            };
+
+            // Check source checksum
+            if patch.checksum != Checksum::from_bytes(&bytes) {
                 println!(
-                    "The URL '{}' of {} target '{}' patch {} does not exist",
-                    url,
+                    "Checksum '{}' of {} target '{}' patch {} with url '{}' is incorrect",
+                    patch.checksum,
                     package_id.style(),
                     target,
-                    patch_number
+                    patch_number,
+                    url
                 );
             }
         }
