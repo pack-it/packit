@@ -115,7 +115,7 @@ impl<'a> PortableRepoCreator<'a> {
 
             if !self.exclude_prebuilds {
                 // Check if the package has a prebuild
-                let prebuild_url = self.repository_manager.get_prebuild_url(
+                let prebuild_meta = self.repository_manager.get_prebuild_meta(
                     &repository_id,
                     &package_id,
                     package_version.get_revision_count(),
@@ -123,7 +123,7 @@ impl<'a> PortableRepoCreator<'a> {
                 )?;
 
                 // Check if prebuild is downloadable, or if package is installed
-                if prebuild_url.is_none() && (self.target != Target::current() || self.register.get_package_version(&package_id).is_none())
+                if prebuild_meta.is_none() && (self.target != Target::current() || self.register.get_package_version(&package_id).is_none())
                 {
                     return Err(PortableRepoError::PrebuildNotFound { package_id });
                 }

@@ -21,13 +21,6 @@ pub struct FileSystemPrebuildProvider {
 }
 
 impl PrebuildProvider for FileSystemPrebuildProvider {
-    fn get_prebuild_url(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<Option<String>> {
-        match self.get_file_path(package_id, revision, prebuild_id, "tar.gz")? {
-            Some(path) => Ok(path.as_os_str().to_str().map(|x| x.into())),
-            None => Ok(None),
-        }
-    }
-
     fn get_prebuild_meta(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<Option<PrebuildFileMeta>> {
         let path = match self.get_file_path(package_id, revision, prebuild_id, "toml")? {
             Some(path) => path,
@@ -40,7 +33,7 @@ impl PrebuildProvider for FileSystemPrebuildProvider {
     }
 
     fn read_prebuild(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<(ArchiveExtension, Bytes)> {
-        let url = self.get_prebuild_url(package_id, revision, prebuild_id)?.ok_or(RepositoryError::PrebuildNotFound {
+        let url = self.get_file_path(package_id, revision, prebuild_id, "tar.gz")?.ok_or(RepositoryError::PrebuildNotFound {
             package_id: package_id.clone(),
             revision,
         })?;
@@ -48,7 +41,7 @@ impl PrebuildProvider for FileSystemPrebuildProvider {
         // TODO: improve efficiency of file reading
         let bytes = fs::read(&url).err_with_path("read", &url)?;
 
-        Ok((ArchiveExtension::from_path(&url), Bytes::from(bytes)))
+        Ok((ArchiveExtension::from_path(&url.display().to_string()), Bytes::from(bytes)))
     }
 }
 

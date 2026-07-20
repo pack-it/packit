@@ -23,13 +23,6 @@ pub struct WebPrebuildProvider {
 }
 
 impl PrebuildProvider for WebPrebuildProvider {
-    fn get_prebuild_url(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<Option<String>> {
-        match self.read_file_path(package_id, revision, prebuild_id, "tar.gz")? {
-            Some((url, _)) => Ok(Some(url.to_string())),
-            None => Ok(None),
-        }
-    }
-
     fn get_prebuild_meta(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<Option<PrebuildFileMeta>> {
         let response = match self.read_file_path(package_id, revision, prebuild_id, "toml")? {
             Some((_, response)) => response,

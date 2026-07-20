@@ -335,15 +335,8 @@ impl<'a> RepositoryManager<'a> {
         self.get_metadata_provider(repository_id)?.read_file(package, file_path)
     }
 
-    /// Retrieves the prebuild url for the given package version.
-    /// Returns the url, or `None` if a prebuild is not available for the package.
-    /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
-    pub fn get_prebuild_url(&self, repository_id: &str, package: &PackageId, revision: u64, prebuild_id: &str) -> Result<Option<String>> {
-        self.get_prebuid_provider(repository_id)?.get_prebuild_url(package, revision, prebuild_id)
-    }
-
-    /// Retrieves the prebuild checksum for the given package version.
-    /// Returns the checksum, or `None` if a prebuild is not available for the package.
+    /// Retrieves the prebuild metadata for the given package version.
+    /// Returns the metadata, or `None` if a prebuild is not available for the package.
     /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     pub fn get_prebuild_meta(
         &self,
