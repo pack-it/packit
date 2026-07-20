@@ -14,7 +14,7 @@ use crate::{
     installer::types::{PackageId, PackageName},
     repositories::{
         provider::{self, MetadataProvider},
-        types::{Checksum, PackageMeta, PackageVersionMeta, Patch, Source, Sources},
+        types::{Checksum, PackageMeta, PackageTarget, PackageVersionMeta, Patch, Source, Sources, TargetBounds},
     },
     utils::{requests, unwrap_or_exit::UnwrapOrExit},
 };
@@ -139,7 +139,10 @@ impl MetaCheckArgs {
             self.check_source(&package_id, target, source);
         }
 
-        // TODO: Check targets
+        // Check all targets
+        for (bounds, target) in &package_version_meta.targets {
+            self.check_target(bounds, target, &package_version_meta.sources);
+        }
     }
 
     fn check_source(&self, package_id: &PackageId, target: &str, source: &Source) {
@@ -245,6 +248,23 @@ impl MetaCheckArgs {
                     url
                 );
             }
+        }
+    }
+
+    fn check_target(&self, bounds: &TargetBounds, target: &PackageTarget, sources: &Sources) {
+        // Check if the source reference in the given target is required, or not present when it should be
+        match &target.source {
+            Some(source_reference) => match &sources {
+                Sources::Single(_) => {
+                    println!("Found source reference '{source_reference}' for target '{bounds}', eventhough none was required",)
+                },
+                Sources::Named(sources) if !sources.contains_key(source_reference) => {
+                    println!("Source reference '{source_reference}' for target '{bounds}' could not be found in package version metadata",)
+                },
+                Sources::Named(_) => {},
+            },
+            None if matches!(sources, Sources::Single(..)) => {},
+            None => println!("No source reference found in target, eventhough sources are target specific"),
         }
     }
 }
