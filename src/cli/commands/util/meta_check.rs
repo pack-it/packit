@@ -13,7 +13,7 @@ use crate::{
     config::{Config, Repository},
     installer::types::{PackageId, PackageName},
     repositories::{
-        provider,
+        provider::{self, MetadataProvider},
         types::{Checksum, PackageMeta, PackageVersionMeta, Patch, Source, Sources},
     },
     utils::{requests, unwrap_or_exit::UnwrapOrExit},
@@ -66,24 +66,7 @@ impl HandleCommand for MetaCheckArgs {
                 },
             };
 
-            self.check_package_meta(&package);
-
-            for version in package.versions {
-                let package_id = PackageId::new(package_name.clone(), version.clone());
-                let package_version = match provider.read_package_version(&package_name, &version) {
-                    Ok(package_version) => {
-                        let success_message = format!("Successfully parsed {}", package_id.style()).bold().green();
-                        println!("{success_message}");
-                        package_version
-                    },
-                    Err(e) => {
-                        error!(e, "Package {} could not be parsed", package_id.style());
-                        continue;
-                    },
-                };
-
-                self.check_package_version_meta(&package_name, &package_version);
-            }
+            self.check_package_meta(&provider, &package);
         }
     }
 }
@@ -102,11 +85,38 @@ impl MetaCheckArgs {
         Repository::new(&self.repository, provider_type)
     }
 
-    fn check_package_meta(&self, package_meta: &PackageMeta) {
+    fn check_package_meta(&self, provider: &Box<dyn MetadataProvider>, package_meta: &PackageMeta) {
         if let Some(homepage) = &package_meta.homepage {
             if !requests::check_url(homepage).unwrap_or_exit(1) {
                 println!("The homepage URL of {} does not exist", package_meta.name.style());
             }
+        }
+
+        // Check if listed versions exist (cannot be parsed) and do package version specific metadata checks
+        for version in &package_meta.versions {
+            let package_id = PackageId::new(package_meta.name.clone(), version.clone());
+            let package_version = match provider.read_package_version(&package_meta.name, &version) {
+                Ok(package_version) => {
+                    let success_message = format!("Successfully parsed {}", package_id.style()).bold().green();
+                    println!("{success_message}");
+                    package_version
+                },
+                Err(e) => {
+                    error!(e, "Package {} could not be parsed", package_id.style());
+                    continue;
+                },
+            };
+
+            // Check if the version exists in any of the supported ranges
+            if !package_meta.supported_versions.values().any(|i| i.covers(version)) {
+                println!(
+                    "Version {} in {} doesn't exist in any target support range",
+                    version.style(),
+                    package_meta.name.style()
+                )
+            }
+
+            self.check_package_version_meta(&package_meta.name, &package_version);
         }
     }
 
