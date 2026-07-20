@@ -16,11 +16,7 @@ use crate::{
         scripts::{self, ScriptData, ScriptError},
         types::{Dependency, PackageId, PackageName},
     },
-    integrity::{
-        Issue,
-        error::{Result, VerifierError},
-        utils::get_storage_packages,
-    },
+    integrity::{Issue, error::Result, utils::get_storage_packages},
     packager,
     platforms::Target,
     register::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
@@ -645,23 +641,19 @@ fn check_package_test(package_id: &PackageId, register: &PackageRegister, config
         }
     }
 
-    // Check if all test requirements are satisfied
-    for requirement in &target.test_requirements {
-        if !requirement.is_satisfied()? {
+    // Run the test script and only return true if the test itself failed
+    match scripts::run_test_script(&script_data, &read_files, &target.test_requirements) {
+        Ok(_) => Ok(false),
+        Err(ScriptError::RequirementNotSatisfied(requirement)) => {
             warning!(
                 "Skipping {} test, because requirement '{requirement}' is not satisfied.\n{}",
                 package_id.style(),
                 requirement.get_not_satisfied_message()
             );
-            return Ok(false);
-        }
-    }
-
-    // Run the test script and only return true if the test itself failed
-    match scripts::run_test_script(&script_data, &read_files, &target.test_requirements) {
-        Ok(_) => Ok(false),
+            Ok(false)
+        },
         Err(ScriptError::ScriptFailed(..)) => Ok(true),
-        Err(e) => Err(VerifierError::ScriptError(e)),
+        Err(e) => Err(e.into()),
     }
 }
 

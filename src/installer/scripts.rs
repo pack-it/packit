@@ -16,7 +16,7 @@ use crate::{
     cli::display::logging::warning,
     config::Config,
     installer::types::{PackageId, PackageName},
-    platforms::{Os, TargetArchitecture},
+    platforms::{Os, TargetArchitecture, tool_detection::error::ToolDetectionError},
     repositories::{error::RepositoryError, manager::RepositoryManager, types::Requirement},
     utils::{
         env::Environment,
@@ -32,6 +32,9 @@ use std::os::{fd::IntoRawFd, unix::process::CommandExt};
 pub enum ScriptError {
     #[error("Cannot parse PathBuf to string")]
     InvalidPathString,
+
+    #[error("Requirement {0} is not satisfied")]
+    RequirementNotSatisfied(Requirement),
 
     #[error("Cannot find script '{0}'")]
     ScriptNotFound(String),
@@ -56,6 +59,9 @@ pub enum ScriptError {
 
     #[error("Cannot create build environment")]
     BuildEnvError(#[from] BuildEnvError),
+
+    #[error("Error while detecting tool on the system")]
+    ToolDetectionError(#[from] ToolDetectionError),
 
     #[error("IOError during a script operation")]
     IOError(#[from] ioerror::IOError),
@@ -119,6 +125,13 @@ pub fn run_post_script(script_data: &ScriptData) -> Result<()> {
 /// It also writes the specified external test files to the temp directory.
 /// Note that the script should be a `.sh` script on Linux and macOS and a `.bat` on Windows.
 pub fn run_test_script(script_data: &ScriptData, external_files: &Vec<(&String, Bytes)>, requirements: &Vec<Requirement>) -> Result<()> {
+    // Check if all test requirements are satisfied
+    for requirement in requirements {
+        if !requirement.is_satisfied()? {
+            return Err(ScriptError::RequirementNotSatisfied(requirement.clone()));
+        }
+    }
+
     let temp_dir = TempDir::new().map_err(ScriptError::TempCreationError)?;
 
     // Install external files into the temp directory

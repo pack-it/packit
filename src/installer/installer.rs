@@ -19,7 +19,7 @@ use crate::{
         error::{InstallerError, Result},
         install_tree::{InstallMeta, InstallTree, InstallTreeBuilder, InstallType},
         options::InstallerOptions,
-        scripts::{self, ScriptData},
+        scripts::{self, ScriptData, ScriptError},
         symlinker::Symlinker,
         types::{OptionalPackageId, PackageId, PackageName, Version},
         unpack::unpack,
@@ -469,30 +469,36 @@ impl<'a> Installer<'a> {
             }
         }
 
-        // Check if all test requirements are satisfied
-        for requirement in &target.test_requirements {
-            if !requirement.is_satisfied()? {
+        // Only create a spinner when not verbose
+        let spinner = match self.options.verbose {
+            true => {
+                println!("Testing {}", package_id.style());
+                None
+            },
+            false => {
+                let spinner_message = format!("Testing {}", package_id.style());
+                let spinner = Spinner::new(spinner_message);
+                spinner.show();
+                Some(spinner)
+            },
+        };
+
+        // Run script
+        match scripts::run_test_script(&script_data, &read_files, &target.test_requirements) {
+            Ok(_) => (),
+            Err(ScriptError::RequirementNotSatisfied(requirement)) => {
                 warning!(
                     "Skipping test, because requirement '{requirement}' is not satisfied.\n{}",
                     requirement.get_not_satisfied_message()
                 );
-                return Ok(());
-            }
+            },
+            Err(e) => return Err(e.into()),
         }
 
-        // Only show a spinner when not verbose
-        if self.options.verbose {
-            println!("Testing {}", package_id.style());
-            scripts::run_test_script(&script_data, &read_files, &target.test_requirements)?;
-            return Ok(());
+        // Finish spinner if it was created
+        if let Some(spinner) = spinner {
+            spinner.finish();
         }
-
-        // Run script with spinner shown
-        let spinner_message = format!("Testing {}", package_id.style());
-        let spinner = Spinner::new(spinner_message);
-        spinner.show();
-        scripts::run_test_script(&script_data, &read_files, &target.test_requirements)?;
-        spinner.finish();
 
         Ok(())
     }
