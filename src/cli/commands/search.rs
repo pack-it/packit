@@ -168,10 +168,7 @@ impl SearchArgs {
         let dependencies = package_version.dependencies.iter().chain(target.dependencies.iter());
         let build_dependencies = package_version.build_dependencies.iter().chain(target.build_dependencies.iter());
 
-        let required_packit_version = match max(&package.required_packit_version, &package_version.required_packit_version) {
-            Some(version) => version.style(),
-            None => "None".dimmed(),
-        };
+        let required_packit_version = max(&package.required_packit_version, &package_version.required_packit_version);
 
         // Show package version information
         println!("{}", package_id.style());
@@ -179,7 +176,7 @@ impl SearchArgs {
         let mut pair_aligner = PairAligner::new();
         pair_aligner.add("Homepage", package.homepage.display());
         pair_aligner.add("License", &package_version.license);
-        pair_aligner.add("Required Packit version", required_packit_version);
+        pair_aligner.add("Required Packit version", required_packit_version.display_or(|v| v.style()));
         pair_aligner.add("Skip symlinking", if package_version.skip_symlinking { "on" } else { "off" });
         pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
         println!();
