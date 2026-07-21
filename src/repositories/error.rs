@@ -29,8 +29,9 @@ pub enum RepositoryError {
         reason: PackageNotFoundReason,
     },
 
-    #[error("Cannot find prebuild of package {} revision {revision}", package_id.style())]
+    #[error("Cannot find prebuild '{prebuild_id}' of package {} revision {revision}", package_id.style())]
     PrebuildNotFound {
+        prebuild_id: String,
         package_id: PackageId,
         revision: u64,
     },

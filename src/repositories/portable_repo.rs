@@ -115,16 +115,20 @@ impl<'a> PortableRepoCreator<'a> {
 
             if !self.exclude_prebuilds {
                 // Check if the package has a prebuild
-                let prebuild_url = self.repository_manager.get_prebuild_url(
+                let prebuild_meta = self.repository_manager.get_prebuild_meta(
                     &repository_id,
                     &package_id,
                     package_version.get_revision_count(),
-                    &self.target,
-                )?;
+                    &self.target.architecture.to_string(),
+                );
+                let found_prebuild = match prebuild_meta {
+                    Ok(_) => true,
+                    Err(RepositoryError::PrebuildNotFound { .. }) => false,
+                    Err(e) => return Err(e.into()),
+                };
 
                 // Check if prebuild is downloadable, or if package is installed
-                if prebuild_url.is_none() && (self.target != Target::current() || self.register.get_package_version(&package_id).is_none())
-                {
+                if !found_prebuild && (self.target != Target::current() || self.register.get_package_version(&package_id).is_none()) {
                     return Err(PortableRepoError::PrebuildNotFound { package_id });
                 }
             }
@@ -295,30 +299,26 @@ impl<'a> PortableRepoCreator<'a> {
 
         // Get checksum
         let revision = package_version.get_revision_count();
-        let checksum = match self.repository_manager.get_prebuild_checksum(repository_id, package_id, revision, &self.target) {
-            Ok(Some(checksum)) => checksum,
+        let prebuild_id = self.target.architecture.to_string();
+        let prebuild_meta = match self.repository_manager.get_prebuild_meta(repository_id, package_id, revision, &prebuild_id) {
+            Ok(prebuild_meta) => prebuild_meta,
             // Only try to package locally if the current target is the target we generate a portable repo for
-            Ok(None) if self.target == Target::current() => {
+            Err(RepositoryError::PrebuildNotFound { .. }) if self.target == Target::current() => {
                 packager::package(self.config, package_id, &destination, revision)?;
                 return Ok(());
-            },
-            Ok(None) => {
-                return Err(PortableRepoError::PrebuildNotFound {
-                    package_id: package_id.clone(),
-                });
             },
             Err(e) => return Err(e.into()),
         };
 
-        let (_, prebuild) = self.repository_manager.read_prebuild(repository_id, package_id, revision, &self.target)?;
+        let (_, prebuild) = self.repository_manager.read_prebuild(repository_id, package_id, revision, &prebuild_id)?;
 
         // Write to file
         let prebuild_name = format!("{package_id}-{revision}-{target}.tar.gz");
         let prebuild_path = destination.join(prebuild_name);
-        let checksum_name = format!("{package_id}-{revision}-{target}.sha256");
-        let checksum_path = destination.join(checksum_name);
+        let prebuild_meta_name = format!("{package_id}-{revision}-{target}.toml");
+        let prebuild_meta_path = destination.join(prebuild_meta_name);
         fs::write(&prebuild_path, &prebuild).err_with_path("write", prebuild_path)?;
-        fs::write(&checksum_path, checksum.to_string().as_bytes()).err_with_path("write", checksum_path)?;
+        self.write_metadata(prebuild_meta, prebuild_meta_path, false)?;
 
         Ok(())
     }

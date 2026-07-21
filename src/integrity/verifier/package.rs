@@ -109,21 +109,15 @@ fn check_package_alterations(package_id: &PackageId, register: &PackageRegister,
     };
 
     let revision = package_version.revisions.len() as u64;
-    let correct_checksum = match provider.get_prebuild_checksum(package_id, revision, &Target::current()) {
-        Ok(Some(checksum)) => checksum,
-        Ok(None) => {
-            warning!(
-                "Cannot perform alterations check for package {}, because no checksum of the prebuild can be found, skipping check",
-                package_id.style()
-            );
-            return Ok(false);
-        },
+    let prebuild_id = Target::current().architecture.to_string();
+    let prebuild_meta = match provider.get_prebuild_meta(package_id, revision, &prebuild_id) {
+        Ok(prebuild_meta) => prebuild_meta,
         Err(e) => {
             warning!(
-                "Cannot perform alterations check for package {}, because checksum cannot be read, skipping check",
+                "Cannot perform alterations check for package {}, because prebuild metadata cannot be read, skipping check",
                 package_id.style()
             );
-            debug!(err: e, "Failed to read prebuild checksum");
+            debug!(err: e, "Failed to read prebuild metadata");
             return Ok(false);
         },
     };
@@ -132,7 +126,7 @@ fn check_package_alterations(package_id: &PackageId, register: &PackageRegister,
     let compressed = packager::compress(&install_directory)?;
     let checksum = Checksum::from_bytes(&compressed);
 
-    Ok(checksum != correct_checksum)
+    Ok(checksum != prebuild_meta.checksum)
 }
 
 /// Checks if the given packages in the register also exist in the package storage in the prefix directory.

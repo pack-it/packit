@@ -6,6 +6,7 @@ mod license;
 mod package;
 mod package_target;
 mod package_version;
+mod prebuilds;
 mod repository;
 mod requirement;
 mod target_bounds;
@@ -17,12 +18,13 @@ pub use self::package::PackageMeta;
 pub use self::package_target::PackageTarget;
 pub use self::package_version::PackageVersionMeta;
 
+pub use self::prebuilds::PrebuildFileMeta;
+
 pub use self::checksum::Checksum;
 pub use self::common::Script;
 
 pub use self::common::Date;
 pub use self::common::DeprecationInfo;
-#[cfg(test)]
 pub use self::common::FileSize;
 pub use self::common::Patch;
 pub use self::common::Source;
