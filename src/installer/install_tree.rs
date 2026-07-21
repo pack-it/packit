@@ -240,8 +240,8 @@ impl<'a> InstallTreeBuilder<'a> {
         let revision = install_meta.version_metadata.get_revision_count();
         let prebuild_id = Target::current().architecture.to_string();
         match self.repository_manager.get_prebuild_meta(&install_meta.repository_id, package_id, revision, &prebuild_id) {
-            Ok(Some(_)) => return Ok(None),
-            Ok(None) | Err(RepositoryError::RepositoryNotFoundError { .. }) => {},
+            Ok(_) => return Ok(None),
+            Err(RepositoryError::PrebuildNotFound { .. }) | Err(RepositoryError::RepositoryNotFoundError { .. }) => {},
             Err(e) => error!(e),
         }
 

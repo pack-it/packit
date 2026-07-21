@@ -344,7 +344,7 @@ impl<'a> RepositoryManager<'a> {
         package: &PackageId,
         revision: u64,
         prebuild_id: &str,
-    ) -> Result<Option<PrebuildFileMeta>> {
+    ) -> Result<PrebuildFileMeta> {
         self.get_prebuid_provider(repository_id)?.get_prebuild_meta(package, revision, prebuild_id)
     }
 

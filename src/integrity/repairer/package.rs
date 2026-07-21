@@ -120,12 +120,12 @@ pub fn fix_inconsistent_register(
         let revisions = package_version_meta.get_revision_count();
         let prebuild_id = Target::current().architecture.to_string();
         let used_prebuild = match manager.get_prebuild_meta(&repository_id, package_id, revisions, &prebuild_id) {
-            Ok(Some(prebuild_meta)) => {
+            Ok(prebuild_meta) => {
                 let compressed = packager::compress(install_path)?;
                 let checksum = Checksum::from_bytes(&compressed);
                 prebuild_meta.checksum == checksum
             },
-            Ok(None) => false,
+            Err(RepositoryError::PrebuildNotFound { .. }) => false,
             Err(RepositoryError::RepositoryNotFoundError { .. }) => false,
             Err(e) => Err(e)?,
         };

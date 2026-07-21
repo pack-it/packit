@@ -21,22 +21,16 @@ pub struct FileSystemPrebuildProvider {
 }
 
 impl PrebuildProvider for FileSystemPrebuildProvider {
-    fn get_prebuild_meta(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<Option<PrebuildFileMeta>> {
-        let path = match self.get_file_path(package_id, revision, prebuild_id, "toml")? {
-            Some(path) => path,
-            None => return Ok(None),
-        };
+    fn get_prebuild_meta(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<PrebuildFileMeta> {
+        let path = self.get_file_path(package_id, revision, prebuild_id, "toml")?;
 
         let metadata_string = fs::read_to_string(&path).err_with_path("read", path)?;
 
-        Ok(Some(toml::de::from_str(&metadata_string)?))
+        Ok(toml::de::from_str(&metadata_string)?)
     }
 
     fn read_prebuild(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<(ArchiveExtension, Bytes)> {
-        let url = self.get_file_path(package_id, revision, prebuild_id, "tar.gz")?.ok_or(RepositoryError::PrebuildNotFound {
-            package_id: package_id.clone(),
-            revision,
-        })?;
+        let url = self.get_file_path(package_id, revision, prebuild_id, "tar.gz")?;
 
         // TODO: improve efficiency of file reading
         let bytes = fs::read(&url).err_with_path("read", &url)?;
@@ -52,15 +46,20 @@ impl FileSystemPrebuildProvider {
         Some(Self { path: PathBuf::from(url) })
     }
 
-    fn get_file_path(&self, package_id: &PackageId, revision: u64, prebuild_id: &str, extension: &str) -> Result<Option<PathBuf>> {
+    fn get_file_path(&self, package_id: &PackageId, revision: u64, prebuild_id: &str, extension: &str) -> Result<PathBuf> {
         let prefix = package_id.name.get_prefix().to_string();
         let prebuild_name = format!("{package_id}-{revision}-{prebuild_id}.{extension}");
         let path = self.path.join("packages").join(prefix).join(&package_id.name).join(package_id.version.to_string()).join(prebuild_name);
 
+        // Check if prebuild path exists
         if !fs::exists(&path).err_with_path("check existance of", &path)? {
-            return Ok(None);
+            return Err(RepositoryError::PrebuildNotFound {
+                prebuild_id: prebuild_id.into(),
+                package_id: package_id.clone(),
+                revision,
+            });
         }
 
-        Ok(Some(path))
+        Ok(path)
     }
 }

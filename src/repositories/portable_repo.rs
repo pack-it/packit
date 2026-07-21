@@ -120,11 +120,15 @@ impl<'a> PortableRepoCreator<'a> {
                     &package_id,
                     package_version.get_revision_count(),
                     &self.target.architecture.to_string(),
-                )?;
+                );
+                let found_prebuild = match prebuild_meta {
+                    Ok(_) => true,
+                    Err(RepositoryError::PrebuildNotFound { .. }) => false,
+                    Err(e) => return Err(e.into()),
+                };
 
                 // Check if prebuild is downloadable, or if package is installed
-                if prebuild_meta.is_none() && (self.target != Target::current() || self.register.get_package_version(&package_id).is_none())
-                {
+                if !found_prebuild && (self.target != Target::current() || self.register.get_package_version(&package_id).is_none()) {
                     return Err(PortableRepoError::PrebuildNotFound { package_id });
                 }
             }
@@ -297,16 +301,11 @@ impl<'a> PortableRepoCreator<'a> {
         let revision = package_version.get_revision_count();
         let prebuild_id = self.target.architecture.to_string();
         let prebuild_meta = match self.repository_manager.get_prebuild_meta(repository_id, package_id, revision, &prebuild_id) {
-            Ok(Some(prebuild_meta)) => prebuild_meta,
+            Ok(prebuild_meta) => prebuild_meta,
             // Only try to package locally if the current target is the target we generate a portable repo for
-            Ok(None) if self.target == Target::current() => {
+            Err(RepositoryError::PrebuildNotFound { .. }) if self.target == Target::current() => {
                 packager::package(self.config, package_id, &destination, revision)?;
                 return Ok(());
-            },
-            Ok(None) => {
-                return Err(PortableRepoError::PrebuildNotFound {
-                    package_id: package_id.clone(),
-                });
             },
             Err(e) => return Err(e.into()),
         };

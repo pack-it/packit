@@ -23,27 +23,16 @@ pub struct WebPrebuildProvider {
 }
 
 impl PrebuildProvider for WebPrebuildProvider {
-    fn get_prebuild_meta(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<Option<PrebuildFileMeta>> {
-        let response = match self.read_file_path(package_id, revision, prebuild_id, "toml")? {
-            Some((_, response)) => response,
-            None => return Ok(None),
-        };
-
+    fn get_prebuild_meta(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<PrebuildFileMeta> {
+        let (_, response) = self.read_file_path(package_id, revision, prebuild_id, "toml")?;
         let metadata_string = response.text()?;
 
-        Ok(Some(toml::de::from_str(&metadata_string)?))
+        Ok(toml::de::from_str(&metadata_string)?)
     }
 
     fn read_prebuild(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<(ArchiveExtension, Bytes)> {
-        let (url, bytes) = match self.read_file_path(package_id, revision, prebuild_id, "tar.gz")? {
-            Some((url, response)) => (url, response.bytes()?),
-            None => {
-                return Err(RepositoryError::PrebuildNotFound {
-                    package_id: package_id.clone(),
-                    revision,
-                });
-            },
-        };
+        let (url, response) = self.read_file_path(package_id, revision, prebuild_id, "tar.gz")?;
+        let bytes = response.bytes()?;
 
         Ok((ArchiveExtension::from_path(url.as_ref()), bytes))
     }
@@ -62,7 +51,7 @@ impl WebPrebuildProvider {
     /// Reads a file from the repository and return the url and response.
     /// Returns `None` if the file cannot be found in the repository.
     /// Returns a `UrlParseError` if the created url cannot be parsed.
-    fn read_file_path(&self, package_id: &PackageId, revision: u64, prebuild_id: &str, extension: &str) -> Result<Option<(Url, Response)>> {
+    fn read_file_path(&self, package_id: &PackageId, revision: u64, prebuild_id: &str, extension: &str) -> Result<(Url, Response)> {
         let prefix = package_id.name.get_prefix().to_string();
         let package_name = &package_id.name;
         let package_version = &package_id.version.to_string();
@@ -75,7 +64,11 @@ impl WebPrebuildProvider {
 
         // Check if the url exists
         if response.status() == StatusCode::NOT_FOUND {
-            return Ok(None);
+            return Err(RepositoryError::PrebuildNotFound {
+                prebuild_id: prebuild_id.into(),
+                package_id: package_id.clone(),
+                revision,
+            });
         }
 
         // Return an error if something went wrong with the request (apart from not found error)
@@ -83,6 +76,6 @@ impl WebPrebuildProvider {
             return Err(RepositoryError::UnsuccessfulRequest(response.status()));
         }
 
-        Ok(Some((url, response)))
+        Ok((url, response))
     }
 }

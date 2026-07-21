@@ -306,10 +306,7 @@ impl<'a> Installer<'a> {
 
         let prebuild_id = Target::current().architecture.to_string();
         let (extension, bytes) = self.repository_manager.read_prebuild(repository_id, package, revision, &prebuild_id)?;
-        let prebuild_meta = self
-            .repository_manager
-            .get_prebuild_meta(repository_id, package, revision, &prebuild_id)?
-            .ok_or(InstallerError::PrebuildNotFound)?;
+        let prebuild_meta = self.repository_manager.get_prebuild_meta(repository_id, package, revision, &prebuild_id)?;
 
         // Finish download spinner
         spinner.finish();

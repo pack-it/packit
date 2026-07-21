@@ -115,14 +115,7 @@ fn check_package_alterations(package_id: &PackageId, register: &PackageRegister,
     let revision = package_version.revisions.len() as u64;
     let prebuild_id = Target::current().architecture.to_string();
     let prebuild_meta = match provider.get_prebuild_meta(package_id, revision, &prebuild_id) {
-        Ok(Some(prebuild_meta)) => prebuild_meta,
-        Ok(None) => {
-            warning!(
-                "Cannot perform alterations check for package {}, because prebuild metadata cannot be found, skipping check",
-                package_id.style()
-            );
-            return Ok(false);
-        },
+        Ok(prebuild_meta) => prebuild_meta,
         Err(e) => {
             warning!(
                 "Cannot perform alterations check for package {}, because prebuild metadata cannot be read, skipping check",

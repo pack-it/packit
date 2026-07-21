@@ -42,7 +42,7 @@ pub trait MetadataProvider {
 /// Generic prebuild repository provider trait, reading prebuild packages from a repository.
 pub trait PrebuildProvider {
     /// Gets the metadata of a prebuild package, returns `None` if the prebuild package does not exist.
-    fn get_prebuild_meta(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<Option<PrebuildFileMeta>>;
+    fn get_prebuild_meta(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<PrebuildFileMeta>;
 
     /// Reads the prebuild package as bytes, returns a tuple containing the origin url and the bytes.
     fn read_prebuild(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<(ArchiveExtension, Bytes)>;
