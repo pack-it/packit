@@ -1,19 +1,31 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use colored::Colorize;
+use colored::{ColoredString, Colorize};
 use std::fmt::Display;
 
-pub trait DisplayOption {
+pub trait DisplayOption<T: Display> {
     /// Returns the correct string display for an `Option<impl Display>`, dimmed when `None`.
     fn display(&self) -> String;
+
+    /// Returns the correct string display for an `Option<impl Display>`, dimmed when `None` and styled with the given closure if `Some`.
+    fn display_or<F>(&self, some_style: F) -> String
+    where
+        F: FnOnce(&T) -> ColoredString;
 }
 
-impl<T> DisplayOption for Option<T>
-where
-    T: Display,
-{
+impl<T: Display> DisplayOption<T> for Option<T> {
     fn display(&self) -> String {
         match self {
-            Some(option) => option.to_string(),
+            Some(value) => value.to_string(),
+            None => "None".dimmed().to_string(),
+        }
+    }
+
+    fn display_or<F>(&self, some_style: F) -> String
+    where
+        F: FnOnce(&T) -> ColoredString,
+    {
+        match self {
+            Some(value) => some_style(value).to_string(),
             None => "None".dimmed().to_string(),
         }
     }
