@@ -25,6 +25,9 @@ pub enum InstallerError {
     #[error("Prebuild checksum does not match")]
     ChecksumError,
 
+    #[error("Prebuild not found, while it was expected to exist")]
+    PrebuildNotFound,
+
     #[error("Package {} with version '{}' is not installed.", package_name.style(), version.as_ref().map_or("any".normal(), |v| v.style()))]
     PackageNotFound {
         package_name: PackageName,
