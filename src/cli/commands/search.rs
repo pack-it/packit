@@ -124,7 +124,7 @@ impl SearchArgs {
         pair_aligner.add("Homepage", package.homepage.display());
         pair_aligner.add("Latest version", latest_version.version.style());
         pair_aligner.add("Available versions", package.versions.iter().map_styled().display(" | "));
-        pair_aligner.add("Required Packit version", package.required_packit_version.display().bold().blue());
+        pair_aligner.add("Required Packit version", package.required_packit_version.display_or(|v| v.style()));
         pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
         println!();
 
