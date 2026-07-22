@@ -8,13 +8,14 @@ use url::Url;
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{logging::error, styled::Styled},
+        display::{logging::error, not_found, styled::Styled},
     },
     config::{Config, Repository},
     installer::types::{PackageId, PackageName},
     repositories::{
+        error::RepositoryError,
         provider::{self, MetadataProvider},
-        types::{Checksum, PackageTarget, PackageVersionMeta, Patch, Source, Sources, TargetBounds},
+        types::{Checksum, IndexMeta, PackageTarget, PackageVersionMeta, Patch, Source, Sources, TargetBounds},
     },
     utils::{requests, unwrap_or_exit::UnwrapOrExit},
 };
@@ -35,24 +36,26 @@ impl HandleCommand for MetaCheckArgs {
         let repository = self.get_repository(&config);
         let provider = provider::create_metadata_provider(&repository).unwrap_or_exit_msg("Could not create metadata provider", 1);
 
-        let packages = match &self.package_name {
-            Some(package) => HashSet::from([package.clone()]),
-            None => match provider.read_index_metadata() {
-                Ok(index_meta) => index_meta.supported_packages,
-                Err(e) => {
-                    error!(e, "Repository 'index.toml' cannot be parsed");
-                    exit(1);
-                },
-            },
-        };
-
         match provider.read_repository_metadata() {
             Ok(_) => println!("{}", "Successfully parsed repository metadata".bold().green()),
             Err(e) => error!(e, "Repository metadata could not be parsed"),
         }
 
+        let index = match provider.read_index_metadata() {
+            Ok(index_meta) => index_meta,
+            Err(e) => {
+                error!(e, "Repository 'index.toml' cannot be parsed");
+                exit(1);
+            },
+        };
+
+        let packages = match &self.package_name {
+            Some(package) => &HashSet::from([package.clone()]),
+            None => &index.supported_packages,
+        };
+
         for package_name in packages {
-            self.check_package_meta(&provider, &package_name);
+            self.check_package_meta(&provider, &index, &package_name);
         }
     }
 }
@@ -77,13 +80,14 @@ impl MetaCheckArgs {
         exit(1)
     }
 
-    fn check_package_meta(&self, provider: &Box<dyn MetadataProvider>, package_name: &PackageName) {
+    fn check_package_meta(&self, provider: &Box<dyn MetadataProvider>, index: &IndexMeta, package_name: &PackageName) {
         let package_meta = match provider.read_package(&package_name) {
             Ok(package) => {
                 let success_message = format!("Successfully parsed {}", package_name.style()).bold().green();
                 println!("{success_message}");
                 package
             },
+            Err(RepositoryError::IOError(..)) => not_found::index_package(package_name, index),
             Err(e) => {
                 error!(e, "Package {} could not be parsed", package_name.style());
                 return;

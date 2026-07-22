@@ -3,7 +3,7 @@ use std::cmp;
 
 use crate::{
     installer::types::PackageName,
-    repositories::{error::RepositoryError, manager::RepositoryManager},
+    repositories::{error::RepositoryError, manager::RepositoryManager, types::IndexMeta},
 };
 
 const FUZZY_THRESHOLD: f64 = 0.25;
@@ -19,6 +19,7 @@ pub fn repository_search(manager: &RepositoryManager, package_name: &PackageName
 
         let fuzzy_matches = fuzzy_search(repository_index.supported_packages.iter(), package_name.as_str());
         for (distance, fuzzy_match) in fuzzy_matches {
+            // Read the package to make sure the package exists for the current target
             match manager.read_package(&fuzzy_match) {
                 Ok(_) => {},
                 Err(RepositoryError::PackageNotFoundError { .. }) => continue,
@@ -38,6 +39,29 @@ pub fn repository_search(manager: &RepositoryManager, package_name: &PackageName
     }
 
     Ok(best_word)
+}
+
+/// Does a fuzzy search against the given index.toml.
+/// Returns a `PackageName` if a fuzzy match can be found.
+/// Note that this also searches other targets (targets which are not the current target).
+pub fn index_search(index: &IndexMeta, package_name: &PackageName) -> Option<PackageName> {
+    let mut best_word = None;
+    let mut best_distance = None;
+
+    let fuzzy_matches = fuzzy_search(index.supported_packages.iter(), package_name.as_str());
+    for (distance, fuzzy_match) in fuzzy_matches {
+        if let Some(current_distance) = best_distance {
+            if distance < current_distance {
+                best_distance = Some(distance);
+                best_word = Some(fuzzy_match);
+            }
+        } else {
+            best_distance = Some(distance);
+            best_word = Some(fuzzy_match);
+        }
+    }
+
+    best_word
 }
 
 /// Wraps around the `fuzzy_search` method and gets the fuzzy match with
