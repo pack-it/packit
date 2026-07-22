@@ -8,7 +8,7 @@ use crate::{
     repositories::{
         error::{RepositoryError, Result},
         provider::MetadataProvider,
-        types::{IndexMeta, PackageMeta, PackageVersionMeta, RepositoryMeta},
+        types::{IndexMeta, PackageMeta, PackageVersionMeta, PrebuildsList, RepositoryMeta},
     },
     utils::requests,
 };
@@ -43,6 +43,21 @@ impl MetadataProvider for WebMetadataProvider {
         let data = self.request_metadata(format!("{}/packages/{package}/{version}/targets.toml", self.url))?;
 
         Ok(toml::de::from_str(&data)?)
+    }
+
+    fn read_prebuilds_list(&self, package: &PackageName, version: &Version) -> Result<PrebuildsList> {
+        let response = requests::get(format!("{}/packages/{package}/{version}/prebuilds.toml", self.url))?;
+
+        if response.status() == StatusCode::NOT_FOUND {
+            return Ok(PrebuildsList::default());
+        }
+
+        // Return an error if something went wrong with the request (apart from not found error)
+        if !response.status().is_success() {
+            return Err(RepositoryError::UnsuccessfulRequest(response.status()));
+        }
+
+        Ok(toml::de::from_str(&response.text()?)?)
     }
 
     fn read_file_bytes(&self, package: &PackageName, file_path: &str) -> Result<Option<Bytes>> {

@@ -17,7 +17,7 @@ use crate::{
     repositories::{
         error::{PackageNotFoundReason, RepositoryError, Result},
         provider::{self, MetadataProvider, PrebuildProvider},
-        types::{Date, IndexMeta, PackageMeta, PackageVersionMeta, PrebuildFileMeta, RepositoryMeta},
+        types::{Date, IndexMeta, PackageMeta, PackageVersionMeta, PrebuildFileMeta, PrebuildsList, RepositoryMeta},
     },
     utils::packit_version::current_packit_version,
 };
@@ -320,6 +320,11 @@ impl<'a> RepositoryManager<'a> {
         }
 
         None
+    }
+
+    /// Reads the list of prebuilds that can be generated for the given version of the package.
+    pub fn read_prebuilds_list(&self, repository_id: &str, package: &PackageName, version: &Version) -> Result<PrebuildsList> {
+        self.get_metadata_provider(repository_id)?.read_prebuilds_list(package, version)
     }
 
     /// Reads a file of the given package from the given repository.

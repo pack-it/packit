@@ -19,6 +19,8 @@ pub use self::package_target::PackageTarget;
 pub use self::package_version::PackageVersionMeta;
 
 pub use self::prebuilds::PrebuildFileMeta;
+pub use self::prebuilds::PrebuildMeta;
+pub use self::prebuilds::PrebuildsList;
 
 pub use self::checksum::Checksum;
 pub use self::common::Script;
