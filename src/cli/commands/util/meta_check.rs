@@ -146,6 +146,39 @@ impl MetaCheckArgs {
         // Check all targets
         for (bounds, target) in &package_version_meta.targets {
             self.check_target(bounds, target, &package_version_meta.sources);
+
+            // Check if there are duplicates between the package version and target fields
+            for dependency in &target.dependencies {
+                if package_version_meta.dependencies.iter().any(|d| d.get_name() == dependency.get_name()) {
+                    println!("Duplicate dependency '{}' found in {}", dependency, package_id.style());
+                }
+            }
+
+            for dependency in &target.build_dependencies {
+                if package_version_meta.build_dependencies.iter().any(|d| d.get_name() == dependency.get_name()) {
+                    println!("Duplicate build dependency '{}' found in {}", dependency, package_id.style());
+                }
+            }
+
+            if let Some(skip_symlinking) = target.skip_symlinking {
+                if package_version_meta.skip_symlinking || !skip_symlinking {
+                    println!("Field 'skip_symlinking' unnecessarily specified on target '{}'", bounds);
+                }
+            }
+
+            for file in &target.external_test_files {
+                if package_version_meta.external_test_files.contains(file) {
+                    println!("Duplicate external test file '{}' found in {}", file, package_id.style());
+                }
+            }
+
+            for (key, value) in &target.script_args {
+                if let Some(other_value) = package_version_meta.script_args.get(key) {
+                    if other_value == value {
+                        println!("Duplicate script arg '{} = {}' found in {}", key, value, package_id.style());
+                    }
+                }
+            }
         }
     }
 
