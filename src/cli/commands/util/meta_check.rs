@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{collections::HashSet, process::exit};
+use std::{collections::HashSet, fs, process::exit};
 
 use clap::Args;
 use colored::Colorize;
@@ -14,7 +14,7 @@ use crate::{
     installer::types::{PackageId, PackageName},
     repositories::{
         provider::{self, MetadataProvider},
-        types::{Checksum, PackageMeta, PackageTarget, PackageVersionMeta, Patch, Source, Sources, TargetBounds},
+        types::{Checksum, PackageTarget, PackageVersionMeta, Patch, Source, Sources, TargetBounds},
     },
     utils::{requests, unwrap_or_exit::UnwrapOrExit},
 };
@@ -33,8 +33,6 @@ impl HandleCommand for MetaCheckArgs {
     fn handle(&self) {
         let config = Config::from(&Config::get_default_path()).unwrap_or_exit(1);
         let repository = self.get_repository(&config);
-
-        // TODO: Better error, telling user which inputs are valid
         let provider = provider::create_metadata_provider(&repository).unwrap_or_exit_msg("Could not create metadata provider", 1);
 
         let packages = match &self.package_name {
@@ -54,19 +52,7 @@ impl HandleCommand for MetaCheckArgs {
         }
 
         for package_name in packages {
-            let package = match provider.read_package(&package_name) {
-                Ok(package) => {
-                    let success_message = format!("Successfully parsed {}", package_name.style()).bold().green();
-                    println!("{success_message}");
-                    package
-                },
-                Err(e) => {
-                    error!(e, "Package {} could not be parsed", package_name.style());
-                    continue;
-                },
-            };
-
-            self.check_package_meta(&provider, &package);
+            self.check_package_meta(&provider, &package_name);
         }
     }
 }
@@ -77,30 +63,48 @@ impl MetaCheckArgs {
             return repository.clone();
         }
 
-        let provider_type = match Url::parse(&self.repository) {
-            Ok(_) => "web",
-            Err(_) => "fs",
-        };
+        // Return web repository if the string is a valid URL
+        if Url::parse(&self.repository).is_ok() {
+            return Repository::new(&self.repository, "web");
+        }
 
-        Repository::new(&self.repository, provider_type)
+        // Return filesystem repository if the string exists as a path
+        if matches!(fs::exists(&self.repository), Ok(true)) {
+            return Repository::new(&self.repository, "fs");
+        }
+
+        error!(msg: "Wrong repository '{}', please use a valid repository id, URL or path to a repository", self.repository);
+        exit(1)
     }
 
-    fn check_package_meta(&self, provider: &Box<dyn MetadataProvider>, package_meta: &PackageMeta) {
+    fn check_package_meta(&self, provider: &Box<dyn MetadataProvider>, package_name: &PackageName) {
+        let package_meta = match provider.read_package(&package_name) {
+            Ok(package) => {
+                let success_message = format!("Successfully parsed {}", package_name.style()).bold().green();
+                println!("{success_message}");
+                package
+            },
+            Err(e) => {
+                error!(e, "Package {} could not be parsed", package_name.style());
+                return;
+            },
+        };
+
         if let Some(homepage) = &package_meta.homepage {
             if !requests::check_url(homepage).unwrap_or_exit(1) {
-                println!("The homepage URL of {} does not exist", package_meta.name.style());
+                println!("The homepage URL of {} does not exist", package_name.style());
             }
 
             // Check if URL is https
             if !homepage.starts_with("https") {
-                println!("The homepage URL '{}' of {} is not https", homepage, package_meta.name.style());
+                println!("The homepage URL '{}' of {} is not https", homepage, package_name.style());
             }
         }
 
         // Check if listed versions exist (cannot be parsed) and do package version specific metadata checks
         for version in &package_meta.versions {
-            let package_id = PackageId::new(package_meta.name.clone(), version.clone());
-            let package_version = match provider.read_package_version(&package_meta.name, &version) {
+            let package_id = PackageId::new(package_name.clone(), version.clone());
+            let package_version = match provider.read_package_version(package_name, &version) {
                 Ok(package_version) => {
                     let success_message = format!("Successfully parsed {}", package_id.style()).bold().green();
                     println!("{success_message}");
@@ -117,11 +121,11 @@ impl MetaCheckArgs {
                 println!(
                     "Version {} in {} doesn't exist in any target support range",
                     version.style(),
-                    package_meta.name.style()
+                    package_name.style()
                 )
             }
 
-            self.check_package_version_meta(&package_meta.name, &package_version);
+            self.check_package_version_meta(&package_name, &package_version);
         }
     }
 
