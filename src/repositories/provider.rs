@@ -14,7 +14,7 @@ use crate::{
             DEFAULT_PREBUILD_PROVIDER_ID, FILESYSTEM_PREBUILD_PROVIDER_ID, FileSystemPrebuildProvider, WEB_PREBUILD_PROVIDER_ID,
             WebPrebuildProvider,
         },
-        types::{IndexMeta, PackageMeta, PackageVersionMeta, PrebuildFileMeta, RepositoryMeta},
+        types::{IndexMeta, PackageMeta, PackageVersionMeta, PrebuildFileMeta, PrebuildsList, RepositoryMeta},
     },
 };
 
@@ -31,6 +31,9 @@ pub trait MetadataProvider {
 
     /// Reads the metadata of a certain version of a package, containing dependencies and targets.
     fn read_package_version(&self, package: &PackageName, version: &Version) -> Result<PackageVersionMeta>;
+
+    /// Reads the list of prebuilds that can be generated for the given version of the package.
+    fn read_prebuilds_list(&self, package: &PackageName, version: &Version) -> Result<PrebuildsList>;
 
     /// Reads the requested file from the repository as bytes.
     fn read_file_bytes(&self, package: &PackageName, file_path: &str) -> Result<Option<Bytes>>;

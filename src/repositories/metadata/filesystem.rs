@@ -9,7 +9,7 @@ use crate::{
     repositories::{
         error::Result,
         provider::MetadataProvider,
-        types::{IndexMeta, PackageMeta, PackageVersionMeta, RepositoryMeta},
+        types::{IndexMeta, PackageMeta, PackageVersionMeta, PrebuildsList, RepositoryMeta},
     },
     utils::ioerror::IOResultExt,
 };
@@ -44,6 +44,16 @@ impl MetadataProvider for FileSystemMetadataProvider {
         let path = self.path.join("packages").join(package.to_string()).join(version.to_string()).join("targets.toml");
         let data = Self::read_file_string(path)?;
 
+        Ok(toml::de::from_str(&data)?)
+    }
+
+    fn read_prebuilds_list(&self, package: &PackageName, version: &Version) -> Result<PrebuildsList> {
+        let path = self.path.join("packages").join(package.to_string()).join(version.to_string()).join("prebuilds.toml");
+        if !path.exists() {
+            return Ok(PrebuildsList::default());
+        }
+
+        let data = Self::read_file_string(path)?;
         Ok(toml::de::from_str(&data)?)
     }
 
