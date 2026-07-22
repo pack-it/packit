@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    cli::display::logging::warning,
     installer::types::VersionIntervals,
     platforms::{Target, TargetArchitecture},
     repositories::types::{Checksum, FileSize, TargetBounds, target_bounds::TargetName},
@@ -30,9 +31,34 @@ pub struct PrebuildMeta {
 
 impl PrebuildsList {
     /// Gets the prebuild that satisfies the given target the best.
-    /// Returns the prebuild id and the `PrebuildMeta`
-    pub fn get_best_prebuild(&self, target: Target) -> (&String, &PrebuildMeta) {
-        todo!()
+    /// Returns the prebuild id and the `PrebuildMeta`, or `None` if no matching prebuild can be found.
+    pub fn get_best_prebuild(&self, target: &Target) -> Option<(&String, &PrebuildMeta)> {
+        let mut best_prebuild_id = None;
+        let mut best_prebuild_meta = None;
+        let mut best_priority = 0;
+
+        for (id, meta) in &self.prebuilds {
+            let Some((priority, _)) = TargetBounds::get_best_target_priority(target, meta.targets.iter().collect()) else {
+                continue;
+            };
+
+            if priority < best_priority {
+                continue;
+            }
+
+            if priority == best_priority {
+                warning!("Found two targets that satisfy and have the same priority!");
+            }
+
+            best_prebuild_id = Some(id);
+            best_prebuild_meta = Some(meta);
+            best_priority = priority;
+        }
+
+        match (best_prebuild_id, best_prebuild_meta) {
+            (Some(best_prebuild_id), Some(best_prebuild_meta)) => Some((best_prebuild_id, best_prebuild_meta)),
+            _ => None,
+        }
     }
 }
 
