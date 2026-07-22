@@ -15,7 +15,7 @@ use crate::{
     repositories::{
         error::RepositoryError,
         provider::{self, MetadataProvider},
-        types::{Checksum, IndexMeta, PackageTarget, PackageVersionMeta, Patch, Source, Sources, TargetBounds},
+        types::{Checksum, IndexMeta, PackageTarget, PackageVersionMeta, Patch, RepositoryMeta, Source, Sources, TargetBounds},
     },
     utils::{requests, unwrap_or_exit::UnwrapOrExit},
 };
@@ -36,10 +36,16 @@ impl HandleCommand for MetaCheckArgs {
         let repository = self.get_repository(&config);
         let provider = provider::create_metadata_provider(&repository).unwrap_or_exit_msg("Could not create metadata provider", 1);
 
-        match provider.read_repository_metadata() {
-            Ok(_) => println!("{}", "Successfully parsed repository metadata".bold().green()),
-            Err(e) => error!(e, "Repository metadata could not be parsed"),
-        }
+        let repository_meta = match provider.read_repository_metadata() {
+            Ok(repository_meta) => {
+                println!("{}", "Successfully parsed repository metadata".bold().green());
+                repository_meta
+            },
+            Err(e) => {
+                error!(e, "Repository metadata could not be parsed");
+                exit(1)
+            },
+        };
 
         let index = match provider.read_index_metadata() {
             Ok(index_meta) => index_meta,
@@ -55,7 +61,7 @@ impl HandleCommand for MetaCheckArgs {
         };
 
         for package_name in packages {
-            self.check_package_meta(&provider, &index, &package_name);
+            self.check_package_meta(&provider, &index, &package_name, &repository_meta);
         }
     }
 }
@@ -80,7 +86,13 @@ impl MetaCheckArgs {
         exit(1)
     }
 
-    fn check_package_meta(&self, provider: &Box<dyn MetadataProvider>, index: &IndexMeta, package_name: &PackageName) {
+    fn check_package_meta(
+        &self,
+        provider: &Box<dyn MetadataProvider>,
+        index: &IndexMeta,
+        package_name: &PackageName,
+        repository_meta: &RepositoryMeta,
+    ) {
         let package_meta = match provider.read_package(&package_name) {
             Ok(package) => {
                 let success_message = format!("Successfully parsed {}", package_name.style()).bold().green();
@@ -93,6 +105,17 @@ impl MetaCheckArgs {
                 return;
             },
         };
+
+        // Check if the package required Packit version is lower then the repository required Packit version
+        if let Some(required_version) = &package_meta.required_packit_version
+            && repository_meta.required_packit_version >= *required_version
+        {
+            println!(
+                "The required Packit version for {} is lower then or equal to repository '{}' required Packit version",
+                package_name.style(),
+                self.repository
+            );
+        }
 
         if let Some(homepage) = &package_meta.homepage {
             if !requests::check_url(homepage).unwrap_or_exit(1) {
@@ -119,6 +142,29 @@ impl MetaCheckArgs {
                     continue;
                 },
             };
+
+            // Check if the package version required Packit version is lower then the repository required Packit version
+            if let Some(required_version) = &package_version.required_packit_version
+                && repository_meta.required_packit_version >= *required_version
+            {
+                println!(
+                    "The required Packit version for {} is lower then or equal to the required version in repository '{}'",
+                    package_name.style(),
+                    self.repository
+                );
+            }
+
+            // Check if the package version required Packit version is lower then the package required Packit version
+            if let Some(package_required_version) = &package_meta.required_packit_version
+                && let Some(required_version) = &package_version.required_packit_version
+                && package_required_version <= required_version
+            {
+                println!(
+                    "The required Packit version for package {} is lower then or equal to the required version in package version {}",
+                    package_name.style(),
+                    package_id.style()
+                );
+            }
 
             // Check if the version exists in any of the supported ranges
             if !package_meta.supported_versions.values().any(|i| i.covers(version)) {
