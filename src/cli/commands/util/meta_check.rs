@@ -15,7 +15,7 @@ use crate::{
     repositories::{
         error::RepositoryError,
         provider::{self, MetadataProvider},
-        types::{Checksum, IndexMeta, PackageTarget, PackageVersionMeta, Patch, RepositoryMeta, Source, Sources, TargetBounds},
+        types::{Checksum, IndexMeta, Licenses, PackageTarget, PackageVersionMeta, Patch, RepositoryMeta, Source, Sources, TargetBounds},
     },
     utils::{requests, unwrap_or_exit::UnwrapOrExit},
 };
@@ -128,6 +128,27 @@ impl MetaCheckArgs {
             }
         }
 
+        // Check that at least one version is specified
+        if package_meta.versions.is_empty() {
+            println!("Package {} has no versions listed in its metadata", package_meta.name.style());
+        }
+
+        // Check that at least one target bound is specified
+        if package_meta.supported_versions.keys().len() == 0 {
+            println!("Package {} has no target listed in its metadata", package_meta.name.style());
+        }
+
+        // Check that the version intervals for each target are non-empty
+        for (target, version_interval) in &package_meta.supported_versions {
+            if version_interval.is_empty() {
+                println!(
+                    "No version interval specified for target '{}' from package {}",
+                    target,
+                    package_meta.name.style()
+                );
+            }
+        }
+
         // Check if listed versions exist (cannot be parsed) and do package version specific metadata checks
         for version in &package_meta.versions {
             let package_id = PackageId::new(package_name.clone(), version.clone());
@@ -182,15 +203,28 @@ impl MetaCheckArgs {
     fn check_package_version_meta(&self, package_name: &PackageName, package_version_meta: &PackageVersionMeta) {
         let package_id = PackageId::new(package_name.clone(), package_version_meta.version.clone());
 
+        // Check license
+        self.check_license(&package_version_meta.license, &package_id);
+
         // Check sources
         let sources = match &package_version_meta.sources {
             Sources::Single(source) => vec![("all", source)],
             Sources::Named(sources) => sources.into_iter().map(|(k, v)| (k.as_str(), v)).collect(),
         };
 
+        // Check if the sources aren't empty
+        if sources.is_empty() {
+            println!("No sources for package {}", package_id.style());
+        }
+
         // Check all sources
         for (target, source) in sources {
             self.check_source(&package_id, target, source);
+        }
+
+        // Check if the targets aren't empty
+        if package_version_meta.targets.is_empty() {
+            println!("No targets for package {}", package_id.style());
         }
 
         // Check all targets
@@ -352,6 +386,25 @@ impl MetaCheckArgs {
             },
             None if matches!(sources, Sources::Single(..)) => {},
             None => println!("No source reference found in target, eventhough sources are target specific"),
+        }
+    }
+
+    fn check_license(&self, license: &Licenses, package_id: &PackageId) {
+        let licenses = match &license {
+            Licenses::Unknown => return,
+            Licenses::Single(license) => &vec![license.clone()],
+            Licenses::Any { any } => any,
+            Licenses::All { all } => all,
+        };
+
+        if licenses.is_empty() {
+            println!("License from {} not specified as unknown, but is empty", package_id.style());
+        }
+
+        for license in licenses {
+            if license.is_empty() {
+                println!("Single license is empty in {}", package_id.style())
+            }
         }
     }
 }
