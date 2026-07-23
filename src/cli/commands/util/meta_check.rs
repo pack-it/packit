@@ -15,7 +15,10 @@ use crate::{
     repositories::{
         error::RepositoryError,
         provider::{self, MetadataProvider},
-        types::{Checksum, IndexMeta, Licenses, PackageTarget, PackageVersionMeta, Patch, RepositoryMeta, Source, Sources, TargetBounds},
+        types::{
+            Checksum, IndexMeta, Licenses, PackageMeta, PackageTarget, PackageVersionMeta, Patch, RepositoryMeta, Source, Sources,
+            TargetBounds,
+        },
     },
     utils::{requests, unwrap_or_exit::UnwrapOrExit},
 };
@@ -195,6 +198,8 @@ impl MetaCheckArgs {
                     package_name.style()
                 )
             }
+
+            self.check_deprecation_dates(&package_id, &package_meta, &package_version);
 
             self.check_package_version_meta(&package_name, &package_version);
         }
@@ -405,6 +410,72 @@ impl MetaCheckArgs {
             if license.is_empty() {
                 println!("Single license is empty in {}", package_id.style())
             }
+        }
+    }
+
+    fn check_deprecation_dates(&self, package_id: &PackageId, package_meta: &PackageMeta, package_version_meta: &PackageVersionMeta) {
+        // Check for disabled before deprecation in package meta
+        if let Some(deprecation) = &package_meta.deprecation
+            && let Some(disabled_from) = &deprecation.disabled_from
+            && deprecation.deprecated_from > *disabled_from
+        {
+            println!(
+                "Package {} is disabled on '{}' before deprecation on '{}'",
+                package_id.name.style(),
+                disabled_from,
+                deprecation.deprecated_from
+            );
+        }
+
+        // Check for disabled before deprecation in package version meta
+        if let Some(deprecation) = &package_version_meta.deprecation
+            && let Some(disabled_from) = &deprecation.disabled_from
+            && deprecation.deprecated_from > *disabled_from
+        {
+            println!(
+                "Package {} is disabled on '{}' before deprecation on '{}'",
+                package_id.style(),
+                disabled_from,
+                deprecation.deprecated_from
+            );
+        }
+
+        // Check deprecation dates
+        let Some(package_deprecation) = &package_meta.deprecation else {
+            return;
+        };
+
+        let Some(version_deprecation) = &package_version_meta.deprecation else {
+            return;
+        };
+
+        if package_deprecation.deprecated_from <= version_deprecation.deprecated_from {
+            println!(
+                "The deprecation at '{}' of package {} happens earlier then package version {} at '{}'",
+                package_deprecation.deprecated_from,
+                package_id.name.style(),
+                package_id.style(),
+                version_deprecation.deprecated_from
+            );
+        }
+
+        // Check disabled dates
+        let Some(disabled_from) = &package_deprecation.disabled_from else {
+            return;
+        };
+
+        let Some(version_disabled_from) = &version_deprecation.disabled_from else {
+            return;
+        };
+
+        if disabled_from <= version_disabled_from {
+            println!(
+                "The package {} disabled from '{}' is earlier then package version {} disabled from '{}'",
+                package_id.name.style(),
+                disabled_from,
+                package_id.style(),
+                version_disabled_from
+            );
         }
     }
 }
