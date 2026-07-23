@@ -96,17 +96,8 @@ impl MetaCheckArgs {
         package_name: &PackageName,
         repository_meta: &RepositoryMeta,
     ) {
-        let package_meta = match provider.read_package(&package_name) {
-            Ok(package) => {
-                let success_message = format!("Successfully parsed {}", package_name.style()).bold().green();
-                println!("{success_message}");
-                package
-            },
-            Err(RepositoryError::IOError(..)) => not_found::index_package(package_name, index),
-            Err(e) => {
-                error!(e, "Package {} could not be parsed", package_name.style());
-                return;
-            },
+        let Some(package_meta) = self.read_package_meta(provider, index, package_name) else {
+            return;
         };
 
         // Check if the package required Packit version is lower then the repository required Packit version
@@ -148,6 +139,21 @@ impl MetaCheckArgs {
                     "No version interval specified for target '{}' from package {}",
                     target,
                     package_meta.name.style()
+                );
+            }
+        }
+
+        // Check conflict fields
+        for conflict_package in &package_meta.conflicts_with {
+            let Some(conflict_meta) = self.read_package_meta(provider, index, conflict_package) else {
+                continue;
+            };
+
+            if !conflict_meta.conflicts_with.contains(package_name) {
+                println!(
+                    "Conflict from package {} is not specified as conflict in package {}",
+                    package_name.style(),
+                    conflict_meta.name.style()
                 );
             }
         }
@@ -203,6 +209,27 @@ impl MetaCheckArgs {
 
             self.check_package_version_meta(&package_name, &package_version);
         }
+    }
+
+    fn read_package_meta(
+        &self,
+        provider: &Box<dyn MetadataProvider>,
+        index: &IndexMeta,
+        package_name: &PackageName,
+    ) -> Option<PackageMeta> {
+        match provider.read_package(&package_name) {
+            Ok(package) => {
+                let success_message = format!("Successfully parsed {}", package_name.style()).bold().green();
+                println!("{success_message}");
+                return Some(package);
+            },
+            Err(RepositoryError::IOError(..)) => not_found::index_package(package_name, index),
+            Err(e) => {
+                error!(e, "Package {} could not be parsed", package_name.style());
+            },
+        };
+
+        return None;
     }
 
     fn check_package_version_meta(&self, package_name: &PackageName, package_version_meta: &PackageVersionMeta) {
