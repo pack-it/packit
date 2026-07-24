@@ -237,11 +237,9 @@ impl<'a> InstallTreeBuilder<'a> {
         self.checked_packages.insert(package_id.clone());
 
         // Check if a prebuild for the package is available
-        let revision = install_meta.version_metadata.get_revision_count();
-        let prebuild_id = Target::current().architecture.to_string();
-        match self.repository_manager.get_prebuild_meta(&install_meta.repository_id, package_id, revision, &prebuild_id) {
-            Ok(_) => return Ok(None),
-            Err(RepositoryError::PrebuildNotFound { .. }) | Err(RepositoryError::RepositoryNotFoundError { .. }) => {},
+        match self.find_prebuild(&install_meta, package_id) {
+            Ok(true) => return Ok(None),
+            Ok(false) => {},
             Err(e) => error!(e),
         }
 
@@ -263,6 +261,25 @@ impl<'a> InstallTreeBuilder<'a> {
 
         // Return an adjusted label
         Ok(Some(InstallLabel::new(InstallType::Build, label.is_dependency())))
+    }
+
+    /// Tries to find a prebuild for the given package.
+    /// Returns true if a prebuild is found, false otherwise
+    fn find_prebuild(&mut self, install_meta: &InstallMeta, package_id: &PackageId) -> Result<bool> {
+        let prebuilds_list =
+            self.repository_manager.read_prebuilds_list(&install_meta.repository_id, &package_id.name, &package_id.version)?;
+
+        let Some((prebuild_id, _)) = prebuilds_list.get_best_prebuild(&Target::current()) else {
+            return Ok(false);
+        };
+
+        // Check if a prebuild for the package is available
+        let revision = install_meta.version_metadata.get_revision_count();
+        match self.repository_manager.get_prebuild_meta(&install_meta.repository_id, package_id, revision, prebuild_id) {
+            Ok(_) => Ok(true),
+            Err(RepositoryError::PrebuildNotFound { .. }) | Err(RepositoryError::RepositoryNotFoundError { .. }) => Ok(false),
+            Err(e) => Err(e.into()),
+        }
     }
 
     /// Updates the tree structure shown in the terminal.
