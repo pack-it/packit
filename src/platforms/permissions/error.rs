@@ -11,7 +11,7 @@ pub enum PermissionError {
     #[error("Error during platform specific operations")]
     PlatformError(#[from] PlatformError),
 
-    #[error("Error while fetching permissions")]
+    #[error("Error while interacting with filesystem")]
     IOError(#[from] ioerror::IOError),
 }
 

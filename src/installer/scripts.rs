@@ -63,7 +63,7 @@ pub enum ScriptError {
     #[error("Error while detecting tool on the system")]
     ToolDetectionError(#[from] ToolDetectionError),
 
-    #[error("IOError during a script operation")]
+    #[error("IO error during a script operation")]
     IOError(#[from] ioerror::IOError),
 }
 

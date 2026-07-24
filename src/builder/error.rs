@@ -39,13 +39,13 @@ pub enum BuilderError {
     #[error("Cannot unpack response")]
     UnpackError(#[from] UnpackError),
 
-    #[error("Cannot execute build script")]
+    #[error("Error while executing build script")]
     ScriptError(#[from] ScriptError),
 
-    #[error("Cannot find a repository for building")]
+    #[error("Cannot get package data from repository")]
     RepositoryError(#[from] RepositoryError),
 
-    #[error("Cannot patch binaries")]
+    #[error("Cannot patch binary")]
     PatchBinaryError(#[from] BinaryPatcherError),
 
     #[error("Cannot apply patch file")]
@@ -54,7 +54,7 @@ pub enum BuilderError {
     #[error("Error while detecting tool on the system")]
     ToolDetectionError(#[from] ToolDetectionError),
 
-    #[error("Cannot request files for building")]
+    #[error("Error while requesting files for building")]
     RequestError(#[from] reqwest::Error),
 
     #[error("Error while interacting with filesystem")]

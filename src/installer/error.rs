@@ -62,19 +62,19 @@ pub enum InstallerError {
     },
 
     // Wrapped custom errors
-    #[error("Cannot find a repository for installation")]
+    #[error("Cannot fetch package metadata from repository")]
     RepositoryError(#[from] RepositoryError),
 
-    #[error("Cannot info package information")]
+    #[error("Cannot get information from register")]
     RegisterError(#[from] RegisterError),
 
-    #[error("Cannot display installer error")]
+    #[error("Error while displaying message on console")]
     DisplayError(#[from] DisplayError),
 
-    #[error("Cannot execute script")]
+    #[error("Error while executing script")]
     ScriptError(#[from] ScriptError),
 
-    #[error("Cannot execute symlink operation")]
+    #[error("Error while doing symlink operation")]
     SymlinkError(#[from] SymlinkError),
 
     #[error("Cannot build package")]
@@ -89,7 +89,7 @@ pub enum InstallerError {
     #[error("Cannot do tree operation")]
     TreeError(#[from] TreeError),
 
-    #[error("Cannot set or get permissions")]
+    #[error("Error while setting or getting permissions")]
     PermissionError(#[from] PermissionError),
 
     #[error("Error while interacting with filesystem")]
