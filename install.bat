@@ -190,7 +190,7 @@ if not ERRORLEVEL 1 (
     if ERRORLEVEL 1 goto cleanup
 
     echo Building Packit from source
-    cargo build-install --destination ..\$VERSION
+    cargo build-install --destination ..\%VERSION%
     if ERRORLEVEL 1 goto cleanup
     cd ..
     if ERRORLEVEL 1 goto cleanup
