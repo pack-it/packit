@@ -41,6 +41,11 @@ pub enum InstallerError {
         new_version: Version,
     },
 
+    #[error("No supported prebuild of {} can be found for the current target", package_id.style())]
+    NoSupportedPrebuild {
+        package_id: PackageId,
+    },
+
     #[error("Could not update, the given version {} is lower then the current version.", new_version.style())]
     VersionTooLowError {
         new_version: Version,
