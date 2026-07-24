@@ -89,8 +89,8 @@ impl Repository {
 /// The errors that occur when reading the config file.
 #[derive(Error, Debug)]
 pub enum ConfigError {
-    #[error("Cannot read config file contents")]
-    ReadError(#[from] ioerror::IOError),
+    #[error("Error while interacting with filesystem")]
+    IOError(#[from] ioerror::IOError),
 
     #[error("Cannot parse config file")]
     ParseError(#[from] toml::de::Error),

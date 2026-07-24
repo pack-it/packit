@@ -15,7 +15,7 @@ use crate::installer::types::version_number::VersionNumber;
 /// Errors that occur when parsing version related structs.
 #[derive(Error, Debug)]
 pub enum VersionError {
-    #[error("Version is none")]
+    #[error("Version is empty")]
     NoneError,
 
     #[error("Version number contains a character which is not a digit or a dot")]
@@ -27,7 +27,7 @@ pub enum VersionError {
     #[error("Multiple leading, trailing or consecutive dots are not allowed in version number")]
     DotsError,
 
-    #[error("Couldn't parse version number")]
+    #[error("Cannot parse version number")]
     ParseError(#[from] ParseIntError),
 }
 

@@ -53,7 +53,7 @@ pub enum PortableRepoError {
     #[error("The given package name is empty")]
     EmptyPackageName,
 
-    #[error("Cannot fetch package from repository")]
+    #[error("Cannot fetch package metadata from repository")]
     RepositoryError(#[from] RepositoryError),
 
     #[error("Cannot create package prebuild")]
