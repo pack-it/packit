@@ -7,10 +7,12 @@ use crate::{
         commands::HandleCommand,
         display::{Spinner, logging::error, not_found, styled::Styled},
     },
-    config::Config,
+    config::{Config, Repository},
     installer::types::PackageId,
     packager,
+    platforms::Target,
     register::package_register::PackageRegister,
+    repositories::provider,
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
@@ -70,13 +72,39 @@ impl PackageArgs {
             None => not_found::register_package_version(package_id, register),
         };
 
+        // Create metadata provider
+        let repository = Repository::new(
+            &package_version.metadata_repository_url,
+            &package_version.metadata_repository_provider,
+        );
+        let Some(provider) = provider::create_metadata_provider(&repository) else {
+            error!(msg: "Cannot create provider for {}, skipping packaging.", package_id.style());
+            return;
+        };
+
+        // Request prebuilds list
+        let prebuilds_list = match provider.read_prebuilds_list(&package_id.name, &package_id.version) {
+            Ok(prebuilds_list) => prebuilds_list,
+            Err(e) => {
+                error!(e, "Cannot read prebuild list for {}, skipping packaging.", package_id.style());
+                return;
+            },
+        };
+
+        // Retrieve prebuild_id to use
+        let Some((prebuild_id, _)) = prebuilds_list.get_best_prebuild(&Target::current()) else {
+            error!(msg: "Cannot find prebuild to create for {}, skipping packaging.", package_id.style());
+            return;
+        };
+
         // Automatically create the destination directory
         fs::create_dir_all(destination).unwrap_or_exit_msg("Failed to create prebuild directory", 1);
 
+        // Call packager and show spinner
         let spinner_message = format!("Packaging {} to '{}'", package_id.style(), destination.display());
         let spinner = Spinner::new(spinner_message);
         spinner.show();
-        packager::package(config, package_id, destination, package_version.revisions.len() as u64).unwrap_or_exit(1);
+        packager::package(config, package_id, destination, package_version.revisions.len() as u64, prebuild_id).unwrap_or_exit(1);
         spinner.finish();
     }
 }

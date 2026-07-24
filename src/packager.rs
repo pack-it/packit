@@ -14,7 +14,6 @@ use thiserror::Error;
 use crate::{
     config::Config,
     installer::types::PackageId,
-    platforms::TargetArchitecture,
     repositories::{
         error::RepositoryError,
         types::{Checksum, FileSize, PrebuildFileMeta},
@@ -53,7 +52,7 @@ pub type Result<T> = core::result::Result<T, PackagerError>;
 
 /// Packages a package to a given destination. If the destination doesn't exist, a `PackagerError::InvalidDestination` error is returned.
 /// The revision is used to create a unique filename for different package revisions.
-pub fn package(config: &Config, package_id: &PackageId, destination: &Path, revisions: u64) -> Result<()> {
+pub fn package(config: &Config, package_id: &PackageId, destination: &Path, revisions: u64, prebuild_id: &str) -> Result<()> {
     let install_directory = config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
 
     // Return an error if the destination is not a directory
@@ -74,8 +73,7 @@ pub fn package(config: &Config, package_id: &PackageId, destination: &Path, revi
     let metadata_string = toml::ser::to_string(&metadata)?;
 
     // Create the file names
-    let target_architecture = TargetArchitecture::current().to_string();
-    let filename = format!("{package_id}-{revisions}-{target_architecture}");
+    let filename = format!("{package_id}-{revisions}-{prebuild_id}");
     let compressed_filename = format!("{filename}.tar.gz");
     let prepackage_file = destination.join(compressed_filename);
     let metadata_filename = format!("{filename}.toml");
