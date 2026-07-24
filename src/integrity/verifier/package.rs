@@ -65,20 +65,20 @@ fn check_package_alterations(package_id: &PackageId, register: &PackageRegister,
         return Ok(false);
     };
 
+    let repository = Repository::new(
+        &package_version.metadata_repository_url,
+        &package_version.metadata_repository_provider,
+    );
+
+    let Some(provider) = provider::create_metadata_provider(&repository) else {
+        warning!("Cannot create metadata provider for {}, skipping check", package_id.style());
+        return Ok(false);
+    };
+
     let mut prebuilds_url = package_version.prebuilds_repository_url.clone();
     let mut prebuilds_provider = package_version.prebuilds_repository_provider.clone();
 
     if prebuilds_url.is_none() {
-        let repository = Repository::new(
-            &package_version.metadata_repository_url,
-            &package_version.metadata_repository_provider,
-        );
-
-        let Some(provider) = provider::create_metadata_provider(&repository) else {
-            warning!("Cannot create metadata provider for {}, skipping check", package_id.style());
-            return Ok(false);
-        };
-
         let repo_metadata = match provider.read_repository_metadata() {
             Ok(meta) => meta,
             Err(e) => {
@@ -100,7 +100,7 @@ fn check_package_alterations(package_id: &PackageId, register: &PackageRegister,
         return Ok(false);
     };
 
-    let provider = match provider::create_prebuild_provider_from_url(prebuilds_url, prebuilds_provider) {
+    let prebuild_provider = match provider::create_prebuild_provider_from_url(prebuilds_url, prebuilds_provider) {
         Some(provider) => provider,
         None => {
             warning!("Cannot create prebuild provider for {}, skipping check", package_id.style());
@@ -108,9 +108,24 @@ fn check_package_alterations(package_id: &PackageId, register: &PackageRegister,
         },
     };
 
+    // Request prebuilds list
+    let prebuilds_list = match provider.read_prebuilds_list(&package_id.name, &package_id.version) {
+        Ok(prebuilds_list) => prebuilds_list,
+        Err(e) => {
+            warning!("Cannot read prebuild list for {}, skipping check.", package_id.style());
+            debug!(err: e, "Retrieving prebuilds list failed");
+            return Ok(false);
+        },
+    };
+
+    // Retrieve prebuild_id to use
+    let Some((prebuild_id, _)) = prebuilds_list.get_best_prebuild(&Target::current()) else {
+        warning!("Cannot find prebuild to create for {}, skipping packaging.", package_id.style());
+        return Ok(false);
+    };
+
     let revision = package_version.revisions.len() as u64;
-    let prebuild_id = Target::current().architecture.to_string();
-    let prebuild_meta = match provider.get_prebuild_meta(package_id, revision, &prebuild_id) {
+    let prebuild_meta = match prebuild_provider.get_prebuild_meta(package_id, revision, &prebuild_id) {
         Ok(prebuild_meta) => prebuild_meta,
         Err(e) => {
             warning!(
