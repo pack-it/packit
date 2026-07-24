@@ -304,7 +304,7 @@ impl<'a> PortableRepoCreator<'a> {
             Ok(prebuild_meta) => prebuild_meta,
             // Only try to package locally if the current target is the target we generate a portable repo for
             Err(RepositoryError::PrebuildNotFound { .. }) if self.target == Target::current() => {
-                packager::package(self.config, package_id, &destination, revision)?;
+                packager::package(self.config, package_id, &destination, revision, &prebuild_id)?;
                 return Ok(());
             },
             Err(e) => return Err(e.into()),
