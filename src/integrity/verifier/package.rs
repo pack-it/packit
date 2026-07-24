@@ -646,7 +646,7 @@ fn check_package_test(package_id: &PackageId, register: &PackageRegister, config
             );
             Ok(false)
         },
-        Err(ScriptError::ScriptFailed(..)) => Ok(true),
+        Err(ScriptError::ScriptFailed { .. }) => Ok(true),
         Err(e) => Err(e.into()),
     }
 }
