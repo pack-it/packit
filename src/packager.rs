@@ -15,10 +15,7 @@ use crate::{
     config::Config,
     installer::types::PackageId,
     platforms::TargetArchitecture,
-    repositories::{
-        error::RepositoryError,
-        types::{Checksum, FileSize, PrebuildFileMeta},
-    },
+    repositories::types::{Checksum, FileSize, PrebuildFileMeta},
     utils::ioerror::{self, IOResultExt},
 };
 
@@ -32,9 +29,6 @@ pub enum PackagerError {
 
     #[error("Cannot parse filename, because it contains invalid unicode")]
     InvalidUnicodeError,
-
-    #[error("Cannot get revisions from repository manager")]
-    RepositoryError(#[from] RepositoryError),
 
     #[error("Cannot parse package size to u32")]
     SizeParseError(#[source] std::num::TryFromIntError),

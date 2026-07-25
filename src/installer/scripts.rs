@@ -8,12 +8,12 @@ use std::{
 };
 
 use bytes::Bytes;
+use colored::Colorize;
 use tempfile::{NamedTempFile, TempDir};
 use thiserror::Error;
 
 use crate::{
     builder::{BuildEnv, BuildEnvError},
-    cli::display::logging::warning,
     config::Config,
     installer::types::{PackageId, PackageName},
     platforms::{Os, TargetArchitecture, tool_detection::error::ToolDetectionError},
@@ -39,8 +39,11 @@ pub enum ScriptError {
     #[error("Cannot find script '{0}'")]
     ScriptNotFound(String),
 
-    #[error("Script executed with status code {0}")]
-    ScriptFailed(i32),
+    #[error("{}", display_script_failed(*exit_code, last_lines))]
+    ScriptFailed {
+        exit_code: Option<i32>,
+        last_lines: Vec<String>,
+    },
 
     #[error("Cannot run script")]
     RunError(#[source] std::io::Error),
@@ -63,11 +66,35 @@ pub enum ScriptError {
     #[error("Error while detecting tool on the system")]
     ToolDetectionError(#[from] ToolDetectionError),
 
-    #[error("IOError during a script operation")]
+    #[error("IO error during a script operation")]
     IOError(#[from] ioerror::IOError),
 }
 
 pub type Result<T> = core::result::Result<T, ScriptError>;
+
+/// Helper function to display the `ScriptError::ScriptFailed` error message and script lines.
+fn display_script_failed(exit_code: Option<i32>, lines: &[String]) -> String {
+    // Output script execution message
+    let mut output = String::from("Script executed ");
+    match exit_code {
+        Some(exit_code) => output.push_str(&format!("with status code {exit_code}")),
+        None => output.push_str("without a status code"),
+    }
+
+    // Output last script lines if available
+    if !lines.is_empty() {
+        output.push_str("\n\n");
+        output.push_str("Last lines of script output:");
+        output.push('\n');
+
+        for line in lines {
+            output.push_str(&format!("{}", line.black())); // The format here is a workaround for getting styling to work
+            output.push('\n');
+        }
+    }
+
+    output
+}
 
 /// Describes the number of lines that should be captured from a script that has `show_output` disabled.
 const MAX_CAPTURED_OUTPUT_LINES: usize = 10;
@@ -222,28 +249,18 @@ fn run_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, env: Environm
         }
     }
 
-    // Display status to user
+    // Wait for exit and return error if script fails
     let status = process.wait().map_err(ScriptError::RunError)?;
     match status.code() {
         Some(0) => Ok(()),
-        Some(code) => {
-            warning!("Script executed with status code {code}");
-            if !last_lines.is_empty() {
-                eprintln!("Last lines of script output:");
-                last_lines.iter().for_each(|x| eprintln!("{x}"));
-            }
-
-            Err(ScriptError::ScriptFailed(code))
-        },
-        None => {
-            warning!("Script executed without a status code");
-            if !last_lines.is_empty() {
-                eprintln!("Last lines of script output:");
-                last_lines.iter().for_each(|x| eprintln!("{x}"));
-            }
-
-            Err(ScriptError::ScriptFailed(-1))
-        },
+        Some(code) => Err(ScriptError::ScriptFailed {
+            exit_code: Some(code),
+            last_lines: last_lines.into(),
+        }),
+        None => Err(ScriptError::ScriptFailed {
+            exit_code: None,
+            last_lines: last_lines.into(),
+        }),
     }
 }
 
