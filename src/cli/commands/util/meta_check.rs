@@ -113,7 +113,10 @@ impl Display for MetaIssue {
         }
 
         if self.checks_skipped {
-            writeln!(f, "Some checks were skipped, due to errors continueing was not possible")?;
+            writeln!(
+                f,
+                "Due to the issue above other checks regarding this item were not possible, so some checks were skipped"
+            )?;
         }
 
         Ok(())
@@ -344,9 +347,17 @@ impl MetaCheck {
             self.issues.push(MetaIssue::default(&description));
         }
 
+        // Check if externel test files exist
+        for file in &package_version_meta.external_test_files {
+            if !matches!(self.provider.read_file_bytes(package_name, file), Ok(Some(_))) {
+                let description = format!("External file '{}' specified in {} could not be found", file, package_id.style());
+                self.issues.push(MetaIssue::default(&description));
+            }
+        }
+
         // Check all targets
         for (bounds, target) in &package_version_meta.targets {
-            self.check_target(bounds, target, &package_version_meta.sources);
+            self.check_target(bounds, target, &package_version_meta.sources, &package_id);
 
             // Check if there are duplicates between the package version and target fields
             for dependency in &target.dependencies {
@@ -503,7 +514,15 @@ impl MetaCheck {
         }
     }
 
-    fn check_target(&mut self, bounds: &TargetBounds, target: &PackageTarget, sources: &Sources) {
+    fn check_target(&mut self, bounds: &TargetBounds, target: &PackageTarget, sources: &Sources, package_id: &PackageId) {
+        // Check if externel test files exist
+        for file in &target.external_test_files {
+            if !matches!(self.provider.read_file_bytes(&package_id.name, file), Ok(Some(_))) {
+                let description = format!("External file '{}' specified for target '{}' could not be found", file, bounds);
+                self.issues.push(MetaIssue::default(&description));
+            }
+        }
+
         // Check if the source reference in the given target is required, or not present when it should be
         match &target.source {
             Some(source_reference) => match &sources {
