@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 - Fix error messages not representing the error correctly.
+- Fix MSVC detection not finding VS Build Tools.
 
 
 ## [v0.0.3](https://github.com/pack-it/packit/compare/0.0.2...0.0.3) - 2026-07-11

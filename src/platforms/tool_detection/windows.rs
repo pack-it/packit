@@ -2,9 +2,12 @@
 use std::{fs, path::PathBuf, process::Command, str::FromStr};
 
 use crate::{
-    cli::display::logging::debug,
+    cli::display::logging::{debug, error},
     installer::types::Version,
-    platforms::tool_detection::{error::Result, tools::Msvc},
+    platforms::{
+        TargetArchitecture,
+        tool_detection::{error::Result, tools::Msvc},
+    },
     utils::ioerror::IOResultExt,
 };
 
@@ -18,9 +21,21 @@ pub fn detect_msvc() -> Result<Option<Msvc>> {
         return Ok(None);
     }
 
+    // Create vswhere requirement based on target architecture
+    let target = match TargetArchitecture::current() {
+        TargetArchitecture::WindowsX86_64Msvc => "x86.x64",
+        TargetArchitecture::WindowsAarch64Msvc => "ARM64",
+        _ => {
+            error!(msg: "Reached Windows specific code on non-Windows target");
+            return Ok(None);
+        },
+    };
+    let requirement = format!("Microsoft.VisualStudio.Component.VC.Tools.{target}");
+
     // Read Visual Studio install path from `vswhere`
     let mut command = Command::new(vswhere);
     command.args(["-latest", "-property", "installationPath"]);
+    command.args(["-products", "*", "-requires", &requirement]);
     let output = command.output().err_operation("run vswhere command")?;
     let vs_path = str::from_utf8(&output.stdout)?;
     let vs_path = PathBuf::from(vs_path.trim());
