@@ -5,7 +5,7 @@ use crate::{
     cli::display::{logging::error, standard_print, styled::Styled},
     installer::types::{OptionalPackageId, PackageId, PackageName, Version},
     register::package_register::PackageRegister,
-    repositories::{error::PackageNotFoundReason, manager::RepositoryManager, types::IndexMeta},
+    repositories::{error::PackageNotFoundReason, manager::RepositoryManager},
     utils::{fuzzy, unwrap_or_exit::UnwrapOrExit},
 };
 
@@ -60,19 +60,6 @@ pub fn repository_package(package_name: &PackageName, manager: &RepositoryManage
         if let Some(fuzzy_match) = fuzzy_match {
             println!("Did you mean: {}?", fuzzy_match.style());
         }
-    }
-
-    exit(1);
-}
-
-/// Shows an error that the package (name) cannot be found (in a certain index) and a fuzzy alternative if it can be found.
-/// Then exits at the end.
-pub fn index_package(package_name: &PackageName, index: &IndexMeta) -> ! {
-    error!(msg: "Package {} cannot be found", package_name.style());
-
-    let fuzzy_match = fuzzy::index_search(index, package_name);
-    if let Some(fuzzy_match) = fuzzy_match {
-        println!("Did you mean: {}?", fuzzy_match.style());
     }
 
     exit(1);
