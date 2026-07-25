@@ -189,12 +189,12 @@ impl MetaCheck {
             Err(RepositoryError::IOError(..)) | Err(RepositoryError::UnsuccessfulRequest(..)) => {
                 let fuzzy_match = fuzzy::index_search(index, package_name);
                 let suggestion = match fuzzy_match {
-                    Some(fuzzy_match) => format!("\nDid you mean: {}?", fuzzy_match.style()),
-                    None => "".to_string(),
+                    Some(fuzzy_match) => Some(fuzzy_match.style().to_string()),
+                    None => None,
                 };
 
-                let description = format!("Package {} could not be found{}", package_name.style(), suggestion);
-                let issue = MetaIssue::default(description).set_checks_skipped(true);
+                let description = format!("Package {} could not be found", package_name.style());
+                let issue = MetaIssue::default(description).set_checks_skipped(true).set_suggestion(suggestion);
                 self.issues.push(issue);
             },
             Err(RepositoryError::ParseError(e)) => {
@@ -327,12 +327,15 @@ impl MetaCheck {
             };
 
             // Check source checksum
-            if source.checksum != Checksum::from_bytes(&bytes) {
-                self.issues.push(MetaIssue::default(format!(
+            let correct_checksum = Checksum::from_bytes(&bytes);
+            if source.checksum != correct_checksum {
+                let description = format!(
                     "Checksum '{}' of {} in target '{target}' with url '{url}' is incorrect",
                     source.checksum,
                     package_id.style(),
-                )));
+                );
+
+                self.issues.push(MetaIssue::default(description).set_suggestion(Some(correct_checksum.to_string())));
             }
 
             // Check source bytes
@@ -388,12 +391,15 @@ impl MetaCheck {
             };
 
             // Check source checksum
-            if patch.checksum != Checksum::from_bytes(&bytes) {
-                self.issues.push(MetaIssue::default(format!(
+            let correct_checksum = Checksum::from_bytes(&bytes);
+            if patch.checksum != correct_checksum {
+                let description = format!(
                     "Checksum '{}' of {} in target '{target}' patch {patch_number} with url '{url}' is incorrect",
                     patch.checksum,
                     package_id.style(),
-                )));
+                );
+
+                self.issues.push(MetaIssue::default(description).set_suggestion(Some(correct_checksum.to_string())));
             }
         }
     }

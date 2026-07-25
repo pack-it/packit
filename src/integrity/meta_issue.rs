@@ -10,6 +10,7 @@ pub struct MetaIssue {
     pub description: String,
     pub checks_skipped: bool,
     pub error: Option<Box<dyn Error>>,
+    pub suggestion: Option<String>,
 }
 
 impl MetaIssue {
@@ -19,6 +20,7 @@ impl MetaIssue {
             description,
             checks_skipped: false,
             error: None,
+            suggestion: None,
         }
     }
 
@@ -36,6 +38,11 @@ impl MetaIssue {
         self.error = Some(error);
         self
     }
+
+    pub fn set_suggestion(mut self, suggestion: Option<String>) -> Self {
+        self.suggestion = suggestion;
+        self
+    }
 }
 
 impl Display for MetaIssue {
@@ -47,6 +54,10 @@ impl Display for MetaIssue {
         };
 
         writeln!(f, "{}: {}", prefix, self.description)?;
+
+        if let Some(suggestion) = &self.suggestion {
+            writeln!(f, "Maybe try this suggestion: {suggestion}")?;
+        }
 
         if let Some(error) = &self.error {
             error!(&**error);
