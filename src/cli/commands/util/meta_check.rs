@@ -2,14 +2,13 @@
 use std::{fs, process::exit};
 
 use clap::Args;
-
 use url::Url;
 
 use crate::{
     cli::{commands::HandleCommand, display::logging::error},
     config::{Config, Repository},
     installer::types::PackageName,
-    integrity::meta_check::MetaCheck,
+    integrity::metadata::MetaCheck,
     repositories::provider::{self},
     utils::unwrap_or_exit::UnwrapOrExit,
 };
@@ -36,6 +35,8 @@ impl HandleCommand for MetaCheckArgs {
 }
 
 impl MetaCheckArgs {
+    /// Gets the repository based on the user input (can be a repository id, url or path).
+    /// If the repository input is none of these an error is shown and the function exits with code 1.
     fn get_repository(&self, config: &Config) -> Repository {
         if let Some(repository) = config.repositories.get(&self.repository) {
             return repository.clone();

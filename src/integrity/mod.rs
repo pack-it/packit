@@ -2,8 +2,7 @@
 mod checks;
 pub mod error;
 mod issue;
-pub mod meta_check;
-mod meta_issue;
+pub mod metadata;
 mod repairer;
 mod utils;
 mod verifier;

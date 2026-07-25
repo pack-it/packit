@@ -5,6 +5,7 @@ use colored::Colorize;
 
 use crate::cli::display::logging::error;
 
+/// Represents an issue found with the metadata checks.
 pub struct MetaIssue {
     pub issue_type: IssueType,
     pub description: String,
@@ -14,6 +15,7 @@ pub struct MetaIssue {
 }
 
 impl MetaIssue {
+    /// Creates a default `MetaIssue`.
     pub fn default(description: String) -> Self {
         Self {
             issue_type: IssueType::Breaking,
@@ -74,6 +76,7 @@ impl Display for MetaIssue {
     }
 }
 
+/// Represents different types of issues.
 pub enum IssueType {
     // Cannot continue with checks
     Fatal,

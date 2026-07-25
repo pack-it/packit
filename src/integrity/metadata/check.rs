@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use crate::{
     cli::display::{ProgressBar, aligned_print::PairAligner, logging::error, styled::Styled},
     installer::types::{PackageId, PackageName},
-    integrity::meta_issue::{IssueType, MetaIssue},
+    integrity::metadata::issue::{IssueType, MetaIssue},
     repositories::{
         error::RepositoryError,
         provider::MetadataProvider,
@@ -16,6 +16,7 @@ use crate::{
     utils::{fuzzy, requests},
 };
 
+/// The `MetaCheck` is used during metadata checks and holds information about the issues.
 pub struct MetaCheck {
     repository: String,
     provider: Box<dyn MetadataProvider>,
@@ -33,6 +34,8 @@ impl MetaCheck {
         }
     }
 
+    /// Checks the metadata of the repository defined in `MetaCheck`. If a package name is given, only that package is checked.
+    /// Otherwise the `index.toml` is used to check all the packages.
     pub fn check(&mut self, package_name: Option<PackageName>) {
         let repository_meta = match self.provider.read_repository_metadata() {
             Ok(repository_meta) => repository_meta,
@@ -68,6 +71,7 @@ impl MetaCheck {
         }
     }
 
+    /// Checks the metadata of a package. Then iterates over all specified versions to check those as well.
     fn check_package_meta(&mut self, index: &IndexMeta, package_name: &PackageName, repository_meta: &RepositoryMeta) {
         let Some(package_meta) = self.read_package_meta(index, package_name) else {
             return;
@@ -138,6 +142,18 @@ impl MetaCheck {
             }
         }
 
+        // Check for disabled before deprecation in package meta
+        if let Some(deprecation) = &package_meta.deprecation
+            && let Some(disabled_from) = &deprecation.disabled_from
+            && deprecation.deprecated_from > *disabled_from
+        {
+            self.issues.push(MetaIssue::default(format!(
+                "Package {} is disabled on '{disabled_from}' before deprecation on '{}'",
+                package_name.style(),
+                deprecation.deprecated_from
+            )));
+        }
+
         // Check if listed versions exist (cannot be parsed) and do package version specific metadata checks
         for version in &package_meta.versions {
             let package_id = PackageId::new(package_name.clone(), version.clone());
@@ -189,11 +205,16 @@ impl MetaCheck {
         }
     }
 
+    /// Reads the package metadata. Returns the package metadata if it can be found and read. If the package
+    /// could not be found a package not found issue is created. If the package could not be parsed a parse
+    /// issue is created. For any other errors the error is immediately printed.
     fn read_package_meta(&mut self, index: &IndexMeta, package_name: &PackageName) -> Option<PackageMeta> {
         match self.provider.read_package(package_name) {
             Ok(package) => return Some(package),
             Err(RepositoryError::IOError(..)) | Err(RepositoryError::UnsuccessfulRequest(..)) => {
                 let fuzzy_match = fuzzy::index_search(index, package_name);
+
+                #[expect(clippy::manual_map)]
                 let suggestion = match fuzzy_match {
                     Some(fuzzy_match) => Some(fuzzy_match.style().to_string()),
                     None => None,
@@ -208,14 +229,13 @@ impl MetaCheck {
                 let issue = MetaIssue::default(description);
                 self.issues.push(issue.set_error(Box::new(e)));
             },
-            Err(e) => {
-                error!(e, "Cannot read package");
-            },
+            Err(e) => error!(e, "Cannot read package {}", package_name.style()),
         };
 
         None
     }
 
+    /// Checks the metadata of a package version. Then iterates over all specified targets to check those as well.
     fn check_package_version_meta(&mut self, package_name: &PackageName, package_version_meta: &PackageVersionMeta) {
         let package_id = PackageId::new(package_name.clone(), package_version_meta.version.clone());
 
@@ -305,6 +325,7 @@ impl MetaCheck {
         }
     }
 
+    /// Checks a specific source specified in a package version. Then iterates over all specified patches to check those as well.
     fn check_source(&mut self, package_id: &PackageId, target: &str, source: &Source) {
         for url in source.mirrors.iter().chain(std::iter::once(&source.url)) {
             // Check source URL existence
@@ -361,6 +382,7 @@ impl MetaCheck {
         }
     }
 
+    /// Checks a specific patch specified in a source.
     fn check_patch(&mut self, package_id: &PackageId, patch_number: &u32, patch: &Patch, target: &str) {
         // Check all patch URL's
         for url in patch.mirrors.iter().chain(std::iter::once(&patch.url)) {
@@ -411,6 +433,7 @@ impl MetaCheck {
         }
     }
 
+    /// Checks a specific target.
     fn check_target(&mut self, bounds: &TargetBounds, target: &PackageTarget, sources: &Sources, package_id: &PackageId) {
         // Check if externel test files exist
         for file in &target.external_test_files {
@@ -450,6 +473,7 @@ impl MetaCheck {
         }
     }
 
+    /// Checks the licenses of a package.
     fn check_license(&mut self, license: &Licenses, package_id: &PackageId) {
         let licenses = match &license {
             Licenses::Unknown => return,
@@ -471,19 +495,9 @@ impl MetaCheck {
         }
     }
 
+    /// Checks the deprecation (and disable) dates of a package and a package version. The dates from the
+    /// package meta and package version meta are compared with each other.
     fn check_deprecation_dates(&mut self, package_id: &PackageId, package_meta: &PackageMeta, package_version_meta: &PackageVersionMeta) {
-        // Check for disabled before deprecation in package meta
-        if let Some(deprecation) = &package_meta.deprecation
-            && let Some(disabled_from) = &deprecation.disabled_from
-            && deprecation.deprecated_from > *disabled_from
-        {
-            self.issues.push(MetaIssue::default(format!(
-                "Package {} is disabled on '{disabled_from}' before deprecation on '{}'",
-                package_id.name.style(),
-                deprecation.deprecated_from
-            )));
-        }
-
         // Check for disabled before deprecation in package version meta
         if let Some(deprecation) = &package_version_meta.deprecation
             && let Some(disabled_from) = &deprecation.disabled_from
@@ -533,6 +547,7 @@ impl MetaCheck {
         }
     }
 
+    /// Displays the issues which have been found.
     pub fn display_issues(&self) {
         if self.issues.is_empty() {
             println!("No issues were found!");
