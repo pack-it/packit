@@ -258,6 +258,11 @@ impl<'a> PortableRepoCreator<'a> {
         let targets_path = package_path.join(package_id.version.to_string()).join("targets.toml");
         self.write_metadata(version_meta, targets_path, false)?;
 
+        // Download prebuilds.toml
+        let prebuilds_list = self.repository_manager.read_prebuilds_list(repository_id, &package_id.name, &package_id.version)?;
+        let prebuilds_path = package_path.join(package_id.version.to_string()).join("prebuilds.toml");
+        self.write_metadata(prebuilds_list, prebuilds_path, false)?;
+
         let target_bounds = package_version.get_best_target(&self.target)?;
 
         // Download scripts
@@ -297,20 +302,25 @@ impl<'a> PortableRepoCreator<'a> {
         let destination = destination.join("prebuilds").join(&target).join(&prefix).join(&package_id.name);
         fs::create_dir_all(&destination).err_with_path("create dirs", &destination)?;
 
+        // Get id of the prebuild
+        let prebuilds_list = self.repository_manager.read_prebuilds_list(repository_id, &package_id.name, &package_id.version)?;
+        let (prebuild_id, _) = prebuilds_list.get_best_prebuild(&Target::current()).ok_or(PortableRepoError::PrebuildNotFound {
+            package_id: package_id.clone(),
+        })?;
+
         // Get checksum
         let revision = package_version.get_revision_count();
-        let prebuild_id = self.target.architecture.to_string();
-        let prebuild_meta = match self.repository_manager.get_prebuild_meta(repository_id, package_id, revision, &prebuild_id) {
+        let prebuild_meta = match self.repository_manager.get_prebuild_meta(repository_id, package_id, revision, prebuild_id) {
             Ok(prebuild_meta) => prebuild_meta,
             // Only try to package locally if the current target is the target we generate a portable repo for
             Err(RepositoryError::PrebuildNotFound { .. }) if self.target == Target::current() => {
-                packager::package(self.config, package_id, &destination, revision, &prebuild_id)?;
+                packager::package(self.config, package_id, &destination, revision, prebuild_id)?;
                 return Ok(());
             },
             Err(e) => return Err(e.into()),
         };
 
-        let (_, prebuild) = self.repository_manager.read_prebuild(repository_id, package_id, revision, &prebuild_id)?;
+        let (_, prebuild) = self.repository_manager.read_prebuild(repository_id, package_id, revision, prebuild_id)?;
 
         // Write to file
         let prebuild_name = format!("{package_id}-{revision}-{target}.tar.gz");
