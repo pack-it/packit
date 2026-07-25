@@ -55,8 +55,8 @@ impl Display for MetaIssue {
 
         writeln!(f, "{}: {}", prefix, self.description)?;
 
-        if let Some(suggestion) = &self.suggestion {
-            writeln!(f, "Maybe try this suggestion: {suggestion}")?;
+        if let Some(suggestion) = &&self.suggestion {
+            writeln!(f, " \u{2514}\u{2500}> Maybe try this suggestion: {suggestion}")?;
         }
 
         if let Some(error) = &self.error {

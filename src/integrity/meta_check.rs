@@ -2,7 +2,7 @@
 use std::collections::HashSet;
 
 use crate::{
-    cli::display::{aligned_print::PairAligner, logging::error, styled::Styled},
+    cli::display::{ProgressBar, aligned_print::PairAligner, logging::error, styled::Styled},
     installer::types::{PackageId, PackageName},
     integrity::meta_issue::{IssueType, MetaIssue},
     repositories::{
@@ -20,6 +20,7 @@ pub struct MetaCheck {
     repository: String,
     provider: Box<dyn MetadataProvider>,
     issues: Vec<MetaIssue>,
+    checks_skipped: bool,
 }
 
 impl MetaCheck {
@@ -28,6 +29,7 @@ impl MetaCheck {
             repository: repository.to_string(),
             provider,
             issues: Vec::new(),
+            checks_skipped: false,
         }
     }
 
@@ -57,7 +59,11 @@ impl MetaCheck {
             None => &index.supported_packages,
         };
 
-        for package_name in packages {
+        let mut progress_bar = ProgressBar::new(packages.len() as u64, "Checking".to_string());
+        for (i, package_name) in packages.iter().enumerate() {
+            let message = format!("Checking {}", package_name.style());
+            progress_bar.adjust_prefix(message);
+            progress_bar.set_position(i as u64);
             self.check_package_meta(&index, package_name, &repository_meta);
         }
     }
@@ -322,6 +328,7 @@ impl MetaCheck {
                 Ok(bytes) => bytes,
                 Err(e) => {
                     error!(e, "Unable to get file bytes");
+                    self.checks_skipped = true;
                     continue;
                 },
             };
@@ -384,8 +391,8 @@ impl MetaCheck {
             let bytes = match response.bytes() {
                 Ok(bytes) => bytes,
                 Err(e) => {
-                    // TODO: Checks are still skipped (occurs somewhere else to), but not a Packit metadata issue
                     error!(e, "Unable to get file bytes");
+                    self.checks_skipped = true;
                     continue;
                 },
             };
@@ -557,6 +564,10 @@ impl MetaCheck {
             if matches!(issue.issue_type, IssueType::Fatal) {
                 return;
             }
+        }
+
+        if self.checks_skipped {
+            println!("Some checks were skipped due to errors NOT created by invalid metadata");
         }
     }
 }
