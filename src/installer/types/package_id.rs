@@ -56,7 +56,7 @@ impl Serialize for PackageId {
 impl Display for PackageId {
     /// Formats the `PackageId` into the following format: <name>@<version>.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}@{}", &self.name, &self.version)?;
+        write!(f, "{}@{}", self.name, self.version)?;
         Ok(())
     }
 }

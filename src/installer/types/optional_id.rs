@@ -45,7 +45,7 @@ impl FromStr for OptionalPackageId {
 impl Display for OptionalPackageId {
     /// Formats the `OptionalPackageId` into the following format: <name>[@version].
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", &self.name)?;
+        write!(f, "{}", self.name)?;
 
         if let Some(version) = &self.version {
             write!(f, "@{}", version)?;

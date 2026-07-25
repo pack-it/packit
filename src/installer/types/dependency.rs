@@ -73,7 +73,7 @@ impl Display for Dependency {
             }
         }
 
-        write!(f, "{}@{}", &self.name, &string_version)?;
+        write!(f, "{}@{}", self.name, string_version)?;
         Ok(())
     }
 }

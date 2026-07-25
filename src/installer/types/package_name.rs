@@ -50,7 +50,7 @@ impl Serialize for PackageName {
 impl Display for PackageName {
     /// Formats a `PackageName` into the following format: <name>.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", &self.0)?;
+        write!(f, "{}", self.0)?;
         Ok(())
     }
 }

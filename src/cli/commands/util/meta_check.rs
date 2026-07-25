@@ -73,10 +73,10 @@ struct MetaIssue {
 }
 
 impl MetaIssue {
-    pub fn default(description: &str) -> Self {
+    pub fn default(description: String) -> Self {
         Self {
             issue_type: IssueType::Breaking,
-            description: description.to_string(),
+            description,
             checks_skipped: false,
             error: None,
         }
@@ -154,7 +154,7 @@ impl MetaCheck {
             Ok(repository_meta) => repository_meta,
             Err(e) => {
                 let description = format!("Repository metadata from '{}' could not be parsed", self.repository);
-                let issue = MetaIssue::default(&description);
+                let issue = MetaIssue::default(description);
                 self.issues.push(issue.set_error(Box::new(e)).set_checks_skipped(true).set_issue_type(IssueType::Fatal));
                 return;
             },
@@ -164,7 +164,7 @@ impl MetaCheck {
             Ok(index_meta) => index_meta,
             Err(e) => {
                 let description = format!("Repository 'index.toml' from '{}' cannot be parsed", self.repository);
-                let issue = MetaIssue::default(&description);
+                let issue = MetaIssue::default(description);
                 self.issues.push(issue.set_error(Box::new(e)).set_checks_skipped(true).set_issue_type(IssueType::Fatal));
                 return;
             },
@@ -176,7 +176,7 @@ impl MetaCheck {
         };
 
         for package_name in packages {
-            self.check_package_meta(&index, &package_name, &repository_meta);
+            self.check_package_meta(&index, package_name, &repository_meta);
         }
     }
 
@@ -189,48 +189,45 @@ impl MetaCheck {
         if let Some(required_version) = &package_meta.required_packit_version
             && repository_meta.required_packit_version >= *required_version
         {
-            let description = format!(
-                "The required Packit version for {} is lower then or equal to repository '{}' required Packit version",
+            self.issues.push(MetaIssue::default(format!(
+                "The required Packit version for {} is higher then or equal to repository '{}' required Packit version",
                 package_name.style(),
                 self.repository
-            );
-            self.issues.push(MetaIssue::default(&description));
+            )));
         }
 
         if let Some(homepage) = &package_meta.homepage {
             if !requests::check_url(homepage).unwrap_or_exit(1) {
-                let description = format!("The homepage URL of {} does not exist", package_name.style());
-                self.issues.push(MetaIssue::default(&description));
+                let description = format!("The homepage URL '{homepage}' of {} does not exist", package_name.style());
+                self.issues.push(MetaIssue::default(description));
             }
 
             // Check if URL is https
             if !homepage.starts_with("https") {
-                let description = format!("The homepage URL '{}' of {} is not https", homepage, package_name.style());
-                self.issues.push(MetaIssue::default(&description).set_issue_type(IssueType::Warning));
+                let description = format!("The homepage URL '{homepage}' of {} is not https", package_name.style());
+                self.issues.push(MetaIssue::default(description).set_issue_type(IssueType::Warning));
             }
         }
 
         // Check that at least one version is specified
         if package_meta.versions.is_empty() {
             let description = format!("Package {} has no versions listed in its metadata", package_meta.name.style());
-            self.issues.push(MetaIssue::default(&description));
+            self.issues.push(MetaIssue::default(description));
         }
 
         // Check that at least one target bound is specified
         if package_meta.supported_versions.keys().len() == 0 {
             let description = format!("Package {} has no target listed in its metadata", package_meta.name.style());
-            self.issues.push(MetaIssue::default(&description));
+            self.issues.push(MetaIssue::default(description));
         }
 
         // Check that the version intervals for each target are non-empty
         for (target, version_interval) in &package_meta.supported_versions {
             if version_interval.is_empty() {
-                let description = format!(
-                    "No version interval specified for target '{}' from package {}",
-                    target,
+                self.issues.push(MetaIssue::default(format!(
+                    "No version interval specified for target '{target}' from package {}",
                     package_meta.name.style()
-                );
-                self.issues.push(MetaIssue::default(&description));
+                )));
             }
         }
 
@@ -241,23 +238,22 @@ impl MetaCheck {
             };
 
             if !conflict_meta.conflicts_with.contains(package_name) {
-                let description = format!(
+                self.issues.push(MetaIssue::default(format!(
                     "Conflict from package {} is not specified as conflict in package {}",
                     package_name.style(),
                     conflict_meta.name.style()
-                );
-                self.issues.push(MetaIssue::default(&description));
+                )));
             }
         }
 
         // Check if listed versions exist (cannot be parsed) and do package version specific metadata checks
         for version in &package_meta.versions {
             let package_id = PackageId::new(package_name.clone(), version.clone());
-            let package_version = match self.provider.read_package_version(package_name, &version) {
+            let package_version = match self.provider.read_package_version(package_name, version) {
                 Ok(package_version) => package_version,
                 Err(e) => {
                     let description = format!("Package {} could not be parsed", package_id.style());
-                    let issue = MetaIssue::default(&description);
+                    let issue = MetaIssue::default(description);
                     self.issues.push(issue.set_error(Box::new(e)).set_checks_skipped(true));
                     continue;
                 },
@@ -267,55 +263,52 @@ impl MetaCheck {
             if let Some(required_version) = &package_version.required_packit_version
                 && repository_meta.required_packit_version >= *required_version
             {
-                let description = format!(
-                    "The required Packit version for {} is lower then or equal to the required version in repository '{}'",
+                self.issues.push(MetaIssue::default(format!(
+                    "The required Packit version for {} is higher then or equal to the required version in repository '{}'",
                     package_name.style(),
                     self.repository
-                );
-                self.issues.push(MetaIssue::default(&description));
+                )));
             }
 
             // Check if the package version required Packit version is lower then the package required Packit version
             if let Some(package_required_version) = &package_meta.required_packit_version
                 && let Some(required_version) = &package_version.required_packit_version
-                && package_required_version <= required_version
+                && package_required_version >= required_version
             {
-                let description = format!(
-                    "The required Packit version for package {} is lower then or equal to the required version in package version {}",
+                self.issues.push(MetaIssue::default(format!(
+                    "The required Packit version for package {} is higher then or equal to the required version in package version {}",
                     package_name.style(),
                     package_id.style()
-                );
-                self.issues.push(MetaIssue::default(&description));
+                )));
             }
 
             // Check if the version exists in any of the supported ranges
             if !package_meta.supported_versions.values().any(|i| i.covers(version)) {
-                let description = format!(
+                self.issues.push(MetaIssue::default(format!(
                     "Version {} in {} doesn't exist in any target support range",
                     version.style(),
                     package_name.style()
-                );
-                self.issues.push(MetaIssue::default(&description));
+                )));
             }
 
             self.check_deprecation_dates(&package_id, &package_meta, &package_version);
 
-            self.check_package_version_meta(&package_name, &package_version);
+            self.check_package_version_meta(package_name, &package_version);
         }
     }
 
     fn read_package_meta(&mut self, index: &IndexMeta, package_name: &PackageName) -> Option<PackageMeta> {
-        match self.provider.read_package(&package_name) {
+        match self.provider.read_package(package_name) {
             Ok(package) => return Some(package),
             Err(RepositoryError::IOError(..)) => not_found::index_package(package_name, index),
             Err(e) => {
                 let description = format!("Package {} could not be parsed", package_name.style());
-                let issue = MetaIssue::default(&description);
+                let issue = MetaIssue::default(description);
                 self.issues.push(issue.set_error(Box::new(e)));
             },
         };
 
-        return None;
+        None
     }
 
     fn check_package_version_meta(&mut self, package_name: &PackageName, package_version_meta: &PackageVersionMeta) {
@@ -327,13 +320,13 @@ impl MetaCheck {
         // Check sources
         let sources = match &package_version_meta.sources {
             Sources::Single(source) => vec![("all", source)],
-            Sources::Named(sources) => sources.into_iter().map(|(k, v)| (k.as_str(), v)).collect(),
+            Sources::Named(sources) => sources.iter().map(|(k, v)| (k.as_str(), v)).collect(),
         };
 
         // Check if the sources aren't empty
         if sources.is_empty() {
             let description = format!("No sources for package {}", package_id.style());
-            self.issues.push(MetaIssue::default(&description));
+            self.issues.push(MetaIssue::default(description));
         }
 
         // Check all sources
@@ -344,14 +337,14 @@ impl MetaCheck {
         // Check if the targets aren't empty
         if package_version_meta.targets.is_empty() {
             let description = format!("No targets for package {}", package_id.style());
-            self.issues.push(MetaIssue::default(&description));
+            self.issues.push(MetaIssue::default(description));
         }
 
         // Check if externel test files exist
         for file in &package_version_meta.external_test_files {
             if !matches!(self.provider.read_file_bytes(package_name, file), Ok(Some(_))) {
-                let description = format!("External file '{}' specified in {} could not be found", file, package_id.style());
-                self.issues.push(MetaIssue::default(&description));
+                let description = format!("External file '{file}' specified in {} could not be found", package_id.style());
+                self.issues.push(MetaIssue::default(description));
             }
         }
 
@@ -362,38 +355,46 @@ impl MetaCheck {
             // Check if there are duplicates between the package version and target fields
             for dependency in &target.dependencies {
                 if package_version_meta.dependencies.iter().any(|d| d.get_name() == dependency.get_name()) {
-                    let description = format!("Duplicate dependency '{}' found in {}", dependency, package_id.style());
-                    self.issues.push(MetaIssue::default(&description));
+                    let description = format!("Duplicate dependency '{dependency}' found in {}", package_id.style());
+                    self.issues.push(MetaIssue::default(description));
                 }
             }
 
             for dependency in &target.build_dependencies {
                 if package_version_meta.build_dependencies.iter().any(|d| d.get_name() == dependency.get_name()) {
-                    let description = format!("Duplicate build dependency '{}' found in {}", dependency, package_id.style());
-                    self.issues.push(MetaIssue::default(&description));
+                    let description = format!("Duplicate build dependency '{dependency}' found in {}", package_id.style());
+                    self.issues.push(MetaIssue::default(description));
                 }
             }
 
             if let Some(skip_symlinking) = target.skip_symlinking {
                 if package_version_meta.skip_symlinking || !skip_symlinking {
-                    let description = format!("Field 'skip_symlinking' unnecessarily specified on target '{}'", bounds);
-                    self.issues.push(MetaIssue::default(&description));
+                    self.issues.push(MetaIssue::default(format!(
+                        "Field 'skip_symlinking' unnecessarily specified on target '{bounds}' in {}",
+                        package_id.style()
+                    )));
                 }
             }
 
             for file in &target.external_test_files {
                 if package_version_meta.external_test_files.contains(file) {
-                    let description = format!("Duplicate external test file '{}' found in {}", file, package_id.style());
-                    self.issues.push(MetaIssue::default(&description));
+                    self.issues.push(MetaIssue::default(format!(
+                        "Duplicate external test file '{file}' found in target '{bounds}' in {}",
+                        package_id.style()
+                    )));
                 }
             }
 
             for (key, value) in &target.script_args {
-                if let Some(other_value) = package_version_meta.script_args.get(key) {
-                    if other_value == value {
-                        let description = format!("Duplicate script arg '{} = {}' found in {}", key, value, package_id.style());
-                        self.issues.push(MetaIssue::default(&description));
-                    }
+                let Some(other_value) = package_version_meta.script_args.get(key) else {
+                    continue;
+                };
+
+                if other_value == value {
+                    self.issues.push(MetaIssue::default(format!(
+                        "Duplicate script arg '{key} = {value}' found in target '{bounds}' in {}",
+                        package_id.style()
+                    )));
                 }
             }
         }
@@ -405,16 +406,16 @@ impl MetaCheck {
             let response = match requests::get(url) {
                 Ok(response) if response.status().is_success() => response,
                 _ => {
-                    let description = format!("The URL '{}' of {} target '{}' does not exist", url, package_id.style(), target);
-                    self.issues.push(MetaIssue::default(&description).set_checks_skipped(true));
+                    let description = format!("The URL '{url}' of {} target '{target}' does not exist", package_id.style());
+                    self.issues.push(MetaIssue::default(description).set_checks_skipped(true));
                     continue;
                 },
             };
 
             // Check if URL is https
             if !url.starts_with("https") {
-                let description = format!("The URL '{}' of {} target '{}' is not https", url, package_id.style(), target);
-                self.issues.push(MetaIssue::default(&description).set_issue_type(IssueType::Warning));
+                let description = format!("The URL '{url}' of {} target '{target}' is not https", package_id.style());
+                self.issues.push(MetaIssue::default(description).set_issue_type(IssueType::Warning));
             }
 
             // Get bytes from response
@@ -428,26 +429,20 @@ impl MetaCheck {
 
             // Check source checksum
             if source.checksum != Checksum::from_bytes(&bytes) {
-                let description = format!(
-                    "Checksum '{}' of {} target '{}' with url '{}' is incorrect",
+                self.issues.push(MetaIssue::default(format!(
+                    "Checksum '{}' of {} in target '{target}' with url '{url}' is incorrect",
                     source.checksum,
                     package_id.style(),
-                    target,
-                    url
-                );
-                self.issues.push(MetaIssue::default(&description));
+                )));
             }
 
             // Check source bytes
             if source.size.0 != bytes.len() as u32 {
-                let description = format!(
-                    "Size '{}' of {} target '{}' with url '{}' is incorrect",
+                self.issues.push(MetaIssue::default(format!(
+                    "Size '{}' of {} in target '{target}' with url '{url}' is incorrect",
                     source.size,
                     package_id.style(),
-                    target,
-                    url
-                );
-                self.issues.push(MetaIssue::default(&description));
+                )));
             }
         }
 
@@ -465,14 +460,11 @@ impl MetaCheck {
                 Ok(response) if response.status().is_success() => response,
                 _ => {
                     let description = format!(
-                        "The URL '{}' of {} target '{}' patch {} does not exist",
-                        url,
+                        "The URL '{url}' of {} in target '{target}' patch {patch_number} does not exist",
                         package_id.style(),
-                        target,
-                        patch_number
                     );
 
-                    self.issues.push(MetaIssue::default(&description).set_checks_skipped(true));
+                    self.issues.push(MetaIssue::default(description).set_checks_skipped(true));
                     continue;
                 },
             };
@@ -480,13 +472,10 @@ impl MetaCheck {
             // Check if URL is https
             if !url.starts_with("https") {
                 let description = format!(
-                    "The URL '{}' of {} target '{}' patch {} is not https",
-                    url,
+                    "The URL '{url}' of {} in target '{target}' patch {patch_number} is not https",
                     package_id.style(),
-                    target,
-                    patch_number
                 );
-                self.issues.push(MetaIssue::default(&description).set_issue_type(IssueType::Warning));
+                self.issues.push(MetaIssue::default(description).set_issue_type(IssueType::Warning));
             }
 
             // Get bytes from response
@@ -501,15 +490,11 @@ impl MetaCheck {
 
             // Check source checksum
             if patch.checksum != Checksum::from_bytes(&bytes) {
-                let description = format!(
-                    "Checksum '{}' of {} target '{}' patch {} with url '{}' is incorrect",
+                self.issues.push(MetaIssue::default(format!(
+                    "Checksum '{}' of {} in target '{target}' patch {patch_number} with url '{url}' is incorrect",
                     patch.checksum,
                     package_id.style(),
-                    target,
-                    patch_number,
-                    url
-                );
-                self.issues.push(MetaIssue::default(&description));
+                )));
             }
         }
     }
@@ -518,32 +503,38 @@ impl MetaCheck {
         // Check if externel test files exist
         for file in &target.external_test_files {
             if !matches!(self.provider.read_file_bytes(&package_id.name, file), Ok(Some(_))) {
-                let description = format!("External file '{}' specified for target '{}' could not be found", file, bounds);
-                self.issues.push(MetaIssue::default(&description));
+                self.issues.push(MetaIssue::default(format!(
+                    "External file '{file}' specified in {} for target '{bounds}' could not be found",
+                    package_id.style(),
+                )));
             }
         }
 
-        // Check if the source reference in the given target is required, or not present when it should be
-        match &target.source {
-            Some(source_reference) => match &sources {
-                Sources::Single(_) => {
-                    let description =
-                        format!("Found source reference '{source_reference}' for target '{bounds}', eventhough none was required");
-                    self.issues.push(MetaIssue::default(&description));
-                },
-                Sources::Named(sources) if !sources.contains_key(source_reference) => {
-                    let description = format!(
-                        "Source reference '{source_reference}' for target '{bounds}' could not be found in package version metadata"
-                    );
-                    self.issues.push(MetaIssue::default(&description));
-                },
-                Sources::Named(_) => {},
-            },
-            None if matches!(sources, Sources::Single(..)) => {},
+        // Check if there is a reference in the target when sources are target specific
+        let source_reference = match &target.source {
+            Some(source_reference) => source_reference,
+            None if matches!(sources, Sources::Single(..)) => return,
             None => {
-                let description = format!("No source reference found in target, eventhough sources are target specific");
-                self.issues.push(MetaIssue::default(&description));
+                self.issues.push(MetaIssue::default(format!(
+                    "No source reference found in {} for target '{bounds}', eventhough sources are target specific",
+                    package_id.style()
+                )));
+
+                return;
             },
+        };
+
+        // Check if the source references in the target are required and can be found
+        match &sources {
+            Sources::Single(_) => self.issues.push(MetaIssue::default(format!(
+                "Found source reference '{source_reference}' in {} for target '{bounds}', eventhough none was required",
+                package_id.style()
+            ))),
+            Sources::Named(sources) if !sources.contains_key(source_reference) => self.issues.push(MetaIssue::default(format!(
+                "Source reference '{source_reference}' for target '{bounds}' could not be found in package version metadata of {}",
+                package_id.style()
+            ))),
+            Sources::Named(_) => {},
         }
     }
 
@@ -557,13 +548,13 @@ impl MetaCheck {
 
         if licenses.is_empty() {
             let description = format!("License from {} not specified as unknown, but is empty", package_id.style());
-            self.issues.push(MetaIssue::default(&description));
+            self.issues.push(MetaIssue::default(description));
         }
 
         for license in licenses {
             if license.is_empty() {
-                let description = format!("Single license is empty in {}", package_id.style());
-                self.issues.push(MetaIssue::default(&description));
+                let description = format!("Single license in {} is empty", package_id.style());
+                self.issues.push(MetaIssue::default(description));
             }
         }
     }
@@ -574,13 +565,11 @@ impl MetaCheck {
             && let Some(disabled_from) = &deprecation.disabled_from
             && deprecation.deprecated_from > *disabled_from
         {
-            let description = format!(
-                "Package {} is disabled on '{}' before deprecation on '{}'",
+            self.issues.push(MetaIssue::default(format!(
+                "Package {} is disabled on '{disabled_from}' before deprecation on '{}'",
                 package_id.name.style(),
-                disabled_from,
                 deprecation.deprecated_from
-            );
-            self.issues.push(MetaIssue::default(&description));
+            )));
         }
 
         // Check for disabled before deprecation in package version meta
@@ -588,13 +577,11 @@ impl MetaCheck {
             && let Some(disabled_from) = &deprecation.disabled_from
             && deprecation.deprecated_from > *disabled_from
         {
-            let description = format!(
-                "Package {} is disabled on '{}' before deprecation on '{}'",
+            self.issues.push(MetaIssue::default(format!(
+                "Package {} is disabled on '{disabled_from}' before deprecation on '{}'",
                 package_id.style(),
-                disabled_from,
                 deprecation.deprecated_from
-            );
-            self.issues.push(MetaIssue::default(&description));
+            )));
         }
 
         // Check deprecation dates
@@ -607,14 +594,13 @@ impl MetaCheck {
         };
 
         if package_deprecation.deprecated_from <= version_deprecation.deprecated_from {
-            let description = format!(
+            self.issues.push(MetaIssue::default(format!(
                 "The deprecation at '{}' of package {} happens earlier then package version {} at '{}'",
                 package_deprecation.deprecated_from,
                 package_id.name.style(),
                 package_id.style(),
                 version_deprecation.deprecated_from
-            );
-            self.issues.push(MetaIssue::default(&description));
+            )));
         }
 
         // Check disabled dates
@@ -627,14 +613,11 @@ impl MetaCheck {
         };
 
         if disabled_from <= version_disabled_from {
-            let description = format!(
-                "The package {} disabled from '{}' is earlier then package version {} disabled from '{}'",
+            self.issues.push(MetaIssue::default(format!(
+                "The package {} disabled from '{disabled_from}' is earlier then package version {} disabled from '{version_disabled_from}'",
                 package_id.name.style(),
-                disabled_from,
                 package_id.style(),
-                version_disabled_from
-            );
-            self.issues.push(MetaIssue::default(&description));
+            )));
         }
     }
 
@@ -644,7 +627,6 @@ impl MetaCheck {
             return;
         }
 
-        // TODO: Issue overview
         let mut count_fatal = 0;
         let mut count_breaking = 0;
         let mut count_warning = 0;

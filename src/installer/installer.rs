@@ -300,7 +300,7 @@ impl<'a> Installer<'a> {
     /// Returns an `InstallerError::ChecksumError` if the pre-build checksum doesn't match.
     fn download_prebuild(&self, repository_id: &str, package: &PackageId, revision: u64, destination_dir: impl AsRef<Path>) -> Result<()> {
         // Show download spinner
-        let spinner_message = format!("Downloading {} prebuild from '{}'", &package.name.style(), repository_id);
+        let spinner_message = format!("Downloading {} prebuild from '{}'", package.name.style(), repository_id);
         let spinner = Spinner::new(spinner_message);
         spinner.show();
 
