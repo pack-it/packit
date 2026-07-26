@@ -47,10 +47,10 @@ impl MetadataProvider for FileSystemMetadataProvider {
         Ok(toml::de::from_str(&data)?)
     }
 
-    fn read_prebuilds_list(&self, package: &PackageName, version: &Version) -> Result<PrebuildsList> {
+    fn read_prebuilds_list(&self, package: &PackageName, version: &Version, package_meta: &PackageMeta) -> Result<PrebuildsList> {
         let path = self.path.join("packages").join(package.to_string()).join(version.to_string()).join("prebuilds.toml");
         if !path.exists() {
-            return Ok(PrebuildsList::default());
+            return Ok(PrebuildsList::default(package_meta.supported_versions.keys()));
         }
 
         let data = Self::read_file_string(path)?;

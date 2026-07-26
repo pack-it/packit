@@ -82,8 +82,17 @@ impl PackageArgs {
             return;
         };
 
+        // Request package metadata
+        let package_meta = match provider.read_package(&package_id.name) {
+            Ok(package_meta) => package_meta,
+            Err(e) => {
+                error!(e, "Cannot read package metadata of {}, skipping packaging.", package_id.style());
+                return;
+            },
+        };
+
         // Request prebuilds list
-        let prebuilds_list = match provider.read_prebuilds_list(&package_id.name, &package_id.version) {
+        let prebuilds_list = match provider.read_prebuilds_list(&package_id.name, &package_id.version, &package_meta) {
             Ok(prebuilds_list) => prebuilds_list,
             Err(e) => {
                 error!(e, "Cannot read prebuild list for {}, skipping packaging.", package_id.style());

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
@@ -60,14 +60,23 @@ impl PrebuildsList {
             _ => None,
         }
     }
-}
 
-// TODO: refactor: also targets that are not supported are in this list by default now.
-impl Default for PrebuildsList {
-    /// Creates a default `PrebuildsList`, containing a prebuild for all available targets.
-    fn default() -> Self {
+    /// Creates a default `PrebuildsList`, containing a prebuild for all supported targets.
+    pub fn default<'a>(supported_targets: impl Iterator<Item = &'a TargetBounds>) -> Self {
+        // Extract only supported targets from the given target bounds
+        let mut targets = HashSet::new();
+        for supported_target in supported_targets {
+            match &supported_target.name {
+                TargetName::Architecture(architecture) => {
+                    targets.insert(architecture);
+                },
+                TargetName::Os(os) => targets.extend(TargetArchitecture::values().iter().filter(|x| x.get_os() == *os)),
+                TargetName::Unix => targets.extend(TargetArchitecture::values().iter().filter(|x| x.get_os().is_unix())),
+            }
+        }
+
         let mut prebuilds = HashMap::new();
-        for architecture in TargetArchitecture::values() {
+        for architecture in targets {
             let target = TargetBounds {
                 name: TargetName::Architecture(architecture.clone()),
                 addition: None,

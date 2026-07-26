@@ -108,8 +108,18 @@ fn check_package_alterations(package_id: &PackageId, register: &PackageRegister,
         },
     };
 
+    // Request package metadata
+    let package_meta = match provider.read_package(&package_id.name) {
+        Ok(package_meta) => package_meta,
+        Err(e) => {
+            warning!("Cannot read package metadata of {}, skipping check.", package_id.style());
+            debug!(err: e, "Retrieving package metadata failed");
+            return Ok(false);
+        },
+    };
+
     // Request prebuilds list
-    let prebuilds_list = match provider.read_prebuilds_list(&package_id.name, &package_id.version) {
+    let prebuilds_list = match provider.read_prebuilds_list(&package_id.name, &package_id.version, &package_meta) {
         Ok(prebuilds_list) => prebuilds_list,
         Err(e) => {
             warning!("Cannot read prebuild list for {}, skipping check.", package_id.style());
