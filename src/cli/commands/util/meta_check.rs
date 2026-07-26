@@ -17,13 +17,13 @@ use crate::{
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
-/// Checks the metedata of the given package in a repository or all packages in a repository if no package has been given.
+/// Checks the metadata of the given package in a repository or all packages in a repository if no package has been given.
 #[derive(Args, Debug)]
 pub struct MetaCheckArgs {
     /// The repository of the package(s). Can be a repository id specified in `Config.toml`, a path to a repo or a URL to a repo
     repository: String,
 
-    /// The package names to check
+    /// The names of the packages to check
     packages: Vec<PackageName>,
 }
 

@@ -26,21 +26,25 @@ impl MetaIssue {
         }
     }
 
+    /// Set the issue type.
     pub fn set_issue_type(mut self, issue_type: IssueType) -> Self {
         self.issue_type = issue_type;
         self
     }
 
+    /// Set the checks skipped value.
     pub fn set_checks_skipped(mut self, checks_skipped: bool) -> Self {
         self.checks_skipped = checks_skipped;
         self
     }
 
+    /// Set the error. Note that the error argument can only be `Some`.
     pub fn set_error(mut self, error: Box<dyn Error>) -> Self {
         self.error = Some(error);
         self
     }
 
+    /// Set a suggestion for the issue.
     pub fn set_suggestion(mut self, suggestion: Option<String>) -> Self {
         self.suggestion = suggestion;
         self

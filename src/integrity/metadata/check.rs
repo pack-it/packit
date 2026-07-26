@@ -23,6 +23,7 @@ pub struct MetaCheck {
 }
 
 impl MetaCheck {
+    /// Constructs a new `MetaCheck` with the given repository and metadata provider.
     pub fn new(repository: &str, provider: Box<dyn MetadataProvider>) -> Self {
         Self {
             repository: repository.to_string(),
@@ -75,18 +76,19 @@ impl MetaCheck {
             return;
         };
 
-        // Check if the package required Packit version is lower then the repository required Packit version
+        // Check if the package required Packit version is lower than the repository required Packit version
         if let Some(required_version) = &package_meta.required_packit_version
             && repository_meta.required_packit_version >= *required_version
         {
             self.issues.push(MetaIssue::default(format!(
-                "The required Packit version for {} is higher then or equal to repository '{}' required Packit version",
+                "The required Packit version for {} is lower than or equal to repository '{}' required Packit version",
                 package_name.style(),
                 self.repository
             )));
         }
 
         if let Some(homepage) = &package_meta.homepage {
+            // Check if the homepage exists
             match requests::check_url(homepage) {
                 Ok(exists) if !exists => {
                     let description = format!("The homepage URL '{homepage}' of {} does not exist", package_name.style());
@@ -127,6 +129,7 @@ impl MetaCheck {
 
         // Check conflict fields
         for conflict_package in &package_meta.conflicts_with {
+            // Skip package if it cannot be found (a conflicting package can be in a different repository)
             let Ok(conflict_meta) = self.provider.read_package(conflict_package) else {
                 continue;
             };
@@ -152,7 +155,7 @@ impl MetaCheck {
             )));
         }
 
-        // Check if listed versions exist (cannot be parsed) and do package version specific metadata checks
+        // Check if listed versions exist and do package version specific metadata checks
         for version in &package_meta.versions {
             let package_id = PackageId::new(package_name.clone(), version.clone());
             let package_version = match self.provider.read_package_version(package_name, version) {
@@ -165,24 +168,24 @@ impl MetaCheck {
                 },
             };
 
-            // Check if the package version required Packit version is lower then the repository required Packit version
+            // Check if the package version required Packit version is lower than the repository required Packit version
             if let Some(required_version) = &package_version.required_packit_version
                 && repository_meta.required_packit_version >= *required_version
             {
                 self.issues.push(MetaIssue::default(format!(
-                    "The required Packit version for {} is higher then or equal to the required version in repository '{}'",
+                    "The required Packit version for {} is lower than or equal to the required version in repository '{}'",
                     package_name.style(),
                     self.repository
                 )));
             }
 
-            // Check if the package version required Packit version is lower then the package required Packit version
+            // Check if the package version required Packit version is lower than the package required Packit version
             if let Some(package_required_version) = &package_meta.required_packit_version
                 && let Some(required_version) = &package_version.required_packit_version
                 && package_required_version >= required_version
             {
                 self.issues.push(MetaIssue::default(format!(
-                    "The required Packit version for package {} is higher then or equal to the required version in package version {}",
+                    "The required Packit version for package {} is higher than or equal to the required version in package version {}",
                     package_name.style(),
                     package_id.style()
                 )));
@@ -263,7 +266,7 @@ impl MetaCheck {
             self.issues.push(MetaIssue::default(description));
         }
 
-        // Check if externel test files exist
+        // Check if external test files exist
         for file in &package_version_meta.external_test_files {
             if !matches!(self.provider.read_file_bytes(package_name, file), Ok(Some(_))) {
                 let description = format!("External file '{file}' specified in {} could not be found", package_id.style());
@@ -481,20 +484,20 @@ impl MetaCheck {
         };
 
         if licenses.is_empty() {
-            let description = format!("License from {} not specified as unknown, but is empty", package_id.style());
+            let description = format!("List of licenses from {} is empty", package_id.style());
             self.issues.push(MetaIssue::default(description));
         }
 
         for license in licenses {
             if license.is_empty() {
-                let description = format!("Single license in {} is empty", package_id.style());
+                let description = format!("Package {} has an empty license", package_id.style());
                 self.issues.push(MetaIssue::default(description));
             }
         }
     }
 
-    /// Checks the deprecation (and disable) dates of a package and a package version. The dates from the
-    /// package meta and package version meta are compared with each other.
+    /// Checks the deprecation (and disable) dates of a package and a package version.
+    /// The dates from the package meta and package version meta are compared with each other.
     fn check_deprecation_dates(&mut self, package_id: &PackageId, package_meta: &PackageMeta, package_version_meta: &PackageVersionMeta) {
         // Check for disabled before deprecation in package version meta
         if let Some(deprecation) = &package_version_meta.deprecation
@@ -517,9 +520,10 @@ impl MetaCheck {
             return;
         };
 
+        // Check if the package deprecates before the package version
         if package_deprecation.deprecated_from <= version_deprecation.deprecated_from {
             self.issues.push(MetaIssue::default(format!(
-                "The deprecation at '{}' of package {} happens earlier then package version {} at '{}'",
+                "The deprecation at '{}' of package {} happens earlier than package version {} at '{}'",
                 package_deprecation.deprecated_from,
                 package_id.name.style(),
                 package_id.style(),
@@ -528,7 +532,7 @@ impl MetaCheck {
         }
 
         // Check disabled dates
-        let Some(disabled_from) = &package_deprecation.disabled_from else {
+        let Some(package_disabled_from) = &package_deprecation.disabled_from else {
             return;
         };
 
@@ -536,9 +540,10 @@ impl MetaCheck {
             return;
         };
 
-        if disabled_from <= version_disabled_from {
+        // Check if the package disables before the package version
+        if package_disabled_from <= version_disabled_from {
             self.issues.push(MetaIssue::default(format!(
-                "The package {} disabled from '{disabled_from}' is earlier then package version {} disabled from '{version_disabled_from}'",
+                "The package {} disabled from '{package_disabled_from}' is earlier than package version {} disabled from '{version_disabled_from}'",
                 package_id.name.style(),
                 package_id.style(),
             )));
