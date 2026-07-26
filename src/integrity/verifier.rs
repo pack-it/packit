@@ -117,6 +117,7 @@ impl Verifier {
         let issue = match check {
             Check::PackitGroup => general::check_packit_group(config)?,
             Check::StrayDirectory => general::check_stray_directories(config)?,
+            Check::InvalidFiles => general::check_invalid_files(packages, register, config)?,
             Check::RegisterConsistency => package::check_register_consistency(register, config)?,
             Check::StorageConsistency => package::check_storage_consistency(packages, config)?,
             Check::DependencyTree => package::check_dependency_tree(packages, register),
@@ -125,6 +126,7 @@ impl Verifier {
             Check::InvalidDependencies => package::check_invalid_dependencies(packages, register)?,
             Check::MissingDependents => package::check_missing_dependents(packages, register),
             Check::InvalidDependents => package::check_invalid_dependents(packages, register),
+            Check::MissingDependencySymlinks => package::check_missing_dir_dependencies(packages, register, config)?,
             Check::InvalidActive => package::check_invalid_active(&packages.iter().map(|p| p.name.clone()).collect(), register, config)?,
             Check::ForbiddenLink => package::check_forbidden_link(packages, register)?,
             Check::MissingLink => package::check_missing_link(packages, register, config)?,
@@ -176,11 +178,11 @@ impl Verifier {
 
     /// Gets the number of initial checks.
     pub fn get_initial_check_length(&self) -> usize {
-        Check::get_initial_checks().len()
+        Check::get_ordered_checks(Check::get_initial_checks()).len()
     }
 
     /// Gets the number of normal checks.
     pub fn get_check_length(&self) -> usize {
-        Check::get_checks().len()
+        Check::get_ordered_checks(Check::get_checks()).len()
     }
 }

@@ -26,6 +26,8 @@ pub enum Check {
     MissingLink,
     MissingDependencies,
     InvalidDependencies,
+    MissingDependencySymlinks,
+    InvalidFiles,
     Test,
 }
 
@@ -77,8 +79,17 @@ impl Check {
                 Self::MissingDependents,
                 Self::InvalidDependents,
             ],
+            Self::MissingDependencySymlinks => &[Self::DependencyTree],
+            Self::InvalidFiles => &[Self::DependencyTree],
             Self::Alterations => &[Self::StorageConsistency, Self::RegisterConsistency],
-            Self::Test => &[Self::ForbiddenLink, Self::MissingLink, Self::DependencyTree, Self::Alterations],
+            Self::Test => &[
+                Self::ForbiddenLink,
+                Self::MissingLink,
+                Self::DependencyTree,
+                Self::Alterations,
+                Self::MissingDependencySymlinks,
+                Self::InvalidFiles,
+            ],
         }
     }
 
@@ -109,6 +120,8 @@ impl Check {
             Self::MissingLink,
             Self::MissingDependencies,
             Self::InvalidDependencies,
+            Self::MissingDependencySymlinks,
+            Self::InvalidFiles,
             Self::Test,
         ]
     }

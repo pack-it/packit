@@ -263,6 +263,28 @@ pub fn fix_invalid_dependents(invalid: Vec<(PackageId, PackageId)>, register: &m
     }
 }
 
+/// Fixes the missing or incorrect dependency symlinks (incorrect meaning they point to the wrong file).
+pub fn fix_missing_dir_dependencies(missing: Vec<(PackageId, PackageId)>, config: &Config) -> Result<()> {
+    for (package, dependency) in missing {
+        let dependencies_dir = config.prefix_directory.join("dependencies").join(package.to_string());
+        let symlink_destination = config.prefix_directory.join("packages").join(&dependency.name).join(dependency.version.to_string());
+        let dependency_symlink = dependencies_dir.join(&dependency.name);
+
+        // Remove any existing symlink
+        _ = symlink::remove_symlink(&dependency_symlink);
+
+        // Make sure that the dependencies directory exists
+        if !fs::exists(&dependencies_dir).err_with_path("check existence of", &dependencies_dir)? {
+            fs::create_dir_all(&dependencies_dir).err_with_path("create dirs", &dependencies_dir)?;
+        }
+
+        // Create the correct symlink
+        symlink::create_symlink(&symlink_destination, &dependency_symlink)?;
+    }
+
+    Ok(())
+}
+
 /// Fixes the invalid active issue.
 pub fn fix_invalid_active(invalid: Vec<PackageName>, register: &mut PackageRegister, config: &Config) -> Result<()> {
     let symlinker = Symlinker::new(config);

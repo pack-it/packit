@@ -21,3 +21,17 @@ pub fn fix_stray_directories(strays: HashSet<PathBuf>) -> Result<()> {
 
     Ok(())
 }
+
+/// Removes all the invalid files. Note that symlinks aren't (and shouldn't be) traversed.
+pub fn fix_invalid_files(invalid: &Vec<PathBuf>) -> Result<()> {
+    for file in invalid {
+        if file.is_dir() {
+            fs::remove_dir_all(file).err_with_path("remove dirs", file)?;
+            continue;
+        }
+
+        fs::remove_file(file).err_with_path("remove file", file)?;
+    }
+
+    Ok(())
+}
