@@ -15,7 +15,7 @@ use crate::{
     packager,
     platforms::{
         Target,
-        symlink::{self, SymlinkError, create_symlink, platform::remove_symlink},
+        symlink::{self, SymlinkError},
     },
     register::package_register::PackageRegister,
     repositories::{
@@ -271,7 +271,7 @@ pub fn fix_missing_dir_dependencies(missing: Vec<(PackageId, PackageId)>, config
         let dependency_symlink = dependencies_dir.join(&dependency.name);
 
         // Remove any existing symlink
-        _ = remove_symlink(&dependency_symlink);
+        _ = symlink::remove_symlink(&dependency_symlink);
 
         // Make sure that the dependencies directory exists
         if !fs::exists(&dependencies_dir).err_with_path("check existence of", &dependencies_dir)? {
@@ -279,7 +279,7 @@ pub fn fix_missing_dir_dependencies(missing: Vec<(PackageId, PackageId)>, config
         }
 
         // Create the correct symlink
-        create_symlink(&symlink_destination, &dependency_symlink)?;
+        symlink::create_symlink(&symlink_destination, &dependency_symlink)?;
     }
 
     Ok(())
