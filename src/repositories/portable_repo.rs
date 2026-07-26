@@ -114,18 +114,7 @@ impl<'a> PortableRepoCreator<'a> {
                 self.repository_manager.read_package_and_version(&package_id.clone().into(), &self.target)?;
 
             if !self.exclude_prebuilds {
-                // Check if the package has a prebuild
-                let prebuild_meta = self.repository_manager.get_prebuild_meta(
-                    &repository_id,
-                    &package_id,
-                    package_version.get_revision_count(),
-                    &self.target.architecture.to_string(),
-                );
-                let found_prebuild = match prebuild_meta {
-                    Ok(_) => true,
-                    Err(RepositoryError::PrebuildNotFound { .. }) => false,
-                    Err(e) => return Err(e.into()),
-                };
+                let found_prebuild = self.is_prebuild_available(&repository_id, &package_id, package_version.get_revision_count())?;
 
                 // Check if prebuild is downloadable, or if package is installed
                 if !found_prebuild && (self.target != Target::current() || self.register.get_package_version(&package_id).is_none()) {
@@ -169,6 +158,24 @@ impl<'a> PortableRepoCreator<'a> {
         self.write_metadata(index_meta, destination.join("index.toml"), true)?;
 
         Ok(())
+    }
+
+    /// Checks if a prebuild is available for the given package and revision in the given repository.
+    /// Returns `true` if a prebuild is available, false otherwise.
+    fn is_prebuild_available(&self, repository_id: &str, package_id: &PackageId, revision: u64) -> Result<bool> {
+        // Get id of the prebuild
+        let prebuilds_list = self.repository_manager.read_prebuilds_list(&repository_id, &package_id.name, &package_id.version)?;
+        let Some((prebuild_id, _)) = prebuilds_list.get_best_prebuild(&Target::current()) else {
+            return Ok(false);
+        };
+
+        // Check if the package has a prebuild
+        let prebuild_meta = self.repository_manager.get_prebuild_meta(&repository_id, &package_id, revision, prebuild_id);
+        match prebuild_meta {
+            Ok(_) => Ok(true),
+            Err(RepositoryError::PrebuildNotFound { .. }) => Ok(false),
+            Err(e) => return Err(e.into()),
+        }
     }
 
     /// Creates a set of all packages that are in the dependency trees of the included packages.
@@ -298,8 +305,8 @@ impl<'a> PortableRepoCreator<'a> {
         destination: &Path,
     ) -> Result<()> {
         let prefix = package_id.name.chars().next().ok_or(PortableRepoError::EmptyPackageName)?.to_string();
-        let target = self.target.architecture.to_string();
-        let destination = destination.join("prebuilds").join(&target).join(&prefix).join(&package_id.name);
+        let prebuilds_dir = destination.join("prebuilds");
+        let destination = prebuilds_dir.join("packages").join(prefix).join(&package_id.name).join(package_id.version.to_string());
         fs::create_dir_all(&destination).err_with_path("create dirs", &destination)?;
 
         // Get id of the prebuild
@@ -323,9 +330,9 @@ impl<'a> PortableRepoCreator<'a> {
         let (_, prebuild) = self.repository_manager.read_prebuild(repository_id, package_id, revision, prebuild_id)?;
 
         // Write to file
-        let prebuild_name = format!("{package_id}-{revision}-{target}.tar.gz");
+        let prebuild_name = format!("{package_id}-{revision}-{prebuild_id}.tar.gz");
         let prebuild_path = destination.join(prebuild_name);
-        let prebuild_meta_name = format!("{package_id}-{revision}-{target}.toml");
+        let prebuild_meta_name = format!("{package_id}-{revision}-{prebuild_id}.toml");
         let prebuild_meta_path = destination.join(prebuild_meta_name);
         fs::write(&prebuild_path, &prebuild).err_with_path("write", prebuild_path)?;
         self.write_metadata(prebuild_meta, prebuild_meta_path, false)?;
