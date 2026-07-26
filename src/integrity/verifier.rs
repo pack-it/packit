@@ -125,6 +125,7 @@ impl Verifier {
             Check::InvalidDependencies => package::check_invalid_dependencies(packages, register)?,
             Check::MissingDependents => package::check_missing_dependents(packages, register),
             Check::InvalidDependents => package::check_invalid_dependents(packages, register),
+            Check::MissingDirDependencies => package::check_missing_dir_dependencies(packages, register, config)?,
             Check::InvalidActive => package::check_invalid_active(&packages.iter().map(|p| p.name.clone()).collect(), register, config)?,
             Check::ForbiddenLink => package::check_forbidden_link(packages, register)?,
             Check::MissingLink => package::check_missing_link(packages, register, config)?,

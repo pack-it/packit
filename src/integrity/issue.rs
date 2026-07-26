@@ -33,6 +33,9 @@ pub enum Issue {
     /// A list of packages which have invalid dependents `<child> : <invalid>`.
     InvalidDependents(Vec<(PackageId, PackageId)>),
 
+    /// A list of packages from which the dependencies in the dependencies directory are missing `<package> : <missing>`.
+    MissingDirDependencies(Vec<(PackageId, PackageId)>),
+
     /// A list of packages which are present in the Register.toml, but not in the package directory.
     InconsistentStorage(Vec<PackageId>),
 
@@ -153,6 +156,16 @@ impl Display for Issue {
                     writeln!(f, "{}", item)?;
                 }
             },
+            Issue::MissingDirDependencies(missing) => {
+                writeln!(f, "Missing dependencies in the dependencies directory")?;
+                writeln!(f, "The following dependencies are missing:")?;
+
+                for (package, missing_package) in missing {
+                    let item = format!("  - {} missing {}", package.style(), missing_package.style());
+
+                    writeln!(f, "{}", item)?;
+                }
+            },
             Issue::InconsistentStorage(package_ids) => {
                 writeln!(f, "Inconsistent storage")?;
                 let issue_explanation = "The following packages were found in Register.toml, but not in the Packit package directory:";
@@ -228,6 +241,7 @@ impl Issue {
             },
             Issue::MissingDependents(_) => "To fix this issue the dependents will be added to the package from which they are missing.",
             Issue::InvalidDependents(_) => "To fix this issue we remove the invalid dependents from the register.",
+            Issue::MissingDirDependencies(_) => "To fix this issue we create the necessary symlinks in the dependencies directory.",
             Issue::InconsistentStorage(_) => {
                 "To fix this issue the packages are temporarily removed from the register and then reinstalled."
             },

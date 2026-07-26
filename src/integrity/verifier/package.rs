@@ -520,6 +520,50 @@ fn invalid_dependencies_impl(package: &InstalledPackageVersion) -> Result<Vec<(P
     Ok(invalid)
 }
 
+/// Checks for missing dependencies in the dependencies directory of the given packages.
+/// Returns an `Issue::MissingDirDependencies` with the missing dependencies, or `None` if no dependencies are missing.
+pub fn check_missing_dir_dependencies(packages: &Vec<PackageId>, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
+    let mut missing = Vec::new();
+    for package in packages {
+        missing.extend(check_missing_package_dir_dependencies(package, register, config)?);
+    }
+
+    if missing.is_empty() {
+        return Ok(None);
+    }
+
+    Ok(Some(Issue::MissingDirDependencies(missing)))
+}
+
+/// Checks if a given package has missing dependencies in its dependencies directory.
+/// Returns a list of missing dependencies for the given package (can be empty).
+fn check_missing_package_dir_dependencies(
+    package_id: &PackageId,
+    register: &PackageRegister,
+    config: &Config,
+) -> Result<Vec<(PackageId, PackageId)>> {
+    let mut missing = Vec::new();
+
+    // If the package cannot be found we can't check dir dependencies issues
+    let Some(package_version) = register.get_package_version(package_id) else {
+        return Ok(missing);
+    };
+
+    // Check if the dependencies are also present in the dependencies directory
+    let dependencies_dir = config.prefix_directory.join("dependencies").join(package_id.to_string());
+    for dependency in &package_version.dependencies {
+        // Create the expected symlink destination
+        let expected_destination = config.prefix_directory.join("packages").join(&dependency.name).join(dependency.version.to_string());
+        let dependency_symlink = dependencies_dir.join(&dependency.name);
+        match fs::read_link(&dependency_symlink) {
+            Ok(symlink) if symlink == expected_destination => continue,
+            Ok(_) | Err(_) => missing.push((package_id.clone(), dependency.clone())),
+        }
+    }
+
+    Ok(missing)
+}
+
 /// Checks the completeness of the depedency trees from the given packages.
 /// Returns an `Issue::BrokenTree` or `None` if there are no packages missing from the dependency trees.
 pub fn check_dependency_tree(packages: &Vec<PackageId>, register: &PackageRegister) -> Option<Issue> {
