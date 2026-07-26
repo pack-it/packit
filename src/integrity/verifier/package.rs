@@ -533,7 +533,7 @@ pub fn check_missing_dir_dependencies(packages: &Vec<PackageId>, register: &Pack
         return Ok(None);
     }
 
-    Ok(Some(Issue::MissingDirDependencies(missing)))
+    Ok(Some(Issue::MissingDependencySymlinks(missing)))
 }
 
 /// Checks if a given package has missing dependencies in its dependencies directory
