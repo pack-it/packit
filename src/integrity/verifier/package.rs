@@ -520,7 +520,8 @@ fn invalid_dependencies_impl(package: &InstalledPackageVersion) -> Result<Vec<(P
     Ok(invalid)
 }
 
-/// Checks for missing dependencies in the dependencies directory of the given packages.
+/// Checks for missing dependencies in the dependencies directory of the given packages
+/// or dependency symlinks which point to the wrong directory.
 /// Returns an `Issue::MissingDirDependencies` with the missing dependencies, or `None` if no dependencies are missing.
 pub fn check_missing_dir_dependencies(packages: &Vec<PackageId>, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
     let mut missing = Vec::new();
@@ -535,7 +536,8 @@ pub fn check_missing_dir_dependencies(packages: &Vec<PackageId>, register: &Pack
     Ok(Some(Issue::MissingDirDependencies(missing)))
 }
 
-/// Checks if a given package has missing dependencies in its dependencies directory.
+/// Checks if a given package has missing dependencies in its dependencies directory
+/// or dependency symlinks which point to the wrong directory.
 /// Returns a list of missing dependencies for the given package (can be empty).
 fn check_missing_package_dir_dependencies(
     package_id: &PackageId,

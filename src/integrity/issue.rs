@@ -12,10 +12,10 @@ pub enum Issue {
     /// The user cannot write to the prefix directory (or one of its sub directories).
     IncorrectPermissions(HashSet<PathBuf>),
 
-    /// The Packit Config.toml is missing.
+    /// The Packit `Config.toml` is missing.
     MissingConfig,
 
-    /// The Packit Register.toml is missing.
+    /// The Packit `Register.toml` is missing.
     MissingRegister,
 
     /// A list of parents and their missing dependencies `<parent> : <missing>`.
@@ -33,13 +33,14 @@ pub enum Issue {
     /// A list of packages which have invalid dependents `<child> : <invalid>`.
     InvalidDependents(Vec<(PackageId, PackageId)>),
 
-    /// A list of packages from which the dependencies in the dependencies directory are missing `<package> : <missing>`.
+    /// A list of packages from which the dependencies in the dependencies directory are missing or incorrect `<package> : <missing>`.
+    /// Incorrect meaning that the symlinks point to wrong file.
     MissingDirDependencies(Vec<(PackageId, PackageId)>),
 
-    /// A list of packages which are present in the Register.toml, but not in the package directory.
+    /// A list of packages which are present in the `Register.toml`, but not in the package directory.
     InconsistentStorage(Vec<PackageId>),
 
-    /// A list of packages which are present in the package directory, but not in the Register.toml.
+    /// A list of packages which are present in the package directory, but not in the `Register.toml`.
     InconsistentRegister(HashSet<PackageId>),
 
     /// A list of packages which are changed (when they shouldn't be).

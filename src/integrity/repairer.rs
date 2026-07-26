@@ -45,6 +45,7 @@ impl Repairer {
             Issue::InvalidDependencies(invalid) => package::fix_invalid_dependencies(invalid, register)?,
             Issue::MissingDependents(missing) => package::fix_missing_dependents(missing, register),
             Issue::InvalidDependents(invalid) => package::fix_invalid_dependents(invalid, register),
+            Issue::MissingDirDependencies(missing) => package::fix_missing_dir_dependencies(missing, config)?,
             Issue::InvalidActive(invalid) => package::fix_invalid_active(invalid, register, config)?,
             Issue::ForbiddenLink(forbidden) => package::fix_forbidden_link(forbidden, register, config)?,
             Issue::MissingLinks(missing) => package::fix_missing_links(missing, register, config)?,
