@@ -104,7 +104,6 @@ impl Verifier {
     /// Returns and `Issue` if an issue is found, `None` if no issues are found.
     fn next_check_impl(&mut self, packages: &Vec<PackageId>, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
         let ordered_checks = Check::get_ordered_checks(Check::get_checks());
-        dbg!(&ordered_checks);
         let check = match ordered_checks.get(self.current_check) {
             Some(check) => check,
             None => return Ok(None),
@@ -179,11 +178,11 @@ impl Verifier {
 
     /// Gets the number of initial checks.
     pub fn get_initial_check_length(&self) -> usize {
-        Check::get_initial_checks().len()
+        Check::get_ordered_checks(Check::get_initial_checks()).len()
     }
 
     /// Gets the number of normal checks.
     pub fn get_check_length(&self) -> usize {
-        Check::get_checks().len()
+        Check::get_ordered_checks(Check::get_checks()).len()
     }
 }
