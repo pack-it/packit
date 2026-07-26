@@ -114,6 +114,17 @@ All available requirements for use with the `build_requirements` and `test_requi
 | `msvc` | The Microsoft Visual C++ toolchain, automatically adds `PACKIT_VS_PATH`, `PACKIT_VCVARSALL`, `PACKIT_VCVARSALL_ARCH` and `PACKIT_MSVC_VERSION` to the build environment. (Windows only) |
 
 
+### `prebuilds.toml`
+The package version directory can contain an optional `prebuilds.toml` file. This file describes which prebuilds can be generated for the package version. If the file is not available, a default list of prebuilds is assumed, consisting of a prebuild for each target architecture that is supported by the package.
+
+#### Prebuild fields
+A prebuild is specified by using `[prebuild.<prebuild-id>]`. Each prebuild can have the fields listed below.
+
+| Field     | Explanation                                                                                     |
+| --------- | ----------------------------------------------------------------------------------------------- |
+| `targets` | Defines a list of [target bounds](#target-bounds) that the prebuild can be used for. (required) |
+
+
 ### Target bounds
 
 The target bounds consist of a name, an addition and version bounds, the name is split up in three different categories.
