@@ -135,7 +135,7 @@ fn check_package_alterations(package_id: &PackageId, register: &PackageRegister,
     };
 
     let revision = package_version.revisions.len() as u64;
-    let prebuild_meta = match prebuild_provider.get_prebuild_meta(package_id, revision, &prebuild_id) {
+    let prebuild_meta = match prebuild_provider.get_prebuild_meta(package_id, revision, prebuild_id) {
         Ok(prebuild_meta) => prebuild_meta,
         Err(e) => {
             warning!(

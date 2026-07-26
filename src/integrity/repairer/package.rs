@@ -165,14 +165,14 @@ fn used_prebuild(
     package_version_meta: &PackageVersionMeta,
     install_path: &PathBuf,
 ) -> Result<bool> {
-    let prebuilds_list = manager.read_prebuilds_list(&repository_id, &package_id.name, &package_id.version)?;
+    let prebuilds_list = manager.read_prebuilds_list(repository_id, &package_id.name, &package_id.version)?;
 
     let Some((prebuild_id, _)) = prebuilds_list.get_best_prebuild(&Target::current()) else {
         return Ok(false);
     };
 
     let revisions = package_version_meta.get_revision_count();
-    match manager.get_prebuild_meta(&repository_id, package_id, revisions, &prebuild_id) {
+    match manager.get_prebuild_meta(repository_id, package_id, revisions, prebuild_id) {
         Ok(prebuild_meta) => {
             let compressed = packager::compress(install_path)?;
             let checksum = Checksum::from_bytes(&compressed);

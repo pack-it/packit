@@ -237,7 +237,7 @@ impl<'a> InstallTreeBuilder<'a> {
         self.checked_packages.insert(package_id.clone());
 
         // Check if a prebuild for the package is available
-        match self.find_prebuild(&install_meta, package_id) {
+        match self.find_prebuild(install_meta, package_id) {
             Ok(true) => return Ok(None),
             Ok(false) => {},
             Err(e) => error!(e),
