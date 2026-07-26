@@ -97,6 +97,38 @@ pub fn check_invalid_files(packages: &Vec<PackageId>, register: &PackageRegister
         invalid.extend(check_invalid_dependencies_files(package, register, config)?);
     }
 
+    // Check if the dependencies directory has wrong files
+    let dependencies_dir = config.prefix_directory.join("dependencies");
+    for file in fs::read_dir(&dependencies_dir).err_with_path("read", &dependencies_dir)? {
+        let file = file.err_with_path("iterate", &dependencies_dir)?;
+
+        // Check if the file is a directory
+        if let Ok(file_type) = file.file_type() {
+            if !file_type.is_dir() {
+                invalid.push(file.path());
+                continue;
+            }
+        }
+
+        // Get the file name (if it's not a valid unicode file name it shouldn't exist here)
+        let file_name = file.file_name();
+        let Some(file_name) = file_name.to_str() else {
+            invalid.push(file.path());
+            continue;
+        };
+
+        // Get the package id (if it's not a valid package id it shouldn't exist here)
+        let Ok(package_id) = PackageId::from_str(file_name) else {
+            invalid.push(file.path());
+            continue;
+        };
+
+        // If the file doesn't correspond to any installed packages it shouldn't be here
+        if register.iterate_all().all(|p| p.package_id != package_id) {
+            invalid.push(file.path());
+        }
+    }
+
     if invalid.is_empty() {
         return Ok(None);
     }
