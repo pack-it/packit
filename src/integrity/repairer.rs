@@ -37,10 +37,11 @@ impl Repairer {
     /// Note: The register is not saved after the fix is applied.
     pub fn fix(&mut self, issue: Issue, register: &mut PackageRegister, config: &Config, manager: &RepositoryManager) -> Result<()> {
         match issue {
+            Issue::StrayDirectories(strays) => general::fix_stray_directories(strays)?,
+            Issue::InvalidFiles(invalid) => general::fix_invalid_files(&invalid)?,
             Issue::BrokenTree(missing) => package::fix_broken_tree(missing, register, config, manager)?,
             Issue::InconsistentStorage(missing) => package::fix_inconsistent_storage(missing, register, config, manager)?,
             Issue::InconsistentRegister(missing) => package::fix_inconsistent_register(missing, register, config, manager)?,
-            Issue::StrayDirectories(strays) => general::fix_stray_directories(strays)?,
             Issue::MissingDependencies(missing) => package::fix_missing_dependencies(missing, register, manager)?,
             Issue::InvalidDependencies(invalid) => package::fix_invalid_dependencies(invalid, register)?,
             Issue::MissingDependents(missing) => package::fix_missing_dependents(missing, register),
