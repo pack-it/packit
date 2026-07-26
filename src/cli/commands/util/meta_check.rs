@@ -5,7 +5,11 @@ use clap::Args;
 use url::Url;
 
 use crate::{
-    cli::{commands::HandleCommand, display::logging::error},
+    cli::{
+        commands::HandleCommand,
+        display::{logging::error, standard_print},
+        parameter_checks,
+    },
     config::{Config, Repository},
     installer::types::PackageName,
     integrity::metadata::MetaCheck,
@@ -19,17 +23,25 @@ pub struct MetaCheckArgs {
     /// The repository of the package(s). Can be a repository id specified in `Config.toml`, a path to a repo or a URL to a repo
     repository: String,
 
-    /// The package metadata to check
-    package_name: Option<PackageName>,
+    /// The package names to check
+    packages: Vec<PackageName>,
 }
 
 impl HandleCommand for MetaCheckArgs {
     fn handle(&self) {
+        // Check for duplicates in the given packages
+        let duplicates = parameter_checks::get_package_duplicates(&self.packages);
+        if !duplicates.is_empty() {
+            error!(msg: "Duplicate package arguments are not allowed. The following duplicates were found:");
+            standard_print::print_list(duplicates.iter());
+            exit(1);
+        }
+
         let config = Config::from(&Config::get_default_path()).unwrap_or_exit(1);
         let repository = self.get_repository(&config);
         let provider = provider::create_metadata_provider(&repository).unwrap_or_exit_msg("Could not create metadata provider", 1);
         let mut meta_checker = MetaCheck::new(&self.repository, provider);
-        meta_checker.check(self.package_name.clone());
+        meta_checker.check(&self.packages);
         meta_checker.display_issues();
     }
 }

@@ -1,6 +1,4 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::collections::HashSet;
-
 use crate::{
     cli::display::{ProgressBar, aligned_print::PairAligner, logging::error, styled::Styled},
     installer::types::{PackageId, PackageName},
@@ -36,7 +34,7 @@ impl MetaCheck {
 
     /// Checks the metadata of the repository defined in `MetaCheck`. If a package name is given, only that package is checked.
     /// Otherwise the `index.toml` is used to check all the packages.
-    pub fn check(&mut self, package_name: Option<PackageName>) {
+    pub fn check(&mut self, packages: &Vec<PackageName>) {
         let repository_meta = match self.provider.read_repository_metadata() {
             Ok(repository_meta) => repository_meta,
             Err(e) => {
@@ -57,9 +55,9 @@ impl MetaCheck {
             },
         };
 
-        let packages = match &package_name {
-            Some(package) => &HashSet::from([package.clone()]),
-            None => &index.supported_packages,
+        let packages = match &packages.is_empty() {
+            false => packages,
+            true => &index.supported_packages.iter().cloned().collect(),
         };
 
         let mut progress_bar = ProgressBar::new(packages.len() as u64, "Checking".to_string());
