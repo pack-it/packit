@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 - The `build_requirements` and `test_requirements` fields, with the `msvc` requirement.
+- The `meta-check` utility command, which checks the metadata of a given repository.
 
 ### Changes
 - Change display of true and false values in the `info` and `search` commands.

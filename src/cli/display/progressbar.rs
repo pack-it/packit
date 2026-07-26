@@ -23,7 +23,7 @@ impl ProgressBar {
     }
 
     /// Sets the position of the progress bar.
-    pub fn set_position(&self, position: u64) {
+    pub fn set_position(&mut self, position: u64) {
         self.bar.set_position(position);
 
         // Finish the bar if the bar is full
@@ -34,5 +34,14 @@ impl ProgressBar {
             self.bar.set_style(style);
             self.bar.finish();
         }
+    }
+
+    /// Adjusts the prefix of the progress bar.
+    pub fn adjust_prefix(&mut self, prefix: String) {
+        self.prefix = prefix;
+
+        let template = format!("{} [{{wide_bar:.white}}] [{{percent}}%]", self.prefix);
+        let style = ProgressStyle::with_template(&template).expect("Expected template to be correct.").progress_chars("\u{2501}\u{2501} ");
+        self.bar.set_style(style);
     }
 }

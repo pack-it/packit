@@ -242,7 +242,7 @@ impl<'a> Builder<'a> {
             && let Some(mirror) = mirrors.next()
         {
             // Update spinner with new download url
-            spinner.adjust_message(format!("Downloading {download_description} from alternative '{}'", &mirror.cyan()));
+            spinner.adjust_message(format!("Downloading {download_description} from alternative '{}'", mirror.cyan()));
 
             // Get response from alternative mirror
             response = requests::get(mirror).map_err(BuilderError::RequestError);

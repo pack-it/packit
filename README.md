@@ -98,6 +98,9 @@ Calculates the checksum of the file at the given url. Also shows the size of the
 #### `pit util portable-repo <DESTINATION> <PACKAGE-NAME>@<VERSION> ... [--exclude-prebuilds] [--skip-dependency-resolution]`
 Generates a portable repository at the given destination, containing the specified packages. Normally all dependencies of the packages are added automatically, when the `--skip-dependency-resolution` flag is given, this step is skipped. If the `--exclude-prebuilds` flag is given, prebuilds are not included in the portable repository and are not required for the generation.
 
+#### `pit util meta-check <REPOSITORY> [PACKAGE-NAME]`
+Checks the metadata from the given repository. The `<REPOSITORY>` argument can be a URL or a path to the repository or a repository id specified in `Config.toml`. If a package name is given only that package and the given repository are checked. If no package name is given all packages specified in the `index.toml` from the repository are checked.
+
 #### `pit config show`
 Shows the current configuration.
 
@@ -126,21 +129,21 @@ Initializes the Packit environment by setting up all required files and director
 ## Config
 All available fields in the config are listed below. The [`pit config`](#pit-config-show) command can also be used to change the config.
 
-| Field               | Explanation                                                       |
-| ------------------- | ----------------------------------------------------------------- |
+| Field               | Explanation                                                                                                 |
+| ------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `prefix_directory`  | Defines the directory used for installing packages, see [File structure](#file-structure) for the defaults on each platform. |
-| `repositories_rank` | Defines the order of repositories to search for a package.        |
+| `repositories_rank` | Defines the order of repositories to search for a package. |
 | `multiuser`         | True to run Packit in multiuser mode, false for single user mode. |
 
 ### Repositories
 
-| Field                | Explanation                                                                            |
-| -------------------- | -------------------------------------------------------------------------------------- |
-| `url`                | Defines the url to the repository.                                                     |
-| `provider`           | Defines the provider of the repository, defaults to `web`.                             |
-| `prebuilds_url`      | Defines the url of the prebuilds repository for this package repository.               |
-| `prebuilds_provider` | Defines the provider of the prebuilds repository, defaults to `fs`.                    |
-| `disable_prebuilds`  | True to disable prebuild usage for the repository, false to use prebuild if available. |
+| Field                 | Explanation                                                                             |
+| --------------------- | --------------------------------------------------------------------------------------- |
+| `url`                 | Defines the url to the repository.                                                      |
+| `provider`            | Defines the provider of the repository, defaults to `web`.                              |
+| `prebuilds_url`       | Defines the url of the prebuilds repository for this package repository.                |
+| `prebuilds_provider`  | Defines the provider of the prebuilds repository, defaults to `fs`.                     |
+| `disable_prebuilds`   | True to disable prebuild usage for the repository, false to use prebuild if available.  |
 
 Specifying a prebuild repository is optional and overrides the value specified in the repository metadata.
 

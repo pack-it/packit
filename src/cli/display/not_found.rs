@@ -49,7 +49,8 @@ pub fn register_package(package_name: &PackageName, register: &PackageRegister) 
     exit(1);
 }
 
-/// Shows an error that the package (name) cannot be found (in the repository) and a fuzzy alternative when the given reason is `PackageNotFoundReason::NotFound`. Then exits at the end.
+/// Shows an error that the package (name) cannot be found (in the repository) and a fuzzy alternative when the given
+/// reason is `PackageNotFoundReason::NotFound`. Then exits at the end.
 pub fn repository_package(package_name: &PackageName, manager: &RepositoryManager, reason: PackageNotFoundReason) -> ! {
     error!(msg: "Package {} cannot be found: {reason}", package_name.style());
 
