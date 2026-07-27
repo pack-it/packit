@@ -19,6 +19,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Change display of true and false values in the `info` and `search` commands.
 - Prebuilds now have a toml metadata file instead of the checksum file, containing the checksum and size of the prebuild.
 - The license field in the metadata now allows nesting and specifying exceptions.
+- The `prebuild_url` and `prebuild_provider` fields in the `repository.toml` file now represent a suggestion that needs to be added to the config in order to be used.
+- The `Alterations` verifier check is now enabled for packages that were installed from a prebuild.
 
 ### Fixed
 - Fix error messages not representing the error correctly.
