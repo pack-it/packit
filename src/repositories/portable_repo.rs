@@ -308,17 +308,18 @@ impl<'a> PortableRepoCreator<'a> {
 
         // Get id of the prebuild
         let prebuilds_list = self.repository_manager.read_prebuilds_list(repository_id, &package_id.name, &package_id.version)?;
-        let (prebuild_id, _) = prebuilds_list.get_best_prebuild(&Target::current()).ok_or(PortableRepoError::PrebuildNotFound {
-            package_id: package_id.clone(),
-        })?;
+        let (prebuild_id, prebuild_meta) =
+            prebuilds_list.get_best_prebuild(&Target::current()).ok_or(PortableRepoError::PrebuildNotFound {
+                package_id: package_id.clone(),
+            })?;
 
         // Get checksum
         let revision = package_version.get_revision_count();
-        let prebuild_meta = match self.repository_manager.get_prebuild_meta(repository_id, package_id, revision, prebuild_id) {
-            Ok(prebuild_meta) => prebuild_meta,
+        let prebuild_file_meta = match self.repository_manager.get_prebuild_meta(repository_id, package_id, revision, prebuild_id) {
+            Ok(prebuild_file_meta) => prebuild_file_meta,
             // Only try to package locally if the current target is the target we generate a portable repo for
             Err(RepositoryError::PrebuildNotFound { .. }) if self.target == Target::current() => {
-                packager::package(self.config, package_id, &destination, revision, prebuild_id)?;
+                packager::package(self.config, package_id, &destination, revision, prebuild_id, prebuild_meta)?;
                 return Ok(());
             },
             Err(e) => return Err(e.into()),
@@ -332,7 +333,7 @@ impl<'a> PortableRepoCreator<'a> {
         let prebuild_meta_name = format!("{package_id}-{revision}-{prebuild_id}.toml");
         let prebuild_meta_path = destination.join(prebuild_meta_name);
         fs::write(&prebuild_path, &prebuild).err_with_path("write", prebuild_path)?;
-        self.write_metadata(prebuild_meta, prebuild_meta_path, false)?;
+        self.write_metadata(prebuild_file_meta, prebuild_meta_path, false)?;
 
         Ok(())
     }

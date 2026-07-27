@@ -19,7 +19,6 @@ pub use self::package_target::PackageTarget;
 pub use self::package_version::PackageVersionMeta;
 
 pub use self::prebuilds::PrebuildFileMeta;
-#[expect(unused_imports)]
 pub use self::prebuilds::PrebuildMeta;
 pub use self::prebuilds::PrebuildsList;
 
