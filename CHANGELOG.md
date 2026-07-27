@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changes
 - Change display of true and false values in the `info` and `search` commands.
 - Prebuilds now have a toml metadata file instead of the checksum file, containing the checksum and size of the prebuild.
+- The license field in the metadata now allows nesting and specifying exceptions.
 
 ### Fixed
 - Fix error messages not representing the error correctly.

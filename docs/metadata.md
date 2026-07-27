@@ -183,6 +183,20 @@ The following operators are available:
 | `\|`        | Can be used to chain multiple bounds, works as an or operator, for example `3\|5-7`. |
 
 
+### Licenses
+
+The licenses can be specified in a structured format, that is easy to parse. A license field can have the following values:
+- `"<license-name>"`
+- `{ name = "<license-name>", with = ["<exception>"] }`
+- `{ any = [ <license-value> ] }`
+- `{ all = [ <license-value> ] }`
+
+The `any` and `all` fields allow nesting another license value. For example, the following complex license is valid: <br>
+`{ all = [ "License-1", { any = [ { name = "License-2", with = ["Exception-1", "Exception-2"] }, "License-3" ] } ] }`
+
+Note that the `<license-name>` and `<exception>` should be a SPDX Identifier if it is available. See https://spdx.org/licenses/.
+
+
 ### Scripts
 
 The scripts define the specific behaviour to install, uninstall or test a specific package. They can be defined globally for a package, per version or per target. On unix systems the script are written in `sh` and have the `.sh` extension. On Windows the scripts are written in `batch` and have the `.bat` extension.
