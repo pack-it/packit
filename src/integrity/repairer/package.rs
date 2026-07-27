@@ -178,8 +178,7 @@ fn used_prebuild(
             let checksum = Checksum::from_bytes(&compressed);
             Ok(prebuild_meta.checksum == checksum)
         },
-        Err(RepositoryError::PrebuildNotFound { .. }) => Ok(false),
-        Err(RepositoryError::RepositoryNotFoundError { .. }) => Ok(false),
+        Err(RepositoryError::PrebuildNotFound { .. }) | Err(RepositoryError::RepositoryNotFoundError { .. }) => Ok(false),
         Err(e) => Err(e.into()),
     }
 }

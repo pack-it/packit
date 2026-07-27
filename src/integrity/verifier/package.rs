@@ -128,7 +128,7 @@ fn check_package_alterations(package_id: &PackageId, register: &PackageRegister,
         },
     };
 
-    // Retrieve prebuild_id to use
+    // Retrieve `prebuild_id` to use
     let Some((prebuild_id, _)) = prebuilds_list.get_best_prebuild(&Target::current()) else {
         warning!("Cannot find prebuild to create for {}, skipping packaging.", package_id.style());
         return Ok(false);

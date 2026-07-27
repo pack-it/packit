@@ -100,7 +100,7 @@ impl PackageArgs {
             },
         };
 
-        // Retrieve prebuild_id to use
+        // Retrieve `prebuild_id` to use
         let Some((prebuild_id, _)) = prebuilds_list.get_best_prebuild(&Target::current()) else {
             error!(msg: "Cannot find prebuild to create for {}, skipping packaging.", package_id.style());
             return;

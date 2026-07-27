@@ -50,9 +50,6 @@ pub enum PortableRepoError {
     #[error("The destination does already exist and is not an empty directory")]
     DestinationNotEmpty,
 
-    #[error("The given package name is empty")]
-    EmptyPackageName,
-
     #[error("Cannot fetch package metadata from repository")]
     RepositoryError(#[from] RepositoryError),
 
@@ -164,17 +161,17 @@ impl<'a> PortableRepoCreator<'a> {
     /// Returns `true` if a prebuild is available, false otherwise.
     fn is_prebuild_available(&self, repository_id: &str, package_id: &PackageId, revision: u64) -> Result<bool> {
         // Get id of the prebuild
-        let prebuilds_list = self.repository_manager.read_prebuilds_list(&repository_id, &package_id.name, &package_id.version)?;
+        let prebuilds_list = self.repository_manager.read_prebuilds_list(repository_id, &package_id.name, &package_id.version)?;
         let Some((prebuild_id, _)) = prebuilds_list.get_best_prebuild(&Target::current()) else {
             return Ok(false);
         };
 
         // Check if the package has a prebuild
-        let prebuild_meta = self.repository_manager.get_prebuild_meta(&repository_id, &package_id, revision, prebuild_id);
+        let prebuild_meta = self.repository_manager.get_prebuild_meta(repository_id, package_id, revision, prebuild_id);
         match prebuild_meta {
             Ok(_) => Ok(true),
             Err(RepositoryError::PrebuildNotFound { .. }) => Ok(false),
-            Err(e) => return Err(e.into()),
+            Err(e) => Err(e.into()),
         }
     }
 
@@ -304,7 +301,7 @@ impl<'a> PortableRepoCreator<'a> {
         package_version: &PackageVersionMeta,
         destination: &Path,
     ) -> Result<()> {
-        let prefix = package_id.name.chars().next().ok_or(PortableRepoError::EmptyPackageName)?.to_string();
+        let prefix = package_id.name.get_prefix().to_string();
         let prebuilds_dir = destination.join("prebuilds");
         let destination = prebuilds_dir.join("packages").join(prefix).join(&package_id.name).join(package_id.version.to_string());
         fs::create_dir_all(&destination).err_with_path("create dirs", &destination)?;

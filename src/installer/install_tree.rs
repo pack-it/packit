@@ -264,7 +264,7 @@ impl<'a> InstallTreeBuilder<'a> {
     }
 
     /// Tries to find a prebuild for the given package.
-    /// Returns true if a prebuild is found, false otherwise
+    /// Returns true if a prebuild is found, false otherwise.
     fn find_prebuild(&mut self, install_meta: &InstallMeta, package_id: &PackageId) -> Result<bool> {
         let prebuilds_list =
             self.repository_manager.read_prebuilds_list(&install_meta.repository_id, &package_id.name, &package_id.version)?;

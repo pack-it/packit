@@ -127,11 +127,12 @@ impl<'a> Installer<'a> {
 
         self.install_nodes(&dependency_tree)?;
 
-        // TODO: don't show when installing from prebuild
         if !self.options.keep_build {
             let removed = self.remove_build_dependencies(0, &dependency_tree)?;
-            print!("Removed build dependencies: ");
-            standard_print::print_list_or_none(removed.iter().map_styled());
+            if !removed.is_empty() {
+                print!("Removed build dependencies: ");
+                standard_print::print_list_or_none(removed.iter().map_styled());
+            }
         }
 
         Ok(package_id)
