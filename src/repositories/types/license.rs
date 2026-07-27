@@ -40,11 +40,11 @@ impl Licenses {
             Licenses::Unknown => write!(f, "Unknown")?,
             Licenses::Single(license) => write!(f, "{license}")?,
             Licenses::SingleWithExceptions { name, exceptions } => {
-                write!(f, "{name} WITH ",)?;
+                write!(f, "{name} WITH ")?;
                 let exceptions_str = exceptions.join(", ");
                 match exceptions.len() {
-                    1 => write!(f, "{}", exceptions_str)?,
-                    _ => write!(f, "({})", exceptions_str)?,
+                    1 => write!(f, "{exceptions_str}")?,
+                    _ => write!(f, "({exceptions_str})")?,
                 }
             },
             Licenses::Any { any } => {

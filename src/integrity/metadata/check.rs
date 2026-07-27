@@ -493,10 +493,11 @@ impl MetaCheck {
                     self.issues.push(MetaIssue::default(description));
                 }
 
-                // Check each license in the list
+                // Recursively check each license in the list
                 for license in licenses {
                     self.check_license(license, package_id);
                 }
+
                 return;
             },
         };

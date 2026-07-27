@@ -194,7 +194,7 @@ The licenses can be specified in a structured format, that is easy to parse. A l
 The `any` and `all` fields allow nesting another license value. For example, the following complex license is valid: <br>
 `{ all = [ "License-1", { any = [ { name = "License-2", with = ["Exception-1", "Exception-2"] }, "License-3" ] } ] }`
 
-Note that the `<license-name>` and `<exception>` should be a SPDX Identifier if it is available. See https://spdx.org/licenses/.
+Note that the `<license-name>` and `<exception>` should be an SPDX Identifier if it is available. See https://spdx.org/licenses/.
 
 
 ### Scripts
