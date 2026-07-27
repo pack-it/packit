@@ -75,7 +75,7 @@ impl<'a> RepositoryManager<'a> {
             }
 
             // Try to create the prebuild provider
-            let prebuild_provider = provider::create_prebuild_provider(repository, &repository_meta);
+            let prebuild_provider = provider::create_prebuild_provider(repository);
             let Some(prebuild_provider) = prebuild_provider else {
                 warning!("Cannot create prebuild provider for repository '{id}'.");
                 continue;

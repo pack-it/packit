@@ -65,47 +65,22 @@ fn check_package_alterations(package_id: &PackageId, register: &PackageRegister,
         return Ok(false);
     };
 
-    let repository = Repository::new(
-        &package_version.metadata_repository_url,
-        &package_version.metadata_repository_provider,
-    );
+    let repository = Repository {
+        url: package_version.metadata_repository_url,
+        provider: package_version.metadata_repository_provider,
+        prebuilds_url: package_version.prebuilds_repository_url,
+        prebuilds_provider: package_version.prebuilds_repository_provider,
+        disable_prebuilds: false,
+    };
 
+    // Create providers
     let Some(provider) = provider::create_metadata_provider(&repository) else {
         warning!("Cannot create metadata provider for {}, skipping check", package_id.style());
         return Ok(false);
     };
-
-    let mut prebuilds_url = package_version.prebuilds_repository_url.clone();
-    let mut prebuilds_provider = package_version.prebuilds_repository_provider.clone();
-
-    if prebuilds_url.is_none() {
-        let repo_metadata = match provider.read_repository_metadata() {
-            Ok(meta) => meta,
-            Err(e) => {
-                warning!("Cannot retrieve repository metadata for {}, skipping check", package_id.style());
-                debug!(err: e, "Retrieving repository metadata failed");
-                return Ok(false);
-            },
-        };
-
-        prebuilds_url = repo_metadata.prebuilds_url;
-        prebuilds_provider = repo_metadata.prebuilds_provider;
-    }
-
-    let Some(prebuilds_url) = &prebuilds_url else {
-        warning!(
-            "Cannot perform alterations check for package {}, because no prebuild repository for the package can be found, skipping check",
-            package_id.style()
-        );
+    let Some(prebuild_provider) = provider::create_prebuild_provider(&repository) else {
+        warning!("Cannot create prebuild provider for {}, skipping check", package_id.style());
         return Ok(false);
-    };
-
-    let prebuild_provider = match provider::create_prebuild_provider_from_url(prebuilds_url, prebuilds_provider) {
-        Some(provider) => provider,
-        None => {
-            warning!("Cannot create prebuild provider for {}, skipping check", package_id.style());
-            return Ok(false);
-        },
     };
 
     // Request package metadata

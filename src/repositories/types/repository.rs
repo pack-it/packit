@@ -13,10 +13,10 @@ pub struct RepositoryMeta {
 
     #[serde(skip_serializing_if = "Licenses::is_unknown", default)]
     pub license: Licenses,
+    // TODO: reintroduce as suggestions
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    // pub prebuilds_url: Option<String>,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub prebuilds_url: Option<String>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub prebuilds_provider: Option<String>,
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    // pub prebuilds_provider: Option<String>,
 }
