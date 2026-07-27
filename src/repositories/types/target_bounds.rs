@@ -239,6 +239,12 @@ impl TargetBounds {
     /// Gets the best satisfying target bound. The best meaning the bound with the highest priority.
     /// `None` will be returned if no satisfying target bounds can be found.
     pub fn get_best_target<'a>(specific_target: &Target, targets: Vec<&'a TargetBounds>) -> Option<&'a TargetBounds> {
+        Self::get_best_target_priority(specific_target, targets).map(|(_, x)| x)
+    }
+
+    /// Gets the best satisfying target bound and its priority. A higher priority means a more specific target.
+    /// `None` will be returned if no satisfying target bounds can be found.
+    pub fn get_best_target_priority<'a>(specific_target: &Target, targets: Vec<&'a TargetBounds>) -> Option<(u32, &'a TargetBounds)> {
         let mut current_best = None;
         let mut current_best_priority = 0;
 
@@ -260,6 +266,6 @@ impl TargetBounds {
             current_best_priority = priority;
         }
 
-        current_best
+        current_best.map(|x| (current_best_priority, x))
     }
 }

@@ -36,6 +36,19 @@ impl Display for TargetArchitecture {
 }
 
 impl TargetArchitecture {
+    /// Gets a list of all target architectures.
+    pub fn values() -> &'static [Self] {
+        &[
+            Self::MacOsX86_64,
+            Self::MacOsAarch64,
+            Self::LinuxAarch64Gnu,
+            Self::LinuxX86_64Gnu,
+            Self::LinuxX86_64Musl,
+            Self::WindowsX86_64Msvc,
+            Self::WindowsAarch64Msvc,
+        ]
+    }
+
     /// Gets the architecture of the current machine. Returns `Unknown` if the type isn't supported.
     pub fn current() -> Self {
         #[cfg(all(target_os = "macos", target_arch = "x86_64"))]

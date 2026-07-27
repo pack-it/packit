@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{collections::HashSet, fs, str::FromStr};
+use std::{collections::HashSet, fs, path::PathBuf, str::FromStr};
 
 use crate::{
     cli::display::{logging::warning, styled::Styled},
@@ -117,18 +117,7 @@ pub fn fix_inconsistent_register(
         // Use checksum to check if a prebuild was used (use checksum to make sure it's the same prebuild)
         let install_path = &package_directory.join(&package_id.name).join(package_id.version.to_string());
         let (repository_id, _, package_version_meta) = manager.read_package_and_version(&package_id.clone().into(), &Target::current())?;
-        let revisions = package_version_meta.get_revision_count();
-        let prebuild_id = Target::current().architecture.to_string();
-        let used_prebuild = match manager.get_prebuild_meta(&repository_id, package_id, revisions, &prebuild_id) {
-            Ok(prebuild_meta) => {
-                let compressed = packager::compress(install_path)?;
-                let checksum = Checksum::from_bytes(&compressed);
-                prebuild_meta.checksum == checksum
-            },
-            Err(RepositoryError::PrebuildNotFound { .. }) => false,
-            Err(RepositoryError::RepositoryNotFoundError { .. }) => false,
-            Err(e) => Err(e)?,
-        };
+        let used_prebuild = used_prebuild(manager, &repository_id, package_id, &package_version_meta, install_path)?;
 
         // Figure out the active version
         let active_link_path = active_directory.join(&package_id.name);
@@ -165,6 +154,33 @@ pub fn fix_inconsistent_register(
     }
 
     Ok(())
+}
+
+/// Helper function to check if a prebuild was used to install the given package.
+/// Checks if the checksum of the package matches the checksum of the corresponding prebuild.
+fn used_prebuild(
+    manager: &RepositoryManager,
+    repository_id: &str,
+    package_id: &PackageId,
+    package_version_meta: &PackageVersionMeta,
+    install_path: &PathBuf,
+) -> Result<bool> {
+    let prebuilds_list = manager.read_prebuilds_list(repository_id, &package_id.name, &package_id.version)?;
+
+    let Some((prebuild_id, _)) = prebuilds_list.get_best_prebuild(&Target::current()) else {
+        return Ok(false);
+    };
+
+    let revisions = package_version_meta.get_revision_count();
+    match manager.get_prebuild_meta(repository_id, package_id, revisions, prebuild_id) {
+        Ok(prebuild_meta) => {
+            let compressed = packager::compress(install_path)?;
+            let checksum = Checksum::from_bytes(&compressed);
+            Ok(prebuild_meta.checksum == checksum)
+        },
+        Err(RepositoryError::PrebuildNotFound { .. }) | Err(RepositoryError::RepositoryNotFoundError { .. }) => Ok(false),
+        Err(e) => Err(e.into()),
+    }
 }
 
 /// Gets the latest satisfying dependencies for a given package from the given storage packages.

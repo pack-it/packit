@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize, de};
 use crate::installer::types::{Version, VersionBounds, VersionError};
 
 /// Represents multiple `VersionBounds`.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
 pub struct VersionIntervals {
     version_bounds: Vec<VersionBounds>,
 }

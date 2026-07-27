@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The `meta-check` utility command, which checks the metadata of a given repository.
 - The `InvalidFiles` check in the verifier, which check directories for invalid files.
 - The `MissingDependencySymlinks` check in the verifier, which checks for missing or incorrect symlinks in the dependencies directory of a certain package.
+- The `prebuilds.toml` file in the metadata, to support more advanced specification of prebuilds for a package.
 
 ### Changes
 - Change display of true and false values in the `info` and `search` commands.
@@ -20,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Fix error messages not representing the error correctly.
 - Fix MSVC detection not finding VS Build Tools.
 - Fix "check length methods" from the verifier returning wrong length in case of an incomplete check list.
+- Fix portable repositories generating an invalid prebuild repository structure.
 
 
 ## [v0.0.3](https://github.com/pack-it/packit/compare/0.0.2...0.0.3) - 2026-07-11

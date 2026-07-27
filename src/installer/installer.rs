@@ -129,8 +129,10 @@ impl<'a> Installer<'a> {
 
         if !self.options.keep_build {
             let removed = self.remove_build_dependencies(0, &dependency_tree)?;
-            print!("Removed build dependencies: ");
-            standard_print::print_list_or_none(removed.iter().map_styled());
+            if !removed.is_empty() {
+                print!("Removed build dependencies: ");
+                standard_print::print_list_or_none(removed.iter().map_styled());
+            }
         }
 
         Ok(package_id)
@@ -304,9 +306,14 @@ impl<'a> Installer<'a> {
         let spinner = Spinner::new(spinner_message);
         spinner.show();
 
-        let prebuild_id = Target::current().architecture.to_string();
-        let (extension, bytes) = self.repository_manager.read_prebuild(repository_id, package, revision, &prebuild_id)?;
-        let prebuild_meta = self.repository_manager.get_prebuild_meta(repository_id, package, revision, &prebuild_id)?;
+        // Get the id of the prebuild
+        let prebuilds_list = self.repository_manager.read_prebuilds_list(repository_id, &package.name, &package.version)?;
+        let (prebuild_id, _) = prebuilds_list.get_best_prebuild(&Target::current()).ok_or(InstallerError::NoSupportedPrebuild {
+            package_id: package.clone(),
+        })?;
+
+        let (extension, bytes) = self.repository_manager.read_prebuild(repository_id, package, revision, prebuild_id)?;
+        let prebuild_meta = self.repository_manager.get_prebuild_meta(repository_id, package, revision, prebuild_id)?;
 
         // Finish download spinner
         spinner.finish();
