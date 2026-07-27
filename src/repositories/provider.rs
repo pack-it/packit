@@ -33,7 +33,8 @@ pub trait MetadataProvider {
     fn read_package_version(&self, package: &PackageName, version: &Version) -> Result<PackageVersionMeta>;
 
     /// Reads the list of prebuilds that can be generated for the given version of the package.
-    fn read_prebuilds_list(&self, package: &PackageName, version: &Version, package_meta: &PackageMeta) -> Result<PrebuildsList>;
+    /// Returns `None` if the prebuilds list does not exist.
+    fn read_prebuilds_list(&self, package: &PackageName, version: &Version) -> Result<Option<PrebuildsList>>;
 
     /// Reads the requested file from the repository as bytes.
     fn read_file_bytes(&self, package: &PackageName, file_path: &str) -> Result<Option<Bytes>>;

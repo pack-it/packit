@@ -45,11 +45,11 @@ impl MetadataProvider for WebMetadataProvider {
         Ok(toml::de::from_str(&data)?)
     }
 
-    fn read_prebuilds_list(&self, package: &PackageName, version: &Version, package_meta: &PackageMeta) -> Result<PrebuildsList> {
+    fn read_prebuilds_list(&self, package: &PackageName, version: &Version) -> Result<Option<PrebuildsList>> {
         let response = requests::get(format!("{}/packages/{package}/{version}/prebuilds.toml", self.url))?;
 
         if response.status() == StatusCode::NOT_FOUND {
-            return Ok(PrebuildsList::default(package_meta.supported_versions.keys()));
+            return Ok(None);
         }
 
         // Return an error if something went wrong with the request (apart from not found error)
@@ -57,7 +57,7 @@ impl MetadataProvider for WebMetadataProvider {
             return Err(RepositoryError::UnsuccessfulRequest(response.status()));
         }
 
-        Ok(toml::de::from_str(&response.text()?)?)
+        Ok(Some(toml::de::from_str(&response.text()?)?))
     }
 
     fn read_file_bytes(&self, package: &PackageName, file_path: &str) -> Result<Option<Bytes>> {

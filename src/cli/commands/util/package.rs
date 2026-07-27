@@ -12,7 +12,7 @@ use crate::{
     packager,
     platforms::Target,
     register::package_register::PackageRegister,
-    repositories::provider,
+    repositories::{provider, types::PrebuildsList},
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
@@ -92,8 +92,9 @@ impl PackageArgs {
         };
 
         // Request prebuilds list
-        let prebuilds_list = match provider.read_prebuilds_list(&package_id.name, &package_id.version, &package_meta) {
-            Ok(prebuilds_list) => prebuilds_list,
+        let prebuilds_list = match provider.read_prebuilds_list(&package_id.name, &package_id.version) {
+            Ok(Some(prebuilds_list)) => prebuilds_list,
+            Ok(None) => PrebuildsList::default(package_meta.supported_versions.keys()),
             Err(e) => {
                 error!(e, "Cannot read prebuild list for {}, skipping packaging.", package_id.style());
                 return;

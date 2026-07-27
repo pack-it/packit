@@ -22,7 +22,7 @@ use crate::{
     register::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
     repositories::{
         provider::{self, create_metadata_provider},
-        types::{Checksum, PackageVersionMeta},
+        types::{Checksum, PackageVersionMeta, PrebuildsList},
     },
     utils::{io::directory_is_empty, ioerror::IOResultExt},
 };
@@ -119,8 +119,9 @@ fn check_package_alterations(package_id: &PackageId, register: &PackageRegister,
     };
 
     // Request prebuilds list
-    let prebuilds_list = match provider.read_prebuilds_list(&package_id.name, &package_id.version, &package_meta) {
-        Ok(prebuilds_list) => prebuilds_list,
+    let prebuilds_list = match provider.read_prebuilds_list(&package_id.name, &package_id.version) {
+        Ok(Some(prebuilds_list)) => prebuilds_list,
+        Ok(None) => PrebuildsList::default(package_meta.supported_versions.keys()),
         Err(e) => {
             warning!("Cannot read prebuild list for {}, skipping check.", package_id.style());
             debug!(err: e, "Retrieving prebuilds list failed");

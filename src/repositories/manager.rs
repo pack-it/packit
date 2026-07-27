@@ -324,8 +324,13 @@ impl<'a> RepositoryManager<'a> {
 
     /// Reads the list of prebuilds that can be generated for the given version of the package.
     pub fn read_prebuilds_list(&self, repository_id: &str, package: &PackageName, version: &Version) -> Result<PrebuildsList> {
-        let package_meta = self.read_repo_package(repository_id, package)?;
-        self.get_metadata_provider(repository_id)?.read_prebuilds_list(package, version, &package_meta)
+        match self.get_metadata_provider(repository_id)?.read_prebuilds_list(package, version)? {
+            Some(list) => Ok(list),
+            None => {
+                let package_meta = self.read_repo_package(repository_id, package)?;
+                Ok(PrebuildsList::default(package_meta.supported_versions.keys()))
+            },
+        }
     }
 
     /// Reads a file of the given package from the given repository.
