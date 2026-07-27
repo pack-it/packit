@@ -12,6 +12,7 @@ use crate::{
             aligned_print::PairAligner,
             ask_user,
             logging::{error, warning},
+            standard_print::DisplayOption,
             styled::Styled,
         },
     },
@@ -240,7 +241,7 @@ impl ConfigArgs {
             Some(provider) => provider,
             None => DEFAULT_METADATA_PROVIDER_ID,
         };
-        let repository = Repository::new(url, provider);
+        let mut repository = Repository::new(url, provider);
 
         // Try to connect to the repository
         let provider = provider::create_metadata_provider(&repository).unwrap_or_exit_msg("Unable to connect to repository", 1);
@@ -257,6 +258,21 @@ impl ConfigArgs {
             if ask_user("Are you sure you want to add this repository?", QuestionResponse::No).unwrap_or_exit(1).is_no_or_invalid() {
                 println!("Cancelling adding of repository.");
                 return;
+            }
+        }
+
+        // Check if repository suggests a prebuild url
+        if let Some(prebuilds_url) = &repo_meta.prebuilds_url {
+            println!("This repository suggests using the following prebuilds repository:");
+            let mut pair_aligner = PairAligner::new();
+            pair_aligner.add("Url", prebuilds_url);
+            pair_aligner.add("Provider", repo_meta.prebuilds_provider.display());
+            pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
+
+            if ask_user("Do you want to add this prebuild repository too?", QuestionResponse::Yes).unwrap_or_exit(1).is_yes() {
+                println!("Adding prebuild repository to config.");
+                repository.prebuilds_url = Some(prebuilds_url.clone());
+                repository.prebuilds_provider = repo_meta.prebuilds_provider;
             }
         }
 

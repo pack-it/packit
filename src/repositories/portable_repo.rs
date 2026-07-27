@@ -143,8 +143,8 @@ impl<'a> PortableRepoCreator<'a> {
             required_packit_version: current_packit_version(),
             maintainers: vec![PORTABLE_REPO_MAINTAINER.into()],
             license: Licenses::Unknown,
-            // prebuilds_url: None,
-            // prebuilds_provider: None,
+            prebuilds_url: None,
+            prebuilds_provider: None,
         };
         self.write_metadata(repository_meta, destination.join("repository.toml"), false)?;
 

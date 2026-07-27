@@ -159,8 +159,8 @@ impl Config {
             let mut pair_aligner = PairAligner::new();
             pair_aligner.add("Url", &repo.url);
             pair_aligner.add("Provider", &repo.provider);
-            pair_aligner.add("Prebuilds provider", repo.prebuilds_provider.display());
             pair_aligner.add("Prebuilds url", repo.prebuilds_url.display());
+            pair_aligner.add("Prebuilds provider", repo.prebuilds_provider.display());
             pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
         }
     }
