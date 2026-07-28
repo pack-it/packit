@@ -26,15 +26,8 @@ pub fn is_writable(path: &PathBuf) -> Result<bool> {
         return Ok(false);
     }
 
-    let metadata = fs::metadata(path).err_with_path("read metadata of", path)?;
-    let permissions = metadata.permissions();
-
-    // Check if path is read only
-    if permissions.readonly() {
-        return Ok(false);
-    }
-
     // Use platform specific writable checks
+    let metadata = fs::metadata(path).err_with_path("read metadata of", path)?;
     platform::is_writable(path, metadata)
 }
 
