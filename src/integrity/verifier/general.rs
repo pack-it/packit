@@ -93,12 +93,31 @@ pub fn check_stray_directories(config: &Config) -> Result<Option<Issue>> {
 pub fn check_invalid_files(packages: &Vec<PackageId>, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
     let mut invalid = Vec::new();
 
+    invalid.extend(check_invalid_dependencies_dir(register, config)?);
+
     for package in packages {
         invalid.extend(check_invalid_dependencies_files(package, register, config)?);
     }
 
-    // Check if the dependencies directory has wrong files
+    if invalid.is_empty() {
+        return Ok(None);
+    }
+
+    Ok(Some(Issue::InvalidFiles(invalid)))
+}
+
+/// Checks for invalid files in the dependencies directory.
+/// Returns a list of invalid files (which could be empty).
+fn check_invalid_dependencies_dir(register: &PackageRegister, config: &Config) -> Result<Vec<PathBuf>> {
+    let mut invalid = Vec::new();
+
+    // Check if the dependencies directory exists
     let dependencies_dir = config.prefix_directory.join("dependencies");
+    if !fs::exists(&dependencies_dir).err_with_path("check existence of", &dependencies_dir)? {
+        return Ok(invalid);
+    }
+
+    // Check if the dependencies directory has wrong files
     for file in fs::read_dir(&dependencies_dir).err_with_path("read", &dependencies_dir)? {
         let file = file.err_with_path("iterate", &dependencies_dir)?;
 
@@ -129,11 +148,7 @@ pub fn check_invalid_files(packages: &Vec<PackageId>, register: &PackageRegister
         }
     }
 
-    if invalid.is_empty() {
-        return Ok(None);
-    }
-
-    Ok(Some(Issue::InvalidFiles(invalid)))
+    Ok(invalid)
 }
 
 /// Checks for invalid files in the dependencies directory of a given package.
@@ -151,8 +166,13 @@ fn check_invalid_dependencies_files(package_id: &PackageId, register: &PackageRe
         return Ok(invalid);
     }
 
-    // Check for invalid files in the dependencies directory of the given package
+    // Check if the directory exists (if it doesn't there can't be any invalid files)
     let dependencies_dir = config.prefix_directory.join("dependencies").join(package_id.to_string());
+    if !fs::exists(&dependencies_dir).err_with_path("check existence of", &dependencies_dir)? {
+        return Ok(invalid);
+    }
+
+    // Check for invalid files in the dependencies directory of the given package
     for file in fs::read_dir(&dependencies_dir).err_with_path("read", &dependencies_dir)? {
         let file = file.err_with_path("iterate", &dependencies_dir)?;
 
