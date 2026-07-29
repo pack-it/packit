@@ -14,9 +14,11 @@ pub struct RepositoryMeta {
     #[serde(skip_serializing_if = "Licenses::is_unknown", default)]
     pub license: Licenses,
 
+    /// Specifies a suggestion of a prebuild repository to use with this metadata repository.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prebuilds_url: Option<String>,
 
+    /// Specifies a suggestion of a prebuild repository to use with this metadata repository.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prebuilds_provider: Option<String>,
 }

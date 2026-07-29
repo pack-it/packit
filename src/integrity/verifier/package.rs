@@ -22,19 +22,14 @@ use crate::{
     register::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
     repositories::{
         provider::{self, create_metadata_provider},
-        types::{Checksum, PackageVersionMeta},
+        types::{Checksum, PackageVersionMeta, PrebuildsList},
     },
     utils::{io::directory_is_empty, ioerror::IOResultExt},
 };
 
 /// Checks for alterations in the given packages using a checksum which is compared to the checksum from the prebuild.
 /// Returns an alteration issue or `None` if no packages can be found that are altered.
-#[expect(unused_variables, unreachable_code)]
 pub fn check_alterations(packages: &Vec<PackageId>, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
-    // TODO: For now skip this check, because it will never work (yet)
-    return Ok(None);
-    warning!("This is an experimental check, issues from this check could be inaccurate.");
-
     let mut altered = Vec::new();
     for package_id in packages {
         if check_package_alterations(package_id, register, config)? {
@@ -51,11 +46,7 @@ pub fn check_alterations(packages: &Vec<PackageId>, register: &PackageRegister, 
 
 /// Checks for alterations in a single package using a checksum which is compared to the checksum from the prebuild.
 /// Returns true if the package was altered, false if not.
-#[expect(unused_variables, unreachable_code)]
 fn check_package_alterations(package_id: &PackageId, register: &PackageRegister, config: &Config) -> Result<bool> {
-    // TODO: For now skip this check, because it will never work (yet)
-    return Ok(false);
-
     // Get the installed package from the register
     let Some(package_version) = register.get_package_version(package_id) else {
         warning!(
@@ -65,47 +56,31 @@ fn check_package_alterations(package_id: &PackageId, register: &PackageRegister,
         return Ok(false);
     };
 
-    let repository = Repository::new(
-        &package_version.metadata_repository_url,
-        &package_version.metadata_repository_provider,
-    );
+    // Skip check if package was not installed from a prebuild
+    if package_version.prebuilds_repository_url.is_none() {
+        debug!(
+            "Package {} was not installed from a prebuild, skipping alterations check",
+            package_id.style()
+        );
+        return Ok(false);
+    }
 
+    let repository = Repository {
+        url: package_version.metadata_repository_url.clone(),
+        provider: package_version.metadata_repository_provider.clone(),
+        prebuilds_url: package_version.prebuilds_repository_url.clone(),
+        prebuilds_provider: package_version.prebuilds_repository_provider.clone(),
+        disable_prebuilds: false,
+    };
+
+    // Create providers
     let Some(provider) = provider::create_metadata_provider(&repository) else {
         warning!("Cannot create metadata provider for {}, skipping check", package_id.style());
         return Ok(false);
     };
-
-    let mut prebuilds_url = package_version.prebuilds_repository_url.clone();
-    let mut prebuilds_provider = package_version.prebuilds_repository_provider.clone();
-
-    if prebuilds_url.is_none() {
-        let repo_metadata = match provider.read_repository_metadata() {
-            Ok(meta) => meta,
-            Err(e) => {
-                warning!("Cannot retrieve repository metadata for {}, skipping check", package_id.style());
-                debug!(err: e, "Retrieving repository metadata failed");
-                return Ok(false);
-            },
-        };
-
-        prebuilds_url = repo_metadata.prebuilds_url;
-        prebuilds_provider = repo_metadata.prebuilds_provider;
-    }
-
-    let Some(prebuilds_url) = &prebuilds_url else {
-        warning!(
-            "Cannot perform alterations check for package {}, because no prebuild repository for the package can be found, skipping check",
-            package_id.style()
-        );
+    let Some(prebuild_provider) = provider::create_prebuild_provider(&repository) else {
+        warning!("Cannot create prebuild provider for {}, skipping check", package_id.style());
         return Ok(false);
-    };
-
-    let prebuild_provider = match provider::create_prebuild_provider_from_url(prebuilds_url, prebuilds_provider) {
-        Some(provider) => provider,
-        None => {
-            warning!("Cannot create prebuild provider for {}, skipping check", package_id.style());
-            return Ok(false);
-        },
     };
 
     // Request package metadata
@@ -119,8 +94,9 @@ fn check_package_alterations(package_id: &PackageId, register: &PackageRegister,
     };
 
     // Request prebuilds list
-    let prebuilds_list = match provider.read_prebuilds_list(&package_id.name, &package_id.version, &package_meta) {
-        Ok(prebuilds_list) => prebuilds_list,
+    let prebuilds_list = match provider.read_prebuilds_list(&package_id.name, &package_id.version) {
+        Ok(Some(prebuilds_list)) => prebuilds_list,
+        Ok(None) => PrebuildsList::default(package_meta.supported_versions.keys()),
         Err(e) => {
             warning!("Cannot read prebuild list for {}, skipping check.", package_id.style());
             debug!(err: e, "Retrieving prebuilds list failed");
