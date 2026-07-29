@@ -269,7 +269,7 @@ impl ConfigArgs {
             pair_aligner.add("Provider", repo_meta.prebuilds_provider.display());
             pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
 
-            if ask_user("Do you want to add this prebuild repository too?", QuestionResponse::Yes).unwrap_or_exit(1).is_yes() {
+            if ask_user("Do you want to add this prebuild repository?", QuestionResponse::Yes).unwrap_or_exit(1).is_yes() {
                 println!("Adding prebuild repository to config.");
                 repository.prebuilds_url = Some(prebuilds_url.clone());
                 repository.prebuilds_provider = repo_meta.prebuilds_provider;
