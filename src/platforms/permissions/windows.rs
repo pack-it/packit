@@ -112,7 +112,7 @@ pub enum PlatformError {
 
 /// Checks if the given directory is writable by the current user. Returns true if it is, false if not.
 /// Could return a `PlatformError::SecurityInfoError` or a `PlatformError::WindowsAPIError` error.
-pub fn is_writable(path: &PathBuf, _metadata: Metadata) -> Result<bool> {
+pub fn is_writable(path: &PathBuf) -> Result<bool> {
     let wide_path_buffer = path_to_pcwstr(path);
     let wide_path = PCWSTR(wide_path_buffer.as_ptr());
     let (_, security_descriptor) = get_security_info(wide_path)?;

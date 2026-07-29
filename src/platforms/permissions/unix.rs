@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::{
     ffi::CString,
-    fs::{self, Metadata, Permissions},
+    fs::{self, Permissions},
     os::unix::{
         self,
         fs::{MetadataExt, PermissionsExt},
@@ -27,7 +27,8 @@ pub enum PlatformError {
 }
 
 /// Checks if a directory is writeable. Returns true if it is, false otherwise.
-pub(super) fn is_writable(_path: &PathBuf, metadata: Metadata) -> Result<bool> {
+pub(super) fn is_writable(path: &PathBuf) -> Result<bool> {
+    let metadata = fs::metadata(path).err_with_path("read metadata of", path)?;
     let mode = metadata.mode();
 
     // Check if path is writable for everyone

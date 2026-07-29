@@ -220,6 +220,9 @@ echo Initializing Packit
 if ERRORLEVEL 1 goto cleanup
 echo Initializing Packit successful
 
+REM Remove readonly attributes on Packit directories
+attrib -R /S /D "*"
+
 REM Make sure that packit words
 echo Testing Packit install
 "%PREFIX_DIR%\bin\pit.exe" --version 2>nul >nul
