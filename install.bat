@@ -252,7 +252,7 @@ if %ERRORLEVEL%==0 (
 REM Ask the user if they want to automatically add Packit to their PATH
 call :ask "Y" "Do you wish to automatically add Packit to your user PATH"
 if ERRORLEVEL 1 (
-    powershell -NoProfile -Command "[Environment]::SetEnvironmentVariable('Path', '!ORIGINAL_PATH!' + '%PREFIX_DIR%\bin;', 'User')"
+    powershell -NoProfile -Command "[Environment]::SetEnvironmentVariable('Path', '!ORIGINAL_PATH!' + ';%PREFIX_DIR%\bin', 'User')"
     if ERRORLEVEL 1 goto cleanup
     echo Restart your shell to refresh your path and use Packit
     popd
