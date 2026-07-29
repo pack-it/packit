@@ -27,8 +27,7 @@ pub fn is_writable(path: &PathBuf) -> Result<bool> {
     }
 
     // Use platform specific writable checks
-    let metadata = fs::metadata(path).err_with_path("read metadata of", path)?;
-    platform::is_writable(path, metadata)
+    platform::is_writable(path)
 }
 
 /// Sets the permissions of packit files.
