@@ -129,14 +129,14 @@ fn check_package_alterations(package_id: &PackageId, register: &PackageRegister,
     };
 
     // Retrieve `prebuild_id` to use
-    let Some((prebuild_id, _)) = prebuilds_list.get_best_prebuild(&Target::current()) else {
+    let Some((prebuild_id, prebuild_meta)) = prebuilds_list.get_best_prebuild(&Target::current()) else {
         warning!("Cannot find prebuild to create for {}, skipping packaging.", package_id.style());
         return Ok(false);
     };
 
     let revision = package_version.revisions.len() as u64;
-    let prebuild_meta = match prebuild_provider.get_prebuild_meta(package_id, revision, prebuild_id) {
-        Ok(prebuild_meta) => prebuild_meta,
+    let prebuild_file_meta = match prebuild_provider.get_prebuild_meta(package_id, revision, prebuild_id) {
+        Ok(prebuild_file_meta) => prebuild_file_meta,
         Err(e) => {
             warning!(
                 "Cannot perform alterations check for package {}, because prebuild metadata cannot be read, skipping check",
@@ -148,10 +148,10 @@ fn check_package_alterations(package_id: &PackageId, register: &PackageRegister,
     };
 
     let install_directory = config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
-    let compressed = packager::compress(&install_directory)?;
+    let compressed = packager::compress(&install_directory, prebuild_meta)?;
     let checksum = Checksum::from_bytes(&compressed);
 
-    Ok(checksum != prebuild_meta.checksum)
+    Ok(checksum != prebuild_file_meta.checksum)
 }
 
 /// Checks if the given packages in the register also exist in the package storage in the prefix directory.

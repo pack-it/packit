@@ -167,16 +167,16 @@ fn used_prebuild(
 ) -> Result<bool> {
     let prebuilds_list = manager.read_prebuilds_list(repository_id, &package_id.name, &package_id.version)?;
 
-    let Some((prebuild_id, _)) = prebuilds_list.get_best_prebuild(&Target::current()) else {
+    let Some((prebuild_id, prebuild_meta)) = prebuilds_list.get_best_prebuild(&Target::current()) else {
         return Ok(false);
     };
 
     let revisions = package_version_meta.get_revision_count();
     match manager.get_prebuild_meta(repository_id, package_id, revisions, prebuild_id) {
-        Ok(prebuild_meta) => {
-            let compressed = packager::compress(install_path)?;
+        Ok(prebuild_file_meta) => {
+            let compressed = packager::compress(install_path, prebuild_meta)?;
             let checksum = Checksum::from_bytes(&compressed);
-            Ok(prebuild_meta.checksum == checksum)
+            Ok(prebuild_file_meta.checksum == checksum)
         },
         Err(RepositoryError::PrebuildNotFound { .. }) | Err(RepositoryError::RepositoryNotFoundError { .. }) => Ok(false),
         Err(e) => Err(e.into()),

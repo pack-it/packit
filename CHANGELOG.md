@@ -11,7 +11,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The `meta-check` utility command, which checks the metadata of a given repository.
 - The `InvalidFiles` check in the verifier, which check directories for invalid files.
 - The `MissingDependencySymlinks` check in the verifier, which checks for missing or incorrect symlinks in the dependencies directory of a certain package.
-- The `prebuilds.toml` file in the metadata, to support more advanced specification of prebuilds for a package.
+- The `prebuilds.toml` file in the metadata, to support more advanced specification of prebuilds for a package:
+    - Prebuilds can now be shared by multiple targets.
+    - Prebuilds can now exclude certain paths of a package.
 
 ### Changes
 - Change display of true and false values in the `info` and `search` commands.

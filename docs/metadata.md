@@ -120,9 +120,10 @@ The package version directory can contain an optional `prebuilds.toml` file. Thi
 #### Prebuild fields
 A prebuild is specified by using `[prebuild.<prebuild-id>]`. Each prebuild can have the fields listed below.
 
-| Field     | Explanation                                                                                     |
-| --------- | ----------------------------------------------------------------------------------------------- |
-| `targets` | Defines a list of [target bounds](#target-bounds) that the prebuild can be used for. (required) |
+| Field           | Explanation                                                                                     |
+| --------------- | ----------------------------------------------------------------------------------------------- |
+| `targets`       | Defines a list of [target bounds](#target-bounds) that the prebuild can be used for. (required) |
+| `exclude_paths` | Defines a list of paths that should not be included in the prebuild.                            |
 
 
 ### Target bounds

@@ -101,7 +101,7 @@ impl PackageArgs {
         };
 
         // Retrieve `prebuild_id` to use
-        let Some((prebuild_id, _)) = prebuilds_list.get_best_prebuild(&Target::current()) else {
+        let Some((prebuild_id, prebuild_meta)) = prebuilds_list.get_best_prebuild(&Target::current()) else {
             error!(msg: "Cannot find prebuild to create for {}, skipping packaging.", package_id.style());
             return;
         };
@@ -113,7 +113,8 @@ impl PackageArgs {
         let spinner_message = format!("Packaging {} to '{}'", package_id.style(), destination.display());
         let spinner = Spinner::new(spinner_message);
         spinner.show();
-        packager::package(config, package_id, destination, package_version.revisions.len() as u64, prebuild_id).unwrap_or_exit(1);
+        let revisions = package_version.revisions.len() as u64;
+        packager::package(config, package_id, destination, revisions, prebuild_id, prebuild_meta).unwrap_or_exit(1);
         spinner.finish();
     }
 }

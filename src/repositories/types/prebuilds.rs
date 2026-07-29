@@ -1,4 +1,7 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    path::PathBuf,
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -28,6 +31,9 @@ pub struct PrebuildsList {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct PrebuildMeta {
     targets: Vec<TargetBounds>,
+
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub exclude_paths: Vec<PathBuf>,
 }
 
 impl PrebuildsList {
@@ -78,7 +84,13 @@ impl PrebuildsList {
                 addition: None,
                 version_intervals: VersionIntervals::default(),
             };
-            prebuilds.insert(architecture.to_string(), PrebuildMeta { targets: vec![target] });
+            prebuilds.insert(
+                architecture.to_string(),
+                PrebuildMeta {
+                    targets: vec![target],
+                    exclude_paths: Vec::new(),
+                },
+            );
         }
 
         Self { prebuilds }
