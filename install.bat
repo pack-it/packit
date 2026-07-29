@@ -236,8 +236,13 @@ if ERRORLEVEL 1 (
 
 echo Successfully installed Packit!
 
+REM Get the PATH
+for /f "delims=" %%A in ('
+    powershell -NoProfile -Command "[Environment]::GetEnvironmentVariable('Path', 'User')"
+') do set "ORIGINAL_PATH=%%A"
+
 REM Exit early if Packit is already in the user PATH
-echo ";%PATH%;" | find /I ";%PREFIX_DIR%\bin;" >nul
+echo ";%ORIGINAL_PATH%;" | find /I ";%PREFIX_DIR%\bin;" >nul
 if %ERRORLEVEL%==0 (
     echo Packit already found in PATH, no further actions should be required
     popd
@@ -247,14 +252,13 @@ if %ERRORLEVEL%==0 (
 REM Ask the user if they want to automatically add Packit to their PATH
 call :ask "Y" "Do you wish to automatically add Packit to your user PATH"
 if ERRORLEVEL 1 (
-    setx PATH "%PATH%;%PREFIX_DIR%\bin"
+    powershell -NoProfile -Command "[Environment]::SetEnvironmentVariable('Path', '!ORIGINAL_PATH!' + '%PREFIX_DIR%\bin;', 'User')"
     if ERRORLEVEL 1 goto cleanup
     echo Restart your shell to refresh your path and use Packit
     popd
     exit /b 0
 )
 
-echo Add '%PREFIX_DIR%\bin' to your PATH by adding the command below to your shell:
-echo setx PATH "%%PATH%%;%PREFIX_DIR%\bin"
+echo Add '%PREFIX_DIR%\bin' to your PATH to start working with Packit
 
 popd
