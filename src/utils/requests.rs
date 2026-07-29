@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+use std::io::Read;
+
+use bytes::{Bytes, BytesMut};
 use reqwest::{
     IntoUrl, StatusCode,
     blocking::{Client, Response},
@@ -34,4 +37,46 @@ pub fn get<T: IntoUrl>(url: T) -> reqwest::Result<Response> {
 /// Builds a request client
 fn build_client() -> reqwest::Result<Client> {
     reqwest::blocking::ClientBuilder::new().user_agent(USER_AGENT).build()
+}
+
+pub trait ResponseExt {
+    /// Reads all bytes from the response into a byte buffer.
+    /// Calls the `progress` callback after reading a chunk.
+    fn read_all<F>(self, progress: F) -> std::io::Result<Bytes>
+    where
+        F: FnMut(usize);
+}
+
+impl ResponseExt for Response {
+    fn read_all<F>(mut self, mut progress: F) -> std::io::Result<Bytes>
+    where
+        F: FnMut(usize),
+    {
+        // Use content length, but cap at 100MB. Use 1MB if no size is specified
+        let size = self.content_length().map(|x| x.min(100 * 1024 * 1024)).unwrap_or(1 * 1024 * 1024) as usize;
+        let mut bytes = BytesMut::with_capacity(size);
+        let mut buffer = [0; 32 * 1024];
+
+        loop {
+            // Read response into buffer, retry on interrupted
+            let n = match self.read(&mut buffer) {
+                Ok(n) => n,
+                Err(e) if matches!(e.kind(), std::io::ErrorKind::Interrupted) => continue,
+                Err(e) => return Err(e),
+            };
+
+            // Stop reading if end of stream is reached
+            if n == 0 {
+                break;
+            }
+
+            // Add read buffer to final buffer
+            bytes.extend_from_slice(&buffer[..n]);
+
+            // Call progress callback
+            progress(bytes.len());
+        }
+
+        Ok(bytes.freeze())
+    }
 }
