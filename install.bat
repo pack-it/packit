@@ -252,7 +252,13 @@ if %ERRORLEVEL%==0 (
 REM Ask the user if they want to automatically add Packit to their PATH
 call :ask "Y" "Do you wish to automatically add Packit to your user PATH"
 if ERRORLEVEL 1 (
-    powershell -NoProfile -Command "[Environment]::SetEnvironmentVariable('Path', '!ORIGINAL_PATH!' + ';%PREFIX_DIR%\bin', 'User')"
+    REM Determine if there should be a semicolon prefix
+    set "SEMICOLON_PREFIX =;"
+    if "!ORIGINAL_PATH:~-1!"==";" (
+        set "SEMICOLON_PREFIX ="
+    )
+
+    powershell -NoProfile -Command "[Environment]::SetEnvironmentVariable('Path', '!ORIGINAL_PATH!!SEMICOLON_PREFIX!%PREFIX_DIR%\bin;', 'User')"
     if ERRORLEVEL 1 goto cleanup
     echo Restart your shell to refresh your path and use Packit
     popd
