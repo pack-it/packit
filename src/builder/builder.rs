@@ -35,16 +35,24 @@ pub struct Builder<'a> {
     register: &'a mut PackageRegister,
     repository_manager: &'a RepositoryManager<'a>,
     verbose: bool,
+    skip_build_test: bool,
 }
 
 impl<'a> Builder<'a> {
     /// Creates new builder
-    pub fn new(config: &'a Config, register: &'a mut PackageRegister, repository_manager: &'a RepositoryManager, verbose: bool) -> Self {
+    pub fn new(
+        config: &'a Config,
+        register: &'a mut PackageRegister,
+        repository_manager: &'a RepositoryManager,
+        verbose: bool,
+        skip_build_test: bool,
+    ) -> Self {
         Self {
             config,
             register,
             repository_manager,
             verbose,
+            skip_build_test,
         }
     }
 
@@ -162,7 +170,15 @@ impl<'a> Builder<'a> {
         let script_path = install_meta.version_metadata.get_build_script_path(&install_meta.target_bounds)?;
         let script_path = scripts::download_script(self.repository_manager, &script_path, package_name, &install_meta.repository_id)?
             .ok_or(ScriptError::ScriptNotFound("build".into()))?;
-        let script_data = ScriptData::new(&script_path, &destination_dir, &package_id, self.config, &script_args, self.verbose);
+        let script_data = ScriptData::new(
+            &script_path,
+            &destination_dir,
+            &package_id,
+            self.config,
+            &script_args,
+            self.verbose,
+            self.skip_build_test,
+        );
 
         // Show build spinner
         if !self.verbose {

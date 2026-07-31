@@ -107,6 +107,7 @@ pub struct ScriptData<'a> {
     config: &'a Config,
     args: &'a HashMap<&'a str, &'a str>,
     verbose: bool,
+    skip_build_test: bool,
 }
 
 impl<'a> ScriptData<'a> {
@@ -118,6 +119,7 @@ impl<'a> ScriptData<'a> {
         config: &'a Config,
         args: &'a HashMap<&str, &str>,
         verbose: bool,
+        skip_build_test: bool,
     ) -> Self {
         Self {
             path,
@@ -126,6 +128,7 @@ impl<'a> ScriptData<'a> {
             config,
             args,
             verbose,
+            skip_build_test,
         }
     }
 }
@@ -197,7 +200,8 @@ fn run_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, env: Environm
         .env("PACKIT_PACKAGE_PATH", package_install_path)
         .env("PACKIT_PACKAGE_VERSION", script_data.package_id.version.to_string())
         .env("PACKIT_PACKAGE_DEPENDENCIES_PATH", &package_dependencies_path)
-        .env("PACKIT_VERBOSE", if script_data.verbose { "1" } else { "0" });
+        .env("PACKIT_VERBOSE", if script_data.verbose { "1" } else { "0" })
+        .env("PACKIT_SKIP_BUILD_TEST", if script_data.skip_build_test { "1" } else { "0" });
 
     // Only display build logging if verbose is enabled, otherwise create combined pipe for reading
     let mut output = None;

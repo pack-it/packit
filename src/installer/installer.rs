@@ -205,8 +205,14 @@ impl<'a> Installer<'a> {
                 let revision = install_meta.version_metadata.get_revision_count();
                 self.download_prebuild(&install_meta.repository_id, &package_id, revision, &install_directory)?
             },
-            false => Builder::new(self.config, self.register, self.repository_manager, self.options.verbose)
-                .build(install_meta, &install_directory)?,
+            false => Builder::new(
+                self.config,
+                self.register,
+                self.repository_manager,
+                self.options.verbose,
+                self.options.skip_build_test,
+            )
+            .build(install_meta, &install_directory)?,
         }
 
         // Set correct permissions for the installed package
@@ -258,6 +264,7 @@ impl<'a> Installer<'a> {
             self.config,
             script_args,
             self.options.verbose,
+            self.options.skip_build_test,
         );
 
         // Only show a spinner when not verbose
@@ -354,6 +361,7 @@ impl<'a> Installer<'a> {
             self.config,
             script_args,
             self.options.verbose,
+            self.options.skip_build_test,
         );
 
         // Only show a spinner when not verbose
@@ -459,6 +467,7 @@ impl<'a> Installer<'a> {
             self.config,
             script_args,
             self.options.verbose,
+            self.options.skip_build_test,
         );
 
         // Download external files necessary for testing
@@ -771,6 +780,7 @@ impl<'a> Installer<'a> {
             self.config,
             &script_args,
             self.options.verbose,
+            self.options.skip_build_test,
         );
 
         // Only show spinner when not verbose
