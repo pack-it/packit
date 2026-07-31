@@ -205,8 +205,14 @@ impl<'a> Installer<'a> {
                 let revision = install_meta.version_metadata.get_revision_count();
                 self.download_prebuild(&install_meta.repository_id, &package_id, revision, &install_directory)?
             },
-            false => Builder::new(self.config, self.register, self.repository_manager, self.options.verbose)
-                .build(install_meta, &install_directory)?,
+            false => Builder::new(
+                self.config,
+                self.register,
+                self.repository_manager,
+                self.options.verbose,
+                self.options.skip_build_test,
+            )
+            .build(install_meta, &install_directory)?,
         }
 
         // Set correct permissions for the installed package
@@ -232,7 +238,10 @@ impl<'a> Installer<'a> {
 
         self.determine_active(install_meta, &package_id, target)?;
 
-        self.execute_test(&package_id, install_meta, &install_directory, &script_args, target)?;
+        // Only run the test if the skip test option is false
+        if !self.options.skip_test {
+            self.execute_test(&package_id, install_meta, &install_directory, &script_args, target)?;
+        }
 
         Ok(())
     }

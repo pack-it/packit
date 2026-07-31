@@ -138,8 +138,10 @@ pub fn run_pre_script(script_data: &ScriptData, run_dir: impl AsRef<Path>) -> Re
 
 /// Runs the given build script, in the given directory.
 /// Note that the script should be a `.sh` script on Linux and macOS and a `.bat` on Windows.
-pub fn run_build_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, build_env: BuildEnv) -> Result<()> {
-    run_script(script_data, run_dir, build_env.try_into()?, script_data.verbose)
+pub fn run_build_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, build_env: BuildEnv, skip_build_test: bool) -> Result<()> {
+    let mut env: Environment = build_env.try_into()?;
+    env.insert_var("PACKIT_SKIP_BUILD_TEST", if skip_build_test { "1" } else { "0" });
+    run_script(script_data, run_dir, env, script_data.verbose)
 }
 
 /// Runs the given post install script, in the package install directory.

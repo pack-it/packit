@@ -35,16 +35,24 @@ pub struct Builder<'a> {
     register: &'a mut PackageRegister,
     repository_manager: &'a RepositoryManager<'a>,
     verbose: bool,
+    skip_build_test: bool,
 }
 
 impl<'a> Builder<'a> {
     /// Creates new builder
-    pub fn new(config: &'a Config, register: &'a mut PackageRegister, repository_manager: &'a RepositoryManager, verbose: bool) -> Self {
+    pub fn new(
+        config: &'a Config,
+        register: &'a mut PackageRegister,
+        repository_manager: &'a RepositoryManager,
+        verbose: bool,
+        skip_build_test: bool,
+    ) -> Self {
         Self {
             config,
             register,
             repository_manager,
             verbose,
+            skip_build_test,
         }
     }
 
@@ -172,7 +180,7 @@ impl<'a> Builder<'a> {
             spinner.show();
 
             // Run build script
-            scripts::run_build_script(&script_data, &build_directory, env)?;
+            scripts::run_build_script(&script_data, &build_directory, env, self.skip_build_test)?;
 
             // Finish build spinner
             spinner.finish();
@@ -180,7 +188,7 @@ impl<'a> Builder<'a> {
             println!("Executing build script of {}", package_id.style());
 
             // Run build script
-            scripts::run_build_script(&script_data, &build_directory, env)?;
+            scripts::run_build_script(&script_data, &build_directory, env, self.skip_build_test)?;
         }
 
         // Patch binaries

@@ -6,7 +6,12 @@ use std::process::exit;
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{deprecation, logging::error, not_found, standard_print, styled::Styled},
+        display::{
+            deprecation,
+            logging::{error, warning},
+            not_found, standard_print,
+            styled::Styled,
+        },
         parameter_checks,
     },
     config::Config,
@@ -49,6 +54,14 @@ pub struct InstallArgs {
     /// True if verbose information should be shown
     #[arg(short, long, default_value = "false")]
     verbose: bool,
+
+    /// True to skip the Packit tests
+    #[arg(long, default_value = "false")]
+    skip_test: bool,
+
+    /// True to skip the build tests (note that these are not the same as the Packit tests)
+    #[arg(long, default_value = "false")]
+    skip_build_test: bool,
 }
 
 impl HandleCommand for InstallArgs {
@@ -93,12 +106,18 @@ impl HandleCommand for InstallArgs {
             InstallType::Prebuild
         };
 
+        if self.skip_test {
+            warning!("Packit tests are skipped, because the `--skip-test` flag is enabled");
+        }
+
         let installer_options = InstallerOptions::default()
             .install_type(install_type)
             .skip_symlinking(self.skip_symlinking)
             .skip_active(self.skip_active)
             .keep_build(self.keep_build)
-            .verbose(self.verbose);
+            .verbose(self.verbose)
+            .skip_build_test(self.skip_build_test)
+            .skip_test(self.skip_test);
         let mut installer = Installer::new(&config, &mut register, &manager, installer_options);
 
         // TODO: Check if this exists as an external package (possibly leading to conflicts) (if so, add to external packages)

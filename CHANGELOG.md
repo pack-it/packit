@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The `prebuilds.toml` file in the metadata, to support more advanced specification of prebuilds for a package:
     - Prebuilds can now be shared by multiple targets.
     - Prebuilds can now exclude certain paths of a package.
+- The `skip-test` and `skip-build-test` flags in the `install` command, to skip Packit tests or skip build tests.
 
 ### Changes
 - Change display of true and false values in the `info` and `search` commands.
