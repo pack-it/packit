@@ -238,7 +238,10 @@ impl<'a> Installer<'a> {
 
         self.determine_active(install_meta, &package_id, target)?;
 
-        self.execute_test(&package_id, install_meta, &install_directory, &script_args, target)?;
+        // Skip the test if the skip test option is true
+        if !self.options.skip_test {
+            self.execute_test(&package_id, install_meta, &install_directory, &script_args, target)?;
+        }
 
         Ok(())
     }
