@@ -662,7 +662,6 @@ fn check_package_test(package_id: &PackageId, register: &PackageRegister, config
         config,
         &script_args,
         false,
-        false,
     );
 
     // Get the external test files

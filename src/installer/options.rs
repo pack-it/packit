@@ -52,7 +52,7 @@ impl InstallerOptions {
         self
     }
 
-    /// Sets the verbose field.
+    /// Sets the `verbose` field.
     pub fn verbose(mut self, verbose: bool) -> Self {
         self.verbose = verbose;
         self

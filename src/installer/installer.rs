@@ -238,7 +238,7 @@ impl<'a> Installer<'a> {
 
         self.determine_active(install_meta, &package_id, target)?;
 
-        // Skip the test if the skip test option is true
+        // Only run the test if the skip test option is false
         if !self.options.skip_test {
             self.execute_test(&package_id, install_meta, &install_directory, &script_args, target)?;
         }
@@ -267,7 +267,6 @@ impl<'a> Installer<'a> {
             self.config,
             script_args,
             self.options.verbose,
-            self.options.skip_build_test,
         );
 
         // Only show a spinner when not verbose
@@ -364,7 +363,6 @@ impl<'a> Installer<'a> {
             self.config,
             script_args,
             self.options.verbose,
-            self.options.skip_build_test,
         );
 
         // Only show a spinner when not verbose
@@ -470,7 +468,6 @@ impl<'a> Installer<'a> {
             self.config,
             script_args,
             self.options.verbose,
-            self.options.skip_build_test,
         );
 
         // Download external files necessary for testing
@@ -783,7 +780,6 @@ impl<'a> Installer<'a> {
             self.config,
             &script_args,
             self.options.verbose,
-            self.options.skip_build_test,
         );
 
         // Only show spinner when not verbose
