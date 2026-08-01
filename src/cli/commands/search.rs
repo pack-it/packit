@@ -141,7 +141,7 @@ impl SearchArgs {
     /// Fails if the given query is not a valid `OptionalPackageId`.
     fn search(&self) {
         // Get the optional id
-        let message = "The given search query isn't a valid package.";
+        let message = "The given search query isn't a valid package. For regex use `--regex`.";
         let optional_id = OptionalPackageId::from_str(&self.query).unwrap_or_exit_msg(message, 1);
 
         match optional_id.versioned() {
