@@ -146,6 +146,11 @@ impl<'a> RepositoryManager<'a> {
 
             let package = match provider.read_package(package) {
                 Ok(package) => package,
+                Err(RepositoryError::ParseError(error)) => {
+                    debug!(err: &error, "Unable to parse {} from repository '{repository_id}', continuing...", package.style());
+                    not_found_reasons.insert(repository_id, PackageNotFoundReason::InvalidMetadata { error });
+                    continue;
+                },
                 Err(e) => {
                     debug!(err: e, "Unable to read {} from repository '{repository_id}', continuing...", package.style());
                     continue;
