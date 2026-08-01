@@ -2,7 +2,11 @@
 use clap::Args;
 use colored::Colorize;
 use regex::Regex;
-use std::{cmp::max, collections::HashSet, str::FromStr};
+use std::{
+    cmp::max,
+    collections::{HashSet, VecDeque},
+    str::FromStr,
+};
 
 use crate::{
     cli::{
@@ -21,12 +25,16 @@ use crate::{
     installer::types::{OptionalPackageId, PackageId, PackageName},
     platforms::Target,
     repositories::{error::RepositoryError, manager::RepositoryManager},
-    utils::unwrap_or_exit::UnwrapOrExit,
+    utils::{
+        tree::{Node, Tree},
+        unwrap_or_exit::UnwrapOrExit,
+    },
 };
 
 /// Searches a package with `<PACKAGE-NAME>[@<PACKAGE-VERSION]` and shows information based on the package (version) metadata.
 /// Alternatively, when the regex flag is true, it uses the regex query to search for packages which match the regex.
 /// Package version specific information is shown when the version is given, otherwise package specific information is shown.
+/// Note that the version is necessary if `--tree` is specified.
 #[derive(Args, Debug)]
 pub struct SearchArgs {
     /// The query to search with (can be an `OptionalPackageId` or regex string)
@@ -36,6 +44,11 @@ pub struct SearchArgs {
     #[arg(long, default_value = "false")]
     regex: bool,
 
+    /// True to show the tree of a package
+    /// Note that the tree assumes the latest versions
+    #[arg(long, default_value = "false", conflicts_with = "regex")]
+    tree: bool,
+
     /// True if verbose information should be shown
     #[arg(short, long, default_value = "false")]
     verbose: bool,
@@ -44,8 +57,13 @@ pub struct SearchArgs {
 impl HandleCommand for SearchArgs {
     /// Handles the search command, searching a certain package.
     fn handle(&self) {
-        match self.regex {
-            true => self.regex_search(),
+        if self.regex {
+            self.regex_search();
+            return;
+        }
+
+        match self.tree {
+            true => self.search_tree(),
             false => self.search(),
         }
     }
@@ -76,6 +94,47 @@ impl SearchArgs {
         }
 
         display::print_grid(&matches.into_iter().map_styled().collect());
+    }
+
+    /// Searches the tree of a given package, always using the latest version for the current target of each dependency.
+    /// Fails if the given query is not a valid `PackageId`.
+    fn search_tree(&self) {
+        // Get the package id
+        let message = "The given search query isn't a valid package id.";
+        let package_id = PackageId::from_str(&self.query).unwrap_or_exit_msg(message, 1);
+
+        let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
+        let manager = RepositoryManager::new(&config);
+
+        let root = Node::new(package_id, (), ());
+        let mut tree = Tree::new(root);
+
+        let mut package_queue = VecDeque::from([0]);
+        while let Some(node_index) = package_queue.pop_front() {
+            let node = tree.get_node_by_index_mut(node_index).expect("Expected node to exist");
+
+            let (_, _, version_meta) =
+                manager.read_package_and_version(&node.get_package_id().clone().into(), &Target::current()).unwrap_or_exit(1);
+
+            let target_bounds = version_meta.get_best_target(&Target::current()).unwrap_or_exit(1);
+            let target = version_meta.get_target(&target_bounds).unwrap_or_exit(1);
+            let dependencies = version_meta.dependencies.iter().chain(target.dependencies.iter());
+            let build_dependencies = version_meta.build_dependencies.iter().chain(target.build_dependencies.iter());
+
+            for dependency in build_dependencies.chain(dependencies) {
+                let (repository_id, dependency_meta) = manager.read_package(dependency.get_name()).unwrap_or_exit(1);
+                let dependency_version_meta = manager
+                    .read_latest_supported_dependency_version(&repository_id, &dependency_meta, dependency, &Target::current())
+                    .unwrap_or_exit(1);
+
+                let dependency_id = PackageId::new(dependency.get_name().clone(), dependency_version_meta.version);
+                let new_node = Node::new(dependency_id, (), ());
+                let new_index = tree.add_node(node_index, new_node).unwrap_or_exit(1);
+                package_queue.push_back(new_index);
+            }
+        }
+
+        println!("{tree}");
     }
 
     /// Searches information of a package based on the provided `OptionalPackageId`.

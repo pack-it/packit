@@ -6,10 +6,7 @@ use std::{
 
 use thiserror::Error;
 
-use crate::{
-    cli::display::styled::Styled, installer::types::PackageId, register::package_register::PackageRegister,
-    repositories::error::RepositoryError,
-};
+use crate::{cli::display::styled::Styled, installer::types::PackageId, register::package_register::PackageRegister};
 
 // Static string prefixes for the tree display
 const BRANCH: &str = "\u{251C}\u{2500}\u{2500}\u{2500} ";
@@ -28,9 +25,6 @@ pub enum TreeError {
 
     #[error("{} has itself as a dependency, creating a cycle in the tree", .0.style())]
     CycleError(PackageId),
-
-    #[error("Cannot create tree, because of an error reading the repository.")]
-    RepositoryError(#[from] RepositoryError),
 }
 
 pub type Result<T> = std::result::Result<T, TreeError>;
