@@ -7,6 +7,7 @@ pub struct ProgressBar {
     prefix: String,
     bar: IndicatifProgressBar,
     size: u64,
+    bar_on_newline: bool,
 }
 
 impl ProgressBar {
@@ -14,12 +15,34 @@ impl ProgressBar {
     pub fn new(size: u64, prefix: String) -> Self {
         let bar = IndicatifProgressBar::new(size);
 
-        // Set the style of the progress bar
-        let template = format!("{prefix} [{{wide_bar:.white}}] [{{percent}}%]");
-        let style = ProgressStyle::with_template(&template).expect("Expected template to be correct.").progress_chars("\u{2501}\u{2501} ");
-        bar.set_style(style);
+        // Create instance to use instance methods
+        let bar_on_newline = prefix.len() > 50;
+        let new_self = Self {
+            prefix,
+            bar,
+            size,
+            bar_on_newline,
+        };
 
-        Self { prefix, bar, size }
+        // Set the style of the progress bar
+        new_self.bar.set_style(new_self.create_style());
+
+        new_self
+    }
+
+    /// Creates the style of the progress bar.
+    fn create_style(&self) -> ProgressStyle {
+        let mut prefix = self.prefix.normal();
+        let mut percent = "{percent}%".normal();
+        if self.bar.position() >= self.size {
+            prefix = prefix.bold().green();
+            percent = percent.green();
+        }
+
+        let separator = if self.bar_on_newline { "\n" } else { " " };
+
+        let template = format!("{prefix}{separator}[{{wide_bar}}] [{percent}]");
+        ProgressStyle::with_template(&template).expect("Expected template to be correct.").progress_chars("\u{2501}\u{2501} ")
     }
 
     /// Sets the position of the progress bar.
@@ -28,10 +51,7 @@ impl ProgressBar {
 
         // Finish the bar if the bar is full
         if position >= self.size {
-            let template = format!("{} [{{wide_bar}}] [{}]", self.prefix.bold().green(), "{percent}%".green());
-            let style =
-                ProgressStyle::with_template(&template).expect("Expected template to be correct.").progress_chars("\u{2501}\u{2501} ");
-            self.bar.set_style(style);
+            self.bar.set_style(self.create_style());
             self.bar.finish();
         }
     }
@@ -40,8 +60,6 @@ impl ProgressBar {
     pub fn adjust_prefix(&mut self, prefix: String) {
         self.prefix = prefix;
 
-        let template = format!("{} [{{wide_bar:.white}}] [{{percent}}%]", self.prefix);
-        let style = ProgressStyle::with_template(&template).expect("Expected template to be correct.").progress_chars("\u{2501}\u{2501} ");
-        self.bar.set_style(style);
+        self.bar.set_style(self.create_style());
     }
 }
