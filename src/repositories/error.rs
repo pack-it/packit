@@ -78,6 +78,11 @@ pub enum PackageNotFoundReason {
     #[error("cannot be found in any repository")]
     NotFound,
 
+    #[error("the metadata cannot be parsed: {error}")]
+    InvalidMetadata {
+        error: toml::de::Error,
+    },
+
     #[error("package is disabled since {since}{}", reason.as_ref().map(|reason| format!(", with reason '{reason}'")).unwrap_or_default())]
     Disabled {
         since: Date,
@@ -101,9 +106,9 @@ impl PackageNotFoundReason {
 
         for next in reasons {
             match &primary {
-                // If the primary is `UnsupportedTarget`, only use the new one if the next is not `NotFound` or `Disabled`
+                // If the primary is `UnsupportedTarget`, only use the new one if the next is `NotSupported`
                 PackageNotFoundReason::UnsupportedTarget => {
-                    if !matches!(next, PackageNotFoundReason::NotFound | PackageNotFoundReason::Disabled { .. }) {
+                    if matches!(next, PackageNotFoundReason::NotSupported { .. }) {
                         primary = next.clone();
                     }
                 },
@@ -123,6 +128,14 @@ impl PackageNotFoundReason {
                         PackageNotFoundReason::UnsupportedTarget | PackageNotFoundReason::NotSupported { .. } => primary = next.clone(),
                         PackageNotFoundReason::Disabled { since: since_next, .. } if since_next > since => primary = next.clone(),
                         _ => {},
+                    };
+                },
+
+                // If the current primary is `InvalidMetadata`, only use the new one if it is not `NotFound` or `InvalidMetadata`
+                PackageNotFoundReason::InvalidMetadata { .. } => {
+                    match next {
+                        PackageNotFoundReason::NotFound | PackageNotFoundReason::InvalidMetadata { .. } => {},
+                        _ => primary = next.clone(),
                     };
                 },
 

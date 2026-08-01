@@ -237,6 +237,14 @@ impl<'a> RepositoryManager<'a> {
 
             let package = match provider.read_package_version(&package_id.name, &package_id.version) {
                 Ok(package) => package,
+                Err(RepositoryError::ParseError(error)) => {
+                    debug!(
+                        "Cannot parse package {} in repository '{repository_id}', continuing.",
+                        package_id.style()
+                    );
+                    not_found_reasons.insert(repository_id, PackageNotFoundReason::InvalidMetadata { error });
+                    continue;
+                },
                 Err(_) => {
                     debug!(
                         "Cannot find package {} in repository '{repository_id}', continuing.",
