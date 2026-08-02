@@ -4,11 +4,11 @@ use crate::{
     installer::types::PackageName,
     platforms::{DEFAULT_CONFIG_DIR, OsVersion, Target},
     repositories::manager::RepositoryManager,
-    utils::packit_version::{current_packit_version, packit_version, packit_version_name},
+    utils::packit_version::{current_packit_version, packit_version_name},
 };
 use clap::Args;
 use colored::Colorize;
-use std::{process::exit, str::FromStr};
+use std::process::exit;
 
 use crate::{
     cli::{
@@ -41,7 +41,7 @@ pub struct InfoArgs {
     verbose: bool,
 
     /// True if displaying package trees as well
-    #[arg(long, default_value = "false")]
+    #[arg(long, default_value = "false", requires = "package")]
     tree: bool,
 }
 
@@ -98,11 +98,12 @@ impl InfoArgs {
         }
 
         let target = Target::current();
+        let package_id = PackageId::new(PackageName::packit(), current_packit_version());
 
         // Read latest version of packit
         let manager = RepositoryManager::new(config);
         let latest_version;
-        match manager.read_package(&PackageName::from_str("packit").expect("Expected 'packit' to be a valid package name")) {
+        match manager.read_package(&package_id.name) {
             Ok((repository_id, package_meta)) => match manager.read_latest_supported_version(&repository_id, &package_meta, &target) {
                 Ok(version_meta) => latest_version = Some(version_meta.version),
                 Err(e) => {
@@ -122,7 +123,7 @@ impl InfoArgs {
             Some(_) | None => "no".into(),
         };
 
-        println!("{}{}", "packit@".bold().blue(), packit_version!().bold().blue());
+        println!("{}", package_id.style());
         println!("{}", packit_version_name!().italic().cyan());
 
         let mut pair_aligner = PairAligner::new();

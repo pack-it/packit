@@ -22,6 +22,11 @@ impl PackageName {
     pub fn get_prefix(&self) -> char {
         self.0.chars().next().expect("Expected first char, based on regex")
     }
+
+    /// Gets the package name of Packit itself.
+    pub fn packit() -> Self {
+        Self("packit".to_string())
+    }
 }
 
 impl<'de> Deserialize<'de> for PackageName {

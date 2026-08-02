@@ -71,7 +71,7 @@ enum Commands {
     /// Check the installation and fix issues
     Fix(FixArgs),
 
-    /// Get info from a specific package
+    /// Get info from a specific package or the Packit install
     Info(InfoArgs),
 
     /// Update an installed package
