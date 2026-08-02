@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use crate::cli::display::{standard_print::DisplayJoined, styled::MapStyled};
+use crate::{
+    cli::display::{standard_print::DisplayJoined, styled::MapStyled},
+    installer::types::PackageName,
+    utils::packit_version::{packit_version, packit_version_name},
+};
 use clap::Args;
 use colored::Colorize;
 use std::process::exit;
@@ -28,7 +32,7 @@ use crate::{
 #[derive(Args, Debug)]
 pub struct InfoArgs {
     /// Optional package id
-    package: OptionalPackageId,
+    package: Option<OptionalPackageId>,
 
     /// True if verbose information should be shown
     #[arg(short, long, default_value = "false")]
@@ -45,15 +49,20 @@ impl HandleCommand for InfoArgs {
         let register_dir = PackageRegister::get_path(&config.prefix_directory);
         let register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
+        let Some(package) = &self.package else {
+            self.display_packit_info(&config, &register);
+            return;
+        };
+
         // Get package information
-        let package = match register.get_package(&self.package.name) {
+        let installed_package = match register.get_package(&package.name) {
             Some(package) => package,
-            None => not_found::register_package(&self.package.name, &register),
+            None => not_found::register_package(&package.name, &register),
         };
 
         // Display tree if tree flag is given
         if self.tree {
-            let Some(package_id) = self.package.versioned() else {
+            let Some(package_id) = package.versioned() else {
                 error!(msg: "Displaying a tree requires package version to be specified.");
                 exit(1);
             };
@@ -69,23 +78,40 @@ impl HandleCommand for InfoArgs {
         }
 
         // Show package version specific information
-        if let Some(package_id) = self.package.versioned() {
-            self.display_package_version_info(&package_id, &register, package);
+        if let Some(package_id) = package.versioned() {
+            self.display_package_version_info(&package_id, &register, installed_package);
             return;
         }
 
-        self.display_package_info(package);
+        self.display_package_info(&package.name, installed_package);
     }
 }
 
 impl InfoArgs {
+    /// Displays information about the Packit installation.
+    fn display_packit_info(&self, config: &Config, register: &PackageRegister) {
+        if self.tree {
+            error!(msg: "Displaying a tree requires package version to be specified.");
+            exit(1);
+        }
+
+        println!("{}{}", "packit@".bold().blue(), packit_version!().bold().blue());
+        println!("{}", packit_version_name!().italic().cyan());
+
+        let mut pair_aligner = PairAligner::new();
+        pair_aligner.add("Prefix", config.prefix_directory.display());
+        pair_aligner.add("Installed packages", register.iterate_all().count());
+        pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
+        println!();
+    }
+
     /// Displays package info.
-    fn display_package_info(&self, package: &InstalledPackage) {
+    fn display_package_info(&self, package_name: &PackageName, package: &InstalledPackage) {
         // Sort installed versions for display
         let mut installed_versions: Vec<_> = package.versions.keys().collect();
         installed_versions.sort();
 
-        println!("{}", self.package.name.style());
+        println!("{}", package_name.style());
         println!("{}", package.description.italic().cyan());
 
         let mut pair_aligner = PairAligner::new();
