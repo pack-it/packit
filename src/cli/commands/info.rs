@@ -2,6 +2,7 @@
 use crate::{
     cli::display::{standard_print::DisplayJoined, styled::MapStyled},
     installer::types::PackageName,
+    platforms::{DEFAULT_CONFIG_DIR, OsVersion, Target},
     utils::packit_version::{packit_version, packit_version_name},
 };
 use clap::Args;
@@ -99,8 +100,38 @@ impl InfoArgs {
         println!("{}", packit_version_name!().italic().cyan());
 
         let mut pair_aligner = PairAligner::new();
-        pair_aligner.add("Prefix", config.prefix_directory.display());
+        pair_aligner.add("Config directory", DEFAULT_CONFIG_DIR);
+        pair_aligner.add("Prefix directory", config.prefix_directory.display());
+        pair_aligner.add("Multiuser mode", if config.multiuser { "on" } else { "off" });
         pair_aligner.add("Installed packages", register.iterate_all().count());
+        pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
+        println!();
+
+        let target = Target::current();
+        println!("Current system");
+        let mut pair_aligner = PairAligner::new();
+
+        match &target.os {
+            OsVersion::MacOs { version } => {
+                pair_aligner.add("OS", format!("macOS {version}"));
+            },
+            OsVersion::Linux {
+                distro,
+                distro_version,
+                kernel_version,
+            } => {
+                pair_aligner.add("OS", format!("Linux {distro} {distro_version}"));
+                pair_aligner.add("Kernel version", kernel_version);
+            },
+            OsVersion::Windows { version } => {
+                pair_aligner.add("OS", format!("Windows {version}"));
+            },
+            OsVersion::Unknown => {
+                pair_aligner.add("OS", "Unknown".dimmed());
+            },
+        }
+
+        pair_aligner.add("Architecture", target.architecture);
         pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
         println!();
     }
