@@ -3,11 +3,12 @@ use crate::{
     cli::display::{standard_print::DisplayJoined, styled::MapStyled},
     installer::types::PackageName,
     platforms::{DEFAULT_CONFIG_DIR, OsVersion, Target},
-    utils::packit_version::{packit_version, packit_version_name},
+    repositories::manager::RepositoryManager,
+    utils::packit_version::{current_packit_version, packit_version, packit_version_name},
 };
 use clap::Args;
 use colored::Colorize;
-use std::process::exit;
+use std::{process::exit, str::FromStr};
 
 use crate::{
     cli::{
@@ -96,6 +97,31 @@ impl InfoArgs {
             exit(1);
         }
 
+        let target = Target::current();
+
+        // Read latest version of packit
+        let manager = RepositoryManager::new(config);
+        let latest_version;
+        match manager.read_package(&PackageName::from_str("packit").expect("Expected 'packit' to be a valid package name")) {
+            Ok((repository_id, package_meta)) => match manager.read_latest_supported_version(&repository_id, &package_meta, &target) {
+                Ok(version_meta) => latest_version = Some(version_meta.version),
+                Err(e) => {
+                    error!(e, "Cannot request packit version metadata");
+                    latest_version = None;
+                },
+            },
+            Err(e) => {
+                error!(e, "Cannot request packit metadata");
+                latest_version = None;
+            },
+        }
+
+        // Create display for new version
+        let new_version_disp = match latest_version {
+            Some(latest_version) if latest_version > current_packit_version() => format!("yes, {}", latest_version.style()),
+            Some(_) | None => "no".into(),
+        };
+
         println!("{}{}", "packit@".bold().blue(), packit_version!().bold().blue());
         println!("{}", packit_version_name!().italic().cyan());
 
@@ -104,10 +130,10 @@ impl InfoArgs {
         pair_aligner.add("Prefix directory", config.prefix_directory.display());
         pair_aligner.add("Multiuser mode", if config.multiuser { "on" } else { "off" });
         pair_aligner.add("Installed packages", register.iterate_all().count());
+        pair_aligner.add("New version available", new_version_disp);
         pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
         println!();
 
-        let target = Target::current();
         println!("Current system");
         let mut pair_aligner = PairAligner::new();
 
