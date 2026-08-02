@@ -146,9 +146,9 @@ impl<'a> RepositoryManager<'a> {
 
             let package = match provider.read_package(package) {
                 Ok(package) => package,
-                Err(RepositoryError::ParseError(error)) => {
-                    debug!(err: &error, "Unable to parse {} from repository '{repository_id}', continuing...", package.style());
-                    not_found_reasons.insert(repository_id, PackageNotFoundReason::InvalidMetadata { error });
+                Err(RepositoryError::ParseError(e)) => {
+                    debug!(err: &e, "Unable to parse {} from repository '{repository_id}', continuing...", package.style());
+                    not_found_reasons.insert(repository_id, PackageNotFoundReason::InvalidMetadata { error: Box::new(e) });
                     continue;
                 },
                 Err(e) => {
@@ -242,12 +242,12 @@ impl<'a> RepositoryManager<'a> {
 
             let package = match provider.read_package_version(&package_id.name, &package_id.version) {
                 Ok(package) => package,
-                Err(RepositoryError::ParseError(error)) => {
+                Err(RepositoryError::ParseError(e)) => {
                     debug!(
                         "Cannot parse package {} in repository '{repository_id}', continuing.",
                         package_id.style()
                     );
-                    not_found_reasons.insert(repository_id, PackageNotFoundReason::InvalidMetadata { error });
+                    not_found_reasons.insert(repository_id, PackageNotFoundReason::InvalidMetadata { error: Box::new(e) });
                     continue;
                 },
                 Err(_) => {

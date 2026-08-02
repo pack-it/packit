@@ -80,7 +80,7 @@ pub enum PackageNotFoundReason {
 
     #[error("the metadata cannot be parsed: {error}")]
     InvalidMetadata {
-        error: toml::de::Error,
+        error: Box<toml::de::Error>,
     },
 
     #[error("package is disabled since {since}{}", reason.as_ref().map(|reason| format!(", with reason '{reason}'")).unwrap_or_default())]
@@ -123,20 +123,16 @@ impl PackageNotFoundReason {
                 },
 
                 // If the primary is `Disabled`, only use the new one if the next if `UnsupportedTarget` or `NotSupported`, or a newer disable
-                PackageNotFoundReason::Disabled { since, .. } => {
-                    match next {
-                        PackageNotFoundReason::UnsupportedTarget | PackageNotFoundReason::NotSupported { .. } => primary = next.clone(),
-                        PackageNotFoundReason::Disabled { since: since_next, .. } if since_next > since => primary = next.clone(),
-                        _ => {},
-                    };
+                PackageNotFoundReason::Disabled { since, .. } => match next {
+                    PackageNotFoundReason::UnsupportedTarget | PackageNotFoundReason::NotSupported { .. } => primary = next.clone(),
+                    PackageNotFoundReason::Disabled { since: since_next, .. } if since_next > since => primary = next.clone(),
+                    _ => {},
                 },
 
                 // If the current primary is `InvalidMetadata`, only use the new one if it is not `NotFound` or `InvalidMetadata`
-                PackageNotFoundReason::InvalidMetadata { .. } => {
-                    match next {
-                        PackageNotFoundReason::NotFound | PackageNotFoundReason::InvalidMetadata { .. } => {},
-                        _ => primary = next.clone(),
-                    };
+                PackageNotFoundReason::InvalidMetadata { .. } => match next {
+                    PackageNotFoundReason::NotFound | PackageNotFoundReason::InvalidMetadata { .. } => {},
+                    _ => primary = next.clone(),
                 },
 
                 // If the current primary is `NotFound`, always use the new one
