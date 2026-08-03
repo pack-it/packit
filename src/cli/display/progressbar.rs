@@ -7,7 +7,6 @@ pub struct ProgressBar {
     prefix: String,
     bar: IndicatifProgressBar,
     size: u64,
-    bar_on_newline: bool,
 }
 
 impl ProgressBar {
@@ -16,16 +15,11 @@ impl ProgressBar {
         let bar = IndicatifProgressBar::new(size);
 
         // Create instance to use instance methods
-        let bar_on_newline = prefix.len() > 50;
-        let new_self = Self {
-            prefix,
-            bar,
-            size,
-            bar_on_newline,
-        };
+        let new_self = Self { prefix, bar, size };
 
         // Set the style of the progress bar
         new_self.bar.set_style(new_self.create_style());
+        new_self.bar.set_position(0);
 
         new_self
     }
@@ -39,9 +33,7 @@ impl ProgressBar {
             percent = percent.green();
         }
 
-        let separator = if self.bar_on_newline { "\n" } else { " " };
-
-        let template = format!("{prefix}{separator}[{{wide_bar}}] [{percent}]");
+        let template = format!("{prefix} [{{wide_bar}}] [{percent}]");
         ProgressStyle::with_template(&template).expect("Expected template to be correct.").progress_chars("\u{2501}\u{2501} ")
     }
 
