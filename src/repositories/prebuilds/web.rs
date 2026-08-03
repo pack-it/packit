@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::str::FromStr;
+use std::{io::Read, str::FromStr};
 
-use bytes::Bytes;
 use reqwest::{StatusCode, blocking::Response};
 use url::Url;
 
@@ -30,11 +29,10 @@ impl PrebuildProvider for WebPrebuildProvider {
         Ok(toml::de::from_str(&metadata_string)?)
     }
 
-    fn read_prebuild(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<(ArchiveExtension, Bytes)> {
+    fn read_prebuild(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<(ArchiveExtension, Box<dyn Read>)> {
         let (url, response) = self.read_file_path(package_id, revision, prebuild_id, "tar.gz")?;
-        let bytes = response.bytes()?;
 
-        Ok((ArchiveExtension::from_path(url.as_ref()), bytes))
+        Ok((ArchiveExtension::from_path(url.as_ref()), Box::new(response)))
     }
 }
 

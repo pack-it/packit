@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::collections::HashMap;
+use std::{collections::HashMap, io::Read};
 
 use bytes::Bytes;
 
@@ -19,7 +19,7 @@ use crate::{
         provider::{self, MetadataProvider, PrebuildProvider},
         types::{Date, IndexMeta, PackageMeta, PackageVersionMeta, PrebuildFileMeta, PrebuildsList, RepositoryMeta},
     },
-    utils::packit_version::current_packit_version,
+    utils::{ioerror::IOResultExt, packit_version::current_packit_version, reading::ReadExt},
 };
 
 /// Manages all requests to the repositories.
@@ -372,7 +372,7 @@ impl<'a> RepositoryManager<'a> {
         self.get_prebuid_provider(repository_id)?.get_prebuild_meta(package, revision, prebuild_id)
     }
 
-    /// Reads the prebuild of the given package version as bytes, returns a tuple containing the archive extension and the bytes.
+    /// Reads the prebuild of the given package version as `Read`, returns a tuple containing the archive extension and the `Read`.
     /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     pub fn read_prebuild(
         &self,
@@ -380,8 +380,23 @@ impl<'a> RepositoryManager<'a> {
         package: &PackageId,
         revision: u64,
         prebuild_id: &str,
-    ) -> Result<(ArchiveExtension, Bytes)> {
+    ) -> Result<(ArchiveExtension, Box<dyn Read>)> {
         self.get_prebuid_provider(repository_id)?.read_prebuild(package, revision, prebuild_id)
+    }
+
+    /// Reads the prebuild of the given package version as bytes, returns a tuple containing the archive extension and the bytes.
+    /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
+    pub fn read_prebuild_bytes(
+        &self,
+        repository_id: &str,
+        package: &PackageId,
+        revision: u64,
+        prebuild_id: &str,
+    ) -> Result<(ArchiveExtension, Bytes)> {
+        let (extension, read) = self.read_prebuild(repository_id, package, revision, prebuild_id)?;
+        let bytes = read.read_all(None).err_operation("read prebuild bytes")?;
+
+        Ok((extension, bytes))
     }
 
     /// Gets the latest supported package version for the given package metadata.

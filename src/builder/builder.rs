@@ -26,11 +26,7 @@ use crate::{
         manager::RepositoryManager,
         types::{Checksum, Patch, Source},
     },
-    utils::{
-        ioerror::IOResultExt,
-        patches,
-        requests::{self, ResponseExt},
-    },
+    utils::{ioerror::IOResultExt, patches, reading::ReadExt, requests},
 };
 
 /// The builder of Packit, managing the building of packages.
@@ -220,7 +216,7 @@ impl<'a> Builder<'a> {
                 }
             };
 
-            let bytes = self.download_file(&patch.url, &patch.mirrors, &patch.checksum, callback, false)?;
+            let bytes = self.download_file(&patch.url, &patch.mirrors, &patch.checksum, callback, None)?;
             spinner.finish();
             return Ok(bytes);
         }
@@ -267,18 +263,13 @@ impl<'a> Builder<'a> {
             }
         };
 
-        self.download_file(&source.url, &source.mirrors, &source.checksum, callback, true)
+        let size = source.size.0 as usize;
+        self.download_file(&source.url, &source.mirrors, &source.checksum, callback, Some(size))
     }
 
     /// Downloads a file from the url, or one of the mirrors. Checks against a checksum and returns progress with a callback.
-    fn download_file<F>(
-        &self,
-        url: &str,
-        mirrors: &[String],
-        checksum: &Checksum,
-        mut callback: F,
-        enable_progress_callback: bool,
-    ) -> Result<Bytes>
+    /// Note that it only returns progress in the callback when `size` is `Some`.
+    fn download_file<F>(&self, url: &str, mirrors: &[String], checksum: &Checksum, mut callback: F, size: Option<usize>) -> Result<Bytes>
     where
         F: FnMut((Option<&str>, Option<usize>)),
     {
@@ -311,9 +302,9 @@ impl<'a> Builder<'a> {
         let response = response?;
 
         // Get the bytes from the response
-        let bytes = match enable_progress_callback {
-            true => response.read_all(|x| callback((None, Some(x)))).unwrap(),
-            false => response.bytes()?,
+        let bytes = match size {
+            Some(size) => response.read_progress(Some(size), |x| callback((None, Some(x)))).unwrap(),
+            None => response.bytes()?,
         };
 
         // Calculate the checksum

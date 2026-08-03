@@ -325,7 +325,7 @@ impl<'a> PortableRepoCreator<'a> {
             Err(e) => return Err(e.into()),
         };
 
-        let (_, prebuild) = self.repository_manager.read_prebuild(repository_id, package_id, revision, prebuild_id)?;
+        let (_, prebuild) = self.repository_manager.read_prebuild_bytes(repository_id, package_id, revision, prebuild_id)?;
 
         // Write to file
         let prebuild_name = format!("{package_id}-{revision}-{prebuild_id}.tar.gz");

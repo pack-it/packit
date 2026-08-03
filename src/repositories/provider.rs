@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
+use std::io::Read;
+
 use bytes::Bytes;
 
 use crate::{
@@ -49,7 +51,7 @@ pub trait PrebuildProvider {
     fn get_prebuild_meta(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<PrebuildFileMeta>;
 
     /// Reads the prebuild package as bytes, returns a tuple containing the origin url and the bytes.
-    fn read_prebuild(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<(ArchiveExtension, Bytes)>;
+    fn read_prebuild(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<(ArchiveExtension, Box<dyn Read>)>;
 }
 
 /// Creates a metadata repository provider for the given repository.

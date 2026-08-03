@@ -6,6 +6,7 @@ pub mod io;
 pub mod ioerror;
 pub mod packit_version;
 pub mod patches;
+pub mod reading;
 pub mod requests;
 pub mod tree;
 pub mod unwrap_or_exit;

@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{fs, path::PathBuf};
-
-use bytes::Bytes;
+use std::{
+    fs::{self, File},
+    io::Read,
+    path::PathBuf,
+};
 
 use crate::{
     installer::{types::PackageId, unpack::ArchiveExtension},
@@ -29,13 +31,11 @@ impl PrebuildProvider for FileSystemPrebuildProvider {
         Ok(toml::de::from_str(&metadata_string)?)
     }
 
-    fn read_prebuild(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<(ArchiveExtension, Bytes)> {
+    fn read_prebuild(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<(ArchiveExtension, Box<dyn Read>)> {
         let url = self.get_file_path(package_id, revision, prebuild_id, "tar.gz")?;
+        let file = File::open(&url).err_with_path("read", &url)?;
 
-        // TODO: improve efficiency of file reading
-        let bytes = fs::read(&url).err_with_path("read", &url)?;
-
-        Ok((ArchiveExtension::from_path(&url.display().to_string()), Bytes::from(bytes)))
+        Ok((ArchiveExtension::from_path(&url.display().to_string()), Box::new(file)))
     }
 }
 
