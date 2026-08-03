@@ -19,7 +19,7 @@ where
 {
     fn read_all(mut self, size: Option<usize>) -> std::io::Result<Bytes> {
         // Use 1MB if no size is specified
-        let size = size.unwrap_or(1 * 1024 * 1024) as usize;
+        let size = size.unwrap_or(1024 * 1024);
         let mut bytes = Vec::with_capacity(size);
 
         self.read_to_end(&mut bytes)?;
@@ -31,7 +31,7 @@ where
         F: FnMut(usize),
     {
         // Use 1MB if no size is specified
-        let size = size.unwrap_or(1 * 1024 * 1024) as usize;
+        let size = size.unwrap_or(1024 * 1024);
         let mut bytes = BytesMut::with_capacity(size);
         let mut buffer = [0; 32 * 1024];
 

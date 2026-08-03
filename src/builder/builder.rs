@@ -114,7 +114,7 @@ impl<'a> Builder<'a> {
         debug!("Source size: {}", source.size);
 
         // Download the build files
-        let bytes = self.download_source(&source, &package_name)?;
+        let bytes = self.download_source(source, package_name)?;
 
         // Create temp directory to build in
         let build_directory = TempDir::new().err_operation("create temp dir")?;
@@ -303,7 +303,7 @@ impl<'a> Builder<'a> {
 
         // Get the bytes from the response
         let bytes = match size {
-            Some(size) => response.read_progress(Some(size), |x| callback((None, Some(x)))).unwrap(),
+            Some(size) => response.read_progress(Some(size), |x| callback((None, Some(x)))).err_operation("read source bytes")?,
             None => response.bytes()?,
         };
 
