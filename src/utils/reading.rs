@@ -8,6 +8,9 @@ pub trait ReadExt {
 
     /// Reads all bytes from the `Read` into a byte buffer.
     /// Calls the `progress` callback after reading a chunk.
+    ///
+    /// Note that the progress method should not contain heavy calculations.
+    /// All operations in the progress callback block reading.
     fn read_progress<F>(self, size: Option<usize>, progress: F) -> std::io::Result<Bytes>
     where
         F: FnMut(usize);

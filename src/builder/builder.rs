@@ -206,14 +206,14 @@ impl<'a> Builder<'a> {
             spinner.show();
 
             let callback = |(alternative, _): (Option<&str>, _)| {
-                if let Some(alternative) = alternative {
-                    let message = format!(
-                        "Downloading patch {id} of {} from alternative '{}'",
-                        package_id.style(),
-                        alternative.cyan()
-                    );
-                    spinner.adjust_message(message);
-                }
+                let Some(alternative) = alternative else { return };
+
+                let message = format!(
+                    "Downloading patch {id} of {} from alternative '{}'",
+                    package_id.style(),
+                    alternative.cyan()
+                );
+                spinner.adjust_message(message);
             };
 
             let bytes = self.download_file(&patch.url, &patch.mirrors, &patch.checksum, callback, None)?;
@@ -248,14 +248,14 @@ impl<'a> Builder<'a> {
 
     /// Downloads the source file of the package. Shows the download progress in a `ProgressBar`.
     fn download_source(&self, source: &Source, package_name: &PackageName) -> Result<Bytes> {
-        let line_1 = format!("Retrieving {} from '{}'", package_name.style(), source.url.cyan());
-        let message = format!("{line_1}\nDownloading {}", package_name.style());
-        let mut progressbar = ProgressBar::new(source.size.0.into(), message);
+        let retrieve_message = format!("Retrieving {} from '{}'", package_name.style(), source.url.cyan());
+        let full_message = format!("{retrieve_message}\nDownloading {}", package_name.style());
+        let mut progressbar = ProgressBar::new(source.size.0.into(), full_message);
 
         let callback = |(alternative, progress): (Option<&str>, Option<usize>)| {
             if let Some(alternative) = alternative {
-                let line_1 = format!("Retrieving {} from alternative '{}'", package_name.style(), alternative.cyan());
-                progressbar.adjust_prefix(format!("{line_1}\nDownloading {}", package_name.style()));
+                let retrieve_message = format!("Retrieving {} from alternative '{}'", package_name.style(), alternative.cyan());
+                progressbar.adjust_prefix(format!("{retrieve_message}\nDownloading {}", package_name.style()));
             }
 
             if let Some(progress) = progress {
