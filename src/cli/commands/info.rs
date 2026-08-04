@@ -43,6 +43,10 @@ pub struct InfoArgs {
     /// True if displaying package trees as well
     #[arg(long, default_value = "false", requires = "package")]
     tree: bool,
+
+    /// True if the active version should be used
+    #[arg(long, default_value = "false", requires = "package")]
+    active: bool,
 }
 
 impl HandleCommand for InfoArgs {
@@ -62,13 +66,27 @@ impl HandleCommand for InfoArgs {
             None => not_found::register_package(&package.name, &register),
         };
 
+        // Check if there is version ambiguity (version and `--active` specified)
+        if package.version.is_some() && self.active {
+            error!(msg: "Version is ambiguous, version and `--active` are both specified");
+            exit(1);
+        }
+
+        // Get the package version
+        let package_version = match &package.version {
+            Some(version) => Some(version),
+            None if self.active => Some(&installed_package.active_version),
+            None => None,
+        };
+
         // Display tree if tree flag is given
         if self.tree {
-            let Some(package_id) = package.versioned() else {
+            let Some(package_version) = package_version else {
                 error!(msg: "Displaying a tree requires package version to be specified.");
                 exit(1);
             };
 
+            let package_id = PackageId::new(package.name.clone(), package_version.clone());
             let tree = match EmptyTree::new_empty(package_id.clone(), &register) {
                 Ok(tree) => tree,
                 Err(TreeError::NotFound(..)) => not_found::register_package_version(&package_id, &register),
@@ -80,7 +98,8 @@ impl HandleCommand for InfoArgs {
         }
 
         // Show package version specific information
-        if let Some(package_id) = package.versioned() {
+        if let Some(package_version) = package_version {
+            let package_id = PackageId::new(package.name.clone(), package_version.clone());
             self.display_package_version_info(&package_id, &register, installed_package);
             return;
         }
@@ -92,11 +111,6 @@ impl HandleCommand for InfoArgs {
 impl InfoArgs {
     /// Displays information about the Packit installation.
     fn display_packit_info(&self, config: &Config, register: &PackageRegister) {
-        if self.tree {
-            error!(msg: "Displaying a tree requires package version to be specified.");
-            exit(1);
-        }
-
         let target = Target::current();
         let package_id = PackageId::new(PackageName::packit(), current_packit_version());
 
