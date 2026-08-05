@@ -13,20 +13,20 @@ use crate::{
         BinaryPatcher, BuildEnv,
         error::{BuilderError, Result},
     },
-    cli::display::{Spinner, logging::debug, styled::Styled},
+    cli::display::{ProgressBar, Spinner, logging::debug, styled::Styled},
     config::Config,
     installer::{
         install_tree::InstallMeta,
         scripts::{self, ScriptData, ScriptError},
-        types::PackageId,
+        types::{PackageId, PackageName},
         unpack::{ArchiveExtension, unpack},
     },
     register::package_register::PackageRegister,
     repositories::{
         manager::RepositoryManager,
-        types::{Checksum, Patch},
+        types::{Checksum, Patch, Source},
     },
-    utils::{ioerror::IOResultExt, patches, requests},
+    utils::{ioerror::IOResultExt, patches, reading::ReadExt, requests},
 };
 
 /// The builder of Packit, managing the building of packages.
@@ -114,7 +114,7 @@ impl<'a> Builder<'a> {
         debug!("Source size: {}", source.size);
 
         // Download the build files
-        let bytes = self.download_file(&source.url, &source.mirrors, &source.checksum, &package_name.style().to_string())?;
+        let bytes = self.download_source(source, package_name)?;
 
         // Create temp directory to build in
         let build_directory = TempDir::new().err_operation("create temp dir")?;
@@ -197,12 +197,28 @@ impl<'a> Builder<'a> {
         Ok(())
     }
 
-    /// Downloads a patch, either from the given url or from the repository.
+    /// Downloads a patch, either from the given url or from the repository. Shows a spinner during the download.
     fn download_patch(&self, id: u32, patch: &Patch, package_id: &PackageId, repository_id: &str) -> Result<Bytes> {
         // Download patch from the url if it starts with 'http://' or 'https://'
         if patch.url.starts_with("http://") || patch.url.starts_with("https://") {
-            let download_description = format!("patch {id} of {}", package_id.style());
-            return self.download_file(&patch.url, &patch.mirrors, &patch.checksum, &download_description);
+            let spinner_message = format!("Downloading patch {id} of {} from '{}'", package_id.style(), patch.url.cyan());
+            let mut spinner = Spinner::new(spinner_message);
+            spinner.show();
+
+            let callback = |(alternative, _): (Option<&str>, _)| {
+                let Some(alternative) = alternative else { return };
+
+                let message = format!(
+                    "Downloading patch {id} of {} from alternative '{}'",
+                    package_id.style(),
+                    alternative.cyan()
+                );
+                spinner.adjust_message(message);
+            };
+
+            let bytes = self.download_file(&patch.url, &patch.mirrors, &patch.checksum, callback, None)?;
+            spinner.finish();
+            return Ok(bytes);
         }
 
         // Create download spinner
@@ -230,12 +246,33 @@ impl<'a> Builder<'a> {
         Ok(file)
     }
 
-    /// Downloads a file from the url, or one of the mirrors. Checks against a checksum and shows a spinner.
-    fn download_file(&self, url: &str, mirrors: &[String], checksum: &Checksum, download_description: &str) -> Result<Bytes> {
-        // Show download spinner
-        let mut spinner = Spinner::new(format!("Downloading {download_description} from '{}'", url.cyan()));
-        spinner.show();
+    /// Downloads the source file of the package. Shows the download progress in a `ProgressBar`.
+    fn download_source(&self, source: &Source, package_name: &PackageName) -> Result<Bytes> {
+        let retrieve_message = format!("Retrieving {} from '{}'", package_name.style(), source.url.cyan());
+        let full_message = format!("{retrieve_message}\nDownloading {}", package_name.style());
+        let mut progressbar = ProgressBar::new(source.size.0.into(), full_message);
 
+        let callback = |(alternative, progress): (Option<&str>, Option<usize>)| {
+            if let Some(alternative) = alternative {
+                let retrieve_message = format!("Retrieving {} from alternative '{}'", package_name.style(), alternative.cyan());
+                progressbar.adjust_prefix(format!("{retrieve_message}\nDownloading {}", package_name.style()));
+            }
+
+            if let Some(progress) = progress {
+                progressbar.set_position(progress as u64);
+            }
+        };
+
+        let size = source.size.0 as usize;
+        self.download_file(&source.url, &source.mirrors, &source.checksum, callback, Some(size))
+    }
+
+    /// Downloads a file from the url, or one of the mirrors. Checks against a checksum and returns progress with a callback.
+    /// Note that it only returns progress in the callback when `size` is `Some`.
+    fn download_file<F>(&self, url: &str, mirrors: &[String], checksum: &Checksum, mut callback: F, size: Option<usize>) -> Result<Bytes>
+    where
+        F: FnMut((Option<&str>, Option<usize>)),
+    {
         // Try to download from the main url
         let mut mirrors = mirrors.iter();
         let mut response = requests::get(url).map_err(BuilderError::RequestError);
@@ -249,8 +286,8 @@ impl<'a> Builder<'a> {
         while response.is_err()
             && let Some(mirror) = mirrors.next()
         {
-            // Update spinner with new download url
-            spinner.adjust_message(format!("Downloading {download_description} from alternative '{}'", mirror.cyan()));
+            // Call callback with new download url
+            callback((Some(mirror), None));
 
             // Get response from alternative mirror
             response = requests::get(mirror).map_err(BuilderError::RequestError);
@@ -262,9 +299,13 @@ impl<'a> Builder<'a> {
                 response = Err(BuilderError::RequestUnsuccessful(status_response.status()));
             }
         }
+        let response = response?;
 
         // Get the bytes from the response
-        let bytes = response?.bytes()?;
+        let bytes = match size {
+            Some(size) => response.read_progress(Some(size), |x| callback((None, Some(x)))).err_operation("read source bytes")?,
+            None => response.bytes()?,
+        };
 
         // Calculate the checksum
         let calculated_checksum = Checksum::from_bytes(&bytes);
@@ -273,9 +314,6 @@ impl<'a> Builder<'a> {
         if *checksum != calculated_checksum {
             return Err(BuilderError::ChecksumError);
         }
-
-        // Finish download spinner
-        spinner.finish();
 
         Ok(bytes)
     }

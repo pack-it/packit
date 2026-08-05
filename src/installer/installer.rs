@@ -8,7 +8,7 @@ use std::{
 use crate::{
     builder::Builder,
     cli::display::{
-        QuestionResponse, Spinner, ask_user,
+        ProgressBar, QuestionResponse, Spinner, ask_user,
         logging::{debug, warning},
         standard_print,
         styled::{MapStyled, Styled},
@@ -31,7 +31,7 @@ use crate::{
         provider,
         types::{Checksum, PackageTarget},
     },
-    utils::{io, ioerror::IOResultExt},
+    utils::{io, ioerror::IOResultExt, reading::ReadExt},
 };
 
 /// The installer of Packit, managing the installation of packages on the system.
@@ -310,22 +310,22 @@ impl<'a> Installer<'a> {
     /// Downloads a package pre-build and unpacks it into the given destination directory.
     /// Returns an `InstallerError::ChecksumError` if the pre-build checksum doesn't match.
     fn download_prebuild(&self, repository_id: &str, package: &PackageId, revision: u64, destination_dir: impl AsRef<Path>) -> Result<()> {
-        // Show download spinner
-        let spinner_message = format!("Downloading {} prebuild from '{}'", package.name.style(), repository_id);
-        let spinner = Spinner::new(spinner_message);
-        spinner.show();
-
         // Get the id of the prebuild
         let prebuilds_list = self.repository_manager.read_prebuilds_list(repository_id, &package.name, &package.version)?;
         let (prebuild_id, _) = prebuilds_list.get_best_prebuild(&Target::current()).ok_or(InstallerError::NoSupportedPrebuild {
             package_id: package.clone(),
         })?;
 
-        let (extension, bytes) = self.repository_manager.read_prebuild(repository_id, package, revision, prebuild_id)?;
         let prebuild_meta = self.repository_manager.get_prebuild_meta(repository_id, package, revision, prebuild_id)?;
 
-        // Finish download spinner
-        spinner.finish();
+        // Show download progress bar
+        let message = format!("Downloading {} prebuild from '{}'", package.name.style(), repository_id);
+        let mut progressbar = ProgressBar::new(prebuild_meta.size.0.into(), message);
+
+        // Download prebuild
+        let (extension, prebuild_read) = self.repository_manager.read_prebuild(repository_id, package, revision, prebuild_id)?;
+        let size = prebuild_meta.size.0 as usize;
+        let bytes = prebuild_read.read_progress(Some(size), |x| progressbar.set_position(x as u64)).err_operation("read prebuild bytes")?;
 
         // Calculate the checksum
         let calculated_checksum = Checksum::from_bytes(&bytes);
