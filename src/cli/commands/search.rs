@@ -71,14 +71,14 @@ impl HandleCommand for SearchArgs {
         let message = "The given search query isn't a valid package. For regex use `--regex`.";
         let optional_id = OptionalPackageId::from_str(&self.query).unwrap_or_exit_msg(message, 1);
 
-        let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
-        let manager = RepositoryManager::new(&config);
-
         // Check if there is version ambiguity (version and `--latest` specified)
         if optional_id.version.is_some() && self.latest {
             error!(msg: "Version is ambiguous, version and `--latest` are both specified");
             exit(1);
         }
+
+        let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
+        let manager = RepositoryManager::new(&config);
 
         // Get the package version
         let package_version = match &optional_id.version {
