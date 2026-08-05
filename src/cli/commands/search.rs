@@ -5,6 +5,7 @@ use regex::Regex;
 use std::{
     cmp::max,
     collections::{HashSet, VecDeque},
+    process::exit,
     str::FromStr,
 };
 
@@ -52,6 +53,10 @@ pub struct SearchArgs {
     /// True if verbose information should be shown
     #[arg(short, long, default_value = "false")]
     verbose: bool,
+
+    /// True to use the latest version
+    #[arg(long, default_value = "false", conflicts_with = "regex")]
+    latest: bool,
 }
 
 impl HandleCommand for SearchArgs {
@@ -62,9 +67,41 @@ impl HandleCommand for SearchArgs {
             return;
         }
 
-        match self.tree {
-            true => self.search_tree(),
-            false => self.search(),
+        // Get the optional id
+        let message = "The given search query isn't a valid package. For regex use `--regex`.";
+        let optional_id = OptionalPackageId::from_str(&self.query).unwrap_or_exit_msg(message, 1);
+
+        // Check if there is version ambiguity (version and `--latest` specified)
+        if optional_id.version.is_some() && self.latest {
+            error!(msg: "Version is ambiguous, version and `--latest` are both specified");
+            exit(1);
+        }
+
+        let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
+        let manager = RepositoryManager::new(&config);
+
+        // Get the package version
+        let package_version = match &optional_id.version {
+            Some(version) => Some(version.clone()),
+            None if self.latest => {
+                let (repository_id, package_meta) = manager.read_package(&optional_id.name).unwrap_or_exit(1);
+                let version_meta =
+                    manager.read_latest_supported_version(&repository_id, &package_meta, &Target::current()).unwrap_or_exit(1);
+                Some(version_meta.version)
+            },
+            None => None,
+        };
+
+        // Version cannot be none if `--tree` is specified
+        if self.tree && package_version.is_none() {
+            error!(msg: "The given search query isn't a valid package id. Use `--latest` for the latest version.");
+            exit(1);
+        }
+
+        match package_version {
+            Some(version) if self.tree => self.search_tree(&manager, PackageId::new(optional_id.name, version.clone())),
+            Some(version) => self.search_package_version(&manager, &PackageId::new(optional_id.name, version.clone())),
+            None => self.search_package(&manager, &optional_id.name),
         }
     }
 }
@@ -98,14 +135,7 @@ impl SearchArgs {
 
     /// Searches the tree of a given package, always using the latest version for the current target of each dependency.
     /// Fails if the given query is not a valid `PackageId`.
-    fn search_tree(&self) {
-        // Get the package id
-        let message = "The given search query isn't a valid package id.";
-        let package_id = PackageId::from_str(&self.query).unwrap_or_exit_msg(message, 1);
-
-        let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
-        let manager = RepositoryManager::new(&config);
-
+    fn search_tree(&self, manager: &RepositoryManager, package_id: PackageId) {
         let root = Node::new(package_id, (), ());
         let mut tree = Tree::new(root);
 
@@ -137,23 +167,8 @@ impl SearchArgs {
         println!("{tree}");
     }
 
-    /// Searches information of a package based on the provided `OptionalPackageId`.
-    /// Fails if the given query is not a valid `OptionalPackageId`.
-    fn search(&self) {
-        // Get the optional id
-        let message = "The given search query isn't a valid package. For regex use `--regex`.";
-        let optional_id = OptionalPackageId::from_str(&self.query).unwrap_or_exit_msg(message, 1);
-
-        match optional_id.versioned() {
-            Some(package_id) => self.search_package_version(&package_id),
-            None => self.search_package(&optional_id.name),
-        }
-    }
-
     /// Searches for and shows package specific information for a given package.
-    fn search_package(&self, package_name: &PackageName) {
-        let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
-        let manager = RepositoryManager::new(&config);
+    fn search_package(&self, manager: &RepositoryManager, package_name: &PackageName) {
         let (repository_id, package) = match manager.read_package(package_name) {
             Ok(package) => package,
             Err(RepositoryError::PackageNotFoundError { reason, .. }) => not_found::repository_package(package_name, &manager, reason),
@@ -197,9 +212,7 @@ impl SearchArgs {
     }
 
     /// Searches for and shows package version specific information for a given package.
-    fn search_package_version(&self, package_id: &PackageId) {
-        let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
-        let manager = RepositoryManager::new(&config);
+    fn search_package_version(&self, manager: &RepositoryManager, package_id: &PackageId) {
         let package_and_version = manager.read_package_and_version(&package_id.clone().into(), &Target::current());
         let (repository_id, package, package_version) = match package_and_version {
             Ok(package) => package,

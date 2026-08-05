@@ -17,6 +17,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The `skip-test` and `skip-build-test` flags in the `install` command, to skip Packit tests or skip build tests.
 - The `--tree` flag in the `search` command, to show the tree of a given package.
 - The `pit info` command to show information about the current Packit install, such as prefix path and target information.
+- The `--active` flag in the `info` command, to use the active version.
+- The `--latest` flag in the `search` command, to use the latest version.
 
 ### Changes
 - Change display of true and false values in the `info` and `search` commands.
