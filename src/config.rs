@@ -161,6 +161,7 @@ impl Config {
             pair_aligner.add("Provider", &repo.provider);
             pair_aligner.add("Prebuilds url", repo.prebuilds_url.display());
             pair_aligner.add("Prebuilds provider", repo.prebuilds_provider.display());
+            pair_aligner.add("Prebuilds disabled", if repo.disable_prebuilds { "yes" } else { "no" });
             pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
         }
     }
