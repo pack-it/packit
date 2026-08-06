@@ -174,7 +174,7 @@ impl<'a> BuildEnv<'a> {
         let mut parts: Vec<String> = Vec::new();
 
         // Add dependencies to PKG_CONFIG_PATH
-        for dependency in self.dependencies {
+        for dependency in self.dependencies.iter().chain(self.build_dependencies.iter()) {
             let lib_path = dependency.install_path.join("lib").join("pkgconfig");
             let share_path = dependency.install_path.join("share").join("pkgconfig");
 
@@ -203,7 +203,7 @@ impl<'a> BuildEnv<'a> {
         let mut parts: Vec<String> = Vec::new();
 
         // Add non symlinked dependencies to CMAKE_PREFIX_PATH
-        for dependency in self.dependencies {
+        for dependency in self.dependencies.iter().chain(self.build_dependencies.iter()) {
             if let Some(package) = self.register.get_package(&dependency.package_id.name) {
                 if package.symlinked {
                     continue;
@@ -221,7 +221,7 @@ impl<'a> BuildEnv<'a> {
         let mut parts: Vec<String> = Vec::new();
 
         // Add non symlinked dependencies to ACLOCAL_PATH
-        for dependency in self.dependencies {
+        for dependency in self.dependencies.iter().chain(self.build_dependencies.iter()) {
             if let Some(package) = self.register.get_package(&dependency.package_id.name) {
                 if package.symlinked {
                     continue;
