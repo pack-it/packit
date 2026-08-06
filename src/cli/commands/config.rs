@@ -76,6 +76,18 @@ pub enum RepositoriesArgs {
         /// The id of the repository to remove
         id: String,
     },
+
+    /// Sets the prebuilds repository url and provider
+    SetPrebuilds {
+        /// The id of the repository to set the prebuilds repository of
+        id: String,
+
+        /// The url of the prebuilds repository
+        prebuilds_url: String,
+
+        /// The optional provider of the prebuilds repository, `web` is used as default
+        prebuilds_provider: Option<String>,
+    },
 }
 
 impl HandleCommand for ConfigArgs {
@@ -91,6 +103,11 @@ impl HandleCommand for ConfigArgs {
             ConfigArgs::Repositories(RepositoriesArgs::SetRank { new_rank }) => self.handle_set_repositories_rank(config, new_rank),
             ConfigArgs::Repositories(RepositoriesArgs::Add { id, url, provider }) => self.handle_add_repository(config, id, url, provider),
             ConfigArgs::Repositories(RepositoriesArgs::Remove { id }) => self.handle_remove_repository(config, id),
+            ConfigArgs::Repositories(RepositoriesArgs::SetPrebuilds {
+                id,
+                prebuilds_url,
+                prebuilds_provider,
+            }) => self.handle_set_prebuilds(config, id, prebuilds_url, prebuilds_provider),
         }
     }
 }
@@ -305,6 +322,34 @@ impl ConfigArgs {
         config.save_to(&Config::get_default_path()).unwrap_or_exit_msg("Cannot save config file", 1);
 
         let styled_message = format!("Succesfully removed repository '{id}' from the config!").bold().green();
+        println!("{styled_message}");
+    }
+
+    /// Handles the config repositories set-prebuilds command.
+    fn handle_set_prebuilds(&self, mut config: EditableConfig, id: &str, prebuilds_url: &str, prebuilds_provider: &Option<String>) {
+        // Check if the config even contains this repository
+        let Some(mut repository) = config.get_config().repositories.get(id).cloned() else {
+            error!(msg: "Repository '{id}' does not exist.");
+            exit(1);
+        };
+
+        // Check if a prebuilds repository was already configured
+        if let Some(old_prebuilds_url) = &repository.prebuilds_url {
+            warning!("Repository '{id}' already had a prebuild repository, overwriting url and provider...");
+            warning!(
+                "Old prebuilds url: {old_prebuilds_url}, provider: {}",
+                repository.prebuilds_provider.display()
+            );
+        }
+
+        repository.prebuilds_url = Some(prebuilds_url.into());
+        repository.prebuilds_provider = prebuilds_provider.clone();
+
+        config.set_repository(id, repository);
+
+        config.save_to(&Config::get_default_path()).unwrap_or_exit_msg("Cannot save config file", 1);
+
+        let styled_message = format!("Succesfully set prebuilds repository for '{id}' to {prebuilds_url}!").bold().green();
         println!("{styled_message}");
     }
 }

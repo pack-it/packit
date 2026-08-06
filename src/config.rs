@@ -246,6 +246,7 @@ impl EditableConfig {
             self.document["repositories"] = toml_edit::Table::new().into();
         }
 
+        // TODO: don't fully replace existing tables
         let mut new_value = toml_edit::Table::new();
         new_value["url"] = (&repository.url).into();
         new_value["provider"] = (&repository.provider).into();
