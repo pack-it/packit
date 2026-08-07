@@ -77,15 +77,27 @@ pub enum RepositoriesArgs {
         id: String,
     },
 
-    /// Sets the prebuilds repository url and provider
-    SetPrebuilds {
-        /// The id of the repository to set the prebuilds repository of
+    /// Sets the repository url and provider
+    SetUrl {
+        /// The id of the repository to set the url of
         id: String,
 
-        /// The url of the prebuilds repository
+        /// The new url of the repository
+        url: String,
+
+        /// The new provider of the repository, if no value is given, the old value is used
+        provider: Option<String>,
+    },
+
+    /// Sets the prebuilds repository url and provider
+    SetPrebuilds {
+        /// The id of the repository to set the prebuilds url of
+        id: String,
+
+        /// The new url of the prebuilds repository
         prebuilds_url: String,
 
-        /// The optional provider of the prebuilds repository, `web` is used as default
+        /// The new provider of the prebuilds repository, if no value is given, the old value is used
         prebuilds_provider: Option<String>,
     },
 }
@@ -103,6 +115,7 @@ impl HandleCommand for ConfigArgs {
             ConfigArgs::Repositories(RepositoriesArgs::SetRank { new_rank }) => self.handle_set_repositories_rank(config, new_rank),
             ConfigArgs::Repositories(RepositoriesArgs::Add { id, url, provider }) => self.handle_add_repository(config, id, url, provider),
             ConfigArgs::Repositories(RepositoriesArgs::Remove { id }) => self.handle_remove_repository(config, id),
+            ConfigArgs::Repositories(RepositoriesArgs::SetUrl { id, url, provider }) => self.handle_set_url(config, id, url, provider),
             ConfigArgs::Repositories(RepositoriesArgs::SetPrebuilds {
                 id,
                 prebuilds_url,
@@ -325,6 +338,29 @@ impl ConfigArgs {
         println!("{styled_message}");
     }
 
+    /// Handles the config repositories set-url command.
+    fn handle_set_url(&self, mut config: EditableConfig, id: &str, url: &str, provider: &Option<String>) {
+        // Check if the config even contains this repository
+        let Some(mut repository) = config.get_config().repositories.get(id).cloned() else {
+            error!(msg: "Repository '{id}' does not exist.");
+            exit(1);
+        };
+
+        warning!("Overwriting url: {}, provider: {}", repository.url, repository.provider);
+
+        repository.url = url.into();
+        if let Some(provider) = provider {
+            repository.provider = provider.clone();
+        }
+
+        config.set_repository(id, repository);
+
+        config.save_to(&Config::get_default_path()).unwrap_or_exit_msg("Cannot save config file", 1);
+
+        let styled_message = format!("Succesfully set repository url for '{id}' to {url}!").bold().green();
+        println!("{styled_message}");
+    }
+
     /// Handles the config repositories set-prebuilds command.
     fn handle_set_prebuilds(&self, mut config: EditableConfig, id: &str, prebuilds_url: &str, prebuilds_provider: &Option<String>) {
         // Check if the config even contains this repository
@@ -343,7 +379,9 @@ impl ConfigArgs {
         }
 
         repository.prebuilds_url = Some(prebuilds_url.into());
-        repository.prebuilds_provider = prebuilds_provider.clone();
+        if prebuilds_provider.is_some() {
+            repository.prebuilds_provider = prebuilds_provider.clone();
+        }
 
         config.set_repository(id, repository);
 
