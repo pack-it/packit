@@ -161,6 +161,7 @@ impl Config {
             pair_aligner.add("Provider", &repo.provider);
             pair_aligner.add("Prebuilds url", repo.prebuilds_url.display());
             pair_aligner.add("Prebuilds provider", repo.prebuilds_provider.display());
+            pair_aligner.add("Prebuilds disabled", if repo.disable_prebuilds { "yes" } else { "no" });
             pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
         }
     }
@@ -239,25 +240,62 @@ impl EditableConfig {
     }
 
     /// Sets the repository with the given id.
+    /// Tries to preserve comments and field ordering.
     pub fn set_repository(&mut self, id: &str, repository: Repository) {
         // Ensure repositories is a table, not an inline table
         if !self.document.contains_table("repositories") {
             self.document["repositories"] = toml_edit::Table::new().into();
         }
 
+        let repositories = self.document["repositories"].as_table_like_mut().expect("Expected repositories to be a table!");
+        let already_existed = repositories.contains_key(id);
+
+        // Load existing table, or use a new one
         let mut new_value = toml_edit::Table::new();
-        new_value["url"] = (&repository.url).into();
-        new_value["provider"] = (&repository.provider).into();
+        let repository_table = match already_existed {
+            true => repositories
+                .get_mut(id)
+                .expect("Expected key to existing in repositories!")
+                .as_table_like_mut()
+                .expect("Expected repository to be a table!"),
+            false => &mut new_value,
+        };
+
+        // Replace url and provider if the new value does not match the old value
+        if repository_table.get("url").map(|x| x.as_str()).flatten() != Some(&repository.url) {
+            repository_table.insert("url", (&repository.url).into());
+        }
+        if repository_table.get("provider").map(|x| x.as_str()).flatten() != Some(&repository.provider) {
+            repository_table.insert("provider", (&repository.provider).into());
+        }
+
+        // Replace prebuilds url and provider if the new value does not match the old value
+        // If the value is not present, remove the field.
         if let Some(prebuilds_url) = &repository.prebuilds_url {
-            new_value["prebuilds_url"] = prebuilds_url.into();
+            if repository_table.get("prebuilds_url").map(|x| x.as_str()).flatten() != Some(&prebuilds_url) {
+                repository_table.insert("prebuilds_url", prebuilds_url.into());
+            }
+        } else {
+            repository_table.remove("prebuilds_url");
         }
         if let Some(prebuilds_provider) = &repository.prebuilds_provider {
-            new_value["prebuilds_provider"] = prebuilds_provider.into();
+            if repository_table.get("prebuildsprebuilds_provider_url").map(|x| x.as_str()).flatten() != Some(&prebuilds_provider) {
+                repository_table.insert("prebuilds_provider", prebuilds_provider.into());
+            }
+        } else {
+            repository_table.remove("prebuilds_provider");
         }
+
+        // Set `disable_prebuilds` if it is true, delete field otherwise
         if repository.disable_prebuilds {
-            new_value["disable_prebuilds"] = true.into();
+            repository_table.insert("disable_prebuilds", true.into());
+        } else {
+            repository_table.remove("disable_prebuilds");
         }
-        self.document["repositories"][id] = new_value.into();
+
+        if !already_existed {
+            self.document["repositories"][id] = new_value.into();
+        }
 
         self.config.repositories.insert(id.into(), repository);
     }

@@ -76,6 +76,44 @@ pub enum RepositoriesArgs {
         /// The id of the repository to remove
         id: String,
     },
+
+    /// Sets the repository url and provider
+    SetUrl {
+        /// The id of the repository to set the url of
+        id: String,
+
+        /// The new url of the repository
+        url: String,
+
+        /// The new provider of the repository, if no value is given, the old value is used
+        provider: Option<String>,
+    },
+
+    /// Sets the prebuilds repository url and provider
+    SetPrebuilds {
+        /// The id of the repository to set the prebuilds url of
+        id: String,
+
+        /// The new url of the prebuilds repository
+        prebuilds_url: String,
+
+        /// The new provider of the prebuilds repository, if no value is given, the old value is used
+        prebuilds_provider: Option<String>,
+    },
+
+    /// Disables or enables the prebuilds of a repository
+    DisablePrebuilds {
+        /// The id of the repository to enable or disable the prebuilds of
+        id: String,
+
+        /// True to disable prebuilds, false to enable
+        #[arg(action = ArgAction::Set)]
+        value: bool,
+
+        /// True if the prebuilds url should be removed
+        #[arg(long, default_value = "false")]
+        remove_urls: bool,
+    },
 }
 
 impl HandleCommand for ConfigArgs {
@@ -91,6 +129,15 @@ impl HandleCommand for ConfigArgs {
             ConfigArgs::Repositories(RepositoriesArgs::SetRank { new_rank }) => self.handle_set_repositories_rank(config, new_rank),
             ConfigArgs::Repositories(RepositoriesArgs::Add { id, url, provider }) => self.handle_add_repository(config, id, url, provider),
             ConfigArgs::Repositories(RepositoriesArgs::Remove { id }) => self.handle_remove_repository(config, id),
+            ConfigArgs::Repositories(RepositoriesArgs::SetUrl { id, url, provider }) => self.handle_set_url(config, id, url, provider),
+            ConfigArgs::Repositories(RepositoriesArgs::SetPrebuilds {
+                id,
+                prebuilds_url,
+                prebuilds_provider,
+            }) => self.handle_set_prebuilds(config, id, prebuilds_url, prebuilds_provider),
+            ConfigArgs::Repositories(RepositoriesArgs::DisablePrebuilds { id, value, remove_urls }) => {
+                self.handle_disable_prebuilds(config, id, *value, *remove_urls)
+            },
         }
     }
 }
@@ -305,6 +352,84 @@ impl ConfigArgs {
         config.save_to(&Config::get_default_path()).unwrap_or_exit_msg("Cannot save config file", 1);
 
         let styled_message = format!("Succesfully removed repository '{id}' from the config!").bold().green();
+        println!("{styled_message}");
+    }
+
+    /// Handles the config repositories set-url command.
+    fn handle_set_url(&self, mut config: EditableConfig, id: &str, url: &str, provider: &Option<String>) {
+        // Check if the config even contains this repository
+        let Some(mut repository) = config.get_config().repositories.get(id).cloned() else {
+            error!(msg: "Repository '{id}' does not exist.");
+            exit(1);
+        };
+
+        warning!("Overwriting url: {}, provider: {}", repository.url, repository.provider);
+
+        repository.url = url.into();
+        if let Some(provider) = provider {
+            repository.provider = provider.clone();
+        }
+
+        config.set_repository(id, repository);
+
+        config.save_to(&Config::get_default_path()).unwrap_or_exit_msg("Cannot save config file", 1);
+
+        let styled_message = format!("Succesfully set repository url for '{id}' to {url}!").bold().green();
+        println!("{styled_message}");
+    }
+
+    /// Handles the config repositories set-prebuilds command.
+    fn handle_set_prebuilds(&self, mut config: EditableConfig, id: &str, prebuilds_url: &str, prebuilds_provider: &Option<String>) {
+        // Check if the config even contains this repository
+        let Some(mut repository) = config.get_config().repositories.get(id).cloned() else {
+            error!(msg: "Repository '{id}' does not exist.");
+            exit(1);
+        };
+
+        // Check if a prebuilds repository was already configured
+        if let Some(old_prebuilds_url) = &repository.prebuilds_url {
+            warning!("Repository '{id}' already had a prebuild repository, overwriting url and provider...");
+            warning!(
+                "Old prebuilds url: {old_prebuilds_url}, provider: {}",
+                repository.prebuilds_provider.display()
+            );
+        }
+
+        repository.prebuilds_url = Some(prebuilds_url.into());
+        if prebuilds_provider.is_some() {
+            repository.prebuilds_provider = prebuilds_provider.clone();
+        }
+
+        config.set_repository(id, repository);
+
+        config.save_to(&Config::get_default_path()).unwrap_or_exit_msg("Cannot save config file", 1);
+
+        let styled_message = format!("Succesfully set prebuilds repository for '{id}' to {prebuilds_url}!").bold().green();
+        println!("{styled_message}");
+    }
+
+    /// Handles the config repositories disable-prebuilds command.
+    fn handle_disable_prebuilds(&self, mut config: EditableConfig, id: &str, value: bool, remove_urls: bool) {
+        // Check if the config even contains this repository
+        let Some(mut repository) = config.get_config().repositories.get(id).cloned() else {
+            error!(msg: "Repository '{id}' does not exist.");
+            exit(1);
+        };
+
+        repository.disable_prebuilds = value;
+
+        // Remove url if prebuilds disabled and `--remove-urls` flag is enabled
+        if value && remove_urls {
+            repository.prebuilds_url = None;
+            repository.prebuilds_provider = None;
+        }
+
+        config.set_repository(id, repository);
+
+        config.save_to(&Config::get_default_path()).unwrap_or_exit_msg("Cannot save config file", 1);
+
+        let disabled = if value { "disabled" } else { "enabled" };
+        let styled_message = format!("Succesfully {disabled} prebuilds for '{id}'!").bold().green();
         println!("{styled_message}");
     }
 }

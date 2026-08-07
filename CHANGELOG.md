@@ -20,6 +20,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The `--active` flag in the `info` command, to use the active version.
 - The `--latest` flag in the `search` command, to use the latest version.
 - Progress bars are now shown while build sources or prebuilds are being downloaded.
+- The `config repositories set-url` command, which can be used to change the url of a repository.
+- The `config repositories set-prebuilds` command, which can be used to change the prebuilds url of a repository.
+- The `config repositories disable-prebuilds` command, which can be used to enable or disable prebuilds of a repository.
 
 ### Changes
 - Change display of true and false values in the `info` and `search` commands.
@@ -27,6 +30,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The license field in the metadata now allows nesting and specifying exceptions.
 - The `prebuild_url` and `prebuild_provider` fields in the `repository.toml` file now represent a suggestion that needs to be added to the config in order to be used.
 - The `Alterations` verifier check is now enabled for packages that were installed from a prebuild.
+- The `config show` command now also shows the `prebuilds_disabled` option.
 
 ### Fixed
 - Fix error messages not representing the error correctly.
