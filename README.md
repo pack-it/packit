@@ -124,6 +124,15 @@ Adds a new repository to the config. Also adds the new repository to the back of
 #### `pit config repositories remove <ID>`
 Removes a repository from the config. Also removes the repository from the repositories rank.
 
+#### `pit config repositories set-url <ID> <URL> [PROVIDER]`
+Sets the url of a repository in the config. If no provider is given, the old provider is used.
+
+#### `pit config repositories set-prebuilds <ID> <PREBUILDS-URL> [PREBUILDS-PROVIDER]`
+Sets the prebuilds url of a repository in the config. If no provider is given, the old provider is used.
+
+#### `pit config repositories disable-prebuilds <ID> <VALUE> [--remove-urls]`
+Disables or enables the prebuilds url of a repository in the config. If the `--remove-urls` flag is given, the urls are removed if `<VALUE>` is true.
+
 #### `pit init [--prefix <PREFIX>]`
 Initializes the Packit environment by setting up all required files and directories. If the `--prefix` option is given, the given path is used as prefix, instead of the [default prefix](#prefix).
 
