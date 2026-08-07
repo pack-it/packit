@@ -100,6 +100,20 @@ pub enum RepositoriesArgs {
         /// The new provider of the prebuilds repository, if no value is given, the old value is used
         prebuilds_provider: Option<String>,
     },
+
+    /// Disables or enables the prebuilds of a repository
+    DisablePrebuilds {
+        /// The id of the repository to enable or disable the prebuilds of
+        id: String,
+
+        /// True to disable prebuilds, false to enable
+        #[arg(action = ArgAction::Set)]
+        value: bool,
+
+        /// True if the prebuilds url should be removed
+        #[arg(long, default_value = "false")]
+        remove_urls: bool,
+    },
 }
 
 impl HandleCommand for ConfigArgs {
@@ -121,6 +135,9 @@ impl HandleCommand for ConfigArgs {
                 prebuilds_url,
                 prebuilds_provider,
             }) => self.handle_set_prebuilds(config, id, prebuilds_url, prebuilds_provider),
+            ConfigArgs::Repositories(RepositoriesArgs::DisablePrebuilds { id, value, remove_urls }) => {
+                self.handle_disable_prebuilds(config, id, *value, *remove_urls)
+            },
         }
     }
 }
@@ -388,6 +405,31 @@ impl ConfigArgs {
         config.save_to(&Config::get_default_path()).unwrap_or_exit_msg("Cannot save config file", 1);
 
         let styled_message = format!("Succesfully set prebuilds repository for '{id}' to {prebuilds_url}!").bold().green();
+        println!("{styled_message}");
+    }
+
+    /// Handles the config repositories disable-prebuilds command.
+    fn handle_disable_prebuilds(&self, mut config: EditableConfig, id: &str, value: bool, remove_urls: bool) {
+        // Check if the config even contains this repository
+        let Some(mut repository) = config.get_config().repositories.get(id).cloned() else {
+            error!(msg: "Repository '{id}' does not exist.");
+            exit(1);
+        };
+
+        repository.disable_prebuilds = value;
+
+        // Remove url if prebuilds disabled and `--remove-urls` flag is enabled
+        if value && remove_urls {
+            repository.prebuilds_url = None;
+            repository.prebuilds_provider = None;
+        }
+
+        config.set_repository(id, repository);
+
+        config.save_to(&Config::get_default_path()).unwrap_or_exit_msg("Cannot save config file", 1);
+
+        let disabled = if value { "disabled" } else { "enabled" };
+        let styled_message = format!("Succesfully {disabled} prebuilds for '{id}'!").bold().green();
         println!("{styled_message}");
     }
 }
