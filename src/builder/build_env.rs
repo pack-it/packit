@@ -168,13 +168,13 @@ impl<'a> BuildEnv<'a> {
         Ok(parts.join(PATH_SEPARATOR))
     }
 
-    /// Creates the `PKG_CONFIG_PATH` to pkgconfig inside of the lib and share directories of the (build) dependencies.
+    /// Creates the `PKG_CONFIG_PATH` to pkgconfig inside of the lib and share directories of the dependencies.
     /// It also adds the necessary platform specific paths.
     fn create_pkg_config_path(&self) -> Result<String> {
         let mut parts: Vec<String> = Vec::new();
 
         // Add dependencies to PKG_CONFIG_PATH
-        for dependency in self.dependencies.iter().chain(self.build_dependencies.iter()) {
+        for dependency in self.dependencies {
             let lib_path = dependency.install_path.join("lib").join("pkgconfig");
             let share_path = dependency.install_path.join("share").join("pkgconfig");
 
@@ -198,12 +198,12 @@ impl<'a> BuildEnv<'a> {
         Ok(parts.join(PATH_SEPARATOR))
     }
 
-    /// Creates the `CMAKE_PREFIX_PATH` with the (build) dependency install paths.
+    /// Creates the `CMAKE_PREFIX_PATH` with the dependency install paths.
     fn create_cmake_prefix_path(&self) -> Result<String> {
         let mut parts: Vec<String> = Vec::new();
 
         // Add non symlinked dependencies to CMAKE_PREFIX_PATH
-        for dependency in self.dependencies.iter().chain(self.build_dependencies.iter()) {
+        for dependency in self.dependencies {
             if let Some(package) = self.register.get_package(&dependency.package_id.name) {
                 if package.symlinked {
                     continue;

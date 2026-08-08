@@ -49,7 +49,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Fix binary patching by writing a full `Fat MachO binary`, instead of one of the separate binaries within.
 - Fix M4 environment variable pointing to install path, instead of the m4 binary.
 - Fix Packit prefix directory in cmake and aclocal environment variables.
-- Fix missing build dependency paths in pkg_config, cmake and aclocal environment variables.
+- Fix missing build dependency paths in `ACLOCAL_PATH` environment variable.
 
 
 ## [v0.0.3](https://github.com/pack-it/packit/compare/0.0.2...0.0.3) - 2026-07-11
