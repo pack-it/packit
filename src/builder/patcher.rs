@@ -34,8 +34,8 @@ pub enum BinaryPatcherError {
     #[error("Cannot convert OsString to string")]
     OsStringConversionError,
 
-    #[error("Cannot resign binary '{path}'")]
-    CannotResign {
+    #[error("Cannot re-sign binary '{path}'")]
+    CannotReSign {
         path: PathBuf,
 
         #[source]
@@ -187,13 +187,13 @@ impl<'a> BinaryPatcher<'a> {
                         Some(code) => format!("codesign exited with status code {code}"),
                         None => format!("codesign exited without a status code"),
                     };
-                    return Err(BinaryPatcherError::CannotResign {
+                    return Err(BinaryPatcherError::CannotReSign {
                         path,
                         error: std::io::Error::new(std::io::ErrorKind::Other, message),
                     });
                 },
                 Ok(_) => (),
-                Err(error) => return Err(BinaryPatcherError::CannotResign { path, error }),
+                Err(error) => return Err(BinaryPatcherError::CannotReSign { path, error }),
             };
         }
 
