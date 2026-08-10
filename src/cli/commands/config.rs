@@ -18,7 +18,7 @@ use crate::{
     },
     config::{Config, EditableConfig, Repository},
     register::package_register::PackageRegister,
-    repositories::{manager::RepositoryManager, metadata::DEFAULT_METADATA_PROVIDER_ID, provider},
+    repositories::{manager::RepositoryManager, metadata::DEFAULT_METADATA_PROVIDER_ID, provider, types::RepositoryMeta},
     utils::{packit_version::current_packit_version, unwrap_or_exit::UnwrapOrExit},
 };
 
@@ -69,6 +69,10 @@ pub enum RepositoriesArgs {
 
         /// The optional provider of the new repository, `web` is used as default
         provider: Option<String>,
+
+        /// True if the repository availability checks should be skipped
+        #[arg(long, default_value = "false")]
+        unchecked: bool,
     },
 
     /// Removes a repository from the config
@@ -87,6 +91,10 @@ pub enum RepositoriesArgs {
 
         /// The new provider of the repository, if no value is given, the old value is used
         provider: Option<String>,
+
+        /// True if the repository availability checks should be skipped
+        #[arg(long, default_value = "false")]
+        unchecked: bool,
     },
 
     /// Sets the prebuilds repository url and provider
@@ -127,9 +135,19 @@ impl HandleCommand for ConfigArgs {
             ConfigArgs::SetMultiuser { multiuser } => self.handle_set_multiuser(config, *multiuser),
             ConfigArgs::Repositories(RepositoriesArgs::List) => self.handle_list_repositories(config),
             ConfigArgs::Repositories(RepositoriesArgs::SetRank { new_rank }) => self.handle_set_repositories_rank(config, new_rank),
-            ConfigArgs::Repositories(RepositoriesArgs::Add { id, url, provider }) => self.handle_add_repository(config, id, url, provider),
+            ConfigArgs::Repositories(RepositoriesArgs::Add {
+                id,
+                url,
+                provider,
+                unchecked,
+            }) => self.handle_add_repository(config, id, url, provider, *unchecked),
             ConfigArgs::Repositories(RepositoriesArgs::Remove { id }) => self.handle_remove_repository(config, id),
-            ConfigArgs::Repositories(RepositoriesArgs::SetUrl { id, url, provider }) => self.handle_set_url(config, id, url, provider),
+            ConfigArgs::Repositories(RepositoriesArgs::SetUrl {
+                id,
+                url,
+                provider,
+                unchecked,
+            }) => self.handle_set_url(config, id, url, provider, *unchecked),
             ConfigArgs::Repositories(RepositoriesArgs::SetPrebuilds {
                 id,
                 prebuilds_url,
@@ -277,7 +295,7 @@ impl ConfigArgs {
     }
 
     /// Handles the config repositories add command.
-    fn handle_add_repository(&self, mut config: EditableConfig, id: &str, url: &str, provider: &Option<String>) {
+    fn handle_add_repository(&self, mut config: EditableConfig, id: &str, url: &str, provider: &Option<String>, unchecked: bool) {
         // Check if the config already contains a repository with this id
         if config.get_config().repositories.contains_key(id) {
             error!(msg: "A repository with id '{id}' already exists.");
@@ -290,36 +308,34 @@ impl ConfigArgs {
         };
         let mut repository = Repository::new(url, provider);
 
-        // Try to connect to the repository
-        let provider = provider::create_metadata_provider(&repository).unwrap_or_exit_msg("Unable to connect to repository", 1);
-        let repo_meta = provider.read_repository_metadata().unwrap_or_exit_msg("Unable to read repository metadata", 1);
+        // Only run checks if unchecked is not enabled
+        if !unchecked {
+            let repo_meta = self.check_metadata_repository_availability(&repository);
+            let is_repository_reachable = repo_meta.as_ref().map(|x| self.check_metadata_repository_compatibility(x)).unwrap_or(false);
 
-        // Check if the repository is supported
-        if repo_meta.required_packit_version > current_packit_version() {
-            warning!(
-                "This repository requires Packit version {}, while your current version is {}",
-                repo_meta.required_packit_version.style(),
-                current_packit_version().style()
-            );
-
-            if ask_user("Are you sure you want to add this repository?", QuestionResponse::No).unwrap_or_exit(1).is_no_or_invalid() {
-                println!("Cancelling adding of repository.");
-                return;
+            // Check if the repository is reachable
+            if is_repository_reachable {
+                if ask_user("Are you sure you want to add this repository?", QuestionResponse::No).unwrap_or_exit(1).is_no_or_invalid() {
+                    println!("Cancelling adding of repository.");
+                    return;
+                }
             }
-        }
 
-        // Check if repository suggests a prebuild url
-        if let Some(prebuilds_url) = &repo_meta.prebuilds_url {
-            println!("This repository suggests using the following prebuilds repository:");
-            let mut pair_aligner = PairAligner::new();
-            pair_aligner.add("Url", prebuilds_url);
-            pair_aligner.add("Provider", repo_meta.prebuilds_provider.display());
-            pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
+            if let Some(repo_meta) = repo_meta {
+                // Check if repository suggests a prebuild url
+                if let Some(prebuilds_url) = &repo_meta.prebuilds_url {
+                    println!("This repository suggests using the following prebuilds repository:");
+                    let mut pair_aligner = PairAligner::new();
+                    pair_aligner.add("Url", prebuilds_url);
+                    pair_aligner.add("Provider", repo_meta.prebuilds_provider.display());
+                    pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
 
-            if ask_user("Do you want to add this prebuild repository?", QuestionResponse::Yes).unwrap_or_exit(1).is_yes() {
-                println!("Adding prebuild repository to config.");
-                repository.prebuilds_url = Some(prebuilds_url.clone());
-                repository.prebuilds_provider = repo_meta.prebuilds_provider;
+                    if ask_user("Do you want to add this prebuild repository?", QuestionResponse::Yes).unwrap_or_exit(1).is_yes() {
+                        println!("Adding prebuild repository to config.");
+                        repository.prebuilds_url = Some(prebuilds_url.clone());
+                        repository.prebuilds_provider = repo_meta.prebuilds_provider;
+                    }
+                }
             }
         }
 
@@ -356,37 +372,21 @@ impl ConfigArgs {
     }
 
     /// Handles the config repositories set-url command.
-    fn handle_set_url(&self, mut config: EditableConfig, id: &str, url: &str, provider: &Option<String>) {
+    fn handle_set_url(&self, mut config: EditableConfig, id: &str, url: &str, provider: &Option<String>, unchecked: bool) {
         // Check if the config even contains this repository
         let Some(mut repository) = config.get_config().repositories.get(id).cloned() else {
             error!(msg: "Repository '{id}' does not exist.");
             exit(1);
         };
 
-        // Check if the repository is reachable
-        let repo_meta = provider::create_metadata_provider(&repository).map(|x| x.read_repository_metadata());
-        match repo_meta {
-            Some(Ok(repo_meta)) => {
-                // Check if the repository is supported
-                if repo_meta.required_packit_version > current_packit_version() {
-                    warning!(
-                        "This repository requires Packit version {}, while your current version is {}",
-                        repo_meta.required_packit_version.style(),
-                        current_packit_version().style()
-                    );
+        // Only run checks if unchecked is not enabled
+        if !unchecked {
+            let repository = Repository::new(url, provider.as_ref().unwrap_or(&repository.provider));
+            let repo_meta = self.check_metadata_repository_availability(&repository);
+            let is_repository_reachable = repo_meta.map(|x| self.check_metadata_repository_compatibility(&x)).unwrap_or(false);
 
-                    if ask_user("Are you sure you want to change the url to this repository?", QuestionResponse::No)
-                        .unwrap_or_exit(1)
-                        .is_no_or_invalid()
-                    {
-                        println!("Cancelling repository url change.");
-                        return;
-                    }
-                }
-            },
-            Some(Err(e)) => {
-                warning!("Cannot request repository metadata: {e}");
-
+            // Check if the repository is reachable
+            if !is_repository_reachable {
                 if ask_user("Are you sure you want to change the url to this repository?", QuestionResponse::No)
                     .unwrap_or_exit(1)
                     .is_no_or_invalid()
@@ -394,18 +394,7 @@ impl ConfigArgs {
                     println!("Cancelling repository url change.");
                     return;
                 }
-            },
-            None => {
-                warning!("Cannot connect to repository");
-
-                if ask_user("Are you sure you want to change the url to this repository?", QuestionResponse::No)
-                    .unwrap_or_exit(1)
-                    .is_no_or_invalid()
-                {
-                    println!("Cancelling repository url change.");
-                    return;
-                }
-            },
+            }
         }
 
         println!("Overwriting url: {}, provider: {}", repository.url, repository.provider);
@@ -476,5 +465,45 @@ impl ConfigArgs {
         let status = if value { "disabled" } else { "enabled" };
         let styled_message = format!("Succesfully {status} prebuilds for '{id}'!").bold().green();
         println!("{styled_message}");
+    }
+
+    /// Check if the metadata repository is available.
+    /// Shows a message with the found issues.
+    /// Returns the repository metadata if the repository is available, false otherwise
+    fn check_metadata_repository_availability(&self, repository: &Repository) -> Option<RepositoryMeta> {
+        // Check if the provider can be created
+        let Some(provider) = provider::create_metadata_provider(repository) else {
+            warning!("Cannot connect to repository");
+            return None;
+        };
+
+        // Check if the repository metadata can be read
+        let repo_meta = match provider.read_repository_metadata() {
+            Ok(repo_meta) => repo_meta,
+            Err(e) => {
+                warning!("Cannot request repository metadata: {e}");
+                return None;
+            },
+        };
+
+        Some(repo_meta)
+    }
+
+    /// Check if the metadata repository is compatible with the current system.
+    /// Shows a message with the found issues.
+    /// Returns true if the repository is compatible, false otherwise
+    fn check_metadata_repository_compatibility(&self, repo_meta: &RepositoryMeta) -> bool {
+        // Check if the repository is supported
+        if repo_meta.required_packit_version > current_packit_version() {
+            warning!(
+                "This repository requires Packit version {}, while your current version is {}",
+                repo_meta.required_packit_version.style(),
+                current_packit_version().style()
+            );
+
+            return false;
+        }
+
+        true
     }
 }
