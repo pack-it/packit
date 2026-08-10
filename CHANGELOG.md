@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The `--active` flag in the `info` command, to use the active version.
 - The `--latest` flag in the `search` command, to use the latest version.
 - Progress bars are now shown while build sources or prebuilds are being downloaded.
+- The `--target-only` flag on the `search` command, to show only the packages that are supported for the current target.
 
 ### Changes
 - Change display of true and false values in the `info` and `search` commands.
@@ -27,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The license field in the metadata now allows nesting and specifying exceptions.
 - The `prebuild_url` and `prebuild_provider` fields in the `repository.toml` file now represent a suggestion that needs to be added to the config in order to be used.
 - The `Alterations` verifier check is now enabled for packages that were installed from a prebuild.
+- The `search --regex` results are now sorted by package name.
 
 ### Fixed
 - Fix error messages not representing the error correctly.

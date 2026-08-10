@@ -16,7 +16,7 @@ use crate::{
             self,
             aligned_print::PairAligner,
             deprecation,
-            logging::error,
+            logging::{error, warning},
             not_found,
             standard_print::{self, DisplayJoined, DisplayOption},
             styled::{MapStyled, Styled},
@@ -25,7 +25,7 @@ use crate::{
     config::Config,
     installer::types::{OptionalPackageId, PackageId, PackageName},
     platforms::Target,
-    repositories::{error::RepositoryError, manager::RepositoryManager},
+    repositories::{error::RepositoryError, manager::RepositoryManager, types::TargetBounds},
     utils::{
         tree::{Node, Tree},
         unwrap_or_exit::UnwrapOrExit,
@@ -44,6 +44,10 @@ pub struct SearchArgs {
     /// True if the query should be interpreted as regex
     #[arg(long, default_value = "false")]
     regex: bool,
+
+    /// True if the search results should only include packages for the current target
+    #[arg(long, default_value = "false", requires = "regex")]
+    target_only: bool,
 
     /// True to show the tree of a package
     /// Note that the tree assumes the latest versions
@@ -129,6 +133,27 @@ impl SearchArgs {
             println!("No packages matched the regex");
             return;
         }
+
+        // Check if matches support the current target
+        if self.target_only {
+            let target = Target::current();
+            matches.retain(|package| {
+                let (_, package_meta) = match manager.read_package(package) {
+                    Ok(package_meta) => package_meta,
+                    Err(RepositoryError::PackageNotFoundError { .. }) => return false,
+                    Err(e) => {
+                        warning!("Cannot read metadata of package {}: {e}", package.style());
+                        return false;
+                    },
+                };
+
+                TargetBounds::get_best_target(&target, package_meta.supported_versions.keys().collect()).is_some()
+            });
+        }
+
+        // Sort the matches
+        let mut matches: Vec<_> = matches.into_iter().collect();
+        matches.sort();
 
         display::print_grid(&matches.into_iter().map_styled().collect());
     }
