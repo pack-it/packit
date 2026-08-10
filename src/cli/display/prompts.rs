@@ -75,6 +75,14 @@ pub fn ask_user_input(question: &str) -> Result<Option<String>> {
     Ok(Some(input.to_string()))
 }
 
+/// Prompts the user to press enter to continue.
+pub fn wait_for_continue() {
+    print!("Press enter to continue...");
+
+    // Wait for user input
+    _ = read_line();
+}
+
 /// Reads a line from stdin
 fn read_line() -> Result<String> {
     io::stdout().flush().err_operation("flush stdout").map_err(DisplayError::IOError)?;

@@ -19,6 +19,7 @@ pub use progressbar::ProgressBar;
 pub use prompts::QuestionResponse;
 pub use prompts::ask_user;
 pub use prompts::ask_user_input;
+pub use prompts::wait_for_continue;
 
 pub use reader::ReaderWithProgress;
 

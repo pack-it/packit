@@ -10,6 +10,7 @@ pub struct InstallerOptions {
     pub verbose: bool,
     pub skip_test: bool,
     pub skip_build_test: bool,
+    pub pause_build: bool,
 }
 
 impl Default for InstallerOptions {
@@ -23,6 +24,7 @@ impl Default for InstallerOptions {
             verbose: false,
             skip_test: false,
             skip_build_test: false,
+            pause_build: false,
         }
     }
 }
@@ -67,6 +69,12 @@ impl InstallerOptions {
     /// Sets the `skip_build_test` field.
     pub fn skip_build_test(mut self, skip: bool) -> Self {
         self.skip_build_test = skip;
+        self
+    }
+
+    /// Sets the `pause_build` field.
+    pub fn pause_build(mut self, pause: bool) -> Self {
+        self.pause_build = pause;
         self
     }
 }

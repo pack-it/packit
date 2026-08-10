@@ -13,7 +13,11 @@ use crate::{
         BinaryPatcher, BuildEnv,
         error::{BuilderError, Result},
     },
-    cli::display::{ProgressBar, Spinner, logging::debug, styled::Styled},
+    cli::display::{
+        self, ProgressBar, Spinner,
+        logging::{debug, warning},
+        styled::Styled,
+    },
     config::Config,
     installer::{
         install_tree::InstallMeta,
@@ -36,6 +40,7 @@ pub struct Builder<'a> {
     repository_manager: &'a RepositoryManager<'a>,
     verbose: bool,
     skip_build_test: bool,
+    pause_build: bool,
 }
 
 impl<'a> Builder<'a> {
@@ -46,6 +51,7 @@ impl<'a> Builder<'a> {
         repository_manager: &'a RepositoryManager,
         verbose: bool,
         skip_build_test: bool,
+        pause_build: bool,
     ) -> Self {
         Self {
             config,
@@ -53,6 +59,7 @@ impl<'a> Builder<'a> {
             repository_manager,
             verbose,
             skip_build_test,
+            pause_build,
         }
     }
 
@@ -173,6 +180,7 @@ impl<'a> Builder<'a> {
         let script_data = ScriptData::new(&script_path, &destination_dir, &package_id, self.config, &script_args, self.verbose);
 
         // Show build spinner
+        let script_result;
         if !self.verbose {
             let styled_package = format!("{package_name}@{version}").bold().blue();
             let spinner_message = format!("Building {styled_package}");
@@ -180,7 +188,7 @@ impl<'a> Builder<'a> {
             spinner.show();
 
             // Run build script
-            scripts::run_build_script(&script_data, &build_directory, env, self.skip_build_test)?;
+            script_result = scripts::run_build_script(&script_data, &build_directory, env, self.skip_build_test);
 
             // Finish build spinner
             spinner.finish();
@@ -188,8 +196,21 @@ impl<'a> Builder<'a> {
             println!("Executing build script of {}", package_id.style());
 
             // Run build script
-            scripts::run_build_script(&script_data, &build_directory, env, self.skip_build_test)?;
+            script_result = scripts::run_build_script(&script_data, &build_directory, env, self.skip_build_test);
         }
+
+        // Wait before continuing when pause build is enabled
+        if self.pause_build {
+            if let Err(e) = &script_result {
+                warning!("Build script execution returned an error: {e}");
+            }
+
+            println!("Paused building in '{}'", build_directory.path().display());
+            display::wait_for_continue();
+        }
+
+        // Propagate script result
+        script_result?;
 
         // Patch binaries
         BinaryPatcher::new(self.config).patch_binaries_in(destination_dir.as_ref().to_path_buf(), &package_id, installed_dependencies)?;
