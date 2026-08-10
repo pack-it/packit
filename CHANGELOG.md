@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The `config repositories set-url` command, which can be used to change the url of a repository.
 - The `config repositories set-prebuilds` command, which can be used to change the prebuilds url of a repository.
 - The `config repositories disable-prebuilds` command, which can be used to enable or disable prebuilds of a repository.
+- The `config repositories add` command now has a `--unchecked` flag, which can be used to skip repository checks.
 
 ### Changes
 - Change display of true and false values in the `info` and `search` commands.
