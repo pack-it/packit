@@ -10,7 +10,7 @@ use lief::{Binary, elf, macho};
 use thiserror::Error;
 
 use crate::{
-    cli::display::logging::{self, debug, error},
+    cli::display::logging::{self, debug},
     config::Config,
     installer::types::PackageId,
     register::installed_package_version::InstalledPackageVersion,
@@ -20,12 +20,12 @@ use crate::{
 /// The errors that occur during binary operations.
 #[derive(Error, Debug)]
 pub enum BinaryPatcherError {
-    #[error("Binary '{path}' cannot be parsed.")]
+    #[error("Binary '{path}' cannot be parsed")]
     CannotParseBinary {
         path: PathBuf,
     },
 
-    #[error("Binary '{path}' of type {bin_type} is not supported.")]
+    #[error("Binary '{path}' of type {bin_type} is not supported")]
     UnsupportedBinaryType {
         path: PathBuf,
         bin_type: String,
@@ -33,6 +33,14 @@ pub enum BinaryPatcherError {
 
     #[error("Cannot convert OsString to string")]
     OsStringConversionError,
+
+    #[error("Cannot re-sign binary '{path}'")]
+    CannotReSign {
+        path: PathBuf,
+
+        #[source]
+        error: std::io::Error,
+    },
 
     #[error("Error while interacting with filesystem")]
     IOError(#[from] ioerror::IOError),
@@ -114,10 +122,10 @@ impl<'a> BinaryPatcher<'a> {
     }
 
     /// Patches the given `MachO` binary.
-    fn patch_macho(&self, binary: macho::FatBinary, path: PathBuf, package: &PackageId) -> Result<()> {
-        for mut binary in binary.iter() {
-            let mut changed = false;
+    fn patch_macho(&self, mut binary: macho::FatBinary, path: PathBuf, package: &PackageId) -> Result<()> {
+        let mut changed = false;
 
+        for binary in binary.iter() {
             for mut library in binary.libraries() {
                 let library_path = PathBuf::from(library.name());
 
@@ -157,33 +165,36 @@ impl<'a> BinaryPatcher<'a> {
                     changed = true;
                 }
             }
+        }
 
-            if changed {
-                debug!("Changed binary '{}', writing changes", path.display());
+        if changed {
+            debug!("Changed binary '{}', writing changes", path.display());
 
-                let config = macho::builder::Config { linkedit: true };
-                binary.write_with_config(&path, config);
+            binary.write(&path);
 
-                // Sign binary
-                let path = path.to_str().ok_or(BinaryPatcherError::OsStringConversionError)?;
-                let mut command = Command::new("/usr/bin/codesign");
-                let mut command = command.args(["--sign", "-", "--force", path]).stdout(Stdio::null()).stderr(Stdio::null());
-                if *logging::DEBUG_ENABLED {
-                    command = command.stdout(Stdio::inherit()).stderr(Stdio::inherit());
-                }
-
-                match command.status() {
-                    Ok(code) if !code.success() => {
-                        error!(msg: "Cannot resign binary, exit code {code}");
-                        continue;
-                    },
-                    Ok(_) => (),
-                    Err(e) => {
-                        error!(e, "Cannot resign binary '{path}'");
-                        continue;
-                    },
-                };
+            // Sign binary
+            let path_str = path.to_str().ok_or(BinaryPatcherError::OsStringConversionError)?;
+            let mut command = Command::new("/usr/bin/codesign");
+            let mut command = command.args(["--sign", "-", "--force", path_str]).stdout(Stdio::null()).stderr(Stdio::null());
+            if *logging::DEBUG_ENABLED {
+                command = command.stdout(Stdio::inherit()).stderr(Stdio::inherit());
             }
+
+            // Return error if codesign did not exit succesfully
+            match command.status() {
+                Ok(status) if !status.success() => {
+                    let message = match status.code() {
+                        Some(code) => format!("codesign exited with status code {code}"),
+                        None => format!("codesign exited without a status code"),
+                    };
+                    return Err(BinaryPatcherError::CannotReSign {
+                        path,
+                        error: std::io::Error::new(std::io::ErrorKind::Other, message),
+                    });
+                },
+                Ok(_) => (),
+                Err(error) => return Err(BinaryPatcherError::CannotReSign { path, error }),
+            };
         }
 
         Ok(())
