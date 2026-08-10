@@ -363,7 +363,52 @@ impl ConfigArgs {
             exit(1);
         };
 
-        warning!("Overwriting url: {}, provider: {}", repository.url, repository.provider);
+        // Check if the repository is reachable
+        let repo_meta = provider::create_metadata_provider(&repository).map(|x| x.read_repository_metadata());
+        match repo_meta {
+            Some(Ok(repo_meta)) => {
+                // Check if the repository is supported
+                if repo_meta.required_packit_version > current_packit_version() {
+                    warning!(
+                        "This repository requires Packit version {}, while your current version is {}",
+                        repo_meta.required_packit_version.style(),
+                        current_packit_version().style()
+                    );
+
+                    if ask_user("Are you sure you want to change the url to this repository?", QuestionResponse::No)
+                        .unwrap_or_exit(1)
+                        .is_no_or_invalid()
+                    {
+                        println!("Cancelling repository url change.");
+                        return;
+                    }
+                }
+            },
+            Some(Err(e)) => {
+                warning!("Cannot request repository metadata: {e}");
+
+                if ask_user("Are you sure you want to change the url to this repository?", QuestionResponse::No)
+                    .unwrap_or_exit(1)
+                    .is_no_or_invalid()
+                {
+                    println!("Cancelling repository url change.");
+                    return;
+                }
+            },
+            None => {
+                warning!("Cannot connect to repository");
+
+                if ask_user("Are you sure you want to change the url to this repository?", QuestionResponse::No)
+                    .unwrap_or_exit(1)
+                    .is_no_or_invalid()
+                {
+                    println!("Cancelling repository url change.");
+                    return;
+                }
+            },
+        }
+
+        println!("Overwriting url: {}, provider: {}", repository.url, repository.provider);
 
         repository.url = url.into();
         if let Some(provider) = provider {
@@ -374,7 +419,7 @@ impl ConfigArgs {
 
         config.save_to(&Config::get_default_path()).unwrap_or_exit_msg("Cannot save config file", 1);
 
-        let styled_message = format!("Succesfully set repository url for '{id}' to {url}!").bold().green();
+        let styled_message = format!("Succesfully set repository url for '{id}' to '{url}'!").bold().green();
         println!("{styled_message}");
     }
 
@@ -388,8 +433,8 @@ impl ConfigArgs {
 
         // Check if a prebuilds repository was already configured
         if let Some(old_prebuilds_url) = &repository.prebuilds_url {
-            warning!("Repository '{id}' already had a prebuild repository, overwriting url and provider...");
-            warning!(
+            println!("Repository '{id}' already had a prebuild repository, overwriting url and provider...");
+            println!(
                 "Old prebuilds url: {old_prebuilds_url}, provider: {}",
                 repository.prebuilds_provider.display()
             );
@@ -404,7 +449,7 @@ impl ConfigArgs {
 
         config.save_to(&Config::get_default_path()).unwrap_or_exit_msg("Cannot save config file", 1);
 
-        let styled_message = format!("Succesfully set prebuilds repository for '{id}' to {prebuilds_url}!").bold().green();
+        let styled_message = format!("Succesfully set prebuilds repository for '{id}' to '{prebuilds_url}'!").bold().green();
         println!("{styled_message}");
     }
 
@@ -428,8 +473,8 @@ impl ConfigArgs {
 
         config.save_to(&Config::get_default_path()).unwrap_or_exit_msg("Cannot save config file", 1);
 
-        let disabled = if value { "disabled" } else { "enabled" };
-        let styled_message = format!("Succesfully {disabled} prebuilds for '{id}'!").bold().green();
+        let status = if value { "disabled" } else { "enabled" };
+        let styled_message = format!("Succesfully {status} prebuilds for '{id}'!").bold().green();
         println!("{styled_message}");
     }
 }

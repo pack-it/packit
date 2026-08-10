@@ -278,6 +278,7 @@ impl EditableConfig {
         } else {
             repository_table.remove("prebuilds_url");
         }
+
         if let Some(prebuilds_provider) = &repository.prebuilds_provider {
             if repository_table.get("prebuildsprebuilds_provider_url").map(|x| x.as_str()).flatten() != Some(&prebuilds_provider) {
                 repository_table.insert("prebuilds_provider", prebuilds_provider.into());
