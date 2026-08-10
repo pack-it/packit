@@ -149,7 +149,7 @@ cd "$PREFIX_DIR/packages/packit/"
 
 # Install Packit to the prefix directory
 echo "Downloading Packit prebuild from '$PREBUILD_URL'"
-if curl --proto "=https" -sSfL $PREBUILD_URL --output packit@$VERSION-$REVISION-$TARGET.tar.gz; then
+if curl --proto "=https" -sSfL "$PREBUILD_URL" --output packit@$VERSION-$REVISION-$TARGET.tar.gz; then
     tar -xf packit@$VERSION-$REVISION-$TARGET.tar.gz
     rm packit@$VERSION-$REVISION-$TARGET.tar.gz
     mv packit@$VERSION-$REVISION-$TARGET $VERSION
@@ -178,10 +178,13 @@ else
         fi
 
         echo "Installing cargo from 'https://sh.rustup.rs'"
-        curl --proto '=https' --tlsv1.2 -sSfL https://sh.rustup.rs | sh
+        RUSTUP_HOME="$HOME/.rustup"
+        CARGO_HOME="$HOME/.cargo"
+        curl --proto '=https' --tlsv1.2 -sSfL https://sh.rustup.rs | sh -s -- -y
 
         # Make sure that the rustup install was successful
-        if ! command -v cargo >/dev/null 2>&1; then
+        ls "$CARGO_HOME"
+        if ! command -v "$CARGO_HOME/bin/cargo" >/dev/null 2>&1; then
             echo "Installing rustup failed, canceling Packit installation"
             exit 1
         fi
@@ -202,16 +205,15 @@ else
     cd packit@$VERSION
 
     echo "Building Packit from source"
-    cargo build-install --destination ../$VERSION
+    "$CARGO_HOME/bin/cargo" build-install --destination ../$VERSION
     cd ..
     rm -r ./packit@$VERSION
 
+    # Remove rustup after installation
     if [ $RUSTUP_INSTALLED -eq 1 ]; then
-        if ask "Y" "You installed rustup to install Packit. This installation is not registered in Packit. Do you wish to uninstall it"; then
-            echo "Uninstalling rustup"
-            rustup self uninstall
-            echo "Uninstalling rustup successful"
-        fi
+        echo "Uninstalling rustup"
+        "$CARGO_HOME/bin/rustup" self uninstall -y
+        echo "Uninstalling rustup successful"
     fi
 
     echo "Building Packit from source successful"
