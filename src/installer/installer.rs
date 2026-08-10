@@ -255,6 +255,14 @@ impl<'a> Installer<'a> {
         install_directory: &PathBuf,
         script_args: &HashMap<&str, &str>,
     ) -> Result<()> {
+        // Check if preinstall script should be used
+        let target_meta = install_meta.version_metadata.get_target(&install_meta.target_bounds)?;
+        let use_script = target_meta.use_preinstall.unwrap_or(install_meta.version_metadata.use_preinstall.unwrap_or(false));
+        if !use_script {
+            debug!("Skipping preinstall script execution since metadata does not define it");
+            return Ok(());
+        }
+
         // Download and run preinstall script if it exists
         let script_path = install_meta.version_metadata.get_preinstall_script_path(&install_meta.target_bounds)?;
         let downloaded_script =
@@ -351,6 +359,14 @@ impl<'a> Installer<'a> {
         install_directory: &PathBuf,
         script_args: &HashMap<&str, &str>,
     ) -> Result<()> {
+        // Check if postinstall script should be used
+        let target_meta = install_meta.version_metadata.get_target(&install_meta.target_bounds)?;
+        let use_script = target_meta.use_postinstall.unwrap_or(install_meta.version_metadata.use_postinstall.unwrap_or(false));
+        if !use_script {
+            debug!("Skipping postinstall script execution since metadata does not define it");
+            return Ok(());
+        }
+
         // Download and run post install script if it exists
         let script_path = install_meta.version_metadata.get_postinstall_script_path(&install_meta.target_bounds)?;
         let downloaded_script =
@@ -761,6 +777,14 @@ impl<'a> Installer<'a> {
         };
 
         let target_bounds = package_version.get_best_target(&Target::current())?;
+
+        // Check if uninstall script should be used
+        let target_meta = package_version.get_target(&target_bounds)?;
+        let use_script = target_meta.use_postinstall.unwrap_or(package_version.use_postinstall.unwrap_or(false));
+        if !use_script {
+            debug!("Skipping uninstall script execution since metadata does not define it");
+            return Ok(());
+        }
 
         // Get script data from package version metadata
         let script_path = package_version.get_uninstall_script_path(&target_bounds)?;

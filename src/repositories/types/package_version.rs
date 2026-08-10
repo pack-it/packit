@@ -51,6 +51,15 @@ pub struct PackageVersionMeta {
     #[serde(skip_serializing_if = "PackageVersionMeta::is_default_use_version_specific")]
     pub use_version_specific_uninstall: bool,
 
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub use_preinstall: Option<bool>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub use_postinstall: Option<bool>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub use_uninstall: Option<bool>,
+
     #[serde(default, skip_serializing_if = "HashSet::is_empty")]
     pub external_test_files: HashSet<String>,
 
