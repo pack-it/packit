@@ -19,7 +19,7 @@ use crate::{
 pub struct Verifier {
     current_initial_check: usize,
     current_check: usize,
-    issues_found: bool,
+    issues_found: u32,
 }
 
 impl Verifier {
@@ -28,27 +28,13 @@ impl Verifier {
         Self {
             current_initial_check: 0,
             current_check: 0,
-            issues_found: false,
-        }
-    }
-
-    /// Gets the result of the next initial check.
-    /// If an error occurs during the check it's only returned if no previous issues were found.
-    pub fn next_initial_check(&mut self) -> Result<Option<Issue>> {
-        match self.next_initial_check_impl() {
-            Ok(issue) => Ok(issue),
-            Err(e) if self.issues_found => {
-                debug!(err: e, "An error occured when issues were already found, skipping remaining checks.");
-                self.current_initial_check = Check::get_initial_checks().len();
-                Ok(None)
-            },
-            Err(e) => Err(e),
+            issues_found: 0,
         }
     }
 
     /// Gets the result of the next initial check.
     /// Returns and `Issue` if an issue is found, `None` if no issues are found.
-    fn next_initial_check_impl(&mut self) -> Result<Option<Issue>> {
+    pub fn next_initial_check(&mut self) -> Result<Option<Issue>> {
         let ordered_checks = Check::get_ordered_checks(Check::get_initial_checks());
         let check = match ordered_checks.get(self.current_initial_check) {
             Some(check) => check,
@@ -75,7 +61,7 @@ impl Verifier {
         };
 
         if issue.is_some() {
-            self.issues_found = true;
+            self.issues_found += 1;
         }
 
         Ok(issue)
@@ -89,15 +75,7 @@ impl Verifier {
             return Err(VerifierError::InitialChecksSkipped);
         }
 
-        match self.next_check_impl(packages, register, config) {
-            Ok(issue) => Ok(issue),
-            Err(e) if self.issues_found => {
-                debug!(err: e, "An error occured when issues were already found, skipping remaining checks.");
-                self.current_check = Check::get_checks().len();
-                Ok(None)
-            },
-            Err(e) => Err(e),
-        }
+        self.next_check_impl(packages, register, config)
     }
 
     /// Gets the next normal check result.
@@ -140,15 +118,14 @@ impl Verifier {
         };
 
         if issue.is_some() {
-            self.issues_found = true;
+            self.issues_found += 1;
         }
 
         Ok(issue)
     }
 
-    /// Get the issues found state.
-    /// Returns true if issues are found, false otherwise.
-    pub fn issues_found(&self) -> bool {
+    /// Get the number of issues found.
+    pub fn issues_found(&self) -> u32 {
         self.issues_found
     }
 

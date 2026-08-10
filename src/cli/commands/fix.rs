@@ -6,12 +6,15 @@ use std::process::exit;
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{QuestionResponse, ask_user, logging::error},
+        display::{
+            QuestionResponse, ask_user,
+            logging::{debug, error},
+        },
         parameter_checks,
     },
     config::Config,
     installer::types::{OptionalPackageId, PackageId},
-    integrity::{Repairer, Verifier},
+    integrity::{Repairer, Verifier, error::VerifierError},
     register::package_register::PackageRegister,
     repositories::manager::RepositoryManager,
     utils::unwrap_or_exit::UnwrapOrExit,
@@ -32,18 +35,38 @@ impl HandleCommand for FixArgs {
         let mut verifier = Verifier::new();
         let mut repairer = Repairer::new();
 
-        self.fix_initial(&mut verifier, &mut repairer);
-        self.fix(&mut verifier, &mut repairer);
+        let mut solved_issues = 0;
+        match self.fix_initial(&mut verifier, &mut repairer, &mut solved_issues) {
+            Ok(_) => {},
+            Err(e) if verifier.issues_found() > solved_issues => {
+                debug!(err: e, "An error occured when issues were already found, skipping remaining checks.");
+                return;
+            },
+            Err(e) => {
+                error!(e, "An error occured while doing the initial verifier checks");
+                exit(1);
+            },
+        };
+
+        let Err(e) = self.fix(&mut verifier, &mut repairer, &mut solved_issues) else {
+            return;
+        };
+
+        if verifier.issues_found() <= solved_issues {
+            error!(e, "An error occured while doing the verifier checks");
+            exit(1);
+        }
+
+        debug!(err: e, "An error occured when issues were already found, skipping remaining checks.");
     }
 }
 
 impl FixArgs {
     /// Fixes the initial issues, which check basic files that Packit requires to run properly (for example Config.toml or Register.toml).
-    fn fix_initial(&self, verifier: &mut Verifier, repairer: &mut Repairer) {
+    fn fix_initial(&self, verifier: &mut Verifier, repairer: &mut Repairer, issues_solved: &mut u32) -> Result<(), VerifierError> {
         let mut fixed_issue = false;
         while verifier.get_initial_check_index() < verifier.get_initial_check_length() {
-            let check_result = verifier.next_initial_check().unwrap_or_exit(1);
-            let issue = match check_result {
+            let issue = match verifier.next_initial_check()? {
                 // If there is an issue and we previously attempted to fix it, error and exit
                 Some(_) if fixed_issue => {
                     error!(msg: UNSUCCESSFUL_FIX_MESSAGE);
@@ -57,6 +80,7 @@ impl FixArgs {
                 None if fixed_issue => {
                     println!("{}", "Successfully fixed the issue".bold().green());
                     fixed_issue = false;
+                    *issues_solved += 1;
                     continue;
                 },
 
@@ -78,10 +102,12 @@ impl FixArgs {
 
             fixed_issue = true;
         }
+
+        Ok(())
     }
 
     /// Does the normal fixes.
-    fn fix(&self, verifier: &mut Verifier, repairer: &mut Repairer) {
+    fn fix(&self, verifier: &mut Verifier, repairer: &mut Repairer, issues_solved: &mut u32) -> Result<(), VerifierError> {
         let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
         let manager = RepositoryManager::new(&config);
         let register_dir = PackageRegister::get_path(&config.prefix_directory);
@@ -99,7 +125,7 @@ impl FixArgs {
         // Retrieve and fix the issues one by one
         let mut fixed_issue = false;
         while verifier.get_check_index() < verifier.get_check_length() {
-            let check_result = verifier.next_check(packages, &register, &config).unwrap_or_exit(1);
+            let check_result = verifier.next_check(packages, &register, &config)?;
             let issue = match check_result {
                 // If there is an issue and we previously attempted to fix it, error and exit
                 Some(_) if fixed_issue => {
@@ -114,6 +140,7 @@ impl FixArgs {
                 None if fixed_issue => {
                     println!("{}", "Successfully fixed the issue".bold().green());
                     fixed_issue = false;
+                    *issues_solved += 1;
                     continue;
                 },
 
@@ -124,7 +151,7 @@ impl FixArgs {
             println!("{issue}");
             println!("{}", issue.get_fix_message());
             if ask_user(FIX_MESSAGE, QuestionResponse::Yes).unwrap_or_exit(1).is_no() {
-                return;
+                return Ok(());
             }
 
             // Repair the found issues
@@ -139,8 +166,10 @@ impl FixArgs {
             fixed_issue = true;
         }
 
-        if !verifier.issues_found() {
+        if verifier.issues_found() == 0 {
             println!("No issues were found!");
         }
+
+        Ok(())
     }
 }
