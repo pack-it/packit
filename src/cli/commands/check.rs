@@ -1,8 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use clap::Args;
+use std::process::exit;
 
 use crate::{
-    cli::{commands::HandleCommand, parameter_checks},
+    cli::{
+        commands::HandleCommand,
+        display::logging::{debug, error},
+        parameter_checks,
+    },
     config::Config,
     installer::types::{OptionalPackageId, PackageId},
     integrity::Verifier,
@@ -24,13 +29,22 @@ impl HandleCommand for CheckArgs {
         // Always do initial checks first
         let mut verifier = Verifier::new();
         while verifier.get_initial_check_index() < verifier.get_initial_check_length() {
-            if let Some(issue) = verifier.next_initial_check().unwrap_or_exit(1) {
-                println!("{issue}")
+            match verifier.next_initial_check() {
+                Ok(Some(issue)) => print!("{issue}"),
+                Ok(_) => {},
+                Err(e) if verifier.issues_found() > 0 => {
+                    debug!(err: e, "An error occured when issues were already found, skipping remaining checks.");
+                    return;
+                },
+                Err(e) => {
+                    error!(e, "An error occured while doing the initial verifier checks");
+                    exit(1);
+                },
             }
         }
 
         // Return correct message based on found issues
-        if verifier.issues_found() {
+        if verifier.issues_found() > 0 {
             println!("{ISSUE_FOUND_MESSAGE}");
             return;
         }
@@ -49,13 +63,22 @@ impl HandleCommand for CheckArgs {
         };
 
         while verifier.get_check_index() < verifier.get_check_length() {
-            if let Some(issue) = verifier.next_check(packages, &register, &config).unwrap_or_exit(1) {
-                println!("{issue}")
+            match verifier.next_check(packages, &register, &config) {
+                Ok(Some(issue)) => print!("{issue}"),
+                Ok(_) => {},
+                Err(e) if verifier.issues_found() > 0 => {
+                    debug!(err: e, "An error occured when issues were already found, skipping remaining checks.");
+                    return;
+                },
+                Err(e) => {
+                    error!(e, "An error occured while doing the verifier checks");
+                    exit(1);
+                },
             }
         }
 
         // Return correct message based on found issues
-        if verifier.issues_found() {
+        if verifier.issues_found() > 0 {
             println!("{ISSUE_FOUND_MESSAGE}");
         } else {
             println!("No issues were found!");

@@ -35,6 +35,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Fix portable repositories generating an invalid prebuild repository structure.
 - Fix writable checks by ignoring the readonly attribute on Windows.
 - Fix package not found message when metadata cannot be parsed.
+- Fix the wrongly ignored errors in the repairer.
 
 
 ## [v0.0.3](https://github.com/pack-it/packit/compare/0.0.2...0.0.3) - 2026-07-11
