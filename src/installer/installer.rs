@@ -211,6 +211,7 @@ impl<'a> Installer<'a> {
                 self.repository_manager,
                 self.options.verbose,
                 self.options.skip_build_test,
+                self.options.pause_build,
             )
             .build(install_meta, &install_directory)?,
         }
