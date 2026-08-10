@@ -68,19 +68,13 @@ impl Verifier {
     }
 
     /// Gets the next normal check result.
-    /// If an error occurs during the check it's only returned if no previous issues were found.
+    /// Returns and `Issue` if an issue is found, `None` if no issues are found.
     pub fn next_check(&mut self, packages: &Vec<PackageId>, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
         // Make sure the initial checks have been run before doing general checks
         if self.current_initial_check != Check::get_initial_checks().len() {
             return Err(VerifierError::InitialChecksSkipped);
         }
 
-        self.next_check_impl(packages, register, config)
-    }
-
-    /// Gets the next normal check result.
-    /// Returns and `Issue` if an issue is found, `None` if no issues are found.
-    fn next_check_impl(&mut self, packages: &Vec<PackageId>, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
         let ordered_checks = Check::get_ordered_checks(Check::get_checks());
         let check = match ordered_checks.get(self.current_check) {
             Some(check) => check,
