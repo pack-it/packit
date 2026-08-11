@@ -379,6 +379,15 @@ impl MetaCheck {
 
         // Check all source patches
         for (patch_number, patch) in &source.patches {
+            // Check if the apply directory is specified
+            if source.apply_patches_in.is_none() && patch.apply_in.is_none() {
+                let description = format!(
+                    "Patch {patch_number} of {} in target '{target}' has no 'apply_in' and no default is specified",
+                    package_id.style(),
+                );
+                self.issues.push(MetaIssue::default(description).set_issue_type(IssueType::Warning));
+            }
+
             self.check_patch(package_id, patch_number, patch, target);
         }
     }
