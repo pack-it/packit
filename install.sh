@@ -177,13 +177,18 @@ else
             exit 1
         fi
 
+        # Check for empty HOME
+        if [ -z "$HOME" ]; then
+            echo "Cannot do rustup install, because HOME variable is empty"
+            exit 1
+        fi
+
         echo "Installing cargo from 'https://sh.rustup.rs'"
         RUSTUP_HOME="$HOME/.rustup"
         CARGO_HOME="$HOME/.cargo"
         curl --proto '=https' --tlsv1.2 -sSfL https://sh.rustup.rs | sh -s -- -y
 
         # Make sure that the rustup install was successful
-        ls "$CARGO_HOME"
         if ! command -v "$CARGO_HOME/bin/cargo" >/dev/null 2>&1; then
             echo "Installing rustup failed, canceling Packit installation"
             exit 1
