@@ -279,7 +279,7 @@ pub fn download_script(
     };
 
     // Write script to file
-    Ok(write_script_to_tempfile(&script_text)?)
+    write_script_to_tempfile(&script_text)
 }
 
 /// Downloads a script and saves it as a temp file.

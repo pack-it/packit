@@ -262,17 +262,17 @@ impl EditableConfig {
         };
 
         // Replace url and provider if the new value does not match the old value
-        if repository_table.get("url").map(|x| x.as_str()).flatten() != Some(&repository.url) {
+        if repository_table.get("url").and_then(|x| x.as_str()) != Some(&repository.url) {
             repository_table.insert("url", (&repository.url).into());
         }
-        if repository_table.get("provider").map(|x| x.as_str()).flatten() != Some(&repository.provider) {
+        if repository_table.get("provider").and_then(|x| x.as_str()) != Some(&repository.provider) {
             repository_table.insert("provider", (&repository.provider).into());
         }
 
         // Replace prebuilds url and provider if the new value does not match the old value
         // If the value is not present, remove the field.
         if let Some(prebuilds_url) = &repository.prebuilds_url {
-            if repository_table.get("prebuilds_url").map(|x| x.as_str()).flatten() != Some(&prebuilds_url) {
+            if repository_table.get("prebuilds_url").and_then(|x| x.as_str()) != Some(prebuilds_url) {
                 repository_table.insert("prebuilds_url", prebuilds_url.into());
             }
         } else {
@@ -280,7 +280,7 @@ impl EditableConfig {
         }
 
         if let Some(prebuilds_provider) = &repository.prebuilds_provider {
-            if repository_table.get("prebuildsprebuilds_provider_url").map(|x| x.as_str()).flatten() != Some(&prebuilds_provider) {
+            if repository_table.get("prebuildsprebuilds_provider_url").and_then(|x| x.as_str()) != Some(prebuilds_provider) {
                 repository_table.insert("prebuilds_provider", prebuilds_provider.into());
             }
         } else {

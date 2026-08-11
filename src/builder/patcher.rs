@@ -185,11 +185,11 @@ impl<'a> BinaryPatcher<'a> {
                 Ok(status) if !status.success() => {
                     let message = match status.code() {
                         Some(code) => format!("codesign exited with status code {code}"),
-                        None => format!("codesign exited without a status code"),
+                        None => "codesign exited without a status code".to_string(),
                     };
                     return Err(BinaryPatcherError::CannotReSign {
                         path,
-                        error: std::io::Error::new(std::io::ErrorKind::Other, message),
+                        error: std::io::Error::other(message),
                     });
                 },
                 Ok(_) => (),
