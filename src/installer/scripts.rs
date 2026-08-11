@@ -272,14 +272,14 @@ pub fn download_script(
     script_path: &str,
     package_name: &PackageName,
     repository_id: &str,
-) -> Result<Option<NamedTempFile>> {
+) -> Result<NamedTempFile> {
     let script_text = match repository_manager.read_file(repository_id, package_name, script_path)? {
         Some(script_text) => script_text,
-        None => return Ok(None), // Script not found, so return `None`
+        None => return Err(ScriptError::ScriptNotFound(script_path.to_string())), // Script not found, so return `ScriptError::ScriptNotFound`
     };
 
     // Write script to file
-    Ok(Some(write_script_to_tempfile(&script_text)?))
+    Ok(write_script_to_tempfile(&script_text)?)
 }
 
 /// Downloads a script and saves it as a temp file.

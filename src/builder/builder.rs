@@ -21,7 +21,7 @@ use crate::{
     config::Config,
     installer::{
         install_tree::InstallMeta,
-        scripts::{self, ScriptData, ScriptError},
+        scripts::{self, ScriptData},
         types::{PackageId, PackageName},
         unpack::{ArchiveExtension, unpack},
     },
@@ -175,8 +175,7 @@ impl<'a> Builder<'a> {
 
         // Download and run build script
         let script_path = install_meta.version_metadata.get_build_script_path(&install_meta.target_bounds)?;
-        let script_path = scripts::download_script(self.repository_manager, &script_path, package_name, &install_meta.repository_id)?
-            .ok_or(ScriptError::ScriptNotFound("build".into()))?;
+        let script_path = scripts::download_script(self.repository_manager, &script_path, package_name, &install_meta.repository_id)?;
         let script_data = ScriptData::new(&script_path, &destination_dir, &package_id, self.config, &script_args, self.verbose);
 
         // Show build spinner
