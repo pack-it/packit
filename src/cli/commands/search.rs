@@ -196,7 +196,7 @@ impl SearchArgs {
     fn search_package(&self, manager: &RepositoryManager, package_name: &PackageName) {
         let (repository_id, package) = match manager.read_package(package_name) {
             Ok(package) => package,
-            Err(RepositoryError::PackageNotFoundError { reason, .. }) => not_found::repository_package(package_name, &manager, reason),
+            Err(RepositoryError::PackageNotFoundError { reason, .. }) => not_found::repository_package(package_name, manager, reason),
             Err(e) => {
                 error!(e, "Cannot read package");
                 return;
@@ -241,9 +241,7 @@ impl SearchArgs {
         let package_and_version = manager.read_package_and_version(&package_id.clone().into(), &Target::current());
         let (repository_id, package, package_version) = match package_and_version {
             Ok(package) => package,
-            Err(RepositoryError::PackageNotFoundError { reason, .. }) => {
-                not_found::repository_package_version(package_id, &manager, reason)
-            },
+            Err(RepositoryError::PackageNotFoundError { reason, .. }) => not_found::repository_package_version(package_id, manager, reason),
             Err(e) => {
                 error!(e, "Cannot read package");
                 return;

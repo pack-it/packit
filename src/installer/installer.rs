@@ -255,12 +255,18 @@ impl<'a> Installer<'a> {
         install_directory: &PathBuf,
         script_args: &HashMap<&str, &str>,
     ) -> Result<()> {
-        // Download and run preinstall script if it exists
-        let script_path = install_meta.version_metadata.get_preinstall_script_path(&install_meta.target_bounds)?;
-        let downloaded_script =
-            scripts::download_script(self.repository_manager, &script_path, &package_id.name, &install_meta.repository_id)?;
+        // Check if preinstall script should be used
+        let target_meta = install_meta.version_metadata.get_target(&install_meta.target_bounds)?;
+        let use_script = target_meta.use_preinstall.unwrap_or(install_meta.version_metadata.use_preinstall.unwrap_or(false));
+        if !use_script {
+            debug!("Skipping preinstall script execution since metadata does not define it");
+            return Ok(());
+        }
 
-        let Some(script_file) = downloaded_script else { return Ok(()) };
+        // Download preinstall script if it exists
+        let script_path = install_meta.version_metadata.get_preinstall_script_path(&install_meta.target_bounds)?;
+        let script_file = scripts::download_script(self.repository_manager, &script_path, &package_id.name, &install_meta.repository_id)?;
+
         let script_data = ScriptData::new(
             &script_file,
             &install_directory,
@@ -351,12 +357,18 @@ impl<'a> Installer<'a> {
         install_directory: &PathBuf,
         script_args: &HashMap<&str, &str>,
     ) -> Result<()> {
-        // Download and run post install script if it exists
-        let script_path = install_meta.version_metadata.get_postinstall_script_path(&install_meta.target_bounds)?;
-        let downloaded_script =
-            scripts::download_script(self.repository_manager, &script_path, &package_id.name, &install_meta.repository_id)?;
+        // Check if postinstall script should be used
+        let target_meta = install_meta.version_metadata.get_target(&install_meta.target_bounds)?;
+        let use_script = target_meta.use_postinstall.unwrap_or(install_meta.version_metadata.use_postinstall.unwrap_or(false));
+        if !use_script {
+            debug!("Skipping postinstall script execution since metadata does not define it");
+            return Ok(());
+        }
 
-        let Some(script_file) = downloaded_script else { return Ok(()) };
+        // Download postinstall script if it exists
+        let script_path = install_meta.version_metadata.get_postinstall_script_path(&install_meta.target_bounds)?;
+        let script_file = scripts::download_script(self.repository_manager, &script_path, &package_id.name, &install_meta.repository_id)?;
+
         let script_data = ScriptData::new(
             &script_file,
             &install_directory,
@@ -458,10 +470,16 @@ impl<'a> Installer<'a> {
     ) -> Result<()> {
         // Download and run test script if it exists
         let script_path = install_meta.version_metadata.get_test_script_path(&install_meta.target_bounds)?;
-        let downloaded_script =
-            scripts::download_script(self.repository_manager, &script_path, &package_id.name, &install_meta.repository_id)?;
+        let download = scripts::download_script(self.repository_manager, &script_path, &package_id.name, &install_meta.repository_id);
+        let script_file = match download {
+            Ok(script_file) => script_file,
+            Err(ScriptError::ScriptNotFound(_)) => {
+                debug!("Test script not found, skipping execution");
+                return Ok(());
+            },
+            Err(e) => return Err(e.into()),
+        };
 
-        let Some(script_file) = downloaded_script else { return Ok(()) };
         let script_data = ScriptData::new(
             &script_file,
             &install_directory,
@@ -762,20 +780,27 @@ impl<'a> Installer<'a> {
 
         let target_bounds = package_version.get_best_target(&Target::current())?;
 
-        // Get script data from package version metadata
+        // Check if uninstall script should be used
+        let target_meta = package_version.get_target(&target_bounds)?;
+        let use_script = target_meta.use_postinstall.unwrap_or(package_version.use_postinstall.unwrap_or(false));
+        if !use_script {
+            debug!("Skipping uninstall script execution since metadata does not define it");
+            return Ok(());
+        }
+
+        // Get script path from package version metadata
         let script_path = package_version.get_uninstall_script_path(&target_bounds)?;
 
-        // Download and run script if it exists
+        // Download uninstall script if it exists
         let Some(script_text) = provider.read_file(&package_id.name, &script_path)? else {
-            return Ok(());
+            return Err(ScriptError::ScriptNotFound(script_path).into());
         };
-
-        let script_path = scripts::write_script_to_tempfile(&script_text)?;
+        let script_file = scripts::write_script_to_tempfile(&script_text)?;
 
         // Run script
         let script_args = package_version.get_script_args(&target_bounds)?;
         let script_data = ScriptData::new(
-            &script_path,
+            &script_file,
             &install_directory,
             package_id,
             self.config,

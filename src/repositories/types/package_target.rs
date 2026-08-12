@@ -33,6 +33,15 @@ pub struct PackageTarget {
     pub test_script: Option<Script>,
     pub uninstall_script: Option<Script>,
 
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub use_preinstall: Option<bool>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub use_postinstall: Option<bool>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub use_uninstall: Option<bool>,
+
     #[serde(default, skip_serializing_if = "HashSet::is_empty")]
     pub external_test_files: HashSet<String>,
 

@@ -503,6 +503,9 @@ pub mod tests {
             use_version_specific_postinstall: false,
             use_version_specific_test: false,
             use_version_specific_uninstall: false,
+            use_preinstall: None,
+            use_postinstall: None,
+            use_uninstall: None,
             revisions: Vec::new(),
         }
     }

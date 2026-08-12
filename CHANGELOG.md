@@ -35,6 +35,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The `Alterations` verifier check is now enabled for packages that were installed from a prebuild.
 - The `search --regex` results are now sorted by package name.
 - The `config show` command now also shows the `prebuilds_disabled` option.
+- Setting the `use_<script>` field is now required to use `preinstall`, `postinstall` and `uninstall` scripts.
 
 ### Fixed
 - Fix error messages not representing the error correctly.
