@@ -31,11 +31,18 @@ use crate::{
         manager::RepositoryManager,
         types::{Checksum, Patch, Source},
     },
-    utils::{ioerror::IOResultExt, patches, reading::ReadExt, requests},
+    utils::{io, ioerror::IOResultExt, patches, reading::ReadExt, requests},
 };
 
 /// The list of automatically detected license files
-const LICENSE_FILES: &[&str] = &["license", "licence", "copying", "notice", "copyright"];
+const LICENSE_FILE_NAMES: &[&str] = &["license", "licence", "copying", "notice", "copyright"];
+
+/// The list of automatically detected license file extensions
+#[rustfmt::skip]
+const LICENSE_FILE_EXTENSIONS: &[&str] = &[
+    ".txt", ".md", ".markdown", ".mdown", ".mkdn", ".textile", ".rdoc", ".org", ".creole",
+    ".mediawiki", ".wiki", ".rst", ".asciidoc", ".adoc", ".asc", ".pod",
+];
 
 /// The builder of Packit, managing the building of packages.
 pub struct Builder<'a> {
@@ -372,9 +379,16 @@ impl<'a> Builder<'a> {
                 let file_name = entry.file_name().to_ascii_lowercase();
                 let Some(file_name) = file_name.to_str() else { continue };
 
-                // Check if file name matches license file names
-                for license_file_name in LICENSE_FILES {
+                // Check if file name matches license file names and has the correct extension
+                for license_file_name in LICENSE_FILE_NAMES {
                     if file_name.starts_with(license_file_name) {
+                        // Skip file if it has an extension and it is not a correct extension
+                        if let Some(extension) = io::get_last_extension(file_name)
+                            && !LICENSE_FILE_EXTENSIONS.contains(&&*extension.to_lowercase())
+                        {
+                            break;
+                        }
+
                         found_files = true;
 
                         // Create destination directory if it does not exist
