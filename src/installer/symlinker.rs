@@ -144,8 +144,8 @@ impl<'a> Symlinker<'a> {
         Ok(())
     }
 
-    /// Switches a dependency of a package to another version
-    /// Updates the register with the changed dependencies
+    /// Switches a dependency of a package to another version.
+    /// Updates the register with the changed dependencies.
     pub fn switch_dependency(
         &self,
         register: &mut PackageRegister,
@@ -167,9 +167,7 @@ impl<'a> Symlinker<'a> {
 
         // Remove dependent from old dependency
         match register.get_package_version_mut(dependency) {
-            Some(package) => {
-                package.dependents.remove(package_id);
-            },
+            Some(package) => package.dependents.remove(package_id),
             None => {
                 return Err(InstallerError::PackageNotFound {
                     package_name: new_dependency.name,
@@ -180,9 +178,7 @@ impl<'a> Symlinker<'a> {
 
         // Add dependent to new dependency
         match register.get_package_version_mut(&new_dependency) {
-            Some(package) => {
-                package.dependents.insert(package_id.clone());
-            },
+            Some(package) => package.dependents.insert(package_id.clone()),
             None => {
                 return Err(InstallerError::UnreachableError {
                     msg: format!(
