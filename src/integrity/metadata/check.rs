@@ -396,54 +396,7 @@ impl MetaCheck {
     fn check_patch(&mut self, package_id: &PackageId, patch_number: &u32, patch: &Patch, target: &str) {
         // Check patch urls if the patch is a remote patch
         if patch.url.starts_with("http://") || patch.url.starts_with("https://") {
-            // Check all patch URL's
-            for url in patch.mirrors.iter().chain(std::iter::once(&patch.url)) {
-                // Check source URL existence
-                let response = match requests::get(url) {
-                    Ok(response) if response.status().is_success() => response,
-                    _ => {
-                        let description = format!(
-                            "The URL '{url}' of {} in target '{target}' patch {patch_number} does not exist",
-                            package_id.style(),
-                        );
-
-                        self.issues.push(MetaIssue::default(description).set_checks_skipped(true));
-                        continue;
-                    },
-                };
-
-                // Check if URL is https
-                if !url.starts_with("https") {
-                    let description = format!(
-                        "The URL '{url}' of {} in target '{target}' patch {patch_number} is not https",
-                        package_id.style(),
-                    );
-                    self.issues.push(MetaIssue::default(description).set_issue_type(IssueType::Warning));
-                }
-
-                // Get bytes from response
-                let bytes = match response.bytes() {
-                    Ok(bytes) => bytes,
-                    Err(e) => {
-                        error!(e, "Unable to get file bytes");
-                        self.checks_skipped = true;
-                        continue;
-                    },
-                };
-
-                // Check source checksum
-                let correct_checksum = Checksum::from_bytes(&bytes);
-                if patch.checksum != correct_checksum {
-                    let description = format!(
-                        "Checksum '{}' of {} in target '{target}' patch {patch_number} with url '{url}' is incorrect",
-                        patch.checksum,
-                        package_id.style(),
-                    );
-
-                    self.issues.push(MetaIssue::default(description).set_suggestion(Some(correct_checksum.to_string())));
-                }
-            }
-
+            self.check_patch_remote(package_id, patch_number, patch, target);
             return;
         }
 
@@ -481,6 +434,57 @@ impl MetaCheck {
             );
 
             self.issues.push(MetaIssue::default(description).set_suggestion(Some(correct_checksum.to_string())));
+        }
+    }
+
+    /// Checks the urls of a remote patch specified in a source.
+    fn check_patch_remote(&mut self, package_id: &PackageId, patch_number: &u32, patch: &Patch, target: &str) {
+        // Check all patch URL's
+        for url in patch.mirrors.iter().chain(std::iter::once(&patch.url)) {
+            // Check source URL existence
+            let response = match requests::get(url) {
+                Ok(response) if response.status().is_success() => response,
+                _ => {
+                    let description = format!(
+                        "The URL '{url}' of {} in target '{target}' patch {patch_number} does not exist",
+                        package_id.style(),
+                    );
+
+                    self.issues.push(MetaIssue::default(description).set_checks_skipped(true));
+                    continue;
+                },
+            };
+
+            // Check if URL is https
+            if !url.starts_with("https") {
+                let description = format!(
+                    "The URL '{url}' of {} in target '{target}' patch {patch_number} is not https",
+                    package_id.style(),
+                );
+                self.issues.push(MetaIssue::default(description).set_issue_type(IssueType::Warning));
+            }
+
+            // Get bytes from response
+            let bytes = match response.bytes() {
+                Ok(bytes) => bytes,
+                Err(e) => {
+                    error!(e, "Unable to get file bytes");
+                    self.checks_skipped = true;
+                    continue;
+                },
+            };
+
+            // Check source checksum
+            let correct_checksum = Checksum::from_bytes(&bytes);
+            if patch.checksum != correct_checksum {
+                let description = format!(
+                    "Checksum '{}' of {} in target '{target}' patch {patch_number} with url '{url}' is incorrect",
+                    patch.checksum,
+                    package_id.style(),
+                );
+
+                self.issues.push(MetaIssue::default(description).set_suggestion(Some(correct_checksum.to_string())));
+            }
         }
     }
 
