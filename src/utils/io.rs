@@ -153,3 +153,11 @@ pub fn normalize_path(path: &Path) -> PathBuf {
 
     path
 }
+
+/// Gets the last extension of the given file name, or `None` if the file has no extension
+pub fn get_last_extension(file_name: &str) -> Option<&str> {
+    let extension_index = file_name.chars().rev().position(|x| x == '.')?;
+    let (_, extension) = file_name.split_at(file_name.len() - extension_index - 1);
+
+    Some(extension)
+}

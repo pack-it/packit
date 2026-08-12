@@ -10,7 +10,10 @@ use zip::ZipArchive;
 use crate::{
     cli::display::{ReaderWithProgress, styled::Styled},
     installer::types::PackageName,
-    utils::ioerror::{self, IOResultExt},
+    utils::{
+        io,
+        ioerror::{self, IOResultExt},
+    },
 };
 
 /// The errors that occur during unpacking.
@@ -40,16 +43,14 @@ pub enum ArchiveExtension {
 impl ArchiveExtension {
     /// Creates an `ArchiveExtension` from a path.
     pub fn from_path(path: &str) -> Self {
-        let extension_index = match path.chars().rev().position(|x| x == '.') {
-            Some(index) => index,
-            None => return Self::Unknown,
+        let Some(extension) = io::get_last_extension(path) else {
+            return Self::Unknown;
         };
-        let (_, extension) = path.split_at(path.len() - extension_index);
 
         match extension.to_lowercase().as_str() {
-            "gz" | "tgz" => Self::GZ,
-            "zip" => Self::ZIP,
-            "xz" => Self::XZ,
+            ".gz" | ".tgz" => Self::GZ,
+            ".zip" => Self::ZIP,
+            ".xz" => Self::XZ,
             _ => Self::Unknown,
         }
     }

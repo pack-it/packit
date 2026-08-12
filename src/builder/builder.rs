@@ -2,6 +2,7 @@
 use bytes::Bytes;
 use colored::Colorize;
 use std::{
+    collections::VecDeque,
     fs,
     path::{Path, PathBuf},
 };
@@ -30,8 +31,18 @@ use crate::{
         manager::RepositoryManager,
         types::{Checksum, Patch, Source},
     },
-    utils::{ioerror::IOResultExt, patches, reading::ReadExt, requests},
+    utils::{io, ioerror::IOResultExt, patches, reading::ReadExt, requests},
 };
+
+/// The list of automatically detected license files
+const LICENSE_FILE_NAMES: &[&str] = &["license", "licence", "copying", "notice", "copyright"];
+
+/// The list of automatically detected license file extensions
+#[rustfmt::skip]
+const LICENSE_FILE_EXTENSIONS: &[&str] = &[
+    ".txt", ".md", ".markdown", ".mdown", ".mkdn", ".textile", ".rdoc", ".org", ".creole",
+    ".mediawiki", ".wiki", ".rst", ".asciidoc", ".adoc", ".asc", ".pod",
+];
 
 /// The builder of Packit, managing the building of packages.
 pub struct Builder<'a> {
@@ -211,6 +222,10 @@ impl<'a> Builder<'a> {
         // Propagate script result
         script_result?;
 
+        // Copy license files
+        let license_directory = destination_dir.as_ref().join("share").join("licenses").join(&install_meta.package_metadata.name);
+        self.copy_license_files(build_directory.path(), &license_directory)?;
+
         // Patch binaries
         BinaryPatcher::new(self.config).patch_binaries_in(destination_dir.as_ref().to_path_buf(), &package_id, installed_dependencies)?;
 
@@ -336,5 +351,64 @@ impl<'a> Builder<'a> {
         }
 
         Ok(bytes)
+    }
+
+    /// Copies license files from the original source into the destination directory.
+    /// Does a breadth-first search from the build directory and stops when it finds license files.
+    /// Only traverse to depth 2, to prevent detecting third party license files.
+    fn copy_license_files(&self, build_directory: &Path, destination_dir: &Path) -> Result<()> {
+        let mut queue = VecDeque::from([(0, build_directory.to_path_buf())]);
+        while let Some((depth, item)) = queue.pop_front() {
+            let mut found_files = false;
+
+            // Read all files in the directory
+            for entry in fs::read_dir(&item).err_with_path("read", &item)? {
+                let entry = entry.err_with_path("iterate", &item)?;
+
+                let metadata = entry.metadata().err_with_path("read metadata of", entry.path())?;
+
+                // If the entry is a directory, add it to the queue
+                if metadata.is_dir() {
+                    // Only add next level if depth is below 2
+                    if depth < 2 {
+                        queue.push_back((depth + 1, entry.path()));
+                    }
+                    continue;
+                }
+
+                let file_name = entry.file_name().to_ascii_lowercase();
+                let Some(file_name) = file_name.to_str() else { continue };
+
+                // Check if file name matches license file names and has the correct extension
+                for license_file_name in LICENSE_FILE_NAMES {
+                    if file_name.starts_with(license_file_name) {
+                        // Skip file if it has an extension and it is not a correct extension
+                        if let Some(extension) = io::get_last_extension(file_name)
+                            && !LICENSE_FILE_EXTENSIONS.contains(&&*extension.to_lowercase())
+                        {
+                            break;
+                        }
+
+                        found_files = true;
+
+                        // Create destination directory if it does not exist
+                        if !destination_dir.exists() {
+                            fs::create_dir_all(destination_dir).err_with_path("create dirs", destination_dir)?;
+                        }
+
+                        fs::copy(entry.path(), destination_dir.join(entry.file_name())).err_with_path("copy", entry.path())?;
+                        break;
+                    }
+                }
+            }
+
+            // Stop searching if we found files in this directory
+            if found_files {
+                return Ok(());
+            }
+        }
+
+        debug!("Unable to find license files for package");
+        Ok(())
     }
 }
