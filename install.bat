@@ -107,7 +107,7 @@ if ERRORLEVEL 1 goto cleanup
 
 REM Install Packit to the prefix directory 
 echo Downloading Packit prebuild from `%PREBUILD_URL%`
-curl --proto "=https" -sSfL %PREBUILD_URL% --output packit@%VERSION%-%REVISION%-%TARGET%.tar.gz
+curl --proto "=https" -sSfL "%PREBUILD_URL%" --output packit@%VERSION%-%REVISION%-%TARGET%.tar.gz
 if not ERRORLEVEL 1 (
     tar -xf packit@%VERSION%-%REVISION%-%TARGET%.tar.gz
     if ERRORLEVEL 1 goto cleanup
@@ -153,18 +153,26 @@ if not ERRORLEVEL 1 (
             goto cleanup
         )
 
+        REM Check for empty USERPROFILE
+        if "%USERPROFILE%"=="" (
+            echo Cannot do rustup install, because USERPROFILE variable is empty
+            goto cleanup
+        )
+
         REM Install cargo
         echo Installing cargo from '!RUSTUP_URL!'
+        set "RUSTUP_HOME=%USERPROFILE%\.rustup"
+        set "CARGO_HOME=%USERPROFILE%\.cargo"
         curl --proto "=https" --tlsv1.2 -sSfL "!RUSTUP_URL!" --output rustup-init.exe
         if ERRORLEVEL 1 goto cleanup
         
-        .\rustup-init.exe
+        .\rustup-init.exe -y
         if ERRORLEVEL 1 goto cleanup
         del .\rustup-init.exe
         if ERRORLEVEL 1 goto cleanup
 
         REM Make sure that the rustup install was successful
-        where cargo 2>nul >nul
+        !CARGO_HOME!\bin\cargo.exe --version 2>nul >nul 
         if ERRORLEVEL 1 (
             echo Installing rustup failed, canceling Packit installation
             goto cleanup
@@ -190,21 +198,19 @@ if not ERRORLEVEL 1 (
     if ERRORLEVEL 1 goto cleanup
 
     echo Building Packit from source
-    cargo build-install --destination ..\%VERSION%
+    "!CARGO_HOME!\bin\cargo.exe" build-install --destination ..\%VERSION%
     if ERRORLEVEL 1 goto cleanup
     cd ..
     if ERRORLEVEL 1 goto cleanup
     rmdir /s /q .\packit@%VERSION%
     if ERRORLEVEL 1 goto cleanup
 
-    if "!RUSTUP_INSTALLED!"==1 (
-        call :ask "Y" "You installed rustup to install Packit. This installation is not registered in Packit. Do you wish to uninstall it"
-        if ERRORLEVEL 1 (
-            echo Uninstalling rustup
-            rustup self uninstall
-            if ERRORLEVEL 1 goto cleanup
-            echo Uninstalling rustup successful
-        )
+    REM Remove rustup after building Packit
+    if "!RUSTUP_INSTALLED!"=="1" (
+        echo Uninstalling rustup
+        "!CARGO_HOME!\bin\rustup.exe" self uninstall -y
+        if ERRORLEVEL 1 goto cleanup
+        echo Uninstalling rustup successful
     )
 
     echo Building Packit from source successful
