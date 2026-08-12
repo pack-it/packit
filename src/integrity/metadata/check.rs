@@ -379,12 +379,66 @@ impl MetaCheck {
 
         // Check all source patches
         for (patch_number, patch) in &source.patches {
+            // Check if the apply directory is specified
+            if source.apply_patches_in.is_none() && patch.apply_in.is_none() {
+                let description = format!(
+                    "Patch {patch_number} of {} in target '{target}' has no 'apply_in' and no default is specified",
+                    package_id.style(),
+                );
+                self.issues.push(MetaIssue::default(description).set_issue_type(IssueType::Warning));
+            }
+
             self.check_patch(package_id, patch_number, patch, target);
         }
     }
 
     /// Checks a specific patch specified in a source.
     fn check_patch(&mut self, package_id: &PackageId, patch_number: &u32, patch: &Patch, target: &str) {
+        // Check patch urls if the patch is a remote patch
+        if patch.url.starts_with("http://") || patch.url.starts_with("https://") {
+            self.check_patch_remote(package_id, patch_number, patch, target);
+            return;
+        }
+
+        // Check if local patch has mirrors specified
+        if !patch.mirrors.is_empty() {
+            let description = format!(
+                "Patch {patch_number} of {} in target '{target}' has mirrors while the patch is in the metadata repository",
+                package_id.style(),
+            );
+            self.issues.push(MetaIssue::default(description));
+        }
+
+        // Read file from repository
+        let file = match self.provider.read_file_bytes(&package_id.name, &patch.url) {
+            Ok(Some(file)) => file,
+            Ok(None) => {
+                let description = format!("Patch {patch_number} of {} in target '{target}' does not exist", package_id.style());
+                self.issues.push(MetaIssue::default(description).set_checks_skipped(true));
+                return;
+            },
+            Err(e) => {
+                error!(e, "Cannot read file '{}' of package {}", patch.url, package_id.style());
+                return;
+            },
+        };
+
+        // Check source checksum
+        let correct_checksum = Checksum::from_bytes(&file);
+        if patch.checksum != correct_checksum {
+            let description = format!(
+                "Checksum '{}' of {} in target '{target}' patch {patch_number} with url '{}' is incorrect",
+                patch.checksum,
+                package_id.style(),
+                patch.url,
+            );
+
+            self.issues.push(MetaIssue::default(description).set_suggestion(Some(correct_checksum.to_string())));
+        }
+    }
+
+    /// Checks the urls of a remote patch specified in a source.
+    fn check_patch_remote(&mut self, package_id: &PackageId, patch_number: &u32, patch: &Patch, target: &str) {
         // Check all patch URL's
         for url in patch.mirrors.iter().chain(std::iter::once(&patch.url)) {
             // Check source URL existence
