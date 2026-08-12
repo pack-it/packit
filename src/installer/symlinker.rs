@@ -2,11 +2,11 @@
 use std::{fs, iter, path::Path};
 
 use crate::{
-    cli::display::logging::warning,
+    cli::display::{logging::warning, styled::Styled},
     config::Config,
     installer::{
         error::{InstallerError, Result},
-        types::{PackageId, PackageName},
+        types::{PackageId, PackageName, Version},
     },
     platforms::symlink,
     register::package_register::PackageRegister,
@@ -137,6 +137,87 @@ impl<'a> Symlinker<'a> {
                 });
             },
         };
+
+        // Save package register
+        register.save_to(&PackageRegister::get_path(&self.config.prefix_directory))?;
+
+        Ok(())
+    }
+
+    /// Switches a dependency of a package to another version
+    /// Updates the register with the changed dependencies
+    pub fn switch_dependency(
+        &self,
+        register: &mut PackageRegister,
+        package_id: &PackageId,
+        dependency: &PackageId,
+        new_version: Version,
+    ) -> Result<()> {
+        // Get new dependency from register
+        let new_dependency = PackageId::new(dependency.name.clone(), new_version);
+        let new_dependency_install_path = match register.get_package_version(&new_dependency) {
+            Some(package) => package.install_path.clone(),
+            None => {
+                return Err(InstallerError::PackageNotFound {
+                    package_name: new_dependency.name,
+                    version: Some(new_dependency.version),
+                });
+            },
+        };
+
+        // Remove dependent from old dependency
+        match register.get_package_version_mut(dependency) {
+            Some(package) => {
+                package.dependents.remove(package_id);
+            },
+            None => {
+                return Err(InstallerError::PackageNotFound {
+                    package_name: new_dependency.name,
+                    version: Some(new_dependency.version),
+                });
+            },
+        };
+
+        // Add dependent to new dependency
+        match register.get_package_version_mut(&new_dependency) {
+            Some(package) => {
+                package.dependents.insert(package_id.clone());
+            },
+            None => {
+                return Err(InstallerError::UnreachableError {
+                    msg: format!(
+                        "previously retrieved package {} cannot be found anymore in register",
+                        new_dependency.style()
+                    ),
+                });
+            },
+        };
+
+        // Change dependency in register
+        match register.get_package_version_mut(package_id) {
+            Some(package) => {
+                // Check if the package was a dependency
+                if !package.dependencies.remove(dependency) {
+                    return Err(InstallerError::NotADependency {
+                        package_id: package_id.clone(),
+                        dependency: dependency.clone(),
+                    });
+                }
+
+                package.dependencies.insert(new_dependency);
+            },
+            None => {
+                return Err(InstallerError::PackageNotFound {
+                    package_name: package_id.name.clone(),
+                    version: Some(package_id.version.clone()),
+                });
+            },
+        }
+
+        // Switch symlink to link to new version
+        let link_path = self.config.prefix_directory.join("dependencies").join(package_id.to_string()).join(&dependency.name);
+        symlink::remove_symlink(&link_path)?;
+        symlink::create_symlink(&new_dependency_install_path, &link_path)?;
 
         // Save package register
         register.save_to(&PackageRegister::get_path(&self.config.prefix_directory))?;

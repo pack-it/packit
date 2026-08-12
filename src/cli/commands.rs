@@ -9,6 +9,7 @@ mod link;
 mod list;
 mod search;
 mod switch;
+mod switch_dependency;
 mod uninstall;
 mod unlink;
 mod update;
@@ -24,8 +25,8 @@ use crate::{
     cli::{
         commands::{
             check::CheckArgs, config::ConfigArgs, fix::FixArgs, info::InfoArgs, init::InitArgs, install::InstallArgs, link::LinkArgs,
-            list::ListArgs, search::SearchArgs, switch::SwitchArgs, uninstall::UninstallArgs, unlink::UnlinkArgs, update::UpdateArgs,
-            util::UtilArgs,
+            list::ListArgs, search::SearchArgs, switch::SwitchArgs, switch_dependency::SwitchDependencyArgs, uninstall::UninstallArgs,
+            unlink::UnlinkArgs, update::UpdateArgs, util::UtilArgs,
         },
         display::logging::error,
     },
@@ -55,6 +56,9 @@ enum Commands {
 
     /// Search a certain package
     Search(SearchArgs),
+
+    /// Switch a dependency version of a package
+    SwitchDependency(SwitchDependencyArgs),
 
     /// Switch the active version of a package
     Switch(SwitchArgs),
@@ -133,6 +137,7 @@ impl Cli {
             Commands::Uninstall(args) => args.handle(),
             Commands::List(args) => args.handle(),
             Commands::Search(args) => args.handle(),
+            Commands::SwitchDependency(args) => args.handle(),
             Commands::Switch(args) => args.handle(),
             Commands::Link(args) => args.handle(),
             Commands::Unlink(args) => args.handle(),
