@@ -26,6 +26,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The `config repositories disable-prebuilds` command, which can be used to enable or disable prebuilds of a repository.
 - The `config repositories add` command now has a `--unchecked` flag, which can be used to skip repository checks.
 - The `--pause-build` flag to the `install` command, to pause the build after build script execution.
+- The `switch-dependency` command, which can be used to switch dependencies of a package.
 
 ### Changes
 - Change display of true and false values in the `info` and `search` commands.

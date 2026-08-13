@@ -31,7 +31,7 @@ pub fn repository_version(package_name: &PackageName, manager: &RepositoryManage
 
 /// Displays alternative versions and exits.
 /// Assumes that at least one item exists in the given list of versions.
-fn display_versions<'a>(versions: impl Iterator<Item = &'a Version>) -> ! {
+pub fn display_versions<'a>(versions: impl Iterator<Item = &'a Version>) -> ! {
     println!("Did you mean one of the following version(s):");
     standard_print::print_list(versions.map(|v| v.style()));
     exit(1);
