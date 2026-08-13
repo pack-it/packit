@@ -57,7 +57,6 @@ pub type Result<T> = core::result::Result<T, BuildEnvError>;
 
 /// Holds all the data necessary to build a normalized build environment.
 pub struct BuildEnv<'a> {
-    prefix_directory: &'a PathBuf,
     dependencies: &'a Vec<&'a InstalledPackageVersion>,
     build_dependencies: Vec<&'a InstalledPackageVersion>,
     build_requirements: &'a Vec<Requirement>,
@@ -89,7 +88,7 @@ impl<'a> TryInto<Environment> for BuildEnv<'a> {
 
         // Add M4 variable if m4 is a build dependency
         if let Some(m4) = self.build_dependencies.iter().find(|x| *x.package_id.name == "m4") {
-            env.insert_var("M4", path_to_string(&m4.install_path, "M4")?);
+            env.insert_var("M4", path_to_string(&m4.install_path.join("bin").join("m4"), "M4")?);
         }
 
         // Add requirement specific vars to the build env
@@ -111,14 +110,12 @@ impl<'a> TryInto<Environment> for BuildEnv<'a> {
 impl<'a> BuildEnv<'a> {
     /// Creates a new `BuildEnv`.
     pub fn new(
-        prefix_directory: &'a PathBuf,
         dependencies: &'a Vec<&'a InstalledPackageVersion>,
         build_dependencies: Vec<&'a InstalledPackageVersion>,
         build_requirements: &'a Vec<Requirement>,
         register: &'a PackageRegister,
     ) -> Self {
         Self {
-            prefix_directory,
             dependencies,
             build_dependencies,
             build_requirements,
@@ -171,7 +168,7 @@ impl<'a> BuildEnv<'a> {
         Ok(parts.join(PATH_SEPARATOR))
     }
 
-    /// Creates the `PKG_CONFIG_PATH` to pkgconfig inside of the lib and share directories of the (build) dependencies.
+    /// Creates the `PKG_CONFIG_PATH` to pkgconfig inside of the lib and share directories of the dependencies.
     /// It also adds the necessary platform specific paths.
     fn create_pkg_config_path(&self) -> Result<String> {
         let mut parts: Vec<String> = Vec::new();
@@ -201,7 +198,7 @@ impl<'a> BuildEnv<'a> {
         Ok(parts.join(PATH_SEPARATOR))
     }
 
-    /// Creates the `CMAKE_PREFIX_PATH` with the (build) dependency install paths.
+    /// Creates the `CMAKE_PREFIX_PATH` with the dependency install paths.
     fn create_cmake_prefix_path(&self) -> Result<String> {
         let mut parts: Vec<String> = Vec::new();
 
@@ -216,9 +213,6 @@ impl<'a> BuildEnv<'a> {
             parts.push(path_to_string(&dependency.install_path, "CMAKE_PREFIX_PATH")?);
         }
 
-        // Add prefix directory to CMAKE_PREFIX_PATH
-        parts.push(path_to_string(self.prefix_directory, "CMAKE_PREFIX_PATH")?);
-
         Ok(parts.join(PATH_SEPARATOR))
     }
 
@@ -227,7 +221,7 @@ impl<'a> BuildEnv<'a> {
         let mut parts: Vec<String> = Vec::new();
 
         // Add non symlinked dependencies to ACLOCAL_PATH
-        for dependency in self.dependencies {
+        for dependency in self.dependencies.iter().chain(self.build_dependencies.iter()) {
             if let Some(package) = self.register.get_package(&dependency.package_id.name) {
                 if package.symlinked {
                     continue;
@@ -241,10 +235,6 @@ impl<'a> BuildEnv<'a> {
                 parts.push(path_to_string(&share_path, "ACLOCAL_PATH")?);
             }
         }
-
-        // Add prefix directory to ACLOCAL_PATH
-        let global_aclocal = self.prefix_directory.join("share").join("aclocal");
-        parts.push(path_to_string(&global_aclocal, "ACLOCAL_PATH")?);
 
         Ok(parts.join(PATH_SEPARATOR))
     }

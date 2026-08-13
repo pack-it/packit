@@ -174,7 +174,6 @@ impl<'a> Builder<'a> {
 
         // Create build env
         let env = BuildEnv::new(
-            &self.config.prefix_directory,
             &installed_dependencies,
             installed_build_dependencies,
             &target.build_requirements,
