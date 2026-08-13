@@ -56,6 +56,12 @@ pub enum InstallerError {
         package_name: PackageName,
     },
 
+    #[error("Package {} is not a dependency of {}", dependency.style(), package_id.style())]
+    NotADependency {
+        package_id: PackageId,
+        dependency: PackageId,
+    },
+
     #[error("Canceled package installation: {reason}.")]
     InstallationCanceled {
         reason: String,

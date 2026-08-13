@@ -892,54 +892,27 @@ impl<'a> Installer<'a> {
         // Install the newer packager first
         self.install(&new_package_id.clone().into())?;
 
-        // Add dependents to new_package
-        let package_version = match self.register.get_package_version_mut(&new_package_id) {
-            Some(package_version) => package_version,
-            None => {
-                // Theoretically unreachable
-                return Err(InstallerError::UnreachableError {
-                    msg: format!("New package version {} cannot be retrieved from the register", new_version.style()),
-                });
-            },
-        };
-
-        // Set the dependents of the old package for the new package
-        package_version.dependents = dependents.clone();
-
-        let install_path = package_version.install_path.clone();
-
         // Update dependents to use the new package version
+        let symlinker = Symlinker::new(self.config);
         for dependent_id in &dependents {
-            if let Some(dependent) = self.register.get_package_version_mut(dependent_id) {
-                dependent.dependencies.remove(&old_package_id);
-                dependent.dependencies.insert(new_package_id.clone());
-            }
-
-            // Switch dependents to use new version
-            let link_path = self.config.prefix_directory.join("dependencies").join(dependent_id.to_string()).join(&new_package_id.name);
-            symlink::remove_symlink(&link_path)?;
-            symlink::create_symlink(&install_path, &link_path)?;
+            symlinker.switch_dependency(self.register, dependent_id, &old_package_id, new_package_id.version.clone())?;
         }
 
         // Set the active and symlinked state for the new package (to the old package state)
         let package = self.register.get_package(&old_package_id.name).expect("Expected old package to still exist.");
         if package.active_version == *new_version {
-            Symlinker::new(self.config).set_active(self.register, &new_package_id, package.symlinked)?;
+            symlinker.set_active(self.register, &new_package_id, package.symlinked)?;
         }
 
-        println!(
-            "The new package version {} has been succesfully installed, uninstalling the old version now.",
-            new_version.style()
-        );
+        print!("The new package version {} has been succesfully installed", new_version.style());
 
-        // Remove the old package dependents, because the old package is no longer a dependency
-        // Note that this is necessary before doing an uninstall.
+        // Only uninstall the package if the old package no longer has dependents
         let old_package = self.register.get_package_version_mut(&old_package_id).expect("Expected old package to still exist.");
-        old_package.dependents = unsatisfied_dependents;
-
-        // Only uninstall the package if an update has been done
         if old_package.dependents.is_empty() {
+            println!(", uninstalling the old version now");
             self.uninstall(&old_package_id.into())?;
+        } else {
+            println!(", keeping old version because it still has dependents");
         }
 
         Ok(Some(new_package_id))
