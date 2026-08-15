@@ -29,7 +29,7 @@ pub enum TreeError {
 
 pub type Result<T> = std::result::Result<T, TreeError>;
 
-pub struct Tree<V, L: Eq> {
+pub struct Tree<V, L: Eq + DisplayNode<V>> {
     // A list of all nodes in the tree. Note that this list will always have parents before children by
     // way of construction (you can only add a node as child of another node).
     nodes: Vec<Node<V, L>>,
@@ -37,7 +37,7 @@ pub struct Tree<V, L: Eq> {
 
 /// Represents a node in a dependency tree with generic values and labels.
 #[derive(Debug)]
-pub struct Node<V, L: Eq> {
+pub struct Node<V, L: Eq + DisplayNode<V>> {
     package_id: PackageId,
     value: V,
     children: Vec<usize>,
@@ -45,7 +45,7 @@ pub struct Node<V, L: Eq> {
     label: L,
 }
 
-impl<V, L: Eq> Tree<V, L> {
+impl<V, L: Eq + DisplayNode<V>> Tree<V, L> {
     pub fn new(root: Node<V, L>) -> Self {
         Self { nodes: vec![root] }
     }
@@ -132,7 +132,7 @@ impl<V, L: Eq> Tree<V, L> {
     /// The implementation of the tree display.
     fn display_impl(&self, f: &mut std::fmt::Formatter<'_>, node_index: usize, prefix: &str) -> std::fmt::Result {
         let node = self.get_node_by_index(node_index).expect("Expected node to exist");
-        writeln!(f, "{prefix}{}", node.package_id.style())?;
+        writeln!(f, "{prefix}{node}")?;
 
         // Note that when the input prefix is "" then this prefix will also be ""
         let prefix = match prefix.ends_with(BRANCH) {
@@ -154,7 +154,7 @@ impl<V, L: Eq> Tree<V, L> {
 }
 
 // Generic node implementation.
-impl<V, L: Eq> Node<V, L> {
+impl<V, L: Eq + DisplayNode<V>> Node<V, L> {
     /// Creates a new `Node`. Note that the `parent_index` is 0 by default. The root will have itself as parent
     /// and when adding a node to a `Tree` the parent index will need to be adjusted.
     pub fn new(package_id: PackageId, value: V, label: L) -> Self {
@@ -223,9 +223,34 @@ impl EmptyTree {
 }
 
 // Display trait for nice display of a tree.
-impl<V, L: Eq> Display for Tree<V, L> {
+impl<V, L: Eq + DisplayNode<V>> Display for Tree<V, L> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.display_impl(f, 0, "")?;
         Ok(())
+    }
+}
+
+// Generic display implementation for `Node` which uses the `DisplayNode` trait on the node label.
+impl<V, L: Eq + DisplayNode<V>> Display for Node<V, L> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.get_label().display(f, self)
+    }
+}
+
+/// Display trait for node labels.
+pub trait DisplayNode<V>: Eq {
+    /// Displays the node using the given node, and its label. This works like a normal `Display` trait except it receives a node.
+    fn display(&self, f: &mut std::fmt::Formatter<'_>, node: &Node<V, Self>) -> std::fmt::Result
+    where
+        Self: Sized;
+}
+
+// Display implementation for the empty type, which defaults to the package id style.
+impl<V> DisplayNode<V> for () {
+    fn display(&self, f: &mut std::fmt::Formatter<'_>, node: &Node<V, Self>) -> std::fmt::Result
+    where
+        Self: Sized,
+    {
+        write!(f, "{}", node.package_id.style())
     }
 }

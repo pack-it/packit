@@ -41,6 +41,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Setting the `use_<script>` field is now required to use `preinstall`, `postinstall` and `uninstall` scripts.
 - The build process now automatically detects license files and copies them to `<package-prefix>/share/licenses/<package-name>`.
 - The `link` command now also shows warnings when `--force` is enabled.
+- The install tree now has color coding, based on installed, prebuild and build state.
 
 ### Fixed
 - Fix error messages not representing the error correctly.
