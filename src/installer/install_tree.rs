@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::collections::{HashSet, VecDeque};
 
+use colored::Colorize;
 use console::Term;
 
 use crate::{
@@ -18,7 +19,7 @@ use crate::{
     },
     utils::{
         ioerror::IOResultExt,
-        tree::{Node, Tree},
+        tree::{DisplayNode, Node, Tree},
     },
 };
 
@@ -54,6 +55,21 @@ impl InstallLabel {
     /// If it is a dependency of a build dependency this also returns true.
     pub fn is_dependency(&self) -> bool {
         self.is_dependency
+    }
+}
+
+impl DisplayNode<Option<InstallMeta>> for InstallLabel {
+    fn display(&self, f: &mut std::fmt::Formatter<'_>, node: &Node<Option<InstallMeta>, Self>) -> std::fmt::Result
+    where
+        Self: Sized,
+    {
+        let package_id = node.get_package_id();
+
+        match self.get_type() {
+            InstallType::Prebuild => write!(f, "{}", package_id.style().cyan()),
+            InstallType::Build | InstallType::BuildAll => write!(f, "{}", package_id.style().purple()),
+            InstallType::Installed => write!(f, "{}", package_id.style()),
+        }
     }
 }
 
