@@ -67,6 +67,7 @@ The targets.toml file can contain one or multiple sources, specified in the foll
 | `checksum`         | Defines the sha256 checksum of the source archive.                                                           |
 | `size`             | Defines the size of the source archive in bytes.                                                             |
 | `mirrors`          | Defines a list of mirrors which could be used to download the sourcecode if the original url is unavailable. |
+| `license_exclude`  | A list of paths to skip when doing automatic license file detection. `*` can be used to skip detection entirely. |
 | `skip_unpack`      | True to skip the unpack step and just download the source file, false to use the build in unpack.            |
 | `apply_patches_in` | Defines the directory that should be used to apply all patches in.                                           |
 | `patches`          | A list of patches to apply to the source. See patches section below.                                         |
