@@ -356,6 +356,36 @@ impl<'a> Builder<'a> {
     /// Does a breadth-first search from the build directory and stops when it finds license files.
     /// Only traverse to depth 2, to prevent detecting third party license files.
     fn copy_license_files(&self, build_directory: &Path, destination_dir: &Path, source: &Source) -> Result<()> {
+        // Copy all include paths first
+        for include_path_str in &source.license_include {
+            let include_path = build_directory.join(include_path_str);
+
+            // Skip if the path does not exist
+            if !include_path.exists() {
+                warning!("Specified license file include path '{include_path_str}' does not exist");
+                continue;
+            }
+
+            // Check if the path is a file
+            let metadata = fs::metadata(&include_path).err_with_path("read metadata", &include_path)?;
+            if !metadata.is_file() {
+                warning!("Specified license file include path '{include_path_str}' is not a file");
+                continue;
+            }
+
+            let Some(file_name) = include_path.file_name() else {
+                warning!("Specified license file include path '{include_path_str}' is not a valid path");
+                continue;
+            };
+
+            // Create destination directory if it does not exist
+            if !destination_dir.exists() {
+                fs::create_dir_all(destination_dir).err_with_path("create dirs", destination_dir)?;
+            }
+
+            fs::copy(&include_path, destination_dir.join(file_name)).err_with_path("copy", include_path)?;
+        }
+
         // Skip copying entirely if exclude `*` is specified
         if source.license_exclude.iter().any(|x| x == "*") {
             debug!("Skipping license file copying");
@@ -407,12 +437,18 @@ impl<'a> Builder<'a> {
                             entry.path().strip_prefix(build_directory).unwrap_or(build_directory).display()
                         );
 
+                        // Check if file was already copied (for example using `license_include`)
+                        let destination_path = destination_dir.join(entry.file_name());
+                        if destination_path.exists() {
+                            debug!("License file with same name is already copied, skipping file");
+                        }
+
                         // Create destination directory if it does not exist
                         if !destination_dir.exists() {
                             fs::create_dir_all(destination_dir).err_with_path("create dirs", destination_dir)?;
                         }
 
-                        fs::copy(entry.path(), destination_dir.join(entry.file_name())).err_with_path("copy", entry.path())?;
+                        fs::copy(entry.path(), destination_path).err_with_path("copy", entry.path())?;
                         break;
                     }
                 }

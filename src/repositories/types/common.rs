@@ -34,6 +34,9 @@ pub struct Source {
 
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub license_exclude: Vec<String>,
+
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub license_include: Vec<String>,
     pub apply_patches_in: Option<String>,
 
     #[serde(default, deserialize_with = "Source::deserialize_patches", skip_serializing_if = "HashMap::is_empty")]

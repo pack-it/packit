@@ -493,6 +493,7 @@ pub mod tests {
                 mirrors: Vec::new(),
                 skip_unpack: false,
                 license_exclude: Vec::new(),
+                license_include: Vec::new(),
                 apply_patches_in: None,
                 patches: HashMap::new(),
             }),

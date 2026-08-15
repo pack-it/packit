@@ -28,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The `--pause-build` flag to the `install` command, to pause the build after build script execution.
 - The `switch-dependency` command, which can be used to switch dependencies of a package.
 - The `license_exclude` field to `sources` in the metadata, which can be used to exclude certain paths from automatic license file detection.
+- The `license_include` field to `sources` in the metadata, which can be used to include certain files in the license file copying.
 
 ### Changes
 - Change display of true and false values in the `info` and `search` commands.
