@@ -143,6 +143,27 @@ if not ERRORLEVEL 1 (
             goto cleanup
         )
 
+        REM Check if vswhere exists
+        if not exist "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" (
+            echo Cannot find vswhere to check for 'link.exe' existence
+            goto cleanup
+        )
+
+        if !TARGET!=="aarch64-pc-windows-msvc" (
+            set "MSVC_TARGET=ARM64"
+        ) else (
+            set "MSVC_TARGET=x86.x64"
+        )
+
+        REM Search MSVC build tools using vswhere
+        for /f "delims=" %%A in ('"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath -products * -requires Microsoft.VisualStudio.Component.VC.Tools.!MSVC_TARGET!') do set "VS_PATH=%%A"
+
+        REM Check if MSVC exists (and thus link.exe)
+        if not exist !VS_PATH! (
+            echo MSVC cannot be found, 'link.exe' is needed to use cargo for the Packit build
+            goto cleanup
+        )
+
         REM Choose the correct rustup version for the current platform
         if "%PROCESSOR_ARCHITECTURE%"=="ARM64" (
             set "RUSTUP_URL=https://static.rust-lang.org/rustup/dist/aarch64-pc-windows-msvc/rustup-init.exe"
