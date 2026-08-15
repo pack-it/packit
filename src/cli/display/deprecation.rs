@@ -10,6 +10,10 @@ use crate::{
 /// Shows a warning if the given `PackageMeta` is deprecated or will be deprecated soon.
 pub fn show_package_warnings(package: &PackageMeta) {
     let Some(deprecation) = &package.deprecation else { return };
+    if deprecation.should_ignore() {
+        return;
+    }
+
     let reason = match &deprecation.reason {
         Some(reason) => format!(" with reason '{reason}'"),
         None => String::default(),
@@ -25,6 +29,10 @@ pub fn show_package_warnings(package: &PackageMeta) {
 /// Shows a warning if the given `PackageVersionMeta` is deprecated or will be deprecated soon.
 pub fn show_package_version_warnings(package_version: &PackageVersionMeta, package_name: &PackageName) {
     let Some(deprecation) = &package_version.deprecation else { return };
+    if deprecation.should_ignore() {
+        return;
+    }
+
     let reason = match &deprecation.reason {
         Some(reason) => format!(" with reason '{reason}'"),
         None => String::default(),
