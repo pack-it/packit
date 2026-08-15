@@ -782,7 +782,7 @@ impl<'a> Installer<'a> {
 
         // Check if uninstall script should be used
         let target_meta = package_version.get_target(&target_bounds)?;
-        let use_script = target_meta.use_postinstall.unwrap_or(package_version.use_postinstall.unwrap_or(false));
+        let use_script = target_meta.use_uninstall.unwrap_or(package_version.use_uninstall.unwrap_or(false));
         if !use_script {
             debug!("Skipping uninstall script execution since metadata does not define it");
             return Ok(());
