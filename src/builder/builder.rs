@@ -223,7 +223,7 @@ impl<'a> Builder<'a> {
 
         // Copy license files
         let license_directory = destination_dir.as_ref().join("share").join("licenses").join(&install_meta.package_metadata.name);
-        self.copy_license_files(build_directory.path(), &license_directory)?;
+        self.copy_license_files(build_directory.path(), &license_directory, source)?;
 
         // Patch binaries
         BinaryPatcher::new(self.config).patch_binaries_in(destination_dir.as_ref().to_path_buf(), &package_id, installed_dependencies)?;
@@ -355,7 +355,18 @@ impl<'a> Builder<'a> {
     /// Copies license files from the original source into the destination directory.
     /// Does a breadth-first search from the build directory and stops when it finds license files.
     /// Only traverse to depth 2, to prevent detecting third party license files.
-    fn copy_license_files(&self, build_directory: &Path, destination_dir: &Path) -> Result<()> {
+    fn copy_license_files(&self, build_directory: &Path, destination_dir: &Path, source: &Source) -> Result<()> {
+        // Copy all include paths first
+        self.copy_include_license_files(build_directory, destination_dir, source)?;
+
+        // Skip copying entirely if exclude `*` is specified
+        if source.license_exclude.iter().any(|x| x == "*") {
+            debug!("Skipping license file copying");
+            return Ok(());
+        }
+
+        let exclude_paths: Vec<_> = source.license_exclude.iter().map(|x| build_directory.join(x)).collect();
+
         let mut queue = VecDeque::from([(0, build_directory.to_path_buf())]);
         while let Some((depth, item)) = queue.pop_front() {
             let mut found_files = false;
@@ -363,6 +374,11 @@ impl<'a> Builder<'a> {
             // Read all files in the directory
             for entry in fs::read_dir(&item).err_with_path("read", &item)? {
                 let entry = entry.err_with_path("iterate", &item)?;
+
+                // Skip paths that should be excluded
+                if exclude_paths.contains(&entry.path()) {
+                    continue;
+                }
 
                 let metadata = entry.metadata().err_with_path("read metadata of", entry.path())?;
 
@@ -389,13 +405,23 @@ impl<'a> Builder<'a> {
                         }
 
                         found_files = true;
+                        debug!(
+                            "Found license file at '{}'",
+                            entry.path().strip_prefix(build_directory).unwrap_or(build_directory).display()
+                        );
+
+                        // Check if file was already copied (for example using `license_include`)
+                        let destination_path = destination_dir.join(entry.file_name());
+                        if destination_path.exists() {
+                            debug!("License file with same name is already copied, skipping file");
+                        }
 
                         // Create destination directory if it does not exist
                         if !destination_dir.exists() {
                             fs::create_dir_all(destination_dir).err_with_path("create dirs", destination_dir)?;
                         }
 
-                        fs::copy(entry.path(), destination_dir.join(entry.file_name())).err_with_path("copy", entry.path())?;
+                        fs::copy(entry.path(), destination_path).err_with_path("copy", entry.path())?;
                         break;
                     }
                 }
@@ -408,6 +434,40 @@ impl<'a> Builder<'a> {
         }
 
         debug!("Unable to find license files for package");
+        Ok(())
+    }
+
+    /// Copies license files that are listed as `license_include` into the destination directory.
+    fn copy_include_license_files(&self, build_directory: &Path, destination_dir: &Path, source: &Source) -> Result<()> {
+        for include_path_str in &source.license_include {
+            let include_path = build_directory.join(include_path_str);
+
+            // Skip if the path does not exist
+            if !include_path.exists() {
+                warning!("Specified license file include path '{include_path_str}' does not exist");
+                continue;
+            }
+
+            // Check if the path is a file
+            let metadata = fs::metadata(&include_path).err_with_path("read metadata", &include_path)?;
+            if !metadata.is_file() {
+                warning!("Specified license file include path '{include_path_str}' is not a file");
+                continue;
+            }
+
+            let Some(file_name) = include_path.file_name() else {
+                warning!("Specified license file include path '{include_path_str}' is not a valid path");
+                continue;
+            };
+
+            // Create destination directory if it does not exist
+            if !destination_dir.exists() {
+                fs::create_dir_all(destination_dir).err_with_path("create dirs", destination_dir)?;
+            }
+
+            fs::copy(&include_path, destination_dir.join(file_name)).err_with_path("copy", include_path)?;
+        }
+
         Ok(())
     }
 }

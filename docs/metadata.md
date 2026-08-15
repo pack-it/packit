@@ -68,6 +68,8 @@ The targets.toml file can contain one or multiple sources, specified in the foll
 | `size`             | Defines the size of the source archive in bytes.                                                             |
 | `mirrors`          | Defines a list of mirrors which could be used to download the sourcecode if the original url is unavailable. |
 | `skip_unpack`      | True to skip the unpack step and just download the source file, false to use the build in unpack.            |
+| `license_exclude`  | A list of paths to skip when doing automatic license file detection. `*` can be used to skip detection entirely. |
+| `license_include`  | A list of files that need to be copied to the package license file directory. These files are copied before the automatic detection. |
 | `apply_patches_in` | Defines the directory that should be used to apply all patches in.                                           |
 | `patches`          | A list of patches to apply to the source. See patches section below.                                         |
 

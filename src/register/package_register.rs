@@ -492,6 +492,8 @@ pub mod tests {
                 size: FileSize(0),
                 mirrors: Vec::new(),
                 skip_unpack: false,
+                license_exclude: Vec::new(),
+                license_include: Vec::new(),
                 apply_patches_in: None,
                 patches: HashMap::new(),
             }),
