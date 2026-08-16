@@ -56,6 +56,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Fix M4 environment variable pointing to install path, instead of the m4 binary.
 - Fix Packit prefix directory in cmake and aclocal environment variables.
 - Fix missing build dependency paths in `ACLOCAL_PATH` environment variable.
+- Fix `unlink` removing dependencies symlinks and other symlinks outside of the symlinked directories.
 
 
 ## [v0.0.3](https://github.com/pack-it/packit/compare/0.0.2...0.0.3) - 2026-07-11

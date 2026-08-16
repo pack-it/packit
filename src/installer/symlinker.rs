@@ -116,12 +116,12 @@ impl<'a> Symlinker<'a> {
             version: Some(package.active_version.clone()),
         })?;
 
-        // Remove all symlinks except for those in the active directory
+        // Remove all symlinks that are in any of the `SYMLINK_DIRECTORIES`
         for entry in fs::read_dir(&self.config.prefix_directory).err_with_path("read", &self.config.prefix_directory)? {
             let entry = entry.err_with_path("iterate", &self.config.prefix_directory)?;
 
             let file_type = entry.file_type().err_with_path("get filetype of", entry.path())?;
-            if file_type.is_dir() && entry.file_name() != "active" {
+            if file_type.is_dir() && SYMLINK_DIRECTORIES.iter().any(|x| *x == entry.file_name()) {
                 io::remove_symlinks(&entry.path(), &package_version.install_path)?;
             }
         }
