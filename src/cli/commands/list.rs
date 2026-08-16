@@ -24,11 +24,11 @@ use crate::{
 pub struct ListArgs {
     /// List updatables packages
     #[arg(long, default_value = "false", conflicts_with = "active")]
-    pub updatables: bool,
+    updatables: bool,
 
     /// List active packages
     #[arg(long, default_value = "false", conflicts_with = "updatables")]
-    pub active: bool,
+    active: bool,
 }
 
 impl HandleCommand for ListArgs {

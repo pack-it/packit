@@ -96,7 +96,7 @@ impl<'a> PortableRepoCreator<'a> {
     }
 
     /// Creates a portable repo, containing all given included packages at the given destination.
-    pub fn create_portable_repo(&self, included_packages: HashSet<PackageId>, destination: &PathBuf) -> Result<()> {
+    pub fn create_portable_repo(&self, included_packages: HashSet<PackageId>, destination: &Path) -> Result<()> {
         // Check if destination is empty
         if destination.exists() && (destination.is_file() || fs::read_dir(destination).err_with_path("read", destination)?.next().is_some())
         {
@@ -146,13 +146,13 @@ impl<'a> PortableRepoCreator<'a> {
             prebuilds_url: None,
             prebuilds_provider: None,
         };
-        self.write_metadata(repository_meta, destination.join("repository.toml"), false)?;
+        self.write_metadata(repository_meta, &destination.join("repository.toml"), false)?;
 
         // Create index.toml
         let index_meta = IndexMeta {
             supported_packages: package_index.keys().cloned().collect(),
         };
-        self.write_metadata(index_meta, destination.join("index.toml"), true)?;
+        self.write_metadata(index_meta, &destination.join("index.toml"), true)?;
 
         Ok(())
     }
@@ -242,7 +242,7 @@ impl<'a> PortableRepoCreator<'a> {
 
         // Download package.toml
         let package_meta = self.repository_manager.read_repo_package(repository_id, package_name)?;
-        self.write_metadata(package_meta, package_path.join("package.toml"), false)?;
+        self.write_metadata(package_meta, &package_path.join("package.toml"), false)?;
 
         Ok(())
     }
@@ -260,12 +260,12 @@ impl<'a> PortableRepoCreator<'a> {
         // Download targets.toml
         let version_meta = self.repository_manager.read_repo_package_version(repository_id, package_id)?;
         let targets_path = package_path.join(package_id.version.to_string()).join("targets.toml");
-        self.write_metadata(version_meta, targets_path, false)?;
+        self.write_metadata(version_meta, &targets_path, false)?;
 
         // Download prebuilds.toml
         let prebuilds_list = self.repository_manager.read_prebuilds_list(repository_id, &package_id.name, &package_id.version)?;
         let prebuilds_path = package_path.join(package_id.version.to_string()).join("prebuilds.toml");
-        self.write_metadata(prebuilds_list, prebuilds_path, false)?;
+        self.write_metadata(prebuilds_list, &prebuilds_path, false)?;
 
         let target_bounds = package_version.get_best_target(&self.target)?;
 
@@ -333,7 +333,7 @@ impl<'a> PortableRepoCreator<'a> {
         let prebuild_meta_name = format!("{package_id}-{revision}-{prebuild_id}.toml");
         let prebuild_meta_path = destination.join(prebuild_meta_name);
         fs::write(&prebuild_path, &prebuild).err_with_path("write", prebuild_path)?;
-        self.write_metadata(prebuild_file_meta, prebuild_meta_path, false)?;
+        self.write_metadata(prebuild_file_meta, &prebuild_meta_path, false)?;
 
         Ok(())
     }
@@ -383,7 +383,7 @@ impl<'a> PortableRepoCreator<'a> {
 
     /// Writes the given metadata to the destination file. The pretty option can be used to enable toml pretty printing,
     /// this currently only includes multiline arrays.
-    fn write_metadata<M: Serialize>(&self, metadata: M, destination: PathBuf, pretty: bool) -> Result<()> {
+    fn write_metadata<M: Serialize>(&self, metadata: M, destination: &Path, pretty: bool) -> Result<()> {
         // Create parent directories
         if let Some(parent) = destination.parent() {
             fs::create_dir_all(parent).err_with_path("create dirs", parent)?;
@@ -394,7 +394,7 @@ impl<'a> PortableRepoCreator<'a> {
             true => toml::ser::to_string_pretty(&metadata)?,
             false => toml::ser::to_string(&metadata)?,
         };
-        fs::write(&destination, meta_str).err_with_path("write", destination)?;
+        fs::write(destination, meta_str).err_with_path("write", destination)?;
 
         Ok(())
     }

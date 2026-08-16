@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use clap::Args;
-use std::{fs, path::PathBuf, process::exit};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    process::exit,
+};
 
 use crate::{
     cli::{
@@ -20,18 +24,18 @@ use crate::{
 #[derive(Args, Debug)]
 pub struct PackageArgs {
     /// Destination of the compressed package
-    pub destination: PathBuf,
+    destination: PathBuf,
 
     /// The ids of the packages to package
-    pub packages: Vec<PackageId>,
+    packages: Vec<PackageId>,
 
     /// True to structure the package into a prebuild directory
     #[arg(short, long, default_value = "false")]
-    pub structured: bool,
+    structured: bool,
 
     /// True to package all installed packages
     #[arg(short, long, default_value = "false")]
-    pub all: bool,
+    all: bool,
 }
 
 impl HandleCommand for PackageArgs {
@@ -66,7 +70,8 @@ impl HandleCommand for PackageArgs {
 }
 
 impl PackageArgs {
-    fn package(&self, package_id: &PackageId, destination: &PathBuf, config: &Config, register: &PackageRegister) {
+    /// Packages a specific package to the given destination.
+    fn package(&self, package_id: &PackageId, destination: &Path, config: &Config, register: &PackageRegister) {
         let package_version = match register.get_package_version(package_id) {
             Some(package_version) => package_version,
             None => not_found::register_package_version(package_id, register),

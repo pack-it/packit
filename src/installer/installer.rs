@@ -2,7 +2,7 @@
 use std::{
     collections::{HashMap, HashSet},
     fs,
-    path::{Path, PathBuf},
+    path::Path,
 };
 
 use crate::{
@@ -252,7 +252,7 @@ impl<'a> Installer<'a> {
         &self,
         package_id: &PackageId,
         install_meta: &InstallMeta,
-        install_directory: &PathBuf,
+        install_directory: &Path,
         script_args: &HashMap<&str, &str>,
     ) -> Result<()> {
         // Check if preinstall script should be used
@@ -354,7 +354,7 @@ impl<'a> Installer<'a> {
         &self,
         package_id: &PackageId,
         install_meta: &InstallMeta,
-        install_directory: &PathBuf,
+        install_directory: &Path,
         script_args: &HashMap<&str, &str>,
     ) -> Result<()> {
         // Check if postinstall script should be used
@@ -464,7 +464,7 @@ impl<'a> Installer<'a> {
         &self,
         package_id: &PackageId,
         install_meta: &InstallMeta,
-        install_directory: &PathBuf,
+        install_directory: &Path,
         script_args: &HashMap<&str, &str>,
         target: &PackageTarget,
     ) -> Result<()> {
@@ -756,7 +756,7 @@ impl<'a> Installer<'a> {
 
     /// Downloads and runs the uninstall script of a given package.
     /// Could return an `InstallerError`.
-    fn run_uninstall_script(&self, repository: &Repository, package_id: &PackageId, install_directory: &PathBuf) -> Result<()> {
+    fn run_uninstall_script(&self, repository: &Repository, package_id: &PackageId, install_directory: &Path) -> Result<()> {
         // Create metadata repository provider for source repository
         let provider = match provider::create_metadata_provider(repository) {
             Some(provider) => provider,

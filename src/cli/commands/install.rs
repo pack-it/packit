@@ -29,27 +29,27 @@ use crate::{
 pub struct InstallArgs {
     /// The name of the packages to install, with an optional version specified with NAME@VERSION
     #[arg(required = true)]
-    pub packages: Vec<OptionalPackageId>,
+    packages: Vec<OptionalPackageId>,
 
     /// True to build from source locally, false to use a prebuild version
     #[arg(long, default_value = "false", conflicts_with = "build_all")]
-    pub build: bool,
+    build: bool,
 
     /// True to build everything from source locally, false to use a prebuild version
     #[arg(long, default_value = "false", conflicts_with = "build")]
-    pub build_all: bool,
+    build_all: bool,
 
     /// True to skip symlinking the package, false to use defaults specified for the package
     #[arg(long, default_value = "false")]
-    pub skip_symlinking: bool,
+    skip_symlinking: bool,
 
     /// True to skip setting the package to active, false to use default behaviour
     #[arg(long, default_value = "false")]
-    pub skip_active: bool,
+    skip_active: bool,
 
     /// Flag to keep build dependencies after building from source
     #[arg(long, default_value = "false")]
-    pub keep_build: bool,
+    keep_build: bool,
 
     /// True if verbose information should be shown
     #[arg(short, long, default_value = "false")]
@@ -124,8 +124,6 @@ impl HandleCommand for InstallArgs {
             .skip_test(self.skip_test)
             .pause_build(self.pause_build);
         let mut installer = Installer::new(&config, &mut register, &manager, installer_options);
-
-        // TODO: Check if this exists as an external package (possibly leading to conflicts) (if so, add to external packages)
 
         // Install all packages
         for optional_id in &self.packages {

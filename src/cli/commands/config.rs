@@ -125,7 +125,6 @@ pub enum RepositoriesArgs {
 }
 
 impl HandleCommand for ConfigArgs {
-    /// Handles the config command.
     fn handle(&self) {
         let config = EditableConfig::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
 
@@ -469,7 +468,7 @@ impl ConfigArgs {
 
     /// Check if the metadata repository is available.
     /// Shows a message with the found issues.
-    /// Returns the repository metadata if the repository is available, false otherwise
+    /// Returns the repository metadata if the repository is available, false otherwise.
     fn check_metadata_repository_availability(&self, repository: &Repository) -> Option<RepositoryMeta> {
         // Check if the provider can be created
         let Some(provider) = provider::create_metadata_provider(repository) else {
@@ -491,7 +490,7 @@ impl ConfigArgs {
 
     /// Check if the metadata repository is compatible with the current system.
     /// Shows a message with the found issues.
-    /// Returns true if the repository is compatible, false otherwise
+    /// Returns true if the repository is compatible, false otherwise.
     fn check_metadata_repository_compatibility(&self, repo_meta: &RepositoryMeta) -> bool {
         // Check if the repository is supported
         if repo_meta.required_packit_version > current_packit_version() {

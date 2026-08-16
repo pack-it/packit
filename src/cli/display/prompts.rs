@@ -83,7 +83,7 @@ pub fn wait_for_continue() {
     _ = read_line();
 }
 
-/// Reads a line from stdin
+/// Reads a line from stdin.
 fn read_line() -> Result<String> {
     io::stdout().flush().err_operation("flush stdout").map_err(DisplayError::IOError)?;
     let mut input = String::new();

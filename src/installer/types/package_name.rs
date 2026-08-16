@@ -14,6 +14,7 @@ pub enum PackageNameError {
     InvalidPackageName,
 }
 
+/// Represents the name of a package.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct PackageName(String);
 

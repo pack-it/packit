@@ -19,7 +19,7 @@ use crate::{
 #[derive(Args, Debug)]
 pub struct CheckArgs {
     /// A list of packages to check. Could be empty, then all packages are checked
-    pub packages: Vec<OptionalPackageId>,
+    packages: Vec<OptionalPackageId>,
 }
 
 const ISSUE_FOUND_MESSAGE: &str = "Consider running `pit fix` to resolve the issues above.";

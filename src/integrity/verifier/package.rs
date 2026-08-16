@@ -1,9 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{
-    collections::HashSet,
-    fs,
-    path::{Path, PathBuf},
-};
+use std::{collections::HashSet, fs, path::Path};
 
 use crate::{
     cli::display::{
@@ -153,7 +149,7 @@ fn package_storage_is_consistent(package_id: &PackageId, config: &Config) -> Res
     let installed_directory = config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
 
     // Check if the directory exists, if so return true
-    if fs::exists(&installed_directory).err_with_path("check existance of", &installed_directory)?
+    if fs::exists(&installed_directory).err_with_path("check existence of", &installed_directory)?
         && !directory_is_empty(&installed_directory)?
     {
         return Ok(true);
@@ -210,7 +206,7 @@ fn check_invalid_package_active(package_name: &PackageName, register: &PackageRe
     };
 
     let active_directory = config.prefix_directory.join("active").join(package_name);
-    if !fs::exists(&active_directory).err_with_path("check existance of", &active_directory)? {
+    if !fs::exists(&active_directory).err_with_path("check existence of", &active_directory)? {
         return Ok(Some(package_name.clone()));
     }
 
@@ -311,7 +307,7 @@ fn check_missing_package_link(package_id: &PackageId, register: &PackageRegister
         let directory = package_path.join(directory_name);
 
         // Continue if the directory doesn't exist in the package
-        if !fs::exists(&directory).err_with_path("check existance of", &directory)? {
+        if !fs::exists(&directory).err_with_path("check existence of", &directory)? {
             continue;
         }
 
@@ -325,7 +321,7 @@ fn check_missing_package_link(package_id: &PackageId, register: &PackageRegister
 
 /// Checks if a symlink can be found for the given directory.
 /// Returns true if a symlink cannot be found, false otherwise.
-fn check_symlinks(directory: &PathBuf, symlink_directory: &Path) -> Result<bool> {
+fn check_symlinks(directory: &Path, symlink_directory: &Path) -> Result<bool> {
     for file in fs::read_dir(directory).err_with_path("read", directory)? {
         let file = file.err_with_path("iterate", directory)?;
         let file_path = file.path();

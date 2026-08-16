@@ -24,7 +24,7 @@ use crate::{
 #[derive(Args, Debug)]
 pub struct FixArgs {
     /// A list of packages to fix. Could be empty, then all packages are fixed
-    pub packages: Vec<OptionalPackageId>,
+    packages: Vec<OptionalPackageId>,
 }
 
 const FIX_MESSAGE: &str = "Would you like to automatically apply the fix above?";

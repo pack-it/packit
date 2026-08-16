@@ -2,7 +2,7 @@
 use std::{
     collections::{HashMap, HashSet},
     fs,
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
 use crate::{
@@ -29,7 +29,7 @@ pub fn fix_missing_config() -> Result<()> {
     // Figure out the prefix path
     let mut prefix_path = PathBuf::from(DEFAULT_PREFIX);
     loop {
-        if fs::exists(&prefix_path).err_with_path("check existance of", &prefix_path)? {
+        if fs::exists(&prefix_path).err_with_path("check existence of", &prefix_path)? {
             let question = format!("Prefix directory '{}' was found, do you wish to use this?", prefix_path.display());
             if ask_user(&question, QuestionResponse::Yes)?.is_yes() {
                 break;
@@ -38,9 +38,7 @@ pub fn fix_missing_config() -> Result<()> {
 
         let question = "Please provide a different prefix path".to_string();
         match ask_user_input(&question)? {
-            Some(path) => {
-                prefix_path = PathBuf::from(path);
-            },
+            Some(path) => prefix_path = PathBuf::from(path),
 
             // Return if no valid prefix path can be found (no possibility for reconstruction)
             None => return confirm_config_construction(&default_config),
@@ -59,7 +57,7 @@ pub fn fix_missing_config() -> Result<()> {
 }
 
 /// Sets the repositories field, if they can be found with the `get_used_repositories`.
-fn set_config_repositories(prefix_path: &PathBuf, default_config: &mut EditableConfig) -> Result<()> {
+fn set_config_repositories(prefix_path: &Path, default_config: &mut EditableConfig) -> Result<()> {
     let register_dir = PackageRegister::get_path(prefix_path);
     if let Ok(register) = PackageRegister::from(&register_dir) {
         let used_repositories = get_used_repositories(&register);

@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{fs, path::PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use bytes::Bytes;
 
@@ -23,26 +26,26 @@ pub struct FileSystemMetadataProvider {
 
 impl MetadataProvider for FileSystemMetadataProvider {
     fn read_repository_metadata(&self) -> Result<RepositoryMeta> {
-        let data = Self::read_file_string(self.path.join("repository.toml"))?;
+        let data = Self::read_file_string(&self.path.join("repository.toml"))?;
 
         Ok(toml::de::from_str(&data)?)
     }
 
     fn read_index_metadata(&self) -> Result<IndexMeta> {
-        let data = Self::read_file_string(self.path.join("index.toml"))?;
+        let data = Self::read_file_string(&self.path.join("index.toml"))?;
 
         Ok(toml::de::from_str(&data)?)
     }
 
     fn read_package(&self, package: &PackageName) -> Result<PackageMeta> {
-        let data = Self::read_file_string(self.path.join("packages").join(package.to_string()).join("package.toml"))?;
+        let data = Self::read_file_string(&self.path.join("packages").join(package.to_string()).join("package.toml"))?;
 
         Ok(toml::de::from_str(&data)?)
     }
 
     fn read_package_version(&self, package: &PackageName, version: &Version) -> Result<PackageVersionMeta> {
         let path = self.path.join("packages").join(package.to_string()).join(version.to_string()).join("targets.toml");
-        let data = Self::read_file_string(path)?;
+        let data = Self::read_file_string(&path)?;
 
         Ok(toml::de::from_str(&data)?)
     }
@@ -53,7 +56,7 @@ impl MetadataProvider for FileSystemMetadataProvider {
             return Ok(None);
         }
 
-        let data = Self::read_file_string(path)?;
+        let data = Self::read_file_string(&path)?;
         Ok(Some(toml::de::from_str(&data)?))
     }
 
@@ -61,7 +64,7 @@ impl MetadataProvider for FileSystemMetadataProvider {
         let file_path = PathBuf::from(file_path);
         let path = self.path.join("packages").join(package.to_string()).join(file_path);
 
-        if !fs::exists(&path).err_with_path("check existance of", &path)? {
+        if !fs::exists(&path).err_with_path("check existence of", &path)? {
             return Ok(None);
         }
 
@@ -72,11 +75,11 @@ impl MetadataProvider for FileSystemMetadataProvider {
         let file_path = PathBuf::from(file_path);
         let path = self.path.join("packages").join(package.to_string()).join(file_path);
 
-        if !fs::exists(&path).err_with_path("check existance of", &path)? {
+        if !fs::exists(&path).err_with_path("check existence of", &path)? {
             return Ok(None);
         }
 
-        Ok(Some(Self::read_file_string(path)?))
+        Ok(Some(Self::read_file_string(&path)?))
     }
 }
 
@@ -93,8 +96,8 @@ impl FileSystemMetadataProvider {
         })
     }
 
-    /// Reads the file at the given path into a string
-    fn read_file_string(path: PathBuf) -> Result<String> {
-        Ok(fs::read_to_string(&path).err_with_path("read", path)?)
+    /// Reads the file at the given path into a string.
+    fn read_file_string(path: &Path) -> Result<String> {
+        Ok(fs::read_to_string(path).err_with_path("read", path)?)
     }
 }

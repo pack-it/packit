@@ -10,7 +10,7 @@ const USER_AGENT: &str = concat!("Packit/", packit_version!());
 
 /// Checks if a URL exists by sending a header request.
 /// A `GET` method is used as a fallback in case of a head request being blocked.
-/// Returns true if the URL exists, false if not
+/// Returns true if the URL exists, false if not.
 pub fn check_url<T: IntoUrl + Clone>(url: T) -> reqwest::Result<bool> {
     let client = build_client()?;
 
@@ -31,7 +31,7 @@ pub fn get<T: IntoUrl>(url: T) -> reqwest::Result<Response> {
     build_client()?.get(url).send()
 }
 
-/// Builds a request client
+/// Builds a request client.
 fn build_client() -> reqwest::Result<Client> {
     reqwest::blocking::ClientBuilder::new().user_agent(USER_AGENT).build()
 }

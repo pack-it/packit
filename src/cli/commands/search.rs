@@ -64,7 +64,6 @@ pub struct SearchArgs {
 }
 
 impl HandleCommand for SearchArgs {
-    /// Handles the search command, searching a certain package.
     fn handle(&self) {
         if self.regex {
             self.regex_search();

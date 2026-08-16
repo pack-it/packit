@@ -49,7 +49,7 @@ impl HandleCommand for InitArgs {
         }
 
         // Check if config directory is writable
-        if !permissions::is_writable(&config_dir.to_path_buf()).unwrap_or_exit_msg("Unable to check if config directory is writable", 1) {
+        if !permissions::is_writable(config_dir).unwrap_or_exit_msg("Unable to check if config directory is writable", 1) {
             error!(msg: "Packit cannot be initialized: the config directory at '{DEFAULT_CONFIG_DIR}' is not writable, please set the correct permissions");
             exit(1);
         }

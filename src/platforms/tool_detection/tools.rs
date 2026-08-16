@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::{
     installer::types::Version,
@@ -20,7 +20,7 @@ impl Msvc {
     }
 
     /// Gets the installation path of Visual Studio.
-    pub fn get_vs_path(&self) -> &PathBuf {
+    pub fn get_vs_path(&self) -> &Path {
         &self.vs_path
     }
 
@@ -35,7 +35,7 @@ impl Msvc {
     }
 
     /// Gets the arch needed for the `vcvarsall.bat` execution.
-    /// Returns `None` if the given target is not supported
+    /// Returns `None` if the given target is not supported.
     pub fn get_vcvarsall_arch(&self, target: &Target) -> Option<&str> {
         match target.architecture {
             TargetArchitecture::WindowsX86_64Msvc => Some("x64"),

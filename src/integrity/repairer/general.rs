@@ -6,7 +6,7 @@ use crate::{cli::display::logging::warning, integrity::error::Result, utils::ioe
 /// Fixes stray directories by removing them.
 pub fn fix_stray_directories(strays: HashSet<PathBuf>) -> Result<()> {
     for directory in strays {
-        if !fs::exists(&directory).err_with_path("check existance of", &directory)? {
+        if !fs::exists(&directory).err_with_path("check existence of", &directory)? {
             warning!(
                 "Skipping deletion of stray directory '{}' because it doesn't exist.",
                 directory.display()

@@ -23,7 +23,7 @@ use crate::{
 pub struct UninstallArgs {
     /// The names of the packages to install, with an optional version specified with `<name>[@version]`
     #[arg(required = true)]
-    pub packages: Vec<OptionalPackageId>,
+    packages: Vec<OptionalPackageId>,
 }
 
 impl HandleCommand for UninstallArgs {

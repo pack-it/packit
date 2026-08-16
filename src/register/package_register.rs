@@ -47,7 +47,7 @@ impl PackageRegister {
     /// This function will return an error if the file cannot be opened or if the content is invalid.
     pub fn from(path: &Path) -> Result<Self> {
         // If the file does not exist, return an error
-        if !fs::exists(path).err_with_path("check existance of", path)? {
+        if !fs::exists(path).err_with_path("check existence of", path)? {
             return Err(RegisterError::RegisterDoesNotExist);
         }
 
@@ -89,7 +89,7 @@ impl PackageRegister {
     }
 
     /// Gets the default path of the Packit installed packages file.
-    pub fn get_path(prefix_directory: &PathBuf) -> PathBuf {
+    pub fn get_path(prefix_directory: &Path) -> PathBuf {
         Path::new(prefix_directory).join(REGISTER_FILENAME)
     }
 
@@ -102,7 +102,7 @@ impl PackageRegister {
         package_version: &PackageVersionMeta,
         dependency_ids: HashSet<PackageId>,
         source_repository: &Repository,
-        install_path: &PathBuf,
+        install_path: &Path,
         symlinked: bool,
         active: bool,
         used_prebuild: bool,

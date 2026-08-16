@@ -40,6 +40,7 @@ pub struct InstallLabel {
 }
 
 impl InstallLabel {
+    /// Creates a new `InstallLabel`.
     pub fn new(install_type: InstallType, is_dependency: bool) -> Self {
         Self {
             install_type,
@@ -47,6 +48,7 @@ impl InstallLabel {
         }
     }
 
+    /// Gets the `InstallType` from the label.
     pub fn get_type(&self) -> &InstallType {
         &self.install_type
     }
@@ -99,6 +101,7 @@ impl InstallMeta {
 pub type InstallTree = Tree<Option<InstallMeta>, InstallLabel>;
 pub type InstallNode = Node<Option<InstallMeta>, InstallLabel>;
 
+/// A builder which helps to construct the install tree.
 pub struct InstallTreeBuilder<'a> {
     register: &'a PackageRegister,
     repository_manager: &'a RepositoryManager<'a>,
@@ -108,6 +111,7 @@ pub struct InstallTreeBuilder<'a> {
 }
 
 impl<'a> InstallTreeBuilder<'a> {
+    /// Creates a new `InstallTreeBuilder`.
     pub fn new(register: &'a PackageRegister, repository_manager: &'a RepositoryManager) -> Self {
         Self {
             register,
@@ -118,6 +122,7 @@ impl<'a> InstallTreeBuilder<'a> {
         }
     }
 
+    /// Creates the install tree for the given package id using the root meta and label.
     pub fn create_tree(&mut self, package_id: PackageId, root_meta: InstallMeta, root_label: InstallLabel) -> Result<InstallTree> {
         let mut tree_display_string = "".to_string();
         let root_label = match self.check_prebuild(&root_meta, &package_id, &root_label)? {
@@ -235,6 +240,8 @@ impl<'a> InstallTreeBuilder<'a> {
         Ok((dependency_id, Some(install_meta), label))
     }
 
+    /// Checks if a prebuild should be used and if one is available. In case a prebuild is not available the user is
+    /// prompted with the question if they want to build from source instead.
     fn check_prebuild(&mut self, install_meta: &InstallMeta, package_id: &PackageId, label: &InstallLabel) -> Result<Option<InstallLabel>> {
         // Don't check for prebuild if the package should not use a prebuild
         if !matches!(label.get_type(), InstallType::Prebuild) {

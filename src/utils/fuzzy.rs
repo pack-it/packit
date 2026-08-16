@@ -64,8 +64,7 @@ pub fn index_search(index: &IndexMeta, package_name: &PackageName) -> Option<Pac
     best_word
 }
 
-/// Wraps around the `fuzzy_search` method and gets the fuzzy match with
-/// the lowest distance to the given string.
+/// Wraps around the `fuzzy_search` method and gets the fuzzy match with the lowest distance to the given string.
 /// Returns `None` if there are no fuzzy matches and a `PackageName` if there is at least one fuzzy match.
 pub fn min_search<'a, I>(words: I, string: &str) -> Option<PackageName>
 where

@@ -305,6 +305,7 @@ fn create_tempfile() -> Result<NamedTempFile> {
     builder.tempfile().map_err(ScriptError::SaveError)
 }
 
+/// Converts the given path to an absolute path.
 fn to_absolute_path<P: AsRef<Path>>(path: P) -> Result<PathBuf> {
     path::absolute(path).map_err(ScriptError::AbsolutePathError)
 }
@@ -351,7 +352,7 @@ fn bind_extra_outputs(command: &mut Command, script_data: &ScriptData) -> Result
     unsafe {
         command.pre_exec(move || {
             // Duplicate source fd onto fd 3
-            // Note that we don't check for existance of fd 3, since this is the very first thing called in the child process
+            // Note that we don't check for existence of fd 3, since this is the very first thing called in the child process
             if libc::dup2(source_verbose_fd, 3) == -1 {
                 return Err(std::io::Error::last_os_error());
             }

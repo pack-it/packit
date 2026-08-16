@@ -184,7 +184,7 @@ fn resolve_paths<'a>(source: &'a Path, destination: &'a Path) -> (&'a Path, &'a 
     (source, destination)
 }
 
-/// Applies a text or binary patch to a file. The source argument can be none, to use no original file
+/// Applies a text or binary patch to a file. The source argument can be none, to use no original file.
 fn apply_path(patch: &PatchKind<[u8]>, source: Option<&Path>, destination: &Path) -> Result<()> {
     if matches!(patch, PatchKind::Binary(BinaryPatch::Marker)) {
         warning!("Patch has a binary patch marker, but does not contain any data");

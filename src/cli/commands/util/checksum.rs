@@ -13,7 +13,7 @@ use crate::{
     utils::requests,
 };
 
-/// Calculates the checksum for the file at the given url
+/// Calculates the checksum for the file at the given url.
 #[derive(Args, Debug)]
 pub struct ChecksumArgs {
     /// The url to request the file from

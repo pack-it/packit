@@ -652,7 +652,7 @@ impl MetaCheck {
             }
         }
 
-        println!("The following metadata issue were found:");
+        println!("The following metadata issues were found:");
         let mut pair_aligner = PairAligner::new();
         pair_aligner.add("Fatal", count_fatal);
         pair_aligner.add("Breaking", count_breaking);

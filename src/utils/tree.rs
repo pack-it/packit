@@ -29,6 +29,7 @@ pub enum TreeError {
 
 pub type Result<T> = std::result::Result<T, TreeError>;
 
+/// A tree of `Node` consisting of packages.
 pub struct Tree<V, L: Eq + DisplayNode<V>> {
     // A list of all nodes in the tree. Note that this list will always have parents before children by
     // way of construction (you can only add a node as child of another node).
@@ -46,6 +47,7 @@ pub struct Node<V, L: Eq + DisplayNode<V>> {
 }
 
 impl<V, L: Eq + DisplayNode<V>> Tree<V, L> {
+    /// Creates a new `Tree`.
     pub fn new(root: Node<V, L>) -> Self {
         Self { nodes: vec![root] }
     }

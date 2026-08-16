@@ -13,7 +13,7 @@ use crate::{
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
-/// Generates a portable repository containing the specified packages
+/// Generates a portable repository containing the specified packages.
 #[derive(Args, Debug)]
 pub struct PortableRepoArgs {
     /// The destination directory

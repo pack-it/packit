@@ -25,14 +25,14 @@ use crate::{
 #[derive(Args, Debug)]
 pub struct SwitchArgs {
     /// The name of the package to switch
-    pub package_name: PackageName,
+    package_name: PackageName,
 
     /// The new active version of the package
-    pub package_version: Version,
+    package_version: Version,
 
     /// True to skip symlinking the package, false to keep the current symlinked state
     #[arg(long, default_value = "false")]
-    pub skip_symlinking: bool,
+    skip_symlinking: bool,
 }
 
 impl HandleCommand for SwitchArgs {

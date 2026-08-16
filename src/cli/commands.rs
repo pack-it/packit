@@ -152,6 +152,7 @@ impl Cli {
     }
 }
 
+/// Each command implements this handle trait, which handles that command.
 trait HandleCommand {
     fn handle(&self);
 }

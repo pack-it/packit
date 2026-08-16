@@ -28,7 +28,6 @@ pub enum UtilArgs {
 }
 
 impl HandleCommand for UtilArgs {
-    /// Handles the util command.
     fn handle(&self) {
         match self {
             Self::Checksum(args) => args.handle(),
