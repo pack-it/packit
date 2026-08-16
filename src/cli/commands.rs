@@ -36,7 +36,7 @@ use crate::{
 /// Represents the CLI interface with clap.
 #[derive(Parser, Debug)]
 #[command(name = "Packit", version, about)]
-#[command(long_about = "The universal package manager, designed to streamline the experience of installing packages on your system.")]
+#[command(long_about = "The universal package manager, designed to streamline the experience of installing packages on your system")]
 #[command(long_version = concat!(packit_version!(), " (", packit_version_name!(), ")"))]
 pub struct Cli {
     #[command(subcommand)]

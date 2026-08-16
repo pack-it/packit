@@ -121,7 +121,7 @@ impl HandleCommand for InitArgs {
         let active = false;
         let symlinked = false;
         let package_description =
-            "The universal package manager, designed to streamline the experience of installing packages on your system.".into();
+            "The universal package manager, designed to streamline the experience of installing packages on your system".into();
         let package_homepage = Some("https://github.com/pack-it/packit".into());
 
         // Add Packit to register
