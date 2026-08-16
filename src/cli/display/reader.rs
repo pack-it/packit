@@ -33,7 +33,7 @@ impl<R: Read + Seek> Read for ReaderWithProgress<R> {
     }
 }
 
-// Implements seek, because `ZipArchive` requires it.
+// Wrapper around the `ReaderWithProgress` seek method.
 impl<R: Read + Seek> Seek for ReaderWithProgress<R> {
     fn seek(&mut self, pos: io::SeekFrom) -> io::Result<u64> {
         self.reader.seek(pos)

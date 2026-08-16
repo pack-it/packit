@@ -152,7 +152,7 @@ impl Cli {
     }
 }
 
-/// Each command implements this handle trait, which handles that command.
+/// Generic command handler trait, used to handle a command.
 trait HandleCommand {
     fn handle(&self);
 }
