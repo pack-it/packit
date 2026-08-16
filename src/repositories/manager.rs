@@ -450,9 +450,10 @@ impl<'a> RepositoryManager<'a> {
                 Err(e) => return Err(e),
             };
 
+            // Only get deprecation info if the deprecation is outside of the ignore limit
             let deprecation = match &package_version.deprecation {
-                Some(deprecation) => deprecation,
-                None => return Ok(package_version),
+                Some(deprecation) if !deprecation.should_ignore() => deprecation,
+                Some(_) | None => return Ok(package_version),
             };
 
             // Update the `latest_deprecated` if it was `None` or if the current version deprecates at a later moment

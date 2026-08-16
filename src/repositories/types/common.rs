@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::{collections::HashMap, fmt::Display, ops::Not};
 
-use chrono::Utc;
+use chrono::{Duration, Utc};
 use serde::{Deserialize, Deserializer, Serialize, de};
 
 use crate::repositories::types::Checksum;
@@ -82,6 +82,16 @@ pub struct DeprecationInfo {
     pub reason: Option<String>,
 }
 
+impl DeprecationInfo {
+    /// Defines the time limit outside of which deprecations are ignored.
+    pub const IGNORE_LIMIT: Duration = Duration::days(365);
+
+    /// Checks if the deprecation info should be ignored.
+    pub fn should_ignore(&self) -> bool {
+        self.deprecated_from > Date::now().add_duration(Self::IGNORE_LIMIT)
+    }
+}
+
 impl Source {
     /// Gets all patches of the source, sorted by id.
     pub fn get_sorted_patches(&self) -> Vec<(u32, &Patch)> {
@@ -156,5 +166,10 @@ impl Date {
     /// Gets the current date.
     pub fn now() -> Self {
         Self(Utc::now().date_naive())
+    }
+
+    /// Adds the given duration to the date.
+    pub fn add_duration(self, duration: Duration) -> Self {
+        Self(self.0 + duration)
     }
 }

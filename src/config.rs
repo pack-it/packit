@@ -280,7 +280,7 @@ impl EditableConfig {
         }
 
         if let Some(prebuilds_provider) = &repository.prebuilds_provider {
-            if repository_table.get("prebuildsprebuilds_provider_url").and_then(|x| x.as_str()) != Some(prebuilds_provider) {
+            if repository_table.get("prebuilds_provider").and_then(|x| x.as_str()) != Some(prebuilds_provider) {
                 repository_table.insert("prebuilds_provider", prebuilds_provider.into());
             }
         } else {
