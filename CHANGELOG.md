@@ -4,7 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
-## [Unreleased](https://github.com/pack-it/packit/compare/0.0.3...HEAD)
+## [Unreleased](https://github.com/pack-it/packit/compare/0.0.4...HEAD)
+
+
+## [v0.0.4](https://github.com/pack-it/packit/compare/0.0.3...0.0.4) - 2026-08-16
 
 ### Added
 - The `build_requirements` and `test_requirements` fields, with the `msvc` requirement.
