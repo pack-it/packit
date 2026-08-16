@@ -43,6 +43,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The `link` command now also shows warnings when `--force` is enabled.
 - The install tree now has color coding, based on installed, prebuild and build state.
 - Package deprecation checks now ignore deprecations that are more than a year in the future.
+- The build process now automatically detects the root of a source directory, meaning `cd` in scripts is not needed anymore.
 
 ### Fixed
 - Fix error messages not representing the error correctly.

@@ -148,8 +148,11 @@ impl<'a> Builder<'a> {
             fs::write(&file_path, bytes).err_with_path("write", file_path)?;
         }
 
+        // Find inner build directory (a directory with more than just a single directory inside)
+        let inner_build_directory = self.find_inner_build_dir(build_directory.path().to_path_buf())?;
+
         // Construct default apply directory for patches
-        let mut apply_directory = build_directory.path().to_path_buf();
+        let mut apply_directory = inner_build_directory.clone();
         if let Some(apply_in) = &source.apply_patches_in {
             apply_directory = apply_directory.join(PathBuf::from(apply_in));
         }
@@ -197,7 +200,7 @@ impl<'a> Builder<'a> {
             spinner.show();
 
             // Run build script
-            script_result = scripts::run_build_script(&script_data, &build_directory, env, self.skip_build_test);
+            script_result = scripts::run_build_script(&script_data, &inner_build_directory, env, self.skip_build_test);
 
             // Finish build spinner
             spinner.finish();
@@ -205,7 +208,7 @@ impl<'a> Builder<'a> {
             println!("Executing build script of {}", package_id.style());
 
             // Run build script
-            script_result = scripts::run_build_script(&script_data, &build_directory, env, self.skip_build_test);
+            script_result = scripts::run_build_script(&script_data, &inner_build_directory, env, self.skip_build_test);
         }
 
         // Wait before continuing when pause build is enabled
@@ -214,7 +217,7 @@ impl<'a> Builder<'a> {
                 warning!("Build script execution returned an error: {e}");
             }
 
-            println!("Paused building in '{}'", build_directory.path().display());
+            println!("Paused building in '{}'", inner_build_directory.display());
             display::wait_for_continue();
         }
 
@@ -223,12 +226,53 @@ impl<'a> Builder<'a> {
 
         // Copy license files
         let license_directory = destination_dir.as_ref().join("share").join("licenses").join(&install_meta.package_metadata.name);
-        self.copy_license_files(build_directory.path(), &license_directory, source)?;
+        self.copy_license_files(&inner_build_directory, &license_directory, source)?;
 
         // Patch binaries
         BinaryPatcher::new(self.config).patch_binaries_in(destination_dir.as_ref().to_path_buf(), &package_id, installed_dependencies)?;
 
         Ok(())
+    }
+
+    // Finds the inner build directory by looking for a directory with more than just a single directory inside.
+    // Returns the found inner directory, or the `build_directory` if that is already the inner directory.
+    fn find_inner_build_dir(&self, build_directory: PathBuf) -> Result<PathBuf> {
+        let mut inner_build_directory = build_directory;
+        let mut found_dir = None;
+
+        // Keep searching until we found the absolute inner directory
+        loop {
+            // Read build directory to see if it contains more than just one directory
+            for entry in fs::read_dir(&inner_build_directory).err_with_path("read", &inner_build_directory)? {
+                let entry = entry.err_with_path("iterate", &inner_build_directory)?;
+                let metadata = entry.metadata().err_with_path("read metadata of", entry.path())?;
+
+                // Found inner directory if the directory contains files
+                if !metadata.is_dir() {
+                    return Ok(inner_build_directory);
+                }
+
+                // Found inner directory if the directory contains more than one directory
+                if found_dir.is_some() {
+                    return Ok(inner_build_directory);
+                }
+
+                // Set found dir to the current subdirectory
+                found_dir = Some(entry.path());
+            }
+
+            // If we found only one directory, use it as new `inner_build_directory` and search this new directory
+            // Otherwise stop searching, inner directory is already found
+            match found_dir {
+                Some(found_build_dir) => {
+                    inner_build_directory = found_build_dir;
+                    found_dir = None;
+                },
+                None => break,
+            }
+        }
+
+        Ok(inner_build_directory)
     }
 
     /// Downloads a patch, either from the given url or from the repository. Shows a spinner during the download.
