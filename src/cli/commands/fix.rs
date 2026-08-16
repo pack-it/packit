@@ -39,7 +39,7 @@ impl HandleCommand for FixArgs {
         match self.fix_initial(&mut verifier, &mut repairer, &mut solved_issues) {
             Ok(_) => {},
             Err(e) if verifier.issues_found() > solved_issues => {
-                debug!(err: e, "An error occured when issues were already found, skipping remaining checks.");
+                debug!(err: e, "An error occured when issues were already found, skipping remaining checks");
                 return;
             },
             Err(e) => {
@@ -57,7 +57,7 @@ impl HandleCommand for FixArgs {
             exit(1);
         }
 
-        debug!(err: e, "An error occured when issues were already found, skipping remaining checks.");
+        debug!(err: e, "An error occured when issues were already found, skipping remaining checks");
     }
 }
 

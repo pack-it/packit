@@ -83,7 +83,7 @@ impl PackageArgs {
             &package_version.metadata_repository_provider,
         );
         let Some(provider) = provider::create_metadata_provider(&repository) else {
-            error!(msg: "Cannot create provider for {}, skipping packaging.", package_id.style());
+            error!(msg: "Cannot create provider for {}, skipping packaging", package_id.style());
             return;
         };
 
@@ -91,7 +91,7 @@ impl PackageArgs {
         let package_meta = match provider.read_package(&package_id.name) {
             Ok(package_meta) => package_meta,
             Err(e) => {
-                error!(e, "Cannot read package metadata of {}, skipping packaging.", package_id.style());
+                error!(e, "Cannot read package metadata of {}, skipping packaging", package_id.style());
                 return;
             },
         };
@@ -101,14 +101,14 @@ impl PackageArgs {
             Ok(Some(prebuilds_list)) => prebuilds_list,
             Ok(None) => PrebuildsList::default(package_meta.supported_versions.keys()),
             Err(e) => {
-                error!(e, "Cannot read prebuild list for {}, skipping packaging.", package_id.style());
+                error!(e, "Cannot read prebuild list for {}, skipping packaging", package_id.style());
                 return;
             },
         };
 
         // Retrieve `prebuild_id` to use
         let Some((prebuild_id, prebuild_meta)) = prebuilds_list.get_best_prebuild(&Target::current()) else {
-            error!(msg: "Cannot find prebuild to create for {}, skipping packaging.", package_id.style());
+            error!(msg: "Cannot find prebuild to create for {}, skipping packaging", package_id.style());
             return;
         };
 

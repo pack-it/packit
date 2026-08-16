@@ -445,7 +445,7 @@ impl<'a> Installer<'a> {
                 // Show warning if the not symlinking but package was previously symlinked
                 if should_set_active && installed_package.symlinked && !should_symlink {
                     warning!(
-                        "The new active package version will not be symlinked, while the previously active version was symlinked. The package will not be automatically findable by your system anymore."
+                        "The new active package version will not be symlinked, while the previously active version was symlinked. The package will not be automatically findable by your system anymore"
                     );
                 }
             }
@@ -499,7 +499,7 @@ impl<'a> Installer<'a> {
             match file_content {
                 Some(content) => read_files.push((file, content)),
                 None => {
-                    warning!("Skipping test, because the required files could not be downloaded.");
+                    warning!("Skipping test, because the required files could not be downloaded");
                     return Ok(());
                 },
             }
@@ -860,7 +860,7 @@ impl<'a> Installer<'a> {
                 Some(dependency) => dependency,
                 None => {
                     warning!(
-                        "Dependent is not a dependent of {} eventhough it should be.",
+                        "Dependent is not a dependent of {} eventhough it should be",
                         old_package.package_id.style()
                     );
                     continue;
@@ -899,7 +899,7 @@ impl<'a> Installer<'a> {
         }
 
         // Set the active and symlinked state for the new package (to the old package state)
-        let package = self.register.get_package(&old_package_id.name).expect("Expected old package to still exist.");
+        let package = self.register.get_package(&old_package_id.name).expect("Expected old package to still exist");
         if package.active_version == *new_version {
             symlinker.set_active(self.register, &new_package_id, package.symlinked)?;
         }
@@ -907,7 +907,7 @@ impl<'a> Installer<'a> {
         print!("The new package version {} has been succesfully installed", new_version.style());
 
         // Only uninstall the package if the old package no longer has dependents
-        let old_package = self.register.get_package_version_mut(&old_package_id).expect("Expected old package to still exist.");
+        let old_package = self.register.get_package_version_mut(&old_package_id).expect("Expected old package to still exist");
         if old_package.dependents.is_empty() {
             println!(", uninstalling the old version now");
             self.uninstall(&old_package_id.into())?;

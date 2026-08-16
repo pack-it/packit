@@ -83,7 +83,7 @@ fn check_package_alterations(package_id: &PackageId, register: &PackageRegister,
     let package_meta = match provider.read_package(&package_id.name) {
         Ok(package_meta) => package_meta,
         Err(e) => {
-            warning!("Cannot read package metadata of {}, skipping check.", package_id.style());
+            warning!("Cannot read package metadata of {}, skipping check", package_id.style());
             debug!(err: e, "Retrieving package metadata failed");
             return Ok(false);
         },
@@ -94,7 +94,7 @@ fn check_package_alterations(package_id: &PackageId, register: &PackageRegister,
         Ok(Some(prebuilds_list)) => prebuilds_list,
         Ok(None) => PrebuildsList::default(package_meta.supported_versions.keys()),
         Err(e) => {
-            warning!("Cannot read prebuild list for {}, skipping check.", package_id.style());
+            warning!("Cannot read prebuild list for {}, skipping check", package_id.style());
             debug!(err: e, "Retrieving prebuilds list failed");
             return Ok(false);
         },
@@ -102,7 +102,7 @@ fn check_package_alterations(package_id: &PackageId, register: &PackageRegister,
 
     // Retrieve `prebuild_id` to use
     let Some((prebuild_id, prebuild_meta)) = prebuilds_list.get_best_prebuild(&Target::current()) else {
-        warning!("Cannot find prebuild to create for {}, skipping packaging.", package_id.style());
+        warning!("Cannot find prebuild to create for {}, skipping packaging", package_id.style());
         return Ok(false);
     };
 
@@ -584,7 +584,7 @@ fn check_package_dependency_tree(package_id: &PackageId, register: &PackageRegis
     let package = match register.get_package_version(package_id) {
         Some(package) => package,
         None => {
-            debug!("Parent node {} doesn't exist, while checking dependency tree.", package_id.style());
+            debug!("Parent node {} doesn't exist, while checking dependency tree", package_id.style());
             return Vec::new();
         },
     };
@@ -670,7 +670,7 @@ fn check_package_test(package_id: &PackageId, register: &PackageRegister, config
             Some(content) => read_files.push((file, content)),
             None => {
                 warning!(
-                    "Skipping {} test, because the required files could not be downloaded.",
+                    "Skipping {} test, because the required files could not be downloaded",
                     package_id.style()
                 );
                 return Ok(false);

@@ -68,7 +68,7 @@ impl HandleCommand for InfoArgs {
 
         // Check if there is version ambiguity (version and `--active` specified)
         if package.version.is_some() && self.active {
-            error!(msg: "Version is ambiguous, version and `--active` are both specified");
+            error!(msg: "Version is ambiguous, version and '--active' are both specified");
             exit(1);
         }
 
@@ -82,7 +82,7 @@ impl HandleCommand for InfoArgs {
         // Display tree if tree flag is given
         if self.tree {
             let Some(package_version) = package_version else {
-                error!(msg: "Displaying a tree requires package version to be specified.");
+                error!(msg: "Displaying a tree requires package version to be specified");
                 exit(1);
             };
 

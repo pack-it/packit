@@ -328,7 +328,7 @@ fn create_command<P: AsRef<Path>>(path: P) -> Command {
 
 #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
 fn create_command<P: AsRef<Path>>(path: P) -> Command {
-    panic!("Cannot create command for target, target is not supported.");
+    panic!("Cannot create command for target, target is not supported");
 }
 
 #[cfg(any(target_os = "macos", target_os = "linux"))]
@@ -384,5 +384,5 @@ fn bind_extra_outputs(command: &mut Command, script_data: &ScriptData) -> Result
 
 #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
 fn bind_extra_outputs(command: &mut Command, script_data: &ScriptData) -> Result<()> {
-    panic!("Cannot bind extra outputs for target, target is not supported.");
+    panic!("Cannot bind extra outputs for target, target is not supported");
 }

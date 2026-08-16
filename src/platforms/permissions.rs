@@ -52,14 +52,14 @@ mod platform {
     pub enum PlatformError {}
 
     pub(super) fn is_writable(_path: &Path, _metadata: Metadata) -> Result<bool> {
-        panic!("Cannot check write permissions for target, target is not supported.");
+        panic!("Cannot check write permissions for target, target is not supported");
     }
 
     pub fn set_packit_permissions(_path: &Path, _is_multiuser: bool, _recurse: bool) -> Result<()> {
-        panic!("Cannot set ownership for target, target is not supported.");
+        panic!("Cannot set ownership for target, target is not supported");
     }
 
     pub fn does_packit_group_exist() -> Result<bool> {
-        panic!("Cannot check if group exists, target is not supported.")
+        panic!("Cannot check if group exists, target is not supported")
     }
 }

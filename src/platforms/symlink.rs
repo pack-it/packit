@@ -14,7 +14,7 @@ pub enum SymlinkError {
     #[error("Path is not a symlink")]
     NonSymlink,
 
-    #[error("The given symlink original '{original}' cannot be found.")]
+    #[error("The given symlink original '{original}' cannot be found")]
     OriginalNotFound {
         original: PathBuf,
     },
@@ -112,11 +112,11 @@ pub mod platform {
 
     /// Panics for any unsupported OS.
     pub fn create_symlink(original: &Path, link: &Path) -> Result<()> {
-        panic!("Cannot create link for target, target is not supported.");
+        panic!("Cannot create link for target, target is not supported");
     }
 
     /// Panics for any unsupported OS.
     pub fn remove_symlink(symlink: &Path) -> Result<()> {
-        panic!("Cannot remove link for target, target is not supported.");
+        panic!("Cannot remove link for target, target is not supported");
     }
 }

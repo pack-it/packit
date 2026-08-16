@@ -19,24 +19,24 @@ use crate::{
 /// The errors that occur during installation.
 #[derive(Error, Debug)]
 pub enum InstallerError {
-    #[error("Cannot write prefix directory due to incorrect permissions.")]
+    #[error("Cannot write prefix directory due to incorrect permissions")]
     PermissionsError,
 
     #[error("Prebuild checksum does not match")]
     ChecksumError,
 
-    #[error("Package {} with version '{}' is not installed.", package_name.style(), version.as_ref().map_or("any".normal(), |v| v.style()))]
+    #[error("Package {} with version '{}' is not installed", package_name.style(), version.as_ref().map_or("any".normal(), |v| v.style()))]
     PackageNotFound {
         package_name: PackageName,
         version: Option<Version>,
     },
 
-    #[error("Package {} is already installed.", package_id.style())]
+    #[error("Package {} is already installed", package_id.style())]
     AlreadyInstalledError {
         package_id: PackageId,
     },
 
-    #[error("The new version {} of this package cannot satisfy all dependents from the old package version.", new_version.style())]
+    #[error("The new version {} of this package cannot satisfy all dependents from the old package version", new_version.style())]
     SatisfyError {
         new_version: Version,
     },
@@ -46,12 +46,12 @@ pub enum InstallerError {
         package_id: PackageId,
     },
 
-    #[error("Could not update, the given version {} is lower then the current version.", new_version.style())]
+    #[error("Could not update, the given version {} is lower then the current version", new_version.style())]
     VersionTooLowError {
         new_version: Version,
     },
 
-    #[error("Cannot delete package, {} is a dependency.", package_name.style())]
+    #[error("Cannot delete package, {} is a dependency", package_name.style())]
     DependencyError {
         package_name: PackageName,
     },
@@ -62,12 +62,12 @@ pub enum InstallerError {
         dependency: PackageId,
     },
 
-    #[error("Canceled package installation: {reason}.")]
+    #[error("Canceled package installation: {reason}")]
     InstallationCanceled {
         reason: String,
     },
 
-    #[error("An unreachable state has been reached: {msg}.")]
+    #[error("An unreachable state has been reached: {msg}")]
     UnreachableError {
         msg: String,
     },

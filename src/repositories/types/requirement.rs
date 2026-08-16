@@ -70,7 +70,7 @@ impl Requirement {
     /// Gets the message that should be shown when the requirement is not satisfied.
     pub fn get_not_satisfied_message(&self) -> &str {
         match self {
-            Requirement::Msvc => "Microsoft Visual C++ cannot be found, please install it from the Microsoft website first.",
+            Requirement::Msvc => "Microsoft Visual C++ cannot be found, please install it from the Microsoft website first",
         }
     }
 }

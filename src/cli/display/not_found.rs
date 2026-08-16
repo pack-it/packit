@@ -67,7 +67,7 @@ pub fn repository_package(package_name: &PackageName, manager: &RepositoryManage
 
 /// Shows an error that the package version cannot be found (in the register) and a fuzzy alternative. Then exits at the end.
 pub fn register_package_version(package_id: &PackageId, register: &PackageRegister) -> ! {
-    error!(msg: "Package {} cannot be found.", package_id.style());
+    error!(msg: "Package {} cannot be found", package_id.style());
     register_version(&package_id.name, register);
 
     let fuzzy_match = fuzzy::min_search(register.iterate_package_names(), &package_id.name);

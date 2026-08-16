@@ -40,7 +40,7 @@ impl<'a> RepositoryManager<'a> {
         for (id, repository) in &config.repositories {
             let provider = provider::create_metadata_provider(repository);
             let Some(provider) = provider else {
-                warning!("Cannot create repository provider for repository '{id}'.");
+                warning!("Cannot create repository provider for repository '{id}'");
                 continue;
             };
 
@@ -77,7 +77,7 @@ impl<'a> RepositoryManager<'a> {
             // Try to create the prebuild provider
             let prebuild_provider = provider::create_prebuild_provider(repository);
             let Some(prebuild_provider) = prebuild_provider else {
-                warning!("Cannot create prebuild provider for repository '{id}'.");
+                warning!("Cannot create prebuild provider for repository '{id}'");
                 continue;
             };
 
@@ -139,7 +139,7 @@ impl<'a> RepositoryManager<'a> {
             let provider = match self.metadata_providers.get(repository_id) {
                 Some(provider) => provider,
                 None => {
-                    warning!("Cannot find provider for '{repository_id}', while it should exist.");
+                    warning!("Cannot find provider for '{repository_id}', while it should exist");
                     continue;
                 },
             };
@@ -235,7 +235,7 @@ impl<'a> RepositoryManager<'a> {
             let provider = match self.metadata_providers.get(repository_id) {
                 Some(provider) => provider,
                 None => {
-                    warning!("Cannot find provider for '{repository_id}', while it should exist.");
+                    warning!("Cannot find provider for '{repository_id}', while it should exist");
                     continue;
                 },
             };
@@ -244,7 +244,7 @@ impl<'a> RepositoryManager<'a> {
                 Ok(package) => package,
                 Err(RepositoryError::ParseError(e)) => {
                     debug!(
-                        "Cannot parse package {} in repository '{repository_id}', continuing.",
+                        "Cannot parse package {} in repository '{repository_id}', continuing",
                         package_id.style()
                     );
                     not_found_reasons.insert(repository_id, PackageNotFoundReason::InvalidMetadata { error: Box::new(e) });
@@ -252,7 +252,7 @@ impl<'a> RepositoryManager<'a> {
                 },
                 Err(_) => {
                     debug!(
-                        "Cannot find package {} in repository '{repository_id}', continuing.",
+                        "Cannot find package {} in repository '{repository_id}', continuing",
                         package_id.style()
                     );
                     continue;

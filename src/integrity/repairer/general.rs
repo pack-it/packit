@@ -8,7 +8,7 @@ pub fn fix_stray_directories(strays: HashSet<PathBuf>) -> Result<()> {
     for directory in strays {
         if !fs::exists(&directory).err_with_path("check existence of", &directory)? {
             warning!(
-                "Skipping deletion of stray directory '{}' because it doesn't exist.",
+                "Skipping deletion of stray directory '{}' because it doesn't exist",
                 directory.display()
             );
         }

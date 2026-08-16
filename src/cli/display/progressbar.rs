@@ -34,7 +34,7 @@ impl ProgressBar {
         }
 
         let template = format!("{prefix} [{{wide_bar}}] [{percent}]");
-        ProgressStyle::with_template(&template).expect("Expected template to be correct.").progress_chars("\u{2501}\u{2501} ")
+        ProgressStyle::with_template(&template).expect("Expected template to be correct").progress_chars("\u{2501}\u{2501} ")
     }
 
     /// Sets the position of the progress bar.

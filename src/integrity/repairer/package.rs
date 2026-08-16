@@ -80,7 +80,7 @@ pub fn fix_inconsistent_storage(
         let (symlinked, active) = match register.get_package(&missing_package.name) {
             Some(package) => (package.symlinked, package.active_version == missing_package.version),
             None => {
-                warning!("Inconsistent package cannot be found in Register.toml anymore, eventhough it was found before.");
+                warning!("Inconsistent package cannot be found in Register.toml anymore, eventhough it was found before");
                 (false, false)
             },
         };

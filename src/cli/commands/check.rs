@@ -22,7 +22,7 @@ pub struct CheckArgs {
     packages: Vec<OptionalPackageId>,
 }
 
-const ISSUE_FOUND_MESSAGE: &str = "Consider running `pit fix` to resolve the issues above.";
+const ISSUE_FOUND_MESSAGE: &str = "Consider running `pit fix` to resolve the issues above";
 
 impl HandleCommand for CheckArgs {
     fn handle(&self) {
@@ -33,7 +33,7 @@ impl HandleCommand for CheckArgs {
                 Ok(Some(issue)) => print!("{issue}"),
                 Ok(_) => {},
                 Err(e) if verifier.issues_found() > 0 => {
-                    debug!(err: e, "An error occured when issues were already found, skipping remaining checks.");
+                    debug!(err: e, "An error occured when issues were already found, skipping remaining checks");
                     return;
                 },
                 Err(e) => {
@@ -67,7 +67,7 @@ impl HandleCommand for CheckArgs {
                 Ok(Some(issue)) => print!("{issue}"),
                 Ok(_) => {},
                 Err(e) if verifier.issues_found() > 0 => {
-                    debug!(err: e, "An error occured when issues were already found, skipping remaining checks.");
+                    debug!(err: e, "An error occured when issues were already found, skipping remaining checks");
                     return;
                 },
                 Err(e) => {

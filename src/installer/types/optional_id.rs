@@ -95,8 +95,8 @@ mod tests {
 
     #[test]
     fn from_str_optional() {
-        let package_name = PackageName::from_str("test").expect("Expected valid package name.");
-        let version = Version::from_str("3.4.1").expect("Expected Version.");
+        let package_name = PackageName::from_str("test").expect("Expected valid package name");
+        let version = Version::from_str("3.4.1").expect("Expected Version");
         let correct_version = PackageId::new(package_name.clone(), version).into();
         match OptionalPackageId::from_str("test@3.4.1") {
             Ok(id) => assert_eq!(id, correct_version),

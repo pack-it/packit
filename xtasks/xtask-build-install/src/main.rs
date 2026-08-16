@@ -123,7 +123,7 @@ fn get_project_root_path() -> PathBuf {
     Path::new(std::env!("CARGO_MANIFEST_DIR"))
         .ancestors()
         .nth(2)
-        .expect("Expected CARGO_MANIFEST_DIR to return the xtask-build-install directory path.")
+        .expect("Expected CARGO_MANIFEST_DIR to return the xtask-build-install directory path")
         .to_path_buf()
 }
 

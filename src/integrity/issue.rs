@@ -209,7 +209,7 @@ impl Display for Issue {
             },
             Issue::MissingPackitGroup => {
                 writeln!(f, "Packit group missing")?;
-                writeln!(f, "The 'packit' group is missing while multiuser mode is turned on.")?;
+                writeln!(f, "The 'packit' group is missing while multiuser mode is turned on")?;
             },
             Issue::StrayDirectories(directories) => {
                 writeln!(f, "Stray directories")?;
@@ -239,32 +239,32 @@ impl Issue {
     /// Gets a message which descripes the fix for each issue.
     pub fn get_fix_message(&self) -> &str {
         match &self {
-            Issue::IncorrectPermissions(_) => "To fix this issue we set the permissions again.",
-            Issue::MissingConfig => "To fix this issue we try to reconstruct the Config.toml with data still in the Packit directory.",
-            Issue::MissingRegister => "To fix this issue we try to reconstruct the Register.toml with data still in the Packit directory.",
-            Issue::StrayDirectories(_) => "To fix this issue we remove the stray directories.",
-            Issue::InvalidActive(_) => "To fix this issue we set the active version to the latest installed version.",
-            Issue::ForbiddenLink(_) => "To fix this issue we unlink the packages which have a forbidden link.",
-            Issue::MissingLinks(_) => "To fix this issue we (temporarily) unlink and then link the package again.",
-            Issue::BrokenTree(_) => "To fix this issue the missing packages will be installed.",
+            Issue::IncorrectPermissions(_) => "To fix this issue we set the permissions again",
+            Issue::MissingConfig => "To fix this issue we try to reconstruct the Config.toml with data still in the Packit directory",
+            Issue::MissingRegister => "To fix this issue we try to reconstruct the Register.toml with data still in the Packit directory",
+            Issue::StrayDirectories(_) => "To fix this issue we remove the stray directories",
+            Issue::InvalidActive(_) => "To fix this issue we set the active version to the latest installed version",
+            Issue::ForbiddenLink(_) => "To fix this issue we unlink the packages which have a forbidden link",
+            Issue::MissingLinks(_) => "To fix this issue we (temporarily) unlink and then link the package again",
+            Issue::BrokenTree(_) => "To fix this issue the missing packages will be installed",
             Issue::MissingDependencies(_) => {
-                "To fix this issue the missing dependencies will be added to the register. Using existing satisfying packages or the latest version otherwise."
+                "To fix this issue the missing dependencies will be added to the register. Using existing satisfying packages or the latest version otherwise"
             },
             Issue::InvalidDependencies(_) => {
-                "To fix this issue we remove the invalid dependencies from the package dependencies in the register."
+                "To fix this issue we remove the invalid dependencies from the package dependencies in the register"
             },
-            Issue::MissingDependents(_) => "To fix this issue the dependents will be added to the package from which they are missing.",
-            Issue::InvalidDependents(_) => "To fix this issue we remove the invalid dependents from the register.",
-            Issue::MissingDependencySymlinks(_) => "To fix this issue we create the necessary symlinks in the dependencies directory.",
-            Issue::InvalidFiles(_) => "To fix this issue we remove the invalid files.",
+            Issue::MissingDependents(_) => "To fix this issue the dependents will be added to the package from which they are missing",
+            Issue::InvalidDependents(_) => "To fix this issue we remove the invalid dependents from the register",
+            Issue::MissingDependencySymlinks(_) => "To fix this issue we create the necessary symlinks in the dependencies directory",
+            Issue::InvalidFiles(_) => "To fix this issue we remove the invalid files",
             Issue::InconsistentStorage(_) => {
-                "To fix this issue the packages are temporarily removed from the register and then reinstalled."
+                "To fix this issue the packages are temporarily removed from the register and then reinstalled"
             },
             Issue::InconsistentRegister(_) => {
-                "To fix this issue we try to reconstruct the Register.toml with data still in the Packit directory."
+                "To fix this issue we try to reconstruct the Register.toml with data still in the Packit directory"
             },
-            Issue::FailedTest(_) | Issue::AlteredPackage(_) => "To fix this issue we try to re-install the package.",
-            Issue::MissingPackitGroup => "There is no automatic fix for this issue available yet.",
+            Issue::FailedTest(_) | Issue::AlteredPackage(_) => "To fix this issue we try to re-install the package",
+            Issue::MissingPackitGroup => "There is no automatic fix for this issue available yet",
         }
     }
 }

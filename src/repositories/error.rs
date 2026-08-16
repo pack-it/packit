@@ -39,7 +39,7 @@ pub enum RepositoryError {
     #[error("Package metadata is not valid: {0}")]
     ValidationError(String),
 
-    #[error("Cannot find target for package.")]
+    #[error("Cannot find target for package")]
     TargetError,
 
     #[error("Dependency '{dependency}' cannot be satisfied: {reason}")]
@@ -48,10 +48,10 @@ pub enum RepositoryError {
         reason: PackageNotFoundReason,
     },
 
-    #[error("No supported version for the current target could be found for package '{0}'.")]
+    #[error("No supported version for the current target could be found for package '{0}'")]
     SupportError(String),
 
-    #[error("Request returned an unsuccessful status code '{0}'.")]
+    #[error("Request returned an unsuccessful status code '{0}'")]
     UnsuccessfulRequest(reqwest::StatusCode),
 
     #[error("Error while interacting with filesystem")]

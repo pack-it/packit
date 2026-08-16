@@ -51,7 +51,7 @@ fn create_normalized_tar(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &P
         let filename = entry.file_name().expect("Expected a valid path termination");
         let filename = filename.to_str().ok_or(io::Error::new(
             io::ErrorKind::InvalidFilename,
-            "Filename contains invalid unicode character.",
+            "Filename contains invalid unicode character",
         ))?;
 
         // Add symlink to tar

@@ -111,7 +111,7 @@ impl HandleCommand for InstallArgs {
         };
 
         if self.skip_test {
-            warning!("Packit tests are skipped, because the `--skip-test` flag is enabled");
+            warning!("Packit tests are skipped, because the '--skip-test' flag is enabled");
         }
 
         let installer_options = InstallerOptions::default()

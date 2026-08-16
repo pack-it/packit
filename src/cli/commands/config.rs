@@ -274,13 +274,13 @@ impl ConfigArgs {
         for repo in new_rank {
             // Check for invalid repository ids
             if !config.get_config().repositories.contains_key(repo) {
-                error!(msg: "Repository '{repo}' does not exist. Please add it to the config first.");
+                error!(msg: "Repository '{repo}' does not exist. Please add it to the config first");
                 exit(1);
             }
 
             // Check for duplicates
             if !seen.insert(repo) {
-                error!(msg: "The given repositories rank contains duplicates. Please remove duplicate repository ids.");
+                error!(msg: "The given repositories rank contains duplicates. Please remove duplicate repository ids");
                 exit(1);
             }
         }
@@ -297,7 +297,7 @@ impl ConfigArgs {
     fn handle_add_repository(&self, mut config: EditableConfig, id: &str, url: &str, provider: &Option<String>, unchecked: bool) {
         // Check if the config already contains a repository with this id
         if config.get_config().repositories.contains_key(id) {
-            error!(msg: "A repository with id '{id}' already exists.");
+            error!(msg: "A repository with id '{id}' already exists");
             exit(1);
         }
 
@@ -315,7 +315,7 @@ impl ConfigArgs {
             // Check if the repository is reachable
             if is_repository_reachable {
                 if ask_user("Are you sure you want to add this repository?", QuestionResponse::No).unwrap_or_exit(1).is_no_or_invalid() {
-                    println!("Cancelling adding of repository.");
+                    println!("Cancelling adding of repository");
                     return;
                 }
             }
@@ -330,7 +330,7 @@ impl ConfigArgs {
                     pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
 
                     if ask_user("Do you want to add this prebuild repository?", QuestionResponse::Yes).unwrap_or_exit(1).is_yes() {
-                        println!("Adding prebuild repository to config.");
+                        println!("Adding prebuild repository to config");
                         repository.prebuilds_url = Some(prebuilds_url.clone());
                         repository.prebuilds_provider = repo_meta.prebuilds_provider;
                     }
@@ -352,13 +352,13 @@ impl ConfigArgs {
     fn handle_remove_repository(&self, mut config: EditableConfig, id: &str) {
         // Check if the config even contains this repository
         if !config.get_config().repositories.contains_key(id) {
-            error!(msg: "Repository '{id}' does not exist.");
+            error!(msg: "Repository '{id}' does not exist");
             exit(1);
         }
 
         // Check if the config only contains this repository
         if config.get_config().repositories.len() == 1 {
-            error!(msg: "Repository '{id}' is the only repository in the config, please add another one before removing this one.");
+            error!(msg: "Repository '{id}' is the only repository in the config, please add another one before removing this one");
             exit(1);
         }
 
@@ -374,7 +374,7 @@ impl ConfigArgs {
     fn handle_set_url(&self, mut config: EditableConfig, id: &str, url: &str, provider: &Option<String>, unchecked: bool) {
         // Check if the config even contains this repository
         let Some(mut repository) = config.get_config().repositories.get(id).cloned() else {
-            error!(msg: "Repository '{id}' does not exist.");
+            error!(msg: "Repository '{id}' does not exist");
             exit(1);
         };
 
@@ -390,7 +390,7 @@ impl ConfigArgs {
                     .unwrap_or_exit(1)
                     .is_no_or_invalid()
                 {
-                    println!("Cancelling repository url change.");
+                    println!("Cancelling repository url change");
                     return;
                 }
             }
@@ -415,7 +415,7 @@ impl ConfigArgs {
     fn handle_set_prebuilds(&self, mut config: EditableConfig, id: &str, prebuilds_url: &str, prebuilds_provider: &Option<String>) {
         // Check if the config even contains this repository
         let Some(mut repository) = config.get_config().repositories.get(id).cloned() else {
-            error!(msg: "Repository '{id}' does not exist.");
+            error!(msg: "Repository '{id}' does not exist");
             exit(1);
         };
 
@@ -445,7 +445,7 @@ impl ConfigArgs {
     fn handle_disable_prebuilds(&self, mut config: EditableConfig, id: &str, value: bool, remove_urls: bool) {
         // Check if the config even contains this repository
         let Some(mut repository) = config.get_config().repositories.get(id).cloned() else {
-            error!(msg: "Repository '{id}' does not exist.");
+            error!(msg: "Repository '{id}' does not exist");
             exit(1);
         };
 
