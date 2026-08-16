@@ -63,7 +63,7 @@ main() {
 trap cleanup INT TERM EXIT
 SHOULD_CLEANUP=1
 
-VERSION="0.0.3"
+VERSION="0.0.4"
 REVISION="0"
 CURRENT_OS="$(uname -s)"
 

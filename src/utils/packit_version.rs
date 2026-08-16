@@ -13,7 +13,7 @@ pub(crate) use packit_version;
 
 macro_rules! packit_version_name {
     () => {
-        "The Vibrant Administrator"
+        "The Build Commander"
     };
 }
 pub(crate) use packit_version_name;

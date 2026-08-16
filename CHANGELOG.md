@@ -4,19 +4,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
-## [Unreleased](https://github.com/pack-it/packit/compare/0.0.3...HEAD)
+## [Unreleased](https://github.com/pack-it/packit/compare/0.0.4...HEAD)
+
+
+## [v0.0.4](https://github.com/pack-it/packit/compare/0.0.3...0.0.4) - 2026-08-16
 
 ### Added
-- The `build_requirements` and `test_requirements` fields, with the `msvc` requirement.
+- The `build_requirements` and `test_requirements` fields, with the `msvc` requirement. (BREAKING)
 - The `meta-check` utility command, which checks the metadata of a given repository.
 - The `InvalidFiles` check in the verifier, which check directories for invalid files.
 - The `MissingDependencySymlinks` check in the verifier, which checks for missing or incorrect symlinks in the dependencies directory of a certain package.
 - The `prebuilds.toml` file in the metadata, to support more advanced specification of prebuilds for a package:
     - Prebuilds can now be shared by multiple targets.
     - Prebuilds can now exclude certain paths of a package.
-- The `skip-test` and `skip-build-test` flags in the `install` command, to skip Packit tests or skip build tests.
+- The `skip-test` and `skip-build-test` flags in the `install` command, to skip Packit tests or skip build tests. (BREAKING)
 - The `--tree` flag in the `search` command, to show the tree of a given package.
-- The `pit info` command to show information about the current Packit install, such as prefix path and target information.
+- The `info` command (without arguments) to show information about the current Packit install, such as prefix path and target information.
 - The `--active` flag in the `info` command, to use the active version.
 - The `--latest` flag in the `search` command, to use the latest version.
 - Progress bars are now shown while build sources or prebuilds are being downloaded.
@@ -32,18 +35,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changes
 - Change display of true and false values in the `info` and `search` commands.
-- Prebuilds now have a toml metadata file instead of the checksum file, containing the checksum and size of the prebuild.
-- The license field in the metadata now allows nesting and specifying exceptions.
+- Prebuilds now have a toml metadata file instead of the checksum file, containing the checksum and size of the prebuild. (BREAKING)
+- The license field in the metadata now allows nesting and specifying exceptions. (BREAKING)
 - The `prebuild_url` and `prebuild_provider` fields in the `repository.toml` file now represent a suggestion that needs to be added to the config in order to be used.
 - The `Alterations` verifier check is now enabled for packages that were installed from a prebuild.
 - The `search --regex` results are now sorted by package name.
 - The `config show` command now also shows the `prebuilds_disabled` option.
-- Setting the `use_<script>` field is now required to use `preinstall`, `postinstall` and `uninstall` scripts.
+- Setting the `use_<script>` field is now required to use `preinstall`, `postinstall` and `uninstall` scripts. (BREAKING)
 - The build process now automatically detects license files and copies them to `<package-prefix>/share/licenses/<package-name>`.
 - The `link` command now also shows warnings when `--force` is enabled.
 - The install tree now has color coding, based on installed, prebuild and build state.
 - Package deprecation checks now ignore deprecations that are more than a year in the future.
-- The build process now automatically detects the root of a source directory, meaning `cd` in scripts is not needed anymore.
+- The build process now automatically detects the root of a source directory, meaning `cd` in scripts is not needed anymore. (BREAKING)
 
 ### Fixed
 - Fix error messages not representing the error correctly.
@@ -55,7 +58,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Fix the wrongly ignored errors in the repairer.
 - Fix binary patching by writing a full `Fat MachO binary`, instead of one of the separate binaries within.
 - Fix M4 environment variable pointing to install path, instead of the m4 binary.
-- Fix Packit prefix directory in cmake and aclocal environment variables.
+- Fix Packit prefix directory in cmake and aclocal environment variables. (BREAKING)
 - Fix missing build dependency paths in `ACLOCAL_PATH` environment variable.
 - Fix `unlink` removing dependencies symlinks and other symlinks outside of the symlinked directories.
 
