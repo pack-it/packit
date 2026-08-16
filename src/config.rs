@@ -23,6 +23,7 @@ use crate::{
     },
 };
 
+/// Represents a config which can be edited without losing document style.
 #[derive(Debug)]
 pub struct EditableConfig {
     config: Config,
@@ -69,7 +70,7 @@ pub struct Repository {
 }
 
 impl Repository {
-    /// Creates a new repository with the specified url and provider
+    /// Creates a new repository with the specified url and provider.
     pub fn new(url: &str, provider: &str) -> Self {
         Self {
             url: url.to_string(),
@@ -80,7 +81,7 @@ impl Repository {
         }
     }
 
-    /// Specifies the default repository provider id
+    /// Specifies the default repository provider id.
     pub fn default_repository_provider() -> String {
         DEFAULT_METADATA_PROVIDER_ID.into()
     }

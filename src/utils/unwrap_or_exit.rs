@@ -12,7 +12,7 @@ pub trait UnwrapOrExit<T> {
     fn unwrap_or_exit(self, exit_code: i32) -> T;
 }
 
-// Implementation of UnwrapOrExit for Result.
+// Implementation of `UnwrapOrExit` for `Result`.
 impl<T, E: Error> UnwrapOrExit<T> for Result<T, E> {
     fn unwrap_or_exit_msg(self, msg: &str, exit_code: i32) -> T {
         match self {
@@ -35,7 +35,7 @@ impl<T, E: Error> UnwrapOrExit<T> for Result<T, E> {
     }
 }
 
-// Implementation of UnwrapOrExit for Option.
+// Implementation of `UnwrapOrExit` for `Option`.
 impl<T> UnwrapOrExit<T> for Option<T> {
     fn unwrap_or_exit_msg(self, msg: &str, exit_code: i32) -> T {
         match self {

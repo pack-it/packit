@@ -54,7 +54,7 @@ fn main() {
     let package_file_name = format!("{package_name}.tar.gz");
     let archive_destination = destination.join(&package_file_name);
     if !command.overwrite && archive_destination.exists() {
-        eprintln!("The package already exists, please remove it first or specify the `--overwrite` option");
+        eprintln!("The package already exists, please remove it first or specify the '--overwrite' option");
         exit(1);
     }
 
@@ -83,7 +83,7 @@ fn get_project_root_path() -> PathBuf {
     Path::new(std::env!("CARGO_MANIFEST_DIR"))
         .ancestors()
         .nth(2)
-        .expect("Expected CARGO_MANIFEST_DIR to return the xtask-package-build directory path.")
+        .expect("Expected CARGO_MANIFEST_DIR to return the xtask-package-build directory path")
         .to_path_buf()
 }
 

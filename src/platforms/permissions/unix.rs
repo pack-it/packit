@@ -6,7 +6,7 @@ use std::{
         self,
         fs::{MetadataExt, PermissionsExt},
     },
-    path::PathBuf,
+    path::Path,
 };
 
 use thiserror::Error;
@@ -27,7 +27,7 @@ pub enum PlatformError {
 }
 
 /// Checks if a directory is writeable. Returns true if it is, false otherwise.
-pub(super) fn is_writable(path: &PathBuf) -> Result<bool> {
+pub(super) fn is_writable(path: &Path) -> Result<bool> {
     let metadata = fs::metadata(path).err_with_path("read metadata of", path)?;
     let mode = metadata.mode();
 
@@ -57,7 +57,7 @@ pub(super) fn is_writable(path: &PathBuf) -> Result<bool> {
 
 /// Sets the permissions of packit files.
 /// Could return a `PermissionError::GroupDoesNotExist` if the packit group does not exist when using multiuser mode or an IO error.
-pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool, recurse: bool) -> Result<()> {
+pub fn set_packit_permissions(path: &Path, is_multiuser: bool, recurse: bool) -> Result<()> {
     let group_id = match is_multiuser {
         true => match get_group_id(PACKIT_GROUP_NAME) {
             Ok(uid) => Some(uid),
@@ -85,7 +85,7 @@ pub fn does_packit_group_exist() -> Result<bool> {
 
 /// Sets the permissions of a given directory. It does so recursively if the recurse parameter is true.
 /// Could return an IO error.
-fn set_file_permissions(path: &PathBuf, mut old_permissions: Permissions, group_id: Option<u32>, recurse: bool) -> Result<()> {
+fn set_file_permissions(path: &Path, mut old_permissions: Permissions, group_id: Option<u32>, recurse: bool) -> Result<()> {
     if let Some(group_id) = group_id {
         set_ownership(path, None, Some(group_id))?;
 
@@ -113,7 +113,7 @@ fn set_file_permissions(path: &PathBuf, mut old_permissions: Permissions, group_
 
 /// Set ownership of a directory based on the provided user and group id.
 /// Could return an IO error.
-pub fn set_ownership(path: &PathBuf, uid: Option<u32>, gid: Option<u32>) -> Result<()> {
+pub fn set_ownership(path: &Path, uid: Option<u32>, gid: Option<u32>) -> Result<()> {
     // If the path is a symlink, set symlink ownership
     if path.is_symlink() {
         unix::fs::lchown(path, uid, gid).err_with_path("change ownership of", path)?;

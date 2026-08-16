@@ -100,7 +100,7 @@ impl Source {
         vec
     }
 
-    /// Custom deserializer to deserialize integer keys correctly
+    /// Custom deserializer to deserialize integer keys correctly.
     fn deserialize_patches<'de, D>(deserializer: D) -> Result<HashMap<u32, Patch>, D::Error>
     where
         D: Deserializer<'de>,

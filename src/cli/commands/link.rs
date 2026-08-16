@@ -27,15 +27,15 @@ use crate::{
 #[derive(Args, Debug)]
 pub struct LinkArgs {
     /// The name of the package to link
-    pub package_name: PackageName,
+    package_name: PackageName,
 
     /// True to force linking, even when we should not link
     #[arg(short, long, default_value = "false")]
-    pub force: bool,
+    force: bool,
 
     /// True to overwrite existing links from another package, false to skip existing links
     #[arg(long, default_value = "false")]
-    pub overwrite: bool,
+    overwrite: bool,
 }
 
 impl HandleCommand for LinkArgs {
@@ -58,7 +58,7 @@ impl HandleCommand for LinkArgs {
 
         // Show warning if forced
         if self.force {
-            warning!("Forcing symlink can cause problems, please be carefull when using --force");
+            warning!("Forcing symlink can cause problems, please be carefull when using '--force'");
         }
 
         // Get active package version

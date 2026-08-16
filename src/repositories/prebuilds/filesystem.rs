@@ -41,18 +41,19 @@ impl PrebuildProvider for FileSystemPrebuildProvider {
 
 impl FileSystemPrebuildProvider {
     /// Creates a new filesystem prebuild provider for the given url.
-    /// Returns `None` if the url is invalid
+    /// Returns `None` if the url is invalid.
     pub fn from_url(url: &str) -> Option<Self> {
         Some(Self { path: PathBuf::from(url) })
     }
 
+    /// Gets the file path of a prebuild file with the given package id, revision, prebuild id and extension.
     fn get_file_path(&self, package_id: &PackageId, revision: u64, prebuild_id: &str, extension: &str) -> Result<PathBuf> {
         let prefix = package_id.name.get_prefix().to_string();
         let prebuild_name = format!("{package_id}-{revision}-{prebuild_id}.{extension}");
         let path = self.path.join("packages").join(prefix).join(&package_id.name).join(package_id.version.to_string()).join(prebuild_name);
 
         // Check if prebuild path exists
-        if !fs::exists(&path).err_with_path("check existance of", &path)? {
+        if !fs::exists(&path).err_with_path("check existence of", &path)? {
             return Err(RepositoryError::PrebuildNotFound {
                 prebuild_id: prebuild_id.into(),
                 package_id: package_id.clone(),

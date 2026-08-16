@@ -22,13 +22,13 @@ use crate::{
 #[derive(Args, Debug)]
 pub struct SwitchDependencyArgs {
     /// The name of the package to switch dependency of
-    pub package: PackageId,
+    package: PackageId,
 
     /// The name of the dependency to switch
-    pub dependency_name: PackageName,
+    dependency_name: PackageName,
 
     /// The new version of the dependency
-    pub dependency_version: Version,
+    dependency_version: Version,
 }
 
 impl HandleCommand for SwitchDependencyArgs {

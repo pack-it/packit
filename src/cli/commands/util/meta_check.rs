@@ -13,7 +13,7 @@ use crate::{
     config::{Config, Repository},
     installer::types::PackageName,
     integrity::metadata::MetaCheck,
-    repositories::provider::{self},
+    repositories::provider,
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 

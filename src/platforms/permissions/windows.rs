@@ -1,11 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{
-    ffi::OsStr,
-    fs::{self, Metadata},
-    os::windows::ffi::OsStrExt,
-    path::PathBuf,
-    ptr,
-};
+use std::{ffi::OsStr, fs, os::windows::ffi::OsStrExt, path::Path, ptr};
 
 use crate::{
     cli::display::logging::warning,
@@ -45,19 +39,19 @@ use windows::{
     core::{BOOL, HSTRING, PCWSTR, PWSTR},
 };
 
-/// Wrapper struct to handle freeing of PSID buffer
+/// Wrapper struct to handle freeing of `PSID` buffer.
 pub struct Sid {
     ptr: PSID,
 }
 
 impl Sid {
-    /// Creates a new Sid with a buffer of the given size
+    /// Creates a new `Sid` with a buffer of the given size.
     pub fn with_size(size: u32) -> Result<Self> {
         let ptr = unsafe { PSID(LocalAlloc(LMEM_FIXED, size as usize).map_err(PlatformError::from)?.0) };
         Ok(Self { ptr })
     }
 
-    /// Gets the Sid as PSID
+    /// Gets the `Sid` as `PSID`.
     pub fn as_psid(&self) -> PSID {
         self.ptr
     }
@@ -72,18 +66,18 @@ impl Drop for Sid {
     }
 }
 
-/// Wrapper struct to handle freeing of `PSECURITY_DESCRIPTOR` buffer
+/// Wrapper struct to handle freeing of `PSECURITY_DESCRIPTOR` buffer.
 pub struct SecurityDescriptor {
     ptr: PSECURITY_DESCRIPTOR,
 }
 
 impl SecurityDescriptor {
-    /// Creates a new `SecurityDescriptor` from the given `PSECURITY_DESCRIPTOR`
+    /// Creates a new `SecurityDescriptor` from the given `PSECURITY_DESCRIPTOR`.
     pub fn from_psecurity_descriptor(psecurity_descriptor: PSECURITY_DESCRIPTOR) -> Self {
         Self { ptr: psecurity_descriptor }
     }
 
-    /// Gets the `SecurityDescriptor` as `PSECURITY_DESCRIPTOR`
+    /// Gets the `SecurityDescriptor` as `PSECURITY_DESCRIPTOR`.
     pub fn as_psecurity_descriptor(&self) -> PSECURITY_DESCRIPTOR {
         self.ptr
     }
@@ -112,7 +106,7 @@ pub enum PlatformError {
 
 /// Checks if the given directory is writable by the current user. Returns true if it is, false if not.
 /// Could return a `PlatformError::SecurityInfoError` or a `PlatformError::WindowsAPIError` error.
-pub fn is_writable(path: &PathBuf) -> Result<bool> {
+pub fn is_writable(path: &Path) -> Result<bool> {
     let wide_path_buffer = path_to_pcwstr(path);
     let wide_path = PCWSTR(wide_path_buffer.as_ptr());
     let (_, security_descriptor) = get_security_info(wide_path)?;
@@ -190,7 +184,7 @@ pub fn is_writable(path: &PathBuf) -> Result<bool> {
 /// Sets the permissions for the current user and for the packit group if multiuser is enabled.
 /// If multiuser mode is enabled it will also set the ownership for the entire packit group.
 /// Could return a `PlatformError::SecurityInfoError`, a `PlatformError::WindowsAPIError` or a `PermissionError::GroupDoesNotExist` error.
-pub fn set_packit_permissions(path: &PathBuf, is_multiuser: bool, recurse: bool) -> Result<()> {
+pub fn set_packit_permissions(path: &Path, is_multiuser: bool, recurse: bool) -> Result<()> {
     // Get the current sid
     let sid = match is_multiuser {
         true => get_group_sid()?,
@@ -306,7 +300,7 @@ fn enable_privilege(name: &str) -> Result<()> {
 
 /// Recursively set the ownership for a given path (if recurse is true).
 /// Could return a `PlatformError::SecurityInfoError`, a `PlatformError::WindowsAPIError` or an `PermissionError::IOError` error.
-fn set_ownership(path: &PathBuf, sid: PSID, recurse: bool) -> Result<()> {
+fn set_ownership(path: &Path, sid: PSID, recurse: bool) -> Result<()> {
     let wide_path_buffer = path_to_pcwstr(path);
     let wide_path = PCWSTR(wide_path_buffer.as_ptr());
 
@@ -448,8 +442,8 @@ fn get_group_sid() -> Result<Sid> {
     }
 }
 
-/// Converts a given path to a wide string buffer (with null termination)
-fn path_to_pcwstr(path: &PathBuf) -> Vec<u16> {
+/// Converts a given path to a wide string buffer (with null termination).
+fn path_to_pcwstr(path: &Path) -> Vec<u16> {
     OsStr::new(path)
         .encode_wide()
         .chain(Some(0)) // Null termination

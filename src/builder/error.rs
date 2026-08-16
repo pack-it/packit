@@ -13,13 +13,13 @@ use crate::{
 /// The errors that occur during building.
 #[derive(Error, Debug)]
 pub enum BuilderError {
-    #[error("Dependency {} of type '{dependency_type}' is not installed.", package_name.style())]
+    #[error("Dependency {} of type '{dependency_type}' is not installed", package_name.style())]
     MissingDependencyError {
         dependency_type: String,
         package_name: PackageName,
     },
 
-    #[error("Requirement '{requirement}' is not satisfied.\n{}", requirement.get_not_satisfied_message())]
+    #[error("Requirement '{requirement}' is not satisfied\n{}", requirement.get_not_satisfied_message())]
     MissingRequirementError {
         requirement: Requirement,
     },
@@ -33,7 +33,7 @@ pub enum BuilderError {
     #[error("The required patch was not found in the repository")]
     RepositoryPatchNotFound,
 
-    #[error("Build files download unsuccessful, with status code: {0}.")]
+    #[error("Build files download unsuccessful, with status code: {0}")]
     RequestUnsuccessful(reqwest::StatusCode),
 
     #[error("Cannot unpack response")]

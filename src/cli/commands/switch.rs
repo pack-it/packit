@@ -25,14 +25,14 @@ use crate::{
 #[derive(Args, Debug)]
 pub struct SwitchArgs {
     /// The name of the package to switch
-    pub package_name: PackageName,
+    package_name: PackageName,
 
     /// The new active version of the package
-    pub package_version: Version,
+    package_version: Version,
 
     /// True to skip symlinking the package, false to keep the current symlinked state
     #[arg(long, default_value = "false")]
-    pub skip_symlinking: bool,
+    skip_symlinking: bool,
 }
 
 impl HandleCommand for SwitchArgs {
@@ -58,7 +58,7 @@ impl HandleCommand for SwitchArgs {
             Some(package_version) => package_version,
             None => {
                 let styled_package = format!("{}@{}", self.package_name, self.package_version).bold().blue();
-                error!(msg: "Package {styled_package} cannot be found.");
+                error!(msg: "Package {styled_package} cannot be found");
                 not_found::register_version(&self.package_name, &register);
                 exit(1);
             },
@@ -67,7 +67,7 @@ impl HandleCommand for SwitchArgs {
         // Show warning if skip symlinking is specified, but package was symlinked before
         if self.skip_symlinking && package.symlinked {
             warning!(
-                "Skipping symlinking while package was symlinked before. The package will not be automatically findable by your system anymore."
+                "Skipping symlinking while package was symlinked before. The package will not be automatically findable by your system anymore"
             );
         }
 

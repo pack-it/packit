@@ -127,7 +127,7 @@ impl Check {
     }
 
     /// Gets the checks in the correct order based on the 'check dependency tree'.
-    /// Returns a flattened 'check dependency tree'
+    /// Returns a flattened 'check dependency tree'.
     pub fn get_ordered_checks(checks: &[Self]) -> Vec<&Self> {
         let mut ordered = Vec::new();
         for check in checks {

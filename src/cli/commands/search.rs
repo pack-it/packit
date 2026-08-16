@@ -64,7 +64,6 @@ pub struct SearchArgs {
 }
 
 impl HandleCommand for SearchArgs {
-    /// Handles the search command, searching a certain package.
     fn handle(&self) {
         if self.regex {
             self.regex_search();
@@ -72,12 +71,12 @@ impl HandleCommand for SearchArgs {
         }
 
         // Get the optional id
-        let message = "The given search query isn't a valid package. For regex use `--regex`.";
+        let message = "The given search query isn't a valid package. For regex use '--regex'";
         let optional_id = OptionalPackageId::from_str(&self.query).unwrap_or_exit_msg(message, 1);
 
         // Check if there is version ambiguity (version and `--latest` specified)
         if optional_id.version.is_some() && self.latest {
-            error!(msg: "Version is ambiguous, version and `--latest` are both specified");
+            error!(msg: "Version is ambiguous, version and '--latest' are both specified");
             exit(1);
         }
 
@@ -98,7 +97,7 @@ impl HandleCommand for SearchArgs {
 
         // Version cannot be none if `--tree` is specified
         if self.tree && package_version.is_none() {
-            error!(msg: "The given search query isn't a valid package id. Use `--latest` for the latest version.");
+            error!(msg: "The given search query isn't a valid package id. Use '--latest' for the latest version");
             exit(1);
         }
 

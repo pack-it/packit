@@ -49,7 +49,7 @@ impl HandleCommand for InitArgs {
         }
 
         // Check if config directory is writable
-        if !permissions::is_writable(&config_dir.to_path_buf()).unwrap_or_exit_msg("Unable to check if config directory is writable", 1) {
+        if !permissions::is_writable(config_dir).unwrap_or_exit_msg("Unable to check if config directory is writable", 1) {
             error!(msg: "Packit cannot be initialized: the config directory at '{DEFAULT_CONFIG_DIR}' is not writable, please set the correct permissions");
             exit(1);
         }
@@ -121,7 +121,7 @@ impl HandleCommand for InitArgs {
         let active = false;
         let symlinked = false;
         let package_description =
-            "The universal package manager, designed to streamline the experience of installing packages on your system.".into();
+            "The universal package manager, designed to streamline the experience of installing packages on your system".into();
         let package_homepage = Some("https://github.com/pack-it/packit".into());
 
         // Add Packit to register

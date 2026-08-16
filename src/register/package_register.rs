@@ -47,7 +47,7 @@ impl PackageRegister {
     /// This function will return an error if the file cannot be opened or if the content is invalid.
     pub fn from(path: &Path) -> Result<Self> {
         // If the file does not exist, return an error
-        if !fs::exists(path).err_with_path("check existance of", path)? {
+        if !fs::exists(path).err_with_path("check existence of", path)? {
             return Err(RegisterError::RegisterDoesNotExist);
         }
 
@@ -89,7 +89,7 @@ impl PackageRegister {
     }
 
     /// Gets the default path of the Packit installed packages file.
-    pub fn get_path(prefix_directory: &PathBuf) -> PathBuf {
+    pub fn get_path(prefix_directory: &Path) -> PathBuf {
         Path::new(prefix_directory).join(REGISTER_FILENAME)
     }
 
@@ -102,7 +102,7 @@ impl PackageRegister {
         package_version: &PackageVersionMeta,
         dependency_ids: HashSet<PackageId>,
         source_repository: &Repository,
-        install_path: &PathBuf,
+        install_path: &Path,
         symlinked: bool,
         active: bool,
         used_prebuild: bool,
@@ -277,7 +277,7 @@ impl PackageRegister {
             return match self.get_package_version(&package_id) {
                 Some(package) => !package.dependents.is_empty(),
                 None => {
-                    warning!("Package version not found in dependency check.");
+                    warning!("Package version not found in dependency check");
                     false // If the package doesn't exist it's not a dependency
                 },
             };
@@ -463,7 +463,7 @@ pub mod tests {
         let current_target_bounds =
             TargetBounds::from_str(&TargetArchitecture::current().to_string()).expect("Expected valid target bounds");
 
-        let version_intervals = VersionIntervals::from_str(&package_id.version.to_string()).expect("Expected valid version intervals.");
+        let version_intervals = VersionIntervals::from_str(&package_id.version.to_string()).expect("Expected valid version intervals");
 
         PackageMeta {
             name: package_id.name.clone(),
@@ -619,7 +619,7 @@ pub mod tests {
         let register = create_register();
         let package_a_id = PackageId::from_str("F@6").expect("Expected valid package id");
         let dependency = create_dependency("F", ">5");
-        let package_a = register.get_package_version(&package_a_id).expect("Expected package F.");
+        let package_a = register.get_package_version(&package_a_id).expect("Expected package F");
 
         match register.get_latest_satisfying_package(&dependency) {
             Some(package) => assert_eq!(package.package_id, package_a.package_id),

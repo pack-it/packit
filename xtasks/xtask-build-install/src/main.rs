@@ -89,7 +89,7 @@ fn run_build() {
 }
 
 /// Copies the `packit` binary to the destinationa and creates the `pit` symlink.
-fn copy_binary_to_destination(destination: &PathBuf) {
+fn copy_binary_to_destination(destination: &Path) {
     // Create destination bin directory
     let bin_directory = destination.join("bin");
     if let Err(e) = fs::create_dir_all(&bin_directory) {
@@ -123,7 +123,7 @@ fn get_project_root_path() -> PathBuf {
     Path::new(std::env!("CARGO_MANIFEST_DIR"))
         .ancestors()
         .nth(2)
-        .expect("Expected CARGO_MANIFEST_DIR to return the xtask-build-install directory path.")
+        .expect("Expected CARGO_MANIFEST_DIR to return the xtask-build-install directory path")
         .to_path_buf()
 }
 

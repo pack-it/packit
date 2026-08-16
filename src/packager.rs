@@ -98,7 +98,7 @@ pub fn package(
 
 /// Compresses a given directory using a normalized tar and returns the compressed bytes.
 /// Uses `prebuild_meta` to determine directories to exclude.
-pub fn compress(source_directory: &PathBuf, prebuild_meta: &PrebuildMeta) -> Result<Vec<u8>> {
+pub fn compress(source_directory: &Path, prebuild_meta: &PrebuildMeta) -> Result<Vec<u8>> {
     let buffer = Vec::new();
     let encoder = GzBuilder::new().mtime(0).write(buffer, Compression::default());
 
@@ -116,7 +116,7 @@ pub fn compress(source_directory: &PathBuf, prebuild_meta: &PrebuildMeta) -> Res
 
 /// Creates a normalized tar by recursively adding files to the tar from a given directory while maintaining the directory structure.
 /// Uses `prebuild_meta` to determine directories to exclude.
-fn create_normalized_tar(builder: &mut TarBuilder, tar_path: &PathBuf, file_path: &PathBuf, prebuild_meta: &PrebuildMeta) -> Result<()> {
+fn create_normalized_tar(builder: &mut TarBuilder, tar_path: &Path, file_path: &Path, prebuild_meta: &PrebuildMeta) -> Result<()> {
     add_directory(builder, tar_path, file_path)?;
 
     // Get directory entries
@@ -164,7 +164,7 @@ fn create_normalized_tar(builder: &mut TarBuilder, tar_path: &PathBuf, file_path
 }
 
 /// Adds a normalized directory to a tar file.
-fn add_directory(builder: &mut TarBuilder, tar_path: &PathBuf, file_path: &PathBuf) -> Result<()> {
+fn add_directory(builder: &mut TarBuilder, tar_path: &Path, file_path: &Path) -> Result<()> {
     // Create directory header
     let mut header = Header::new_ustar();
     header.set_entry_type(EntryType::Directory);
@@ -177,7 +177,7 @@ fn add_directory(builder: &mut TarBuilder, tar_path: &PathBuf, file_path: &PathB
 }
 
 /// Adds a normalized file to a tar file.
-fn add_file(builder: &mut TarBuilder, tar_path: &PathBuf, file_path: &PathBuf) -> Result<()> {
+fn add_file(builder: &mut TarBuilder, tar_path: &Path, file_path: &Path) -> Result<()> {
     let file = File::open(file_path).err_with_path("open", file_path)?;
     let metadata = file.metadata().err_with_path("read metadata of", file_path)?;
 
@@ -193,7 +193,7 @@ fn add_file(builder: &mut TarBuilder, tar_path: &PathBuf, file_path: &PathBuf) -
 }
 
 /// Adds a normalized symlink to a tar file.
-fn add_symlink(builder: &mut TarBuilder, tar_path: &PathBuf, file_path: &PathBuf) -> Result<()> {
+fn add_symlink(builder: &mut TarBuilder, tar_path: &Path, file_path: &Path) -> Result<()> {
     let target = fs::read_link(file_path).err_with_path("read link", file_path)?;
 
     // Create symlink header
@@ -209,7 +209,7 @@ fn add_symlink(builder: &mut TarBuilder, tar_path: &PathBuf, file_path: &PathBuf
 
 /// Normalizes a tar header. Most fields are set to zero. The data length and path fields are set based on
 /// the given parameters. The mode field is set based on the entry type of the existing/given header.
-fn normalize_header(header: &mut Header, data_length: u64, tar_path: &PathBuf, file_path: &PathBuf) -> Result<()> {
+fn normalize_header(header: &mut Header, data_length: u64, tar_path: &Path, file_path: &Path) -> Result<()> {
     #[cfg(target_os = "windows")]
     let _ = file_path; // Ignore file_path on Windows
 

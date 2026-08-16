@@ -8,14 +8,14 @@ use std::os::unix::fs::PermissionsExt;
 use std::{
     fs::{self, File},
     io,
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
 use flate2::{Compression, GzBuilder, write::GzEncoder};
 use tar::{Builder, EntryType, Header};
 
 /// Compresses a given directory using a normalized tar and returns the compressed bytes.
-pub fn compress(source_directory: &PathBuf, top_directory_name: &str) -> std::io::Result<Vec<u8>> {
+pub fn compress(source_directory: &Path, top_directory_name: &str) -> std::io::Result<Vec<u8>> {
     let buffer = Vec::new();
     let encoder = GzBuilder::new().mtime(0).write(buffer, Compression::default());
 
@@ -33,7 +33,7 @@ pub fn compress(source_directory: &PathBuf, top_directory_name: &str) -> std::io
 }
 
 /// Creates a normalized tar by recursively adding files to the tar from a given directory while maintaining the directory structure.
-fn create_normalized_tar(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, file_path: &PathBuf) -> std::io::Result<()> {
+fn create_normalized_tar(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &Path, file_path: &Path) -> std::io::Result<()> {
     add_directory(builder, tar_path, file_path)?;
 
     // Get directory entries
@@ -51,7 +51,7 @@ fn create_normalized_tar(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &P
         let filename = entry.file_name().expect("Expected a valid path termination");
         let filename = filename.to_str().ok_or(io::Error::new(
             io::ErrorKind::InvalidFilename,
-            "Filename contains invalid unicode character.",
+            "Filename contains invalid unicode character",
         ))?;
 
         // Add symlink to tar
@@ -77,7 +77,7 @@ fn create_normalized_tar(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &P
 }
 
 /// Adds a normalized directory to a tar file.
-fn add_directory(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, file_path: &PathBuf) -> std::io::Result<()> {
+fn add_directory(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &Path, file_path: &Path) -> std::io::Result<()> {
     // Create directory header
     let mut header = Header::new_ustar();
     header.set_entry_type(EntryType::Directory);
@@ -90,7 +90,7 @@ fn add_directory(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, 
 }
 
 /// Adds a normalized file to a tar file.
-fn add_file(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, file_path: &PathBuf) -> std::io::Result<()> {
+fn add_file(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &Path, file_path: &Path) -> std::io::Result<()> {
     let file = File::open(file_path)?;
 
     // Create regular file header
@@ -105,7 +105,7 @@ fn add_file(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, file_
 }
 
 /// Adds a normalized symlink to a tar file.
-fn add_symlink(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, file_path: &PathBuf) -> std::io::Result<()> {
+fn add_symlink(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &Path, file_path: &Path) -> std::io::Result<()> {
     let target = fs::read_link(file_path)?;
 
     // Create symlink header
@@ -122,7 +122,7 @@ fn add_symlink(builder: &mut Builder<GzEncoder<Vec<u8>>>, tar_path: &PathBuf, fi
 /// Normalizes a tar header. Most fields are set to zero. The data length and path fields are set based on
 /// the given parameters. The mode field is set based on the entry type of the existing/given header.
 #[cfg_attr(target_os = "windows", expect(unused_variables))] // Ignore unused file_path variable on windows
-fn normalize_header(header: &mut Header, data_length: u64, tar_path: &PathBuf, file_path: &PathBuf) -> std::io::Result<()> {
+fn normalize_header(header: &mut Header, data_length: u64, tar_path: &Path, file_path: &Path) -> std::io::Result<()> {
     #[cfg(target_family = "unix")]
     {
         // For symlink do symlink_metadata() instead of metadata()

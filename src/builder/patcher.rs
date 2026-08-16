@@ -2,7 +2,7 @@
 use std::{
     collections::VecDeque,
     fs,
-    path::PathBuf,
+    path::{Path, PathBuf},
     process::{Command, Stdio},
 };
 
@@ -54,6 +54,7 @@ pub struct BinaryPatcher<'a> {
 }
 
 impl<'a> BinaryPatcher<'a> {
+    /// Creates a new `BinaryPatcher`.
     pub fn new(config: &'a Config) -> Self {
         Self { config }
     }
@@ -64,7 +65,7 @@ impl<'a> BinaryPatcher<'a> {
 
         // If the given path is a file, patch the file directly
         if metadata.is_file() {
-            return self.patch_binary(path, package, &dependencies);
+            return self.patch_binary(&path, package, &dependencies);
         }
 
         let mut queue = VecDeque::from([path]);
@@ -81,7 +82,7 @@ impl<'a> BinaryPatcher<'a> {
 
                 // If the entry is a file, try to patch it
                 if metadata.is_file() {
-                    match self.patch_binary(entry.path(), package, &dependencies) {
+                    match self.patch_binary(&entry.path(), package, &dependencies) {
                         Ok(_)
                         | Err(BinaryPatcherError::CannotParseBinary { .. })
                         | Err(BinaryPatcherError::UnsupportedBinaryType { .. }) => (),
@@ -95,8 +96,8 @@ impl<'a> BinaryPatcher<'a> {
     }
 
     /// Patches the binary at the given path. Currently supports `ELF` and `MachO` binaries.
-    fn patch_binary(&self, path: PathBuf, package: &PackageId, dependencies: &Vec<&InstalledPackageVersion>) -> Result<()> {
-        match Binary::parse(&path) {
+    fn patch_binary(&self, path: &Path, package: &PackageId, dependencies: &Vec<&InstalledPackageVersion>) -> Result<()> {
+        match Binary::parse(path) {
             Some(Binary::ELF(binary)) => {
                 debug!("Patching ELF binary at '{}'", path.display());
                 self.patch_elf(binary, path, package, dependencies)?;
@@ -111,18 +112,18 @@ impl<'a> BinaryPatcher<'a> {
             },
             Some(Binary::COFF(_)) => {
                 return Err(BinaryPatcherError::UnsupportedBinaryType {
-                    path,
+                    path: path.to_path_buf(),
                     bin_type: "COFF".into(),
                 });
             },
-            None => return Err(BinaryPatcherError::CannotParseBinary { path }),
+            None => return Err(BinaryPatcherError::CannotParseBinary { path: path.to_path_buf() }),
         }
 
         Ok(())
     }
 
     /// Patches the given `MachO` binary.
-    fn patch_macho(&self, mut binary: macho::FatBinary, path: PathBuf, package: &PackageId) -> Result<()> {
+    fn patch_macho(&self, mut binary: macho::FatBinary, path: &Path, package: &PackageId) -> Result<()> {
         let mut changed = false;
 
         for binary in binary.iter() {
@@ -170,7 +171,7 @@ impl<'a> BinaryPatcher<'a> {
         if changed {
             debug!("Changed binary '{}', writing changes", path.display());
 
-            binary.write(&path);
+            binary.write(path);
 
             // Sign binary
             let path_str = path.to_str().ok_or(BinaryPatcherError::OsStringConversionError)?;
@@ -188,12 +189,17 @@ impl<'a> BinaryPatcher<'a> {
                         None => "codesign exited without a status code".to_string(),
                     };
                     return Err(BinaryPatcherError::CannotReSign {
-                        path,
+                        path: path.to_path_buf(),
                         error: std::io::Error::other(message),
                     });
                 },
                 Ok(_) => (),
-                Err(error) => return Err(BinaryPatcherError::CannotReSign { path, error }),
+                Err(error) => {
+                    return Err(BinaryPatcherError::CannotReSign {
+                        path: path.to_path_buf(),
+                        error,
+                    });
+                },
             };
         }
 
@@ -204,7 +210,7 @@ impl<'a> BinaryPatcher<'a> {
     fn patch_elf(
         &self,
         mut binary: elf::Binary,
-        path: PathBuf,
+        path: &Path,
         package: &PackageId,
         dependencies: &Vec<&InstalledPackageVersion>,
     ) -> Result<()> {

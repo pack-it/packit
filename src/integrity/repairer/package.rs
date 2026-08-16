@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{collections::HashSet, fs, path::PathBuf, str::FromStr};
+use std::{collections::HashSet, fs, path::Path, str::FromStr};
 
 use crate::{
     cli::display::{logging::warning, styled::Styled},
@@ -80,7 +80,7 @@ pub fn fix_inconsistent_storage(
         let (symlinked, active) = match register.get_package(&missing_package.name) {
             Some(package) => (package.symlinked, package.active_version == missing_package.version),
             None => {
-                warning!("Inconsistent package cannot be found in Register.toml anymore, eventhough it was found before.");
+                warning!("Inconsistent package cannot be found in Register.toml anymore, eventhough it was found before");
                 (false, false)
             },
         };
@@ -163,7 +163,7 @@ fn used_prebuild(
     repository_id: &str,
     package_id: &PackageId,
     package_version_meta: &PackageVersionMeta,
-    install_path: &PathBuf,
+    install_path: &Path,
 ) -> Result<bool> {
     let prebuilds_list = manager.read_prebuilds_list(repository_id, &package_id.name, &package_id.version)?;
 

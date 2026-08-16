@@ -1,6 +1,6 @@
 [package]
 name = "xtask-package-build"
-description = "Utility to package the build of Packit."
+description = "Utility to package the build of Packit"
 version = "0.0.0"
 publish = false
 edition.workspace = true

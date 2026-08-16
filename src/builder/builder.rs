@@ -55,7 +55,7 @@ pub struct Builder<'a> {
 }
 
 impl<'a> Builder<'a> {
-    /// Creates new builder
+    /// Creates a new `Builder`.
     pub fn new(
         config: &'a Config,
         register: &'a mut PackageRegister,

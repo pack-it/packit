@@ -17,7 +17,7 @@ use crate::{
 #[derive(Args, Debug)]
 pub struct UnlinkArgs {
     /// The name of the package to unlink
-    pub package_name: PackageName,
+    package_name: PackageName,
 }
 
 impl HandleCommand for UnlinkArgs {
