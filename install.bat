@@ -83,7 +83,8 @@ REM Check for administrator privileges
 fltmc >nul 2>&1
 if ERRORLEVEL 1 (
     REM Rerun the script with elevated permissions (this will first prompt the user)
-    powershell -Command "Start-Process cmd -Verb RunAs -ArgumentList '/k \"%~f0\"'"
+    REM Change directory to the current directory, so the working directory will not be 'windows\system32'
+    powershell -Command "Start-Process cmd -Verb RunAs -ArgumentList '/k cd /d %~dp0 && \"%~f0\"'"
 
     exit /b
 )
