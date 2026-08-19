@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased](https://github.com/pack-it/packit/compare/0.0.4...HEAD)
 
+### Fixed
+- Fix patch apply directory meta check reporting wrong issues.
+
 
 ## [v0.0.4](https://github.com/pack-it/packit/compare/0.0.3...0.0.4) - 2026-08-16
 
