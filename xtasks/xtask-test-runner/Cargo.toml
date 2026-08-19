@@ -1,0 +1,10 @@
+[package]
+name = "xtask-test-runner"
+description = "Utility that wraps around cargo's test framework which handles setup and cleanup"
+version = "0.0.0"
+publish = false
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+toml = "1.1.4"
