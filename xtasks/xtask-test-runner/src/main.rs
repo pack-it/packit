@@ -1,5 +1,5 @@
 use std::{
-    fs,
+    fs::{self, File},
     path::PathBuf,
     process::{ExitCode, exit},
 };
@@ -83,10 +83,17 @@ fn setup() -> Cleanup {
 }
 
 fn create_default_test_config(config_dir: &PathBuf) {
-    fs::create_dir_all(config_dir).unwrap();
+    let Some(parent) = config_dir.parent() else {
+        println!("Couldn't get config directory parent");
+        exit(1);
+    };
+
+    fs::create_dir_all(parent).unwrap();
+    File::create(config_dir).unwrap();
 
     let mut config = Map::new();
     config.insert("repositories_rank".into(), Value::Array(vec!["test".into()]));
+    config.insert("prefix_directory".into(), DEFAULT_PREFIX.into());
 
     let mut repositories = Map::new();
     let mut test_repository = Map::new();
@@ -94,10 +101,10 @@ fn create_default_test_config(config_dir: &PathBuf) {
         "url".into(),
         Value::String("https://raw.githubusercontent.com/pack-it/test-repository/main/".into()),
     );
-    test_repository.insert("provider".into(), "fs".into());
+    test_repository.insert("provider".into(), "web".into());
 
-    repositories.insert("test".into(), Value::Table(test_repository)).unwrap();
-    config.insert("repositories".into(), Value::Table(repositories)).unwrap();
+    repositories.insert("test".into(), Value::Table(test_repository));
+    config.insert("repositories".into(), Value::Table(repositories));
 
     let config_content = Value::Table(config);
     let toml_string = toml::to_string_pretty(&config_content).unwrap();
