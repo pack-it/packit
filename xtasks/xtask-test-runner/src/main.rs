@@ -1,4 +1,5 @@
 use std::{
+    env,
     fs::{self, File},
     path::PathBuf,
     process::{ExitCode, exit},
@@ -47,8 +48,12 @@ fn main() -> ExitCode {
     // Execute setup, which will partially determine how the cleanup
     let _cleanup = setup();
 
+    // Gather command arguments, and pass them to cargo test (the first argument is the program name)
+    let args: Vec<String> = env::args().skip(1).collect();
+
     let status = std::process::Command::new("cargo")
         .args(["test", "--features", "test-support", "--", "--test-threads=1"])
+        .args(args)
         .status()
         .expect("failed to run cargo test");
 
