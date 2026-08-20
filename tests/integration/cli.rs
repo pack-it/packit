@@ -2,26 +2,26 @@ use crate::packit;
 
 #[test]
 fn version() {
-    packit!().args(["--version"]).assert().success();
+    packit!("--version").assert().success();
 }
 
 #[test]
 fn info_requirements() {
     // Install simple package for test
-    _ = packit!().args(["install", "simple@0.0.1", "--build"]).ok();
+    _ = packit!("install", "simple@0.0.1", "--build").ok();
 
-    packit!().args(["info", "--tree"]).assert().failure();
-    packit!().args(["info", "--active"]).assert().failure();
-    packit!().args(["info", "--tree --active"]).assert().failure();
-    packit!().args(["info", "simple", "--tree"]).assert().failure();
+    packit!("info", "--tree").assert().failure();
+    packit!("info", "--active").assert().failure();
+    packit!("info", "--tree --active").assert().failure();
+    packit!("info", "simple", "--tree").assert().failure();
 
-    packit!().args(["info"]).assert().success();
-    packit!().args(["info", "simple"]).assert().success();
-    packit!().args(["info", "simple@0.0.1"]).assert().success();
-    packit!().args(["info", "simple@0.0.1", "--tree"]).assert().success();
-    packit!().args(["info", "simple", "--active"]).assert().success();
-    packit!().args(["info", "simple", "--tree", "--active"]).assert().success();
+    packit!("info").assert().success();
+    packit!("info", "simple").assert().success();
+    packit!("info", "simple@0.0.1").assert().success();
+    packit!("info", "simple@0.0.1", "--tree").assert().success();
+    packit!("info", "simple", "--active").assert().success();
+    packit!("info", "simple", "--tree", "--active").assert().success();
 
     // Cleanup simple package after test
-    _ = packit!().args(["uninstall", "simple"]).ok();
+    _ = packit!("uninstall", "simple").ok();
 }
