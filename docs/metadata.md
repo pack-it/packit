@@ -1,5 +1,7 @@
 # Repository Structure
 
+This file explains the Packit metadata repository structure and shows some examples where necessary. Not everything has an example, a simple example package which covers the basics is: [libssh2](https://github.com/pack-it/core/tree/main/packages/libssh2). For something more elaborate look at: [xz](https://github.com/pack-it/core/tree/main/packages/xz).
+
 ## `repository.toml`
 This file should be present in every Packit repository, it quickly describes what the repository is for.
 
@@ -40,7 +42,7 @@ Each package contains this file, it describes the package as whole. It shows the
 
 ## `targets.toml`
 Each package version directory contains a `targets.toml` file. This file describes version specific information. This information can be the same for all targets (global) or target specific. Some fields in a target section override their global value. Other fields are additive, meaning both the global and target-specific values are used.
-See the tables below for all different fields, see [Target fields](#target-fields) to get more information about additive and overrides.
+See the tables below for all different fields, look at [Target fields](#target-fields) for more information about additive and overrides.
 
 ### Global fields
 | Field                           | Explanation                                                                    |
@@ -59,7 +61,7 @@ See the tables below for all different fields, see [Target fields](#target-field
 | `external_test_files`           | A list of external test files that are needed for executing the test script. These files are automatically downloaded. |
 
 ### Sources
-The targets.toml file can contain one or multiple sources, specified in the following format. When multiple sources are defined, they need to be named.
+The targets.toml file can contain one or more sources, specified in the following format. When multiple sources are defined, they need to be named.
 
 | Field              | Explanation                                                                                                  |
 | ------------------ | ------------------------------------------------------------------------------------------------------------ |
@@ -67,11 +69,25 @@ The targets.toml file can contain one or multiple sources, specified in the foll
 | `checksum`         | Defines the sha256 checksum of the source archive.                                                           |
 | `size`             | Defines the size of the source archive in bytes.                                                             |
 | `mirrors`          | Defines a list of mirrors which could be used to download the source code if the original URL is unavailable.|
-| `skip_unpack`      | True to skip the unpack step and just download the source file, false to use the build in unpack.            |
+| `skip_unpack`      | True to skip the unpack step and just download the source file, false to use the build-in unpack.            |
 | `license_exclude`  | A list of paths to skip when doing automatic license file detection. `*` can be used to skip detection entirely. |
 | `license_include`  | A list of files that need to be copied to the package license file directory. These files are copied before the automatic detection. |
 | `apply_patches_in` | Defines the directory that should be used to apply all patches in.                                           |
 | `patches`          | A list of patches to apply to the source. See patches section below.                                         |
+
+#### Example
+In this example there are multiple sources, because Unix and Windows have different source URLs. Notice that both sources are now named (`unix` and `windows` respectively). If there was only one source this would not be necessary.
+```
+[source.unix]
+url = "https://some-package/unix-version/4.3.tar.gz"
+checksum = "svwergw8e9r6f9w8er6v98we6rv9w8e6rvg9we86rvg0w8ev0werv768669e69vg"
+size = 87625
+
+[source.windows]
+url = "https://some-package/windows-version/4.3.tar.gz"
+checksum = "cba4bb7a44edf2877bb6f059932896383babe435b3a8c3b5df48b4aa41c9bb85"
+size = 89825
+```
 
 ### Patches
 The `patches` field in a source is specified in the following format. Patches are indexed with a number, so the first patch is specified by key `patches.0`.
@@ -85,6 +101,23 @@ The `patches` field in a source is specified in the following format. Patches ar
 
 Please note that the `mirrors` is not used when the URL contains a file in the repository, this file is then expected to exist.
 
+#### Example
+This example shows a source with two patches. Note that the patches are numbered, this determines the execution order.
+```
+[source]
+url = "https://some-package/some-2.7.tar.gz"
+checksum = "cba4bb7a44edf2877bb6f059932896383babe435b3a8c3b5df48b4aa41c9bb85"
+size = 12971567
+patches.0 = {
+    url = "https://some-package/some.patch",
+    checksum = "78297d75748708730441c9196fea6b32722924870c05178bd2182b9b4c40f1cd"
+}
+patches.1 = {
+    url = "https://other-package/other.patch",
+    checksum = "ed93ec1cdff8333ca69fd536c86bcbc6d0ef36c463fa7b43c2ced102c7cabeb9"
+}
+```
+
 ### Deprecation
 The `deprecation` fields in package.toml and targets.toml describe when a package is deprecated, when it will be disabled and why.
 
@@ -95,7 +128,7 @@ The `deprecation` fields in package.toml and targets.toml describe when a packag
 | `reason`          | Defines the reason the package is deprecated.                                    |
 
 ### Target fields
-Targets are specified as `[targets.<bounds>]`, where bounds specify the support target as described in [Target bounds](#target-bounds).
+Targets are specified as `[targets.<bounds>]`, where bounds specify the supported target as described in [Target bounds](#target-bounds).
 
 | Field                           | Explanation                                                                          |
 | ------------------------------- | ------------------------------------------------------------------------------------ |
@@ -134,7 +167,7 @@ A prebuild is specified by using `[prebuild.<prebuild-id>]`. Each prebuild can h
 
 The target bounds consist of a name, an addition and [version bounds](#target-version-bounds). The target name is required, the addition and version bounds are not. The syntax of a target bound is as follows: `<name>[:<addition>][@<version-bounds>]`.
 
-There is a priority from lowest to highest when selecting the target to use:
+Packit selects the most specific matching target bound according to the following priority order, from lowest to highest:
 - OS group
 - OS name
 - Target architecture
@@ -166,7 +199,7 @@ See [Version bounds](#version-bounds) for the version bounds syntax.
 
 ## Version bounds
 
-Version bounds are used by target bounds, by dependencies and by the supported versions to specify which version satisfy a target or dependency.
+Version bounds are used by target bounds, dependencies and the supported versions to specify which versions satisfy a target or dependency.
 
 Please note version bounds are required to be in order of versions.
 
@@ -209,7 +242,7 @@ The available scripts are:
 | `build`              | The build script is run to build a package.                                                     |
 | `postinstall`        | The postinstall script is run after the package is installed.                                   |
 | `test`               | The test script is called after the package is installed to test if the install was successful. |
-| `uninstall`          | The uninstall script is run after an uninstall to cleanup all package data.                     |
+| `uninstall`          | The uninstall script is run after an uninstall to clean up all package data.                    |
 
 Note that the `build` script must be present and that the `test` script should be present. The other scripts are optional and depend on the package.
 
