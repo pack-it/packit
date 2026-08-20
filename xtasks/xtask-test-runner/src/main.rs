@@ -21,14 +21,15 @@ pub const DEFAULT_CONFIG_DIR: &str = "/Library/Application Support/packit";
 #[cfg(target_os = "windows")]
 pub const DEFAULT_CONFIG_DIR: &str = "C:\\Program Files\\packit";
 
+/// Contains the necessary information for the cleanup.
 struct Cleanup {
     existing_config: bool,
     prefix: PathBuf,
 }
 
-// Implement drop to make sure the cleanup is still ran, even if a test panics
-impl Drop for Cleanup {
-    fn drop(&mut self) {
+impl Cleanup {
+    /// Cleans up after the tests.
+    pub fn clean(&self) {
         println!("Running cleanup");
 
         // Only remove the config if it was auto-generated
@@ -52,6 +53,15 @@ impl Drop for Cleanup {
     }
 }
 
+// Implement drop to make sure the cleanup is still ran, even if a test panics
+impl Drop for Cleanup {
+    fn drop(&mut self) {
+        self.clean();
+    }
+}
+
+/// Wraps around the `cargo test` command to handle the setup and cleanup.
+/// Returns an `ExitCode`.
 fn main() -> ExitCode {
     // Execute setup, which will partially determine how the cleanup
     let _cleanup = setup();
@@ -68,6 +78,8 @@ fn main() -> ExitCode {
     ExitCode::from(status.code().unwrap_or(1) as u8)
 }
 
+/// Handles the test setup. Creates the `TestConfig.toml` if necessary and a new test prefix.
+/// Returns `Cleanup` containing setup info.
 fn setup() -> Cleanup {
     let mut existing_config = true;
     let config_dir = PathBuf::from(DEFAULT_CONFIG_DIR).join("TestConfig.toml");
@@ -158,6 +170,7 @@ fn setup() -> Cleanup {
     Cleanup { existing_config, prefix }
 }
 
+/// Creates the default test config.
 fn create_default_test_config(config_dir: &PathBuf) {
     let Some(parent) = config_dir.parent() else {
         eprintln!("Couldn't get config directory parent");
