@@ -69,3 +69,7 @@ assert_cmd = "2.2.2"
 
 [features]
 test-support = []
+
+[[test]]
+name = "integration"
+required-features = ["test-support"]

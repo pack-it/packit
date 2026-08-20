@@ -1,4 +1,4 @@
-mod common;
+use crate::packit;
 
 #[test]
 fn simple_install() {
