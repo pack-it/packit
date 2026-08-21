@@ -8,7 +8,7 @@ use thiserror::Error;
 const VALID_PACKAGE_NAME: &str = r"^[a-zA-Z0-9\-_]+$";
 
 /// Errors that occur when creating or parsing the package name.
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum PackageNameError {
     #[error("Package name cannot be empty and can only contain characters: 'a-z', 'A-Z', '0-9', '-' and '_'")]
     InvalidPackageName,
@@ -89,5 +89,58 @@ impl Deref for PackageName {
 impl AsRef<Path> for PackageName {
     fn as_ref(&self) -> &Path {
         Path::new(&self.0)
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use std::str::FromStr;
+
+    use super::*;
+
+    #[test]
+    fn valid_from_str() {
+        let name = &"_Test-123";
+        assert_eq!(PackageName::from_str(name), Ok(PackageName(name.to_string())));
+    }
+
+    #[test]
+    fn from_str_no_input() {
+        assert_eq!(PackageName::from_str(""), Err(PackageNameError::InvalidPackageName));
+    }
+
+    #[test]
+    fn from_str_illegal_chars() {
+        let illegal_chars = [
+            " ", ".", "/", "\\", "!", "@", "#", "$", "%", "^", "&", "*", "a b", "a.b", "a/b", "()", "{}", "[]", ":", ";", "'", "\"", ">",
+            "<", "|", "~", "`", "\u{1234}", "±", "§", "=", "+",
+        ];
+
+        for name in illegal_chars {
+            assert_eq!(
+                PackageName::from_str(name),
+                Err(PackageNameError::InvalidPackageName),
+                "expected {name:?} to be invalid"
+            );
+        }
+    }
+
+    #[test]
+    fn format() {
+        let package_name = PackageName("_Test-123".to_string());
+
+        assert_eq!(package_name.to_string(), "_Test-123");
+    }
+
+    #[test]
+    fn get_prefix() {
+        let package_name = PackageName("_Test-123".to_string());
+
+        assert_eq!(package_name.get_prefix(), '_');
+    }
+
+    #[test]
+    fn get_packit_name() {
+        assert_eq!(PackageName::packit(), PackageName("packit".to_string()));
     }
 }
