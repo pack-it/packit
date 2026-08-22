@@ -213,7 +213,7 @@ impl MetaCheck {
         match self.provider.read_package(package_name) {
             Ok(package) => return Some(package),
             Err(RepositoryError::IOError(..)) | Err(RepositoryError::UnsuccessfulRequest(..)) => {
-                let fuzzy_match = fuzzy::index_search(index, package_name);
+                let fuzzy_match = fuzzy::min_search(index.supported_packages.iter(), package_name.as_str());
 
                 #[expect(clippy::manual_map)]
                 let suggestion = match fuzzy_match {

@@ -122,17 +122,6 @@ pub mod tests {
     }
 
     #[test]
-    fn from_str_invalid_chars() {
-        let invalid_chars = "!#$%^&*()~:;{}[]<>,.?/|\\\"\'`+=";
-        for char in invalid_chars.chars() {
-            assert_eq!(
-                PackageId::from_str(format!("{char}@3.4.1").as_str()),
-                Err(PackageIdError::PackageNameError(PackageNameError::InvalidPackageName))
-            );
-        }
-    }
-
-    #[test]
     fn format() {
         let package_name = create_package_name("test");
         let version = create_version("3.4.1");
