@@ -68,8 +68,8 @@ windows = { version = "0.62.2", features = [
 assert_cmd = "2.2.2"
 
 [features]
-test-support = []
+integration-tests = []
 
 [[test]]
 name = "integration"
-required-features = ["test-support"]
+required-features = ["integration-tests"]

@@ -1,6 +1,6 @@
 [package]
 name = "xtask-test-runner"
-description = "Utility that wraps around cargos test framework which handles setup and cleanup"
+description = "Utility to run Packit integration tests"
 version = "0.0.0"
 publish = false
 edition.workspace = true
