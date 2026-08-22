@@ -94,13 +94,18 @@ mod tests {
     use super::*;
 
     #[test]
-    fn from_str() {
+    fn valid_from_str() {
         let correct_version = VersionNumber {
             original: String::from("3"),
             number: 3,
         };
 
         assert_eq!(VersionNumber::from_str("3"), Ok(correct_version));
+    }
+
+    #[test]
+    fn from_str_empty() {
+        assert_eq!(VersionNumber::from_str(""), Err(VersionError::NoneError));
     }
 
     #[test]
@@ -114,20 +119,29 @@ mod tests {
     }
 
     #[test]
+    fn from_str_illegal_chars() {
+        for invalid_char in "- .@<>=+|!#$%^&*(),'\"\\?[]{}`~±§".chars() {
+            assert_eq!(
+                VersionNumber::from_str(&invalid_char.to_string()),
+                Err(VersionError::IllegalCharacterError)
+            );
+        }
+    }
+
+    #[test]
     fn compare() {
         let version_a = VersionNumber::from_str("03").unwrap();
-        let version_b = VersionNumber::from_str("03").unwrap();
-        let version_c = VersionNumber::from_str("0000003").unwrap();
-        let version_d = VersionNumber::from_str("02").unwrap();
-        let version_e = VersionNumber::from_str("04").unwrap();
+        let version_b = VersionNumber::from_str("0000003").unwrap();
+        let version_c = VersionNumber::from_str("2").unwrap();
+        let version_d = VersionNumber::from_str("4").unwrap();
 
+        assert!(version_a == version_a);
         assert!(version_a == version_b);
-        assert!(version_a == version_c);
-        assert!(version_a <= version_c);
-        assert!(version_a > version_d);
-        assert!(version_a < version_e);
-        assert!(version_d < version_c);
-        assert!(version_e > version_c);
+        assert!(version_a <= version_b);
+        assert!(version_a > version_c);
+        assert!(version_a < version_d);
+        assert!(version_c < version_b);
+        assert!(version_d > version_b);
     }
 
     #[test]
