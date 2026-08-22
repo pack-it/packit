@@ -148,6 +148,11 @@ mod tests {
 
     use super::*;
 
+    /// This is a helper method which creates a `VersionIntervals` from an `intervals_str`  which is assumed to be correct.
+    pub fn create_version_intervals(intervals_str: &str) -> VersionIntervals {
+        VersionIntervals::from_str(intervals_str).expect("Expected valid version intervals string")
+    }
+
     #[test]
     fn from_str_ranges() {
         let version_intervals = VersionIntervals::from_str("<6.6|6.7|6.8-7.10|>8");
@@ -196,7 +201,67 @@ mod tests {
         let intervals = ["3|3", "5-10|7-11", "<6.5|>=6.4", "<6.6|6.9|6.8-7.10|>8", ">4|5", "4|3"];
         for interval in intervals {
             let parsed_interval = VersionIntervals::from_str(interval);
-            assert!(parsed_interval.is_err(), "Test failed: {}", parsed_interval.unwrap());
+            assert_eq!(parsed_interval, Err(VersionError::InvalidInterval));
         }
+    }
+
+    #[test]
+    fn from_str_empty_version() {
+        let parsed_interval = VersionIntervals::from_str("||");
+        assert_eq!(parsed_interval, Err(VersionError::NoneError));
+    }
+
+    #[test]
+    fn empty_format() {
+        let version_intervals = VersionIntervals {
+            version_bounds: Vec::new(),
+        };
+
+        assert_eq!(version_intervals.to_string(), "");
+    }
+
+    #[test]
+    fn format() {
+        let version_intervals_str = "<6.6|6.7|6.8-7.10|>8";
+        let version_intervals = create_version_intervals(version_intervals_str);
+        assert_eq!(version_intervals.to_string(), version_intervals_str);
+    }
+
+    #[test]
+    fn empty_covers() {
+        let version_intervals = VersionIntervals {
+            version_bounds: Vec::new(),
+        };
+
+        version_intervals.covers(&create_version(&[0, 0, 0]));
+    }
+
+    #[test]
+    fn one_covers() {
+        let version_intervals_str = "<6.6|6.7|6.8-7.10|>8";
+        let version_intervals = create_version_intervals(version_intervals_str);
+
+        assert!(version_intervals.covers(&create_version(&[6, 9])));
+    }
+
+    #[test]
+    fn multiple_cover() {
+        let version_intervals_str = "<=4|4.5|5-6|>=10.1";
+        let version_intervals = create_version_intervals(version_intervals_str);
+
+        assert!(version_intervals.covers(&create_version(&[0, 0, 1])));
+        assert!(version_intervals.covers(&create_version(&[4, 5])));
+        assert!(version_intervals.covers(&create_version(&[5, 5])));
+        assert!(version_intervals.covers(&create_version(&[10, 1])));
+    }
+
+    #[test]
+    fn none_covers() {
+        let version_intervals_str = "<6.6|6.7|6.8-7.10|>8";
+        let version_intervals = create_version_intervals(version_intervals_str);
+
+        assert!(!version_intervals.covers(&create_version(&[6, 6])));
+        assert!(!version_intervals.covers(&create_version(&[7, 10])));
+        assert!(!version_intervals.covers(&create_version(&[8])));
     }
 }
