@@ -98,6 +98,11 @@ pub mod tests {
 
     use super::*;
 
+    /// This is a helper method which creates a `PackageName` from a name which is assumed to be correct.
+    pub fn create_package_name(name: &str) -> PackageName {
+        PackageName(name.to_string())
+    }
+
     #[test]
     fn valid_from_str() {
         let name = &"_Test-123";
@@ -111,14 +116,10 @@ pub mod tests {
 
     #[test]
     fn from_str_illegal_chars() {
-        let illegal_chars = [
-            " ", ".", "/", "\\", "!", "@", "#", "$", "%", "^", "&", "*", "a b", "a.b", "a/b", "()", "{}", "[]", ":", ";", "'", "\"", ">",
-            "<", "|", "~", "`", "\u{1234}", "±", "§", "=", "+",
-        ];
-
-        for name in illegal_chars {
+        let illegal_chars = " ./\\!@#$%^&*():;'\"<>[]{}?|~`±§=+\u{1234}";
+        for name in illegal_chars.chars() {
             assert_eq!(
-                PackageName::from_str(name),
+                PackageName::from_str(&name.to_string()),
                 Err(PackageNameError::InvalidPackageName),
                 "expected {name:?} to be invalid"
             );
@@ -128,14 +129,12 @@ pub mod tests {
     #[test]
     fn format() {
         let package_name = PackageName("_Test-123".to_string());
-
         assert_eq!(package_name.to_string(), "_Test-123");
     }
 
     #[test]
     fn get_prefix() {
         let package_name = PackageName("_Test-123".to_string());
-
         assert_eq!(package_name.get_prefix(), '_');
     }
 

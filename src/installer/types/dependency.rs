@@ -99,67 +99,71 @@ impl Dependency {
 pub mod tests {
     use std::str::FromStr;
 
+    use crate::installer::types::package_name::tests::create_package_name;
+    use crate::installer::types::version::tests::create_version;
+
     use super::*;
 
+    /// This is a helper method which creates a `Dependency` from a name and version_intervals which are assumed to be correct.
     pub fn create_dependency(name: &str, version_intervals: &str) -> Dependency {
         Dependency {
-            name: PackageName::from_str(name).expect("Expected valid package name"),
+            name: create_package_name(name),
             version_intervals: VersionIntervals::from_str(version_intervals).expect("Expected correct version intervals"),
         }
     }
 
     #[test]
     fn satisfied_range() {
-        let package_name = PackageName::from_str("test").expect("Expected valid package name");
+        let package_name = create_package_name("test");
         let dependency = create_dependency("test", "3.4.1-3.4.8");
 
-        assert!(dependency.satisfied(&package_name, &Version::from_str("3.4.7").expect("Expected Version")));
-        assert!(!dependency.satisfied(&package_name, &Version::from_str("3.4.0").expect("Expected version")));
-        assert!(!dependency.satisfied(&package_name, &Version::from_str("3.4.8").expect("Expected version")));
+        assert!(dependency.satisfied(&package_name, &create_version(&[3, 4, 7])));
+        assert!(!dependency.satisfied(&package_name, &create_version(&[3, 4, 0])));
+        assert!(!dependency.satisfied(&package_name, &create_version(&[3, 4, 8])));
     }
 
     #[test]
     fn satisfied_lower() {
-        let package_name = PackageName::from_str("test").expect("Expected valid package name");
+        let package_name = create_package_name("test");
         let dependency = create_dependency("test", "<3.4.1");
 
-        assert!(dependency.satisfied(&package_name, &Version::from_str("3.4.0").expect("Expected Version")));
-        assert!(!dependency.satisfied(&package_name, &Version::from_str("3.4.1").expect("Expected Version")));
+        assert!(dependency.satisfied(&package_name, &create_version(&[3, 4, 0])));
+        assert!(!dependency.satisfied(&package_name, &create_version(&[3, 4, 1])));
     }
 
     #[test]
     fn satisfied_lower_equals() {
-        let package_name = PackageName::from_str("test").expect("Expected valid package name");
+        let package_name = create_package_name("test");
         let dependency = create_dependency("test", "<=3.4.1");
 
-        assert!(dependency.satisfied(&package_name, &Version::from_str("3.4.1").expect("Expected Version")));
-        assert!(!dependency.satisfied(&package_name, &Version::from_str("3.4.2").expect("Expected Version")));
+        assert!(dependency.satisfied(&package_name, &create_version(&[3, 4, 1])));
+        assert!(!dependency.satisfied(&package_name, &create_version(&[3, 4, 2])));
     }
 
     #[test]
     fn satisfied_higher() {
-        let package_name = PackageName::from_str("test").expect("Expected valid package name");
+        let package_name = create_package_name("test");
         let dependency = create_dependency("test", ">3.4.1");
 
-        assert!(dependency.satisfied(&package_name, &Version::from_str("3.4.2").expect("Expected Version")));
-        assert!(!dependency.satisfied(&package_name, &Version::from_str("3.4.1").expect("Expected Version")));
+        assert!(dependency.satisfied(&package_name, &create_version(&[3, 4, 2])));
+        assert!(!dependency.satisfied(&package_name, &create_version(&[3, 4, 1])));
     }
 
     #[test]
     fn satisfied_higher_equals() {
-        let package_name = PackageName::from_str("test").expect("Expected valid package name");
+        let package_name = create_package_name("test");
         let dependency = create_dependency("test", ">=3.4.1");
 
-        assert!(dependency.satisfied(&package_name, &Version::from_str("3.4.1").expect("Expected Version")));
-        assert!(!dependency.satisfied(&package_name, &Version::from_str("3.4.0").expect("Expected Version")));
+        assert!(dependency.satisfied(&package_name, &create_version(&[3, 4, 1])));
+        assert!(!dependency.satisfied(&package_name, &create_version(&[3, 4, 0])));
     }
 
     #[test]
     fn satisfied_equals() {
-        let package_name = PackageName::from_str("test").expect("Expected valid package name");
+        let package_name = create_package_name("test");
         let dependency = create_dependency("test", "3.4.1");
 
-        assert!(dependency.satisfied(&package_name, &Version::from_str("3.4.1").expect("Expected Version")));
-        assert!(!dependency.satisfied(&package_name, &Version::from_str("5").expect("Expected Version")));
+        assert!(dependency.satisfied(&package_name, &create_version(&[3, 4, 1])));
+        assert!(!dependency.satisfied(&package_name, &create_version(&[5])));
     }
 }

@@ -174,12 +174,17 @@ impl<const N: usize> From<&[u32; N]> for Version {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
 
+    /// This is a helper method which creates a `Version` which is known to be correct.
+    pub fn create_version(numbers: &[u32]) -> Version {
+        Version::from(numbers)
+    }
+
     #[test]
-    fn from_str() {
-        let correct_version = Version::from(&[3, 4, 1]);
+    fn valid_from_str() {
+        let correct_version = create_version(&[3, 4, 1]);
 
         match Version::from_str("3.4.1") {
             Ok(version) => assert_eq!(version, correct_version),
@@ -207,10 +212,10 @@ mod tests {
 
     #[test]
     fn compare() {
-        let version_a = Version::from(&[3, 4, 0]);
-        let version_b = Version::from(&[3, 4, 0]);
-        let version_c = Version::from(&[3, 4, 1]);
-        let version_d = Version::from(&[3, 3, 5]);
+        let version_a = create_version(&[3, 4, 0]);
+        let version_b = create_version(&[3, 4, 0]);
+        let version_c = create_version(&[3, 4, 1]);
+        let version_d = create_version(&[3, 3, 5]);
 
         assert!(version_a == version_b);
         assert!(version_a <= version_b);
@@ -224,12 +229,12 @@ mod tests {
 
     #[test]
     fn compare_different_length() {
-        let version_a = Version::from(&[3, 4, 0, 0]);
-        let version_b = Version::from(&[3, 4, 0]);
-        let version_c = Version::from(&[4]);
-        let version_d = Version::from(&[3]);
-        let version_e = Version::from(&[0, 3, 3, 5]);
-        let version_f = Version::from(&[3, 3, 5]);
+        let version_a = create_version(&[3, 4, 0, 0]);
+        let version_b = create_version(&[3, 4, 0]);
+        let version_c = create_version(&[4]);
+        let version_d = create_version(&[3]);
+        let version_e = create_version(&[0, 3, 3, 5]);
+        let version_f = create_version(&[3, 3, 5]);
 
         assert!(version_a == version_b);
         assert!(version_c > version_b);

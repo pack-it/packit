@@ -89,14 +89,19 @@ impl OptionalPackageId {
 
 #[cfg(test)]
 mod tests {
-    use crate::installer::types::{PackageId, Version, package_id::PackageIdError, package_name::PackageNameError};
+    use crate::installer::types::{
+        PackageId,
+        package_id::PackageIdError,
+        package_name::{PackageNameError, tests::create_package_name},
+        version::tests::create_version,
+    };
 
     use super::*;
 
     #[test]
-    fn from_str_optional() {
-        let package_name = PackageName::from_str("test").expect("Expected valid package name");
-        let version = Version::from_str("3.4.1").expect("Expected Version");
+    fn valid_from_str_optional() {
+        let package_name = create_package_name("test");
+        let version = create_version(&[3, 4, 1]);
         let correct_version = PackageId::new(package_name.clone(), version).into();
         match OptionalPackageId::from_str("test@3.4.1") {
             Ok(id) => assert_eq!(id, correct_version),

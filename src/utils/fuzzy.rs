@@ -152,12 +152,12 @@ fn calculate_distance(first_word: &str, second_word: &str) -> u64 {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
+    use crate::installer::types::package_name_tests::create_package_name;
 
     use super::*;
 
     #[test]
-    fn test_distance_calculation() {
+    fn distance_calculation() {
         assert_eq!(calculate_distance("same", "same"), 0);
         assert_eq!(calculate_distance("saem", "same"), 1);
         assert_eq!(calculate_distance("sema", "same"), 2);
@@ -166,28 +166,28 @@ mod tests {
     }
 
     #[test]
-    fn test_fuzzy_search() {
+    fn fuzzy_search_test() {
         assert_eq!(
-            fuzzy_search(vec![&PackageName::from_str("hello").unwrap()], "hello"),
-            vec![(0 as u64, PackageName::from_str("hello").unwrap())]
+            fuzzy_search(vec![&create_package_name("hello")], "hello"),
+            vec![(0 as u64, create_package_name("hello"))]
         );
 
         assert_eq!(
             fuzzy_search(
                 vec![
-                    &PackageName::from_str("aahello").unwrap(),
-                    &PackageName::from_str("aahell").unwrap(),
-                    &PackageName::from_str("aahellow").unwrap(),
-                    &PackageName::from_str("aahelloxyz").unwrap(),
-                    &PackageName::from_str("aahelloxy").unwrap(),
+                    &create_package_name("aahello"),
+                    &create_package_name("aahell"),
+                    &create_package_name("aahellow"),
+                    &create_package_name("aahelloxyz"),
+                    &create_package_name("aahelloxy"),
                 ],
                 "aahello"
             ),
             vec![
-                (0 as u64, PackageName::from_str("aahello").unwrap()),
-                (1 as u64, PackageName::from_str("aahell").unwrap()),
-                (1 as u64, PackageName::from_str("aahellow").unwrap()),
-                (2 as u64, PackageName::from_str("aahelloxy").unwrap()),
+                (0 as u64, create_package_name("aahello")),
+                (1 as u64, create_package_name("aahell")),
+                (1 as u64, create_package_name("aahellow")),
+                (2 as u64, create_package_name("aahelloxy")),
             ]
         );
     }
