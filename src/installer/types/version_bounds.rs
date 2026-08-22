@@ -90,65 +90,56 @@ impl VersionBounds {
 
 #[cfg(test)]
 mod tests {
+    use crate::installer::types::version::tests::create_version;
+
     use super::*;
 
     #[test]
     fn from_str_range() {
+        let version_a = create_version(&[3, 4]);
+        let version_b = create_version(&[4, 1]);
         let version_bound = VersionBounds::from_str("3.4-4.1");
 
-        match version_bound {
-            Ok(bound) => assert!(matches!(bound, VersionBounds::Range(..)), "bound was {:?}", bound),
-            Err(e) => panic!("Expected Ok(VersionBound (..)), got Err({e:?})"),
-        }
+        assert_eq!(version_bound, Ok(VersionBounds::Range(version_a, version_b)));
     }
 
     #[test]
     fn from_str_lower() {
+        let version = create_version(&[3, 4]);
         let version_bound = VersionBounds::from_str("<3.4");
 
-        match version_bound {
-            Ok(bound) => assert!(matches!(bound, VersionBounds::Lower(..)), "bound was {:?}", bound),
-            Err(e) => panic!("Expected Ok(VersionBound (..)), got Err({e:?})"),
-        }
+        assert_eq!(version_bound, Ok(VersionBounds::Lower(version)));
     }
 
     #[test]
     fn from_str_lower_equal() {
+        let version = create_version(&[3, 4]);
         let version_bound = VersionBounds::from_str("<=3.4");
 
-        match version_bound {
-            Ok(bound) => assert!(matches!(bound, VersionBounds::LowerEqual(..)), "bound was {:?}", bound),
-            Err(e) => panic!("Expected Ok(VersionBound (..)), got Err({e:?})"),
-        }
+        assert_eq!(version_bound, Ok(VersionBounds::LowerEqual(version)));
     }
 
     #[test]
     fn from_str_higher() {
+        let version = create_version(&[3, 4]);
         let version_bound = VersionBounds::from_str(">3.4");
 
-        match version_bound {
-            Ok(bound) => assert!(matches!(bound, VersionBounds::Higher(..)), "bound was {:?}", bound),
-            Err(e) => panic!("Expected Ok(VersionBound (..)), got Err({e:?})"),
-        }
+        assert_eq!(version_bound, Ok(VersionBounds::Higher(version)));
     }
 
     #[test]
     fn from_str_higher_equal() {
+        let version = create_version(&[3, 4]);
         let version_bound = VersionBounds::from_str(">=3.4");
 
-        match version_bound {
-            Ok(bound) => assert!(matches!(bound, VersionBounds::HigherEqual(..)), "bound was {:?}", bound),
-            Err(e) => panic!("Expected Ok(VersionBound (..)), got Err({e:?})"),
-        }
+        assert_eq!(version_bound, Ok(VersionBounds::HigherEqual(version)));
     }
 
     #[test]
     fn from_str_equal() {
+        let version = create_version(&[3, 4]);
         let version_bound = VersionBounds::from_str("3.4");
 
-        match version_bound {
-            Ok(bound) => assert!(matches!(bound, VersionBounds::Equal(..)), "bound was {:?}", bound),
-            Err(e) => panic!("Expected Ok(VersionBound (..)), got Err({e:?})"),
-        }
+        assert_eq!(version_bound, Ok(VersionBounds::Equal(version)));
     }
 }

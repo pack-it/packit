@@ -103,37 +103,31 @@ mod tests {
         let package_name = create_package_name("test");
         let version = create_version(&[3, 4, 1]);
         let correct_version = PackageId::new(package_name.clone(), version).into();
-        match OptionalPackageId::from_str("test@3.4.1") {
-            Ok(id) => assert_eq!(id, correct_version),
-            Err(e) => panic!("Expected Ok(OptionalPackageId(name: 'test', version: Some(Version(..)))), got Err({e:?})"),
-        }
+        assert_eq!(OptionalPackageId::from_str("test@3.4.1"), Ok(correct_version));
 
         let correct_version = OptionalPackageId {
             name: package_name,
             version: None,
         };
-        match OptionalPackageId::from_str("test") {
-            Ok(id) => assert_eq!(id, correct_version),
-            Err(e) => panic!("Expected Ok(OptionalPackageId(name: 'test', version: None)), got Err({e:?})"),
-        }
+        assert_eq!(OptionalPackageId::from_str("test"), Ok(correct_version));
     }
 
     #[test]
     fn from_str_empty_optional() {
-        assert!(matches!(
+        assert_eq!(
             OptionalPackageId::from_str(""),
             Err(PackageIdError::PackageNameError(PackageNameError::InvalidPackageName))
-        ))
+        )
     }
 
     #[test]
     fn from_str_invalid_chars() {
         let invalid_chars = "!#$%^&*()~:;{}[]<>,.?/|\\\"\'`+=";
         for char in invalid_chars.chars() {
-            assert!(matches!(
+            assert_eq!(
                 OptionalPackageId::from_str(format!("{char}@3.4.1").as_str()),
                 Err(PackageIdError::PackageNameError(PackageNameError::InvalidPackageName))
-            ))
+            )
         }
     }
 }

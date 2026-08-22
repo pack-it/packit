@@ -100,10 +100,7 @@ mod tests {
             number: 3,
         };
 
-        match VersionNumber::from_str("3") {
-            Ok(version) => assert_eq!(version, correct_version),
-            Err(e) => panic!("Expected Ok(VersionNumber(..)), got Err({e:?})"),
-        }
+        assert_eq!(VersionNumber::from_str("3"), Ok(correct_version));
     }
 
     #[test]
@@ -113,10 +110,7 @@ mod tests {
             number: 3,
         };
 
-        match VersionNumber::from_str("03") {
-            Ok(version) => assert_eq!(version, correct_version),
-            Err(e) => panic!("Expected Ok(VersionNumber(original: 03, number: 3)), got Err({e:?})"),
-        }
+        assert_eq!(VersionNumber::from_str("03"), Ok(correct_version));
     }
 
     #[test]

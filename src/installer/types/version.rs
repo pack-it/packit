@@ -13,6 +13,7 @@ use thiserror::Error;
 use crate::installer::types::version_number::VersionNumber;
 
 /// Errors that occur when parsing version related structs.
+#[cfg_attr(test, derive(PartialEq))]
 #[derive(Error, Debug)]
 pub enum VersionError {
     #[error("Version is empty")]
@@ -185,29 +186,25 @@ pub mod tests {
     #[test]
     fn valid_from_str() {
         let correct_version = create_version(&[3, 4, 1]);
-
-        match Version::from_str("3.4.1") {
-            Ok(version) => assert_eq!(version, correct_version),
-            Err(e) => panic!("Expected Ok(Version (numbers: [3, 4, 1])), got Err({e:?})"),
-        }
+        assert_eq!(Version::from_str("3.4.1"), Ok(correct_version));
     }
 
     #[test]
     fn from_str_dot_errors() {
-        assert!(matches!(Version::from_str("3.4..1"), Err(VersionError::DotsError)));
-        assert!(matches!(Version::from_str("3.4.1."), Err(VersionError::DotsError)));
-        assert!(matches!(Version::from_str(".3.4.1"), Err(VersionError::DotsError)));
+        assert_eq!(Version::from_str("3.4..1"), Err(VersionError::DotsError));
+        assert_eq!(Version::from_str("3.4.1."), Err(VersionError::DotsError));
+        assert_eq!(Version::from_str(".3.4.1"), Err(VersionError::DotsError));
     }
 
     #[test]
     fn from_str_no_input() {
-        assert!(matches!(Version::from_str(""), Err(VersionError::NoneError)));
+        assert_eq!(Version::from_str(""), Err(VersionError::NoneError));
     }
 
     #[test]
     fn from_str_illegal_char() {
-        assert!(matches!(Version::from_str("3.a.1"), Err(VersionError::IllegalCharacterError)));
-        assert!(matches!(Version::from_str("3.-1.1"), Err(VersionError::IllegalCharacterError)));
+        assert_eq!(Version::from_str("3.a.1"), Err(VersionError::IllegalCharacterError));
+        assert_eq!(Version::from_str("3.-1.1"), Err(VersionError::IllegalCharacterError));
     }
 
     #[test]
@@ -245,7 +242,6 @@ pub mod tests {
     #[test]
     fn format() {
         let version = Version::from(&[3, 4, 1]);
-
         assert_eq!(version.to_string(), "3.4.1");
     }
 }

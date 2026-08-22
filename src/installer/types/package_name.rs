@@ -8,7 +8,8 @@ use thiserror::Error;
 const VALID_PACKAGE_NAME: &str = r"^[a-zA-Z0-9\-_]+$";
 
 /// Errors that occur when creating or parsing the package name.
-#[derive(Error, Debug, PartialEq)]
+#[cfg_attr(test, derive(PartialEq))]
+#[derive(Error, Debug)]
 pub enum PackageNameError {
     #[error("Package name cannot be empty and can only contain characters: 'a-z', 'A-Z', '0-9', '-' and '_'")]
     InvalidPackageName,

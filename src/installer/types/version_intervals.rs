@@ -149,55 +149,50 @@ impl VersionIntervals {
 
 #[cfg(test)]
 mod tests {
+    use crate::installer::types::version::tests::create_version;
+
     use super::*;
 
     #[test]
     fn from_str_ranges() {
         let version_intervals = VersionIntervals::from_str("<6.6|6.7|6.8-7.10|>8");
+        let intervals = match version_intervals {
+            Ok(intervals) => intervals,
+            Err(e) => panic!("Test failed: {e}"),
+        };
 
-        match version_intervals {
-            Ok(intervals) => {
-                let version_bounds = intervals.get_version_bounds();
-                assert!(version_bounds.len() == 4);
-                assert!(
-                    matches!(version_bounds.get(0), Some(VersionBounds::Lower(..))),
-                    "bound was {version_bounds:?}",
-                );
-                assert!(
-                    matches!(version_bounds.get(1), Some(VersionBounds::Equal(..))),
-                    "bound was {version_bounds:?}",
-                );
-                assert!(
-                    matches!(version_bounds.get(2), Some(VersionBounds::Range(..))),
-                    "bound was {version_bounds:?}",
-                );
-                assert!(
-                    matches!(version_bounds.get(3), Some(VersionBounds::Higher(..))),
-                    "bound was {version_bounds:?}",
-                );
-            },
-            Err(e) => panic!("Expected Ok(Vec(VersionBound (..))), got Err({e:?})"),
-        }
+        let version_bounds = intervals.get_version_bounds();
+        assert_eq!(version_bounds.len(), 4);
+        assert_eq!(version_bounds.get(0), Some(&VersionBounds::Lower(create_version(&[6, 6]))));
+        assert_eq!(version_bounds.get(1), Some(&VersionBounds::Equal(create_version(&[6, 7]))));
+        assert_eq!(
+            version_bounds.get(2),
+            Some(&VersionBounds::Range(create_version(&[6, 8]), create_version(&[7, 10])))
+        );
+        assert_eq!(version_bounds.get(3), Some(&VersionBounds::Higher(create_version(&[8]))));
     }
 
     #[test]
     fn from_str_ranges_empty() {
         let version_intervals = VersionIntervals::from_str("");
+        let intervals = match version_intervals {
+            Ok(intervals) => intervals,
+            Err(e) => panic!("Test failed: {e}"),
+        };
 
-        match version_intervals {
-            Ok(intervals) => assert!(intervals.get_version_bounds().len() == 0),
-            Err(e) => panic!("Expected Ok([]), got Err({e:?})"),
-        }
+        assert_eq!(intervals.get_version_bounds().len(), 0);
     }
 
     #[test]
     fn from_str_valid_interval() {
         let intervals = ["3", "<6.6|6.7|6.8-7.10|>8", "<=4|4.5|5-6|>=10.1", "4-10", "32|>34", "<6.5|>6.5"];
         for interval in intervals {
-            match VersionIntervals::from_str(interval) {
-                Ok(_) => {},
-                Err(e) => panic!("Expected Ok(..), got Err({e:?})"),
-            }
+            let parsed_interval = VersionIntervals::from_str(interval);
+            assert!(
+                parsed_interval.is_ok(),
+                "Test failed: {}\nTesting {interval:?}",
+                parsed_interval.unwrap_err()
+            );
         }
     }
 
@@ -205,10 +200,8 @@ mod tests {
     fn from_str_invalid_interval() {
         let intervals = ["3|3", "5-10|7-11", "<6.5|>=6.4", "<6.6|6.9|6.8-7.10|>8", ">4|5", "4|3"];
         for interval in intervals {
-            match VersionIntervals::from_str(interval) {
-                Ok(interval) => panic!("Expected Err(..), got Ok({interval:?})"),
-                Err(_) => {},
-            }
+            let parsed_interval = VersionIntervals::from_str(interval);
+            assert!(parsed_interval.is_err(), "Test failed: {}", parsed_interval.unwrap());
         }
     }
 }

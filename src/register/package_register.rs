@@ -625,13 +625,10 @@ pub mod tests {
     fn get_latest_satisfying_package() {
         let register = create_register();
         let package_a_id = create_package_id("F@6");
-        let dependency = create_dependency("F", ">5");
         let package_a = register.get_package_version(&package_a_id).expect("Expected package F");
+        let dependency = create_dependency("F", ">5");
 
-        match register.get_latest_satisfying_package(&dependency) {
-            Some(package) => assert_eq!(package.package_id, package_a.package_id),
-            None => panic!("Expected Some(InstalledPackageVersion (..)), got None"),
-        }
+        assert_eq!(register.get_latest_satisfying_package(&dependency), Some(package_a));
     }
 
     #[test]
