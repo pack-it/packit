@@ -66,7 +66,7 @@ impl OptionalPackageId {
     }
 
     /// Returns a `PackageId` with the current version, or the given version if the `OptionalPackageId` does not contain a version.
-    #[expect(unused)]
+    #[cfg_attr(not(test), expect(unused))]
     pub fn versioned_or(&self, version: Version) -> PackageId {
         let version = match &self.version {
             Some(version) => version.clone(),
@@ -79,27 +79,33 @@ impl OptionalPackageId {
     /// Returns a `PackageId` with the current version, or a clone of the given version if the `OptionalPackageId` does not contain a version.
     pub fn versioned_or_cloned(&self, version: &Version) -> PackageId {
         let version = match &self.version {
-            Some(version) => version.clone(),
-            None => version.clone(),
+            Some(version) => version,
+            None => version,
         };
 
-        PackageId::new(self.name.clone(), version)
+        PackageId::new(self.name.clone(), version.clone())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::installer::types::{
-        PackageId,
+        PackageId, VersionError,
         package_id::PackageIdError,
+        package_id_tests::create_package_id,
         package_name::{PackageNameError, tests::create_package_name},
         version::tests::create_version,
     };
 
     use super::*;
 
+    /// This is a helper method which creates an `OptionalPackageId` from an id string which is assumed to be correct.
+    pub fn create_optional_id(id: &str) -> OptionalPackageId {
+        OptionalPackageId::from_str(id).expect("Expected a valid optional id str")
+    }
+
     #[test]
-    fn valid_from_str_optional() {
+    fn valid_from_str() {
         let package_name = create_package_name("test");
         let version = create_version("3.4.1");
         let correct_version = PackageId::new(package_name.clone(), version).into();
@@ -113,6 +119,24 @@ mod tests {
     }
 
     #[test]
+    fn invalid_from_str() {
+        assert_eq!(
+            OptionalPackageId::from_str("test@@3.4.1"),
+            Err(PackageIdError::VersionError(VersionError::IllegalCharacterError))
+        );
+
+        assert_eq!(
+            OptionalPackageId::from_str("test@"),
+            Err(PackageIdError::VersionError(VersionError::NoneError))
+        );
+
+        assert_eq!(
+            OptionalPackageId::from_str("3.4.1"),
+            Err(PackageIdError::PackageNameError(PackageNameError::InvalidPackageName))
+        );
+    }
+
+    #[test]
     fn from_str_empty_optional() {
         assert_eq!(
             OptionalPackageId::from_str(""),
@@ -121,13 +145,53 @@ mod tests {
     }
 
     #[test]
-    fn from_str_invalid_chars() {
-        let invalid_chars = "!#$%^&*()~:;{}[]<>,.?/|\\\"\'`+=";
-        for char in invalid_chars.chars() {
-            assert_eq!(
-                OptionalPackageId::from_str(format!("{char}@3.4.1").as_str()),
-                Err(PackageIdError::PackageNameError(PackageNameError::InvalidPackageName))
-            )
-        }
+    fn from() {
+        let optional_id = create_optional_id("test@3.4.1");
+
+        assert_eq!(optional_id.name, create_package_name("test"));
+        assert_eq!(optional_id.version, Some(create_version("3.4.1")));
+    }
+
+    #[test]
+    fn format() {
+        let optional_id = create_optional_id("test@3.4.1");
+        assert_eq!(optional_id.to_string(), "test@3.4.1");
+
+        let optional_id = create_optional_id("test");
+        assert_eq!(optional_id.to_string(), "test");
+    }
+
+    #[test]
+    fn versioned() {
+        let package_id = create_package_id("test@3.4.1");
+        let optional_id = create_optional_id("test@3.4.1");
+        assert_eq!(optional_id.versioned(), Some(package_id));
+
+        let optional_id = create_optional_id("test");
+        assert_eq!(optional_id.versioned(), None);
+    }
+
+    #[test]
+    fn versioned_or() {
+        let version = create_version("2.0.1");
+        let package_id = create_package_id("test@3.4.1");
+        let optional_id = create_optional_id("test@3.4.1");
+        assert_eq!(optional_id.versioned_or(version.clone()), package_id);
+
+        let package_id = create_package_id("test@2.0.1");
+        let optional_id = create_optional_id("test");
+        assert_eq!(optional_id.versioned_or(version), package_id);
+    }
+
+    #[test]
+    fn versioned_or_cloned() {
+        let version = create_version("2.0.1");
+        let package_id = create_package_id("test@3.4.1");
+        let optional_id = create_optional_id("test@3.4.1");
+        assert_eq!(optional_id.versioned_or_cloned(&version), package_id);
+
+        let package_id = create_package_id("test@2.0.1");
+        let optional_id = create_optional_id("test");
+        assert_eq!(optional_id.versioned_or_cloned(&version), package_id);
     }
 }
