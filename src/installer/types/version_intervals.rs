@@ -140,11 +140,6 @@ impl VersionIntervals {
     pub fn is_empty(&self) -> bool {
         self.version_bounds.is_empty()
     }
-
-    /// Gets a reference to the version bounds vec.
-    pub fn get_version_bounds(&self) -> &Vec<VersionBounds> {
-        &self.version_bounds
-    }
 }
 
 #[cfg(test)]
@@ -161,7 +156,7 @@ mod tests {
             Err(e) => panic!("Test failed: {e}"),
         };
 
-        let version_bounds = intervals.get_version_bounds();
+        let version_bounds = intervals.version_bounds;
         assert_eq!(version_bounds.len(), 4);
         assert_eq!(version_bounds.get(0), Some(&VersionBounds::Lower(create_version(&[6, 6]))));
         assert_eq!(version_bounds.get(1), Some(&VersionBounds::Equal(create_version(&[6, 7]))));
@@ -180,7 +175,7 @@ mod tests {
             Err(e) => panic!("Test failed: {e}"),
         };
 
-        assert_eq!(intervals.get_version_bounds().len(), 0);
+        assert_eq!(intervals.version_bounds.len(), 0);
     }
 
     #[test]
