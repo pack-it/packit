@@ -63,3 +63,13 @@ windows = { version = "0.62.2", features = [
     "Win32_System_SystemServices",
     "Win32_System_Memory",
 ] }
+
+[dev-dependencies]
+assert_cmd = "2.2.2"
+
+[features]
+integration-tests = []
+
+[[test]]
+name = "integration"
+required-features = ["integration-tests"]
