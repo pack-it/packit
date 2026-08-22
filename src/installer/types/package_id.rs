@@ -99,7 +99,7 @@ pub mod tests {
     #[test]
     fn from_str() {
         let package_name = create_package_name("test");
-        let version = create_version(&[3, 4, 1]);
+        let version = create_version("3.4.1");
         let correct_version = PackageId::new(package_name, version);
 
         assert_eq!(PackageId::from_str("test@3.4.1"), Ok(correct_version));
@@ -135,7 +135,7 @@ pub mod tests {
     #[test]
     fn format() {
         let package_name = create_package_name("test");
-        let version = create_version(&[3, 4, 1]);
+        let version = create_version("3.4.1");
         let correct_version = PackageId::new(package_name, version);
 
         assert_eq!(correct_version.to_string(), "test@3.4.1");

@@ -163,13 +163,13 @@ mod tests {
 
         let version_bounds = intervals.version_bounds;
         assert_eq!(version_bounds.len(), 4);
-        assert_eq!(version_bounds.get(0), Some(&VersionBounds::Lower(create_version(&[6, 6]))));
-        assert_eq!(version_bounds.get(1), Some(&VersionBounds::Equal(create_version(&[6, 7]))));
+        assert_eq!(version_bounds.get(0), Some(&VersionBounds::Lower(create_version("6.6"))));
+        assert_eq!(version_bounds.get(1), Some(&VersionBounds::Equal(create_version("6.7"))));
         assert_eq!(
             version_bounds.get(2),
-            Some(&VersionBounds::Range(create_version(&[6, 8]), create_version(&[7, 10])))
+            Some(&VersionBounds::Range(create_version("6.8"), create_version("7.10")))
         );
-        assert_eq!(version_bounds.get(3), Some(&VersionBounds::Higher(create_version(&[8]))));
+        assert_eq!(version_bounds.get(3), Some(&VersionBounds::Higher(create_version("8"))));
     }
 
     #[test]
@@ -233,7 +233,7 @@ mod tests {
             version_bounds: Vec::new(),
         };
 
-        version_intervals.covers(&create_version(&[0, 0, 0]));
+        version_intervals.covers(&create_version("0.0.0"));
     }
 
     #[test]
@@ -241,7 +241,7 @@ mod tests {
         let version_intervals_str = "<6.6|6.7|6.8-7.10|>8";
         let version_intervals = create_version_intervals(version_intervals_str);
 
-        assert!(version_intervals.covers(&create_version(&[6, 9])));
+        assert!(version_intervals.covers(&create_version("6.9")));
     }
 
     #[test]
@@ -249,10 +249,10 @@ mod tests {
         let version_intervals_str = "<=4|4.5|5-6|>=10.1";
         let version_intervals = create_version_intervals(version_intervals_str);
 
-        assert!(version_intervals.covers(&create_version(&[0, 0, 1])));
-        assert!(version_intervals.covers(&create_version(&[4, 5])));
-        assert!(version_intervals.covers(&create_version(&[5, 5])));
-        assert!(version_intervals.covers(&create_version(&[10, 1])));
+        assert!(version_intervals.covers(&create_version("0.0.1")));
+        assert!(version_intervals.covers(&create_version("4.5")));
+        assert!(version_intervals.covers(&create_version("5.5")));
+        assert!(version_intervals.covers(&create_version("10.1")));
     }
 
     #[test]
@@ -260,8 +260,8 @@ mod tests {
         let version_intervals_str = "<6.6|6.7|6.8-7.10|>8";
         let version_intervals = create_version_intervals(version_intervals_str);
 
-        assert!(!version_intervals.covers(&create_version(&[6, 6])));
-        assert!(!version_intervals.covers(&create_version(&[7, 10])));
-        assert!(!version_intervals.covers(&create_version(&[8])));
+        assert!(!version_intervals.covers(&create_version("6.6")));
+        assert!(!version_intervals.covers(&create_version("7.10")));
+        assert!(!version_intervals.covers(&create_version("8")));
     }
 }

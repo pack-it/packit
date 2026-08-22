@@ -101,7 +101,7 @@ mod tests {
     #[test]
     fn valid_from_str_optional() {
         let package_name = create_package_name("test");
-        let version = create_version(&[3, 4, 1]);
+        let version = create_version("3.4.1");
         let correct_version = PackageId::new(package_name.clone(), version).into();
         assert_eq!(OptionalPackageId::from_str("test@3.4.1"), Ok(correct_version));
 

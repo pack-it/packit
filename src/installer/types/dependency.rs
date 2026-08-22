@@ -100,9 +100,9 @@ pub mod tests {
         let package_name = create_package_name("test");
         let dependency = create_dependency("test", "3.4.1-3.4.8");
 
-        assert!(dependency.satisfied(&package_name, &create_version(&[3, 4, 7])));
-        assert!(!dependency.satisfied(&package_name, &create_version(&[3, 4, 0])));
-        assert!(!dependency.satisfied(&package_name, &create_version(&[3, 4, 8])));
+        assert!(dependency.satisfied(&package_name, &create_version("3.4.7")));
+        assert!(!dependency.satisfied(&package_name, &create_version("3.4.0")));
+        assert!(!dependency.satisfied(&package_name, &create_version("3.4.8")));
     }
 
     #[test]
@@ -110,8 +110,8 @@ pub mod tests {
         let package_name = create_package_name("test");
         let dependency = create_dependency("test", "<3.4.1");
 
-        assert!(dependency.satisfied(&package_name, &create_version(&[3, 4, 0])));
-        assert!(!dependency.satisfied(&package_name, &create_version(&[3, 4, 1])));
+        assert!(dependency.satisfied(&package_name, &create_version("3.4.0")));
+        assert!(!dependency.satisfied(&package_name, &create_version("3.4.1")));
     }
 
     #[test]
@@ -119,8 +119,8 @@ pub mod tests {
         let package_name = create_package_name("test");
         let dependency = create_dependency("test", "<=3.4.1");
 
-        assert!(dependency.satisfied(&package_name, &create_version(&[3, 4, 1])));
-        assert!(!dependency.satisfied(&package_name, &create_version(&[3, 4, 2])));
+        assert!(dependency.satisfied(&package_name, &create_version("3.4.1")));
+        assert!(!dependency.satisfied(&package_name, &create_version("3.4.2")));
     }
 
     #[test]
@@ -128,8 +128,8 @@ pub mod tests {
         let package_name = create_package_name("test");
         let dependency = create_dependency("test", ">3.4.1");
 
-        assert!(dependency.satisfied(&package_name, &create_version(&[3, 4, 2])));
-        assert!(!dependency.satisfied(&package_name, &create_version(&[3, 4, 1])));
+        assert!(dependency.satisfied(&package_name, &create_version("3.4.2")));
+        assert!(!dependency.satisfied(&package_name, &create_version("3.4.1")));
     }
 
     #[test]
@@ -137,8 +137,8 @@ pub mod tests {
         let package_name = create_package_name("test");
         let dependency = create_dependency("test", ">=3.4.1");
 
-        assert!(dependency.satisfied(&package_name, &create_version(&[3, 4, 1])));
-        assert!(!dependency.satisfied(&package_name, &create_version(&[3, 4, 0])));
+        assert!(dependency.satisfied(&package_name, &create_version("3.4.1")));
+        assert!(!dependency.satisfied(&package_name, &create_version("3.4.0")));
     }
 
     #[test]
@@ -146,15 +146,15 @@ pub mod tests {
         let package_name = create_package_name("test");
         let dependency = create_dependency("test", "3.4.1");
 
-        assert!(dependency.satisfied(&package_name, &create_version(&[3, 4, 1])));
-        assert!(!dependency.satisfied(&package_name, &create_version(&[5])));
+        assert!(dependency.satisfied(&package_name, &create_version("3.4.1")));
+        assert!(!dependency.satisfied(&package_name, &create_version("5")));
     }
 
     #[test]
     fn satisfied_wrong_name() {
         let package_name = create_package_name("wrong_name");
         let dependency = create_dependency("test", "3.4.1");
-        assert!(!dependency.satisfied(&package_name, &create_version(&[3, 4, 1])));
+        assert!(!dependency.satisfied(&package_name, &create_version("3.4.1")));
     }
 
     #[test]
