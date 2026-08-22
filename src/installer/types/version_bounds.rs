@@ -142,4 +142,101 @@ mod tests {
 
         assert_eq!(version_bound, Ok(VersionBounds::Equal(version)));
     }
+
+    #[test]
+    fn invalid_from_str() {
+        let version_bound = VersionBounds::from_str("<<3.4");
+        assert_eq!(version_bound, Err(VersionError::IllegalCharacterError));
+
+        let version_bound = VersionBounds::from_str("3.4=");
+        assert_eq!(version_bound, Err(VersionError::IllegalCharacterError));
+
+        let version_bound = VersionBounds::from_str("3.4=-");
+        assert_eq!(version_bound, Err(VersionError::IllegalCharacterError));
+
+        let version_bound = VersionBounds::from_str("---");
+        assert_eq!(version_bound, Err(VersionError::NoneError));
+    }
+
+    #[test]
+    fn range_covers() {
+        let version_bound = VersionBounds::Range(create_version(&[3, 0]), create_version(&[3, 5]));
+        assert!(!version_bound.covers(&create_version(&[2, 9])));
+        assert!(version_bound.covers(&create_version(&[3, 0])));
+        assert!(version_bound.covers(&create_version(&[3, 4])));
+        assert!(!version_bound.covers(&create_version(&[3, 5])));
+    }
+
+    #[test]
+    fn including_range_covers() {
+        let version_bound = VersionBounds::IncludingRange(create_version(&[3, 0]), create_version(&[3, 5]));
+        assert!(!version_bound.covers(&create_version(&[2, 9])));
+        assert!(version_bound.covers(&create_version(&[3, 0])));
+        assert!(version_bound.covers(&create_version(&[3, 5])));
+        assert!(!version_bound.covers(&create_version(&[3, 6])));
+    }
+
+    #[test]
+    fn lower_covers() {
+        let version_bound = VersionBounds::Lower(create_version(&[3, 1]));
+        assert!(version_bound.covers(&create_version(&[3, 0])));
+        assert!(!version_bound.covers(&create_version(&[3, 1])));
+        assert!(!version_bound.covers(&create_version(&[3, 2])));
+    }
+
+    #[test]
+    fn lower_equal_covers() {
+        let version_bound = VersionBounds::LowerEqual(create_version(&[3, 1]));
+        assert!(version_bound.covers(&create_version(&[3, 0])));
+        assert!(version_bound.covers(&create_version(&[3, 1])));
+        assert!(!version_bound.covers(&create_version(&[3, 2])));
+    }
+
+    #[test]
+    fn higher_covers() {
+        let version_bound = VersionBounds::Higher(create_version(&[3, 0]));
+        assert!(!version_bound.covers(&create_version(&[2, 9])));
+        assert!(!version_bound.covers(&create_version(&[3, 0])));
+        assert!(version_bound.covers(&create_version(&[3, 1])));
+    }
+
+    #[test]
+    fn higher_equal_covers() {
+        let version_bound = VersionBounds::HigherEqual(create_version(&[3, 0]));
+        assert!(!version_bound.covers(&create_version(&[2, 9])));
+        assert!(version_bound.covers(&create_version(&[3, 0])));
+        assert!(version_bound.covers(&create_version(&[3, 1])));
+    }
+
+    #[test]
+    fn equal_covers() {
+        let version_bound = VersionBounds::Equal(create_version(&[3, 0]));
+        assert!(!version_bound.covers(&create_version(&[2, 9])));
+        assert!(version_bound.covers(&create_version(&[3, 0])));
+        assert!(!version_bound.covers(&create_version(&[3, 1])));
+    }
+
+    #[test]
+    fn format() {
+        let version_bound = VersionBounds::Range(create_version(&[3, 0]), create_version(&[3, 5]));
+        assert_eq!(version_bound.to_string(), "3.0-3.5");
+
+        let version_bound = VersionBounds::IncludingRange(create_version(&[3, 0]), create_version(&[3, 5]));
+        assert_eq!(version_bound.to_string(), "3.0-=3.5");
+
+        let version_bound = VersionBounds::Lower(create_version(&[3, 0]));
+        assert_eq!(version_bound.to_string(), "<3.0");
+
+        let version_bound = VersionBounds::LowerEqual(create_version(&[3, 0]));
+        assert_eq!(version_bound.to_string(), "<=3.0");
+
+        let version_bound = VersionBounds::Higher(create_version(&[3, 0]));
+        assert_eq!(version_bound.to_string(), ">3.0");
+
+        let version_bound = VersionBounds::HigherEqual(create_version(&[3, 0]));
+        assert_eq!(version_bound.to_string(), ">=3.0");
+
+        let version_bound = VersionBounds::Equal(create_version(&[3, 0]));
+        assert_eq!(version_bound.to_string(), "3.0");
+    }
 }
