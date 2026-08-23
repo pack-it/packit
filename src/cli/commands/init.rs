@@ -125,16 +125,14 @@ impl HandleCommand for InitArgs {
         let package_homepage = Some("https://github.com/pack-it/packit".into());
 
         // Add Packit to register
-        register
-            .add_package_raw(
-                installed_package_version,
-                active,
-                symlinked,
-                package_description,
-                package_homepage,
-                Vec::new(),
-            )
-            .unwrap_or_exit_msg("Packit cannot be initialized: error while adding Packit to register", 1);
+        register.add_package_raw(
+            installed_package_version,
+            active,
+            symlinked,
+            package_description,
+            package_homepage,
+            Vec::new(),
+        );
 
         // Save register
         register

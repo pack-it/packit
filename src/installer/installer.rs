@@ -229,7 +229,7 @@ impl<'a> Installer<'a> {
             false,
             false,
             use_prebuild,
-        )?;
+        );
         self.register.save_to(&PackageRegister::get_path(&self.config.prefix_directory))?;
 
         self.execute_postinstall(&package_id, install_meta, &install_directory, &script_args)?;
