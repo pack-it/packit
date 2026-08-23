@@ -217,12 +217,12 @@ fn run_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, env: Environm
     bind_extra_outputs(&mut command, script_data)?;
 
     // Remove stripped environment variables
-    for key in env.stripped_vars {
+    for key in env.get_stripped_vars() {
         command.env_remove(key);
     }
 
     // Add script environment variables
-    for (key, value) in env.env_vars {
+    for (key, value) in env.get_env_vars() {
         command.env(key, value);
     }
 
