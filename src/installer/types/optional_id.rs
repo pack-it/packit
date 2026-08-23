@@ -88,7 +88,7 @@ impl OptionalPackageId {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use crate::installer::types::{
         PackageId, VersionError,
         package_id::PackageIdError,

@@ -10,7 +10,7 @@ use crate::{
 };
 
 /// Gets all the duplicate package arguments. Packages are duplicate if they have the same name and version
-/// or if the version isn't specified on one of them, the package is also considered duplicate.
+/// or if the version isn't specified on one of them and the names are the same, the package is also considered duplicate.
 pub fn get_duplicates(packages: &Vec<OptionalPackageId>) -> HashSet<String> {
     let mut duplicates = HashSet::new();
     let mut seen = HashSet::new();
@@ -72,4 +72,64 @@ pub fn expand_optional_ids(register: &PackageRegister, config: &Config, packages
     }
 
     package_ids
+}
+
+#[cfg(test)]
+pub mod tests {
+
+    use crate::installer::types::{optional_id_tests::create_optional_id, package_name_tests::create_package_name};
+
+    use super::*;
+
+    #[test]
+    fn optional_id_duplicates() {
+        let packages = vec![create_optional_id("test")];
+        let duplicates = get_duplicates(&packages);
+        assert_eq!(duplicates, HashSet::new());
+
+        let packages = vec![create_optional_id("test@3.4.1")];
+        let duplicates = get_duplicates(&packages);
+        assert_eq!(duplicates, HashSet::new());
+
+        let mut packages = vec![create_optional_id("test@3.4.1"), create_optional_id("test@3.4.2")];
+        let duplicates = get_duplicates(&packages);
+        assert_eq!(duplicates, HashSet::new());
+
+        packages.push(create_optional_id("test"));
+        let duplicates = get_duplicates(&packages);
+        assert_eq!(duplicates, HashSet::from([create_package_name("test").style().to_string()]));
+
+        let packages = vec![create_optional_id("test@3.4.1"), create_optional_id("test@3.4.1")];
+        let duplicates = get_duplicates(&packages);
+        assert_eq!(duplicates, HashSet::from([create_optional_id("test@3.4.1").style().to_string()]));
+
+        let packages = vec![create_optional_id("test"), create_optional_id("test")];
+        let duplicates = get_duplicates(&packages);
+        assert_eq!(duplicates, HashSet::from([create_optional_id("test").style().to_string()]));
+    }
+
+    #[test]
+    fn empty_optional_id_duplicates() {
+        let packages = vec![];
+        let duplicates = get_duplicates(&packages);
+        assert_eq!(duplicates, HashSet::new());
+    }
+
+    #[test]
+    fn package_name_duplicates() {
+        let mut packages = vec![create_package_name("test")];
+        let duplicates = get_package_duplicates(&packages);
+        assert_eq!(duplicates, HashSet::new());
+
+        packages.push(create_package_name("test"));
+        let duplicates = get_package_duplicates(&packages);
+        assert_eq!(duplicates, HashSet::from([create_package_name("test").style().to_string()]));
+    }
+
+    #[test]
+    fn empty_package_name_duplicates() {
+        let packages = vec![];
+        let duplicates = get_package_duplicates(&packages);
+        assert_eq!(duplicates, HashSet::new());
+    }
 }
