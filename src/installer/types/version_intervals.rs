@@ -156,31 +156,23 @@ mod tests {
     #[test]
     fn from_str_ranges() {
         let version_intervals = VersionIntervals::from_str("<6.6|6.7|6.8-7.10|>8");
-        let intervals = match version_intervals {
-            Ok(intervals) => intervals,
-            Err(e) => panic!("Test failed: {e}"),
-        };
-
-        let version_bounds = intervals.version_bounds;
-        assert_eq!(version_bounds.len(), 4);
-        assert_eq!(version_bounds.get(0), Some(&VersionBounds::Lower(create_version("6.6"))));
-        assert_eq!(version_bounds.get(1), Some(&VersionBounds::Equal(create_version("6.7"))));
         assert_eq!(
-            version_bounds.get(2),
-            Some(&VersionBounds::Range(create_version("6.8"), create_version("7.10")))
+            version_intervals,
+            Ok(VersionIntervals {
+                version_bounds: vec![
+                    VersionBounds::Lower(create_version("6.6")),
+                    VersionBounds::Equal(create_version("6.7")),
+                    VersionBounds::Range(create_version("6.8"), create_version("7.10")),
+                    VersionBounds::Higher(create_version("8"))
+                ]
+            })
         );
-        assert_eq!(version_bounds.get(3), Some(&VersionBounds::Higher(create_version("8"))));
     }
 
     #[test]
     fn from_str_ranges_empty() {
         let version_intervals = VersionIntervals::from_str("");
-        let intervals = match version_intervals {
-            Ok(intervals) => intervals,
-            Err(e) => panic!("Test failed: {e}"),
-        };
-
-        assert_eq!(intervals.version_bounds.len(), 0);
+        assert_eq!(version_intervals, Ok(VersionIntervals { version_bounds: vec![] }));
     }
 
     #[test]
@@ -190,7 +182,7 @@ mod tests {
             let parsed_interval = VersionIntervals::from_str(interval);
             assert!(
                 parsed_interval.is_ok(),
-                "Test failed: {}\nTesting {interval:?}",
+                "{}\nTest value: {interval:?}",
                 parsed_interval.unwrap_err()
             );
         }

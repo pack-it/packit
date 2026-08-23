@@ -2,15 +2,15 @@
 use std::sync::LazyLock;
 
 use crate::{
-    cli::display::{logging::debug, styled::Styled},
+    cli::display::{
+        logging::{debug, error},
+        styled::Styled,
+    },
     installer::types::Version,
 };
 
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 use std::str::FromStr;
-
-#[cfg(any(target_os = "macos", target_os = "linux"))]
-use crate::cli::display::logging::error;
 
 /// Represents an operating system type.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -224,7 +224,13 @@ impl OsVersion {
     fn get_version() -> Option<Self> {
         let windows_version = windows_version::OsVersion::current();
 
-        let version = Version::from(&[windows_version.major, windows_version.minor, windows_version.pack]);
+        let version = match Version::try_from(&[windows_version.major, windows_version.minor, windows_version.pack]) {
+            Ok(version) => version,
+            Err(e) => {
+                error!(e, "Cannot parse Windows version");
+                return None;
+            },
+        };
 
         debug!(
             "Retrieved current windows version version {} with build version {}",

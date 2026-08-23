@@ -156,6 +156,35 @@ impl FromStr for Version {
     }
 }
 
+/// Implements the from trait for `&[u32]`.
+impl TryFrom<&[u32]> for Version {
+    type Error = VersionError;
+
+    fn try_from(value: &[u32]) -> Result<Self, VersionError> {
+        if value.is_empty() {
+            return Err(VersionError::NoneError);
+        }
+
+        Ok(Self {
+            numbers: value.iter().map(|v| VersionNumber::from(*v)).collect(),
+        })
+    }
+}
+
+/// Implements the from trait for `&[u32; N]`.
+impl<const N: usize> TryFrom<&[u32; N]> for Version {
+    type Error = VersionError;
+    fn try_from(value: &[u32; N]) -> Result<Self, VersionError> {
+        if value.is_empty() {
+            return Err(VersionError::NoneError);
+        }
+
+        Ok(Self {
+            numbers: value.iter().map(|v| VersionNumber::from(*v)).collect(),
+        })
+    }
+}
+
 #[cfg(test)]
 pub mod tests {
     use super::*;

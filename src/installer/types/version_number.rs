@@ -120,7 +120,7 @@ mod tests {
 
     #[test]
     fn from_str_illegal_chars() {
-        for invalid_char in "- .@<>=+|!#$%^&*(),'\"\\?[]{}`~±§".chars() {
+        for invalid_char in (0..=255).map(char::from).filter(|c| !c.is_ascii_digit()) {
             assert_eq!(
                 VersionNumber::from_str(&invalid_char.to_string()),
                 Err(VersionError::IllegalCharacterError)

@@ -82,8 +82,7 @@ impl Dependency {
 pub mod tests {
     use std::str::FromStr;
 
-    use crate::installer::types::package_name::tests::create_package_name;
-    use crate::installer::types::version::tests::create_version;
+    use crate::installer::types::{package_name::tests::create_package_name, version::tests::create_version};
 
     use super::*;
 

@@ -362,9 +362,9 @@ pub mod tests {
     use std::str::FromStr;
 
     use crate::installer::types::VersionIntervals;
-    use crate::installer::types::dependency_tests::create_dependency;
-    use crate::installer::types::package_id_tests::create_package_id;
-    use crate::installer::types::package_name_tests::create_package_name;
+    use crate::installer::types::{
+        dependency_tests::create_dependency, package_id_tests::create_package_id, package_name_tests::create_package_name,
+    };
     use crate::platforms::TargetArchitecture;
     use crate::repositories::types::{Checksum, FileSize, Licenses, Source, Sources, TargetBounds};
 

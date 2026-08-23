@@ -91,8 +91,7 @@ impl OptionalPackageId {
 mod tests {
     use crate::installer::types::{
         PackageId, VersionError,
-        package_id::PackageIdError,
-        package_id_tests::create_package_id,
+        package_id::{PackageIdError, tests::create_package_id},
         package_name::{PackageNameError, tests::create_package_name},
         version::tests::create_version,
     };
