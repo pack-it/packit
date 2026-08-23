@@ -32,4 +32,7 @@ pub use package_name::tests as package_name_tests;
 pub use package_id::tests as package_id_tests;
 
 #[cfg(test)]
+pub use optional_id::tests as optional_id_tests;
+
+#[cfg(test)]
 pub use dependency::tests as dependency_tests;
