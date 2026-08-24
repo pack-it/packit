@@ -230,6 +230,7 @@ Scripts get certain environment variables from Packit:
 | `PACKIT_PACKAGE_DEPENDENCIES_PATH` | The path containing symlinks to all dependencies of the package.                           |
 | `PACKIT_VERBOSE`                   | True (1) if verbose output is enabled, false (0) otherwise.                                |
 | `PACKIT_SKIP_BUILD_TEST`           | True (1) if the build tests should be skipped, false (0) otherwise.                        |
+| `PACKIT_BUILD_JOBS_COUNT`          | The number of jobs to use for build processes in the build script. Using `2 * the CPU count` as a heuristic.                           |
 
 Please note that the build script output is only shown to the user when the verbose mode is turned on. All other scripts always show their output, the output of these scripts should thus be clean. Optional verbose output can be printed when the `PACKIT_VERBOSE` is `1`.
 

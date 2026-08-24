@@ -5,6 +5,7 @@ use std::{
     io::{BufRead, BufReader},
     path::{self, Path, PathBuf},
     process::{Command, Stdio},
+    thread,
 };
 
 use bytes::Bytes;
@@ -190,6 +191,9 @@ fn run_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, env: Environm
 
     let package_dependencies_path = script_data.config.prefix_directory.join("dependencies").join(script_data.package_id.to_string());
 
+    // Use 2 * CPU count as a heuristic
+    let job_count = 2 * thread::available_parallelism().map(|n| n.get()).unwrap_or(1);
+
     let mut command = create_command(path);
     command
         .current_dir(run_dir)
@@ -199,7 +203,8 @@ fn run_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, env: Environm
         .env("PACKIT_PACKAGE_PATH", package_install_path)
         .env("PACKIT_PACKAGE_VERSION", script_data.package_id.version.to_string())
         .env("PACKIT_PACKAGE_DEPENDENCIES_PATH", &package_dependencies_path)
-        .env("PACKIT_VERBOSE", if script_data.verbose { "1" } else { "0" });
+        .env("PACKIT_VERBOSE", if script_data.verbose { "1" } else { "0" })
+        .env("PACKIT_BUILD_JOBS_COUNT", job_count.to_string());
 
     // Only display build logging if verbose is enabled, otherwise create combined pipe for reading
     let mut output = None;
