@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 - The integration tests to test Packit.
+- The build scripts now get the `PACKIT_BUILD_JOBS_COUNT` variable to use for parallel builds and tests.
 
 ### Fixed
 - Fix patch apply directory meta check reporting wrong issues.
