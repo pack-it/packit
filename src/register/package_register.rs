@@ -106,7 +106,7 @@ impl PackageRegister {
         symlinked: bool,
         active: bool,
         used_prebuild: bool,
-    ) -> Result<()> {
+    ) {
         let (prebuilds_repository_url, prebuilds_repository_provider) = match used_prebuild {
             true => (
                 source_repository.prebuilds_url.clone(),
@@ -148,7 +148,7 @@ impl PackageRegister {
         package_description: String,
         package_homepage: Option<String>,
         conflicts_with: Vec<PackageName>,
-    ) -> Result<()> {
+    ) {
         // Add the package as a dependent in its dependencies
         for dependency in &installed_package_version.dependencies {
             if let Some(package) = self.get_package_version_mut(dependency) {
@@ -176,12 +176,11 @@ impl PackageRegister {
                 );
             },
         };
-
-        Ok(())
     }
 
     /// Removes a package version from the register storage.
     /// Please note that this does not save the storage and does not read the currently installed packages from the toml.
+    /// Also note that if a package doesn't exist, it's silently ignored.
     pub fn remove_package_version(&mut self, package_id: &PackageId) {
         // Get the package, if it doesn't exist return early.
         let package = match self.get_package_mut(&package_id.name) {
@@ -230,7 +229,7 @@ impl PackageRegister {
 
     /// Gets mutable references to all installed versions of a certain package from the register storage.
     /// Returns a list containing all installed versions, which is empty if the package is not installed.
-    #[expect(unused)]
+    #[cfg_attr(not(test), expect(unused))]
     pub fn get_all_package_versions_mut(&mut self, package_name: &PackageName) -> Vec<&mut InstalledPackageVersion> {
         match self.packages.get_mut(package_name) {
             Some(package) => package.get_versions_mut(),
@@ -363,12 +362,16 @@ pub mod tests {
     use std::str::FromStr;
 
     use crate::installer::types::VersionIntervals;
-    use crate::installer::types::dependency_tests::create_dependency;
+    use crate::installer::types::{
+        dependency_tests::create_dependency, package_id_tests::create_package_id, package_name_tests::create_package_name,
+    };
     use crate::platforms::TargetArchitecture;
     use crate::repositories::types::{Checksum, FileSize, Licenses, Source, Sources, TargetBounds};
 
     use super::*;
 
+    /// A helper function which creates an `InstalledPackageVersion` using a package id,
+    /// dependencies and dependents lists and default values.
     fn create_package_version(
         package_id: PackageId,
         dependencies: HashSet<PackageId>,
@@ -388,6 +391,7 @@ pub mod tests {
         }
     }
 
+    /// A helper function which creates an `InstalledPackage` using a list of `InstalledPackageVersion` and default values.
     fn create_package(package_versions: Vec<InstalledPackageVersion>) -> InstalledPackage {
         let active_version = package_versions[0].package_id.version.clone();
         let mut versions = HashMap::new();
@@ -405,15 +409,17 @@ pub mod tests {
         }
     }
 
+    /// This is a helper function which creates a register.
     fn create_register() -> PackageRegister {
-        let package_a = PackageId::from_str("A@3.4.1").expect("Expected valid package id");
-        let package_b = PackageId::from_str("B@2.72").expect("Expected valid package id");
-        let package_c = PackageId::from_str("C@1.18.1").expect("Expected valid package id");
-        let package_d = PackageId::from_str("D@2.5.4").expect("Expected valid package id");
-        let package_e = PackageId::from_str("E@10.4").expect("Expected valid package id");
-        let package_f5 = PackageId::from_str("F@5").expect("Expected valid package id");
-        let package_f6 = PackageId::from_str("F@6").expect("Expected valid package id");
+        let package_a = create_package_id("A@3.4.1");
+        let package_b = create_package_id("B@2.72");
+        let package_c = create_package_id("C@1.18.1");
+        let package_d = create_package_id("D@2.5.4");
+        let package_e = create_package_id("E@10.4");
+        let package_f5 = create_package_id("F@5");
+        let package_f6 = create_package_id("F@6");
 
+        // Package A
         let mut packages = HashMap::new();
         let package_versions = vec![create_package_version(
             package_a.clone(),
@@ -422,6 +428,7 @@ pub mod tests {
         )];
         packages.insert(package_a.name.clone(), create_package(package_versions));
 
+        // Package B
         let package_versions = vec![create_package_version(
             package_b.clone(),
             HashSet::from([package_e.clone()]),
@@ -429,6 +436,7 @@ pub mod tests {
         )];
         packages.insert(package_b.name.clone(), create_package(package_versions));
 
+        // Package C
         let package_versions = vec![create_package_version(
             package_c.clone(),
             HashSet::from([package_d.clone(), package_e.clone()]),
@@ -436,6 +444,7 @@ pub mod tests {
         )];
         packages.insert(package_c.name.clone(), create_package(package_versions));
 
+        // Package D
         let package_versions = vec![create_package_version(
             package_d.clone(),
             HashSet::from([package_f5.clone()]),
@@ -443,6 +452,7 @@ pub mod tests {
         )];
         packages.insert(package_d.name.clone(), create_package(package_versions));
 
+        // Package E
         let package_versions = vec![create_package_version(
             package_e.clone(),
             HashSet::new(),
@@ -450,6 +460,7 @@ pub mod tests {
         )];
         packages.insert(package_e.name, create_package(package_versions));
 
+        // Packages F@5 and F@6
         let package_versions = vec![
             create_package_version(package_f5.clone(), HashSet::new(), HashSet::from([package_d])),
             create_package_version(package_f6, HashSet::new(), HashSet::new()),
@@ -459,6 +470,7 @@ pub mod tests {
         PackageRegister { packages }
     }
 
+    /// A helper function which creates `PackageMeta` with a given `package_id` and default values.
     fn create_package_meta(package_id: &PackageId) -> PackageMeta {
         let current_target_bounds =
             TargetBounds::from_str(&TargetArchitecture::current().to_string()).expect("Expected valid target bounds");
@@ -477,6 +489,7 @@ pub mod tests {
         }
     }
 
+    /// A helper function which creates `PackageVersionMeta` with default values and a given `package_id`.
     fn create_package_version_meta(package_id: &PackageId) -> PackageVersionMeta {
         PackageVersionMeta {
             version: package_id.version.clone(),
@@ -515,39 +528,41 @@ pub mod tests {
     #[test]
     fn add_package() {
         let mut register = create_register();
-        let package_id = PackageId::from_str("new_package@2.90").expect("Expected valid package id");
+        let package_id = create_package_id("new_package@2.90");
         let package_meta = create_package_meta(&package_id);
         let package_version_meta = create_package_version_meta(&package_id);
         let mut dependency_ids = HashSet::new();
-        dependency_ids.insert(PackageId::from_str("B@2.72").expect("Expected valid package id"));
+        let package_id_b = create_package_id("B@2.72");
+        dependency_ids.insert(package_id_b.clone());
 
-        register
-            .add_package(
-                &package_meta,
-                &package_version_meta,
-                dependency_ids,
-                &Repository::new("-", "-"),
-                &PathBuf::from("-"),
-                false,
-                false,
-                false,
-            )
-            .expect("Expected successful package addition in test");
+        // Add the package
+        register.add_package(
+            &package_meta,
+            &package_version_meta,
+            dependency_ids,
+            &Repository::new("-", "-"),
+            &PathBuf::from("-"),
+            false,
+            false,
+            false,
+        );
 
-        let package = match register.get_package_version(&package_id) {
-            Some(package) => package,
-            None => panic!("Expected Some(InstalledPackageVersion (..)), got None"),
-        };
+        // Test if the package has succesfully been added
+        assert_eq!(
+            register.get_package_version(&package_id),
+            Some(&create_package_version(
+                package_id.clone(),
+                HashSet::from([package_id_b.clone()]),
+                HashSet::new()
+            ))
+        );
 
-        let package_b_id = PackageId::from_str("B@2.72").expect("Expected valid package id");
-        let package_b = match register.get_package_version(&package_b_id) {
-            Some(package) => package,
-            None => panic!("Expected Some(InstalledPackageVersion (..)), got None"),
-        };
+        // Get both packages
+        let package = register.get_package_version(&package_id).expect("Expected package to exist");
+        let package_b = register.get_package_version(&package_id_b).expect("Expected package to exist");
 
-        assert_eq!(package.package_id.name, package_id.name);
-        assert_eq!(package.package_id.version, package_id.version);
-        assert_eq!(package.dependencies.get(&package_b_id), Some(&package_b_id));
+        // Check if the dependencies are correct
+        assert_eq!(package.dependencies.get(&package_id_b), Some(&package_id_b));
         assert_eq!(package_b.dependents.get(&package_id), Some(&package_id));
     }
 
@@ -555,49 +570,67 @@ pub mod tests {
     fn remove_package_version() {
         let mut register = create_register();
 
-        let package_b = PackageId::from_str("B@2.72").expect("Expected valid package id");
+        // Check if basic package version removal works
+        let package_a = create_package_id("A@3.4.1");
+        register.remove_package_version(&package_a);
+        assert!(register.get_package_version(&package_a).is_none());
+        assert!(register.get_package(&package_a.name).is_none());
+    }
+
+    #[test]
+    fn remove_package_dependency() {
+        let mut register = create_register();
+
+        let package_b = create_package_id("B@2.72");
         register.remove_package_version(&package_b);
 
         assert!(register.get_package_version(&package_b).is_none());
 
         // Check if package A still has B as a dependency (B shouldn't be removed)
-        let package_a = PackageId::from_str("A@3.4.1").expect("Expected valid package id");
+        // The register doesn't check for dependencies when removing a package.
+        let package_a = create_package_id("A@3.4.1");
         assert!(register.get_package_version(&package_a).expect("Expected package A").dependencies.get(&package_b).is_some());
 
         // Check that B is deleted as a dependent
-        let package_e = PackageId::from_str("E@10.4").expect("Expected valid package id");
+        let package_e = create_package_id("E@10.4");
         assert!(register.get_package_version(&package_e).expect("Expected package C").dependents.get(&package_b).is_none());
     }
 
     #[test]
     fn remove_package_version_one_of_two() {
         let mut register = create_register();
-        let package_f5 = PackageId::from_str("F@5").expect("Expected valid package id");
-        let package_f6 = PackageId::from_str("F@6").expect("Expected valid package id");
-        register.remove_package_version(&package_f5);
 
+        // Check if the package version was succesfully removed
+        let package_f5 = create_package_id("F@5");
+        register.remove_package_version(&package_f5);
         assert!(register.get_package_version(&package_f5).is_none());
+
+        // Check if the other version still exists
+        let package_f6 = create_package_id("F@6");
         assert!(register.get_package_version(&package_f6).is_some());
+
+        // Check if the active version was not switched (the register doesn't handle this)
+        let package_f = register.get_package(&package_f6.name).expect("Expected package to exist");
+        assert_eq!(package_f.active_version, package_f5.version);
     }
 
     #[test]
     fn remove_package() {
         let mut register = create_register();
 
-        let package_f = PackageId::from_str("F@5").expect("Expected valid package id");
+        let package_f = create_package_id("F@5");
         register.remove_package(&package_f.name);
         assert!(register.get_package(&package_f.name).is_none());
 
         // Check if package D still has B as a dependency (B shouldn't be removed)
-        let package_d = PackageId::from_str("D@2.5.4").expect("Expected valid package id");
+        let package_d = create_package_id("D@2.5.4");
         assert!(register.get_package_version(&package_d).expect("Expected package D").dependencies.get(&package_f).is_some());
     }
 
     #[test]
     fn is_dependency() {
         let register = create_register();
-
-        let package_f5 = PackageId::from_str("F@5").expect("Expected valid package id");
+        let package_f5 = create_package_id("F@5");
 
         assert!(register.is_dependency(&package_f5.into()));
         assert!(register.is_dependency(&OptionalPackageId::from_str("F").expect("Expected valid package name")));
@@ -607,24 +640,21 @@ pub mod tests {
     fn is_not_dependency() {
         let register = create_register();
 
-        let package_f6 = PackageId::from_str("F@6").expect("Expected valid package id");
+        let package_f6 = create_package_id("F@6");
         assert!(!register.is_dependency(&package_f6.into()));
 
-        let package_a = PackageId::from_str("A@3.4.1").expect("Expected valid package id");
+        let package_a = create_package_id("A@3.4.1");
         assert!(!register.is_dependency(&package_a.into()));
     }
 
     #[test]
     fn get_latest_satisfying_package() {
         let register = create_register();
-        let package_a_id = PackageId::from_str("F@6").expect("Expected valid package id");
-        let dependency = create_dependency("F", ">5");
+        let package_a_id = create_package_id("F@6");
         let package_a = register.get_package_version(&package_a_id).expect("Expected package F");
+        let dependency = create_dependency("F", ">5");
 
-        match register.get_latest_satisfying_package(&dependency) {
-            Some(package) => assert_eq!(package.package_id, package_a.package_id),
-            None => panic!("Expected Some(InstalledPackageVersion (..)), got None"),
-        }
+        assert_eq!(register.get_latest_satisfying_package(&dependency), Some(package_a));
     }
 
     #[test]
@@ -633,5 +663,85 @@ pub mod tests {
         let dependency = create_dependency("A", ">3.4.1");
 
         assert!(register.get_latest_satisfying_package(&dependency).is_none());
+    }
+
+    #[test]
+    fn get_all_package_versions_test() {
+        let mut register = create_register();
+
+        let package_f = create_package_name("F");
+        let package_ids: Vec<PackageId> = register.get_all_package_versions(&package_f).iter().map(|p| p.package_id.clone()).collect();
+        assert!(package_ids.contains(&create_package_id("F@5")));
+        assert!(package_ids.contains(&create_package_id("F@6")));
+
+        let package_ids: Vec<PackageId> = register.get_all_package_versions_mut(&package_f).iter().map(|p| p.package_id.clone()).collect();
+        assert!(package_ids.contains(&create_package_id("F@5")));
+        assert!(package_ids.contains(&create_package_id("F@6")));
+    }
+
+    #[test]
+    fn conflicts() {
+        let mut register = create_register();
+
+        let conflicting = register.get_conflicting_packages(&create_package_name("F"), &[create_package_name("E")]);
+        assert_eq!(conflicting, [&create_package_name("E")]);
+
+        let package_id = create_package_id("new_package@2.90");
+        let mut package_meta = create_package_meta(&package_id);
+        package_meta.conflicts_with.push(create_package_name("E"));
+        let package_version_meta = create_package_version_meta(&package_id);
+        let dependency_ids = HashSet::new();
+
+        // Add the package
+        register.add_package(
+            &package_meta,
+            &package_version_meta,
+            dependency_ids,
+            &Repository::new("-", "-"),
+            &PathBuf::from("-"),
+            true,
+            false,
+            false,
+        );
+
+        let conflicting = register.get_conflicting_packages(&create_package_name("E"), &[]);
+        assert_eq!(conflicting, [&create_package_name("new_package")]);
+
+        let conflicting = register.get_conflicting_packages(&create_package_name("E"), &[create_package_name("E")]);
+        assert_eq!(conflicting, [&create_package_name("new_package")]);
+    }
+
+    #[test]
+    fn conflicts_no_symlink() {
+        let mut register = create_register();
+
+        let package_id = create_package_id("new_package@2.90");
+        let mut package_meta = create_package_meta(&package_id);
+        package_meta.conflicts_with.push(create_package_name("E"));
+        let package_version_meta = create_package_version_meta(&package_id);
+        let dependency_ids = HashSet::new();
+
+        // Add the package
+        register.add_package(
+            &package_meta,
+            &package_version_meta,
+            dependency_ids,
+            &Repository::new("-", "-"),
+            &PathBuf::from("-"),
+            false,
+            false,
+            false,
+        );
+
+        let conflicting = register.get_conflicting_packages(&create_package_name("E"), &[]);
+        assert_eq!(conflicting, &[] as &[&PackageName]);
+    }
+
+    #[test]
+    fn no_conflicts() {
+        let register = create_register();
+
+        let conflicting: Vec<&PackageName> = register.get_conflicting_packages(&create_package_name("F"), &[]);
+        assert_eq!(conflicting, &[] as &[&PackageName]);
     }
 }

@@ -13,6 +13,7 @@ use thiserror::Error;
 use crate::installer::types::version_number::VersionNumber;
 
 /// Errors that occur when parsing version related structs.
+#[cfg_attr(test, derive(PartialEq))]
 #[derive(Error, Debug)]
 pub enum VersionError {
     #[error("Version is empty")]
@@ -156,61 +157,73 @@ impl FromStr for Version {
 }
 
 /// Implements the from trait for `&[u32]`.
-impl From<&[u32]> for Version {
-    fn from(value: &[u32]) -> Self {
-        Self {
-            numbers: value.iter().map(|v| VersionNumber::from(*v)).collect(),
+impl TryFrom<&[u32]> for Version {
+    type Error = VersionError;
+
+    fn try_from(value: &[u32]) -> Result<Self, VersionError> {
+        if value.is_empty() {
+            return Err(VersionError::NoneError);
         }
+
+        Ok(Self {
+            numbers: value.iter().map(|v| VersionNumber::from(*v)).collect(),
+        })
     }
 }
 
 /// Implements the from trait for `&[u32; N]`.
-impl<const N: usize> From<&[u32; N]> for Version {
-    fn from(value: &[u32; N]) -> Self {
-        Self {
-            numbers: value.iter().map(|v| VersionNumber::from(*v)).collect(),
+impl<const N: usize> TryFrom<&[u32; N]> for Version {
+    type Error = VersionError;
+    fn try_from(value: &[u32; N]) -> Result<Self, VersionError> {
+        if value.is_empty() {
+            return Err(VersionError::NoneError);
         }
+
+        Ok(Self {
+            numbers: value.iter().map(|v| VersionNumber::from(*v)).collect(),
+        })
     }
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
 
-    #[test]
-    fn from_str() {
-        let correct_version = Version::from(&[3, 4, 1]);
+    /// This is a helper method which creates a `Version` which is assumed to be correct.
+    pub fn create_version(version_str: &str) -> Version {
+        Version::from_str(version_str).expect("Expected a valid version str")
+    }
 
-        match Version::from_str("3.4.1") {
-            Ok(version) => assert_eq!(version, correct_version),
-            Err(e) => panic!("Expected Ok(Version (numbers: [3, 4, 1])), got Err({e:?})"),
-        }
+    #[test]
+    fn valid_from_str() {
+        let correct_version = create_version("3.4.1");
+        assert_eq!(Version::from_str("3.4.1"), Ok(correct_version));
     }
 
     #[test]
     fn from_str_dot_errors() {
-        assert!(matches!(Version::from_str("3.4..1"), Err(VersionError::DotsError)));
-        assert!(matches!(Version::from_str("3.4.1."), Err(VersionError::DotsError)));
-        assert!(matches!(Version::from_str(".3.4.1"), Err(VersionError::DotsError)));
+        assert_eq!(Version::from_str("3.4..1"), Err(VersionError::DotsError));
+        assert_eq!(Version::from_str("3.4.1."), Err(VersionError::DotsError));
+        assert_eq!(Version::from_str(".3.4.1"), Err(VersionError::DotsError));
     }
 
     #[test]
-    fn from_str_no_input() {
-        assert!(matches!(Version::from_str(""), Err(VersionError::NoneError)));
+    fn from_str_empty() {
+        assert_eq!(Version::from_str(""), Err(VersionError::NoneError));
     }
 
     #[test]
     fn from_str_illegal_char() {
-        assert!(matches!(Version::from_str("3.a.1"), Err(VersionError::IllegalCharacterError)));
-        assert!(matches!(Version::from_str("3.-1.1"), Err(VersionError::IllegalCharacterError)));
+        assert_eq!(Version::from_str("3.a.1"), Err(VersionError::IllegalCharacterError));
+        assert_eq!(Version::from_str("3.-1.1"), Err(VersionError::IllegalCharacterError));
     }
 
     #[test]
     fn compare() {
-        let version_a = Version::from(&[3, 4, 0]);
-        let version_b = Version::from(&[3, 4, 0]);
-        let version_c = Version::from(&[3, 4, 1]);
-        let version_d = Version::from(&[3, 3, 5]);
+        let version_a = create_version("3.4.0");
+        let version_b = create_version("3.4.0");
+        let version_c = create_version("3.4.1");
+        let version_d = create_version("3.3.5");
 
         assert!(version_a == version_b);
         assert!(version_a <= version_b);
@@ -224,12 +237,12 @@ mod tests {
 
     #[test]
     fn compare_different_length() {
-        let version_a = Version::from(&[3, 4, 0, 0]);
-        let version_b = Version::from(&[3, 4, 0]);
-        let version_c = Version::from(&[4]);
-        let version_d = Version::from(&[3]);
-        let version_e = Version::from(&[0, 3, 3, 5]);
-        let version_f = Version::from(&[3, 3, 5]);
+        let version_a = create_version("3.4.0.0");
+        let version_b = create_version("3.4.0");
+        let version_c = create_version("4");
+        let version_d = create_version("3");
+        let version_e = create_version("0.3.3.5");
+        let version_f = create_version("3.3.5");
 
         assert!(version_a == version_b);
         assert!(version_c > version_b);
@@ -238,9 +251,24 @@ mod tests {
     }
 
     #[test]
-    fn format() {
-        let version = Version::from(&[3, 4, 1]);
+    fn ordering() {
+        let version_a = create_version("3.4.0.1");
+        let version_b = create_version("3.4.0");
+        let version_c = create_version("0.4");
+        let version_d = create_version("0.0.100");
 
+        let mut version_list = vec![&version_a, &version_b, &version_c, &version_d];
+        version_list.sort();
+
+        assert_eq!(*version_list[0], version_d);
+        assert_eq!(*version_list[1], version_c);
+        assert_eq!(*version_list[2], version_b);
+        assert_eq!(*version_list[3], version_a);
+    }
+
+    #[test]
+    fn format() {
+        let version = create_version("3.4.1");
         assert_eq!(version.to_string(), "3.4.1");
     }
 }

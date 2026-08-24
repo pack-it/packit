@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
 /// Wrapper to differentiate between different License types in metadata files.
+#[cfg_attr(test, derive(PartialEq))]
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 #[serde(untagged)]
 pub enum Licenses {

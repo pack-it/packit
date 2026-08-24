@@ -3,7 +3,7 @@ use std::cmp;
 
 use crate::{
     installer::types::PackageName,
-    repositories::{error::RepositoryError, manager::RepositoryManager, types::IndexMeta},
+    repositories::{error::RepositoryError, manager::RepositoryManager},
 };
 
 const FUZZY_THRESHOLD: f64 = 0.25;
@@ -41,30 +41,7 @@ pub fn repository_search(manager: &RepositoryManager, package_name: &PackageName
     Ok(best_word)
 }
 
-/// Does a fuzzy search against the given index.toml.
-/// Returns a `PackageName` if a fuzzy match can be found.
-/// Note that this also searches other targets (targets which are not the current target).
-pub fn index_search(index: &IndexMeta, package_name: &PackageName) -> Option<PackageName> {
-    let mut best_word = None;
-    let mut best_distance = None;
-
-    let fuzzy_matches = fuzzy_search(index.supported_packages.iter(), package_name.as_str());
-    for (distance, fuzzy_match) in fuzzy_matches {
-        if let Some(current_distance) = best_distance {
-            if distance < current_distance {
-                best_distance = Some(distance);
-                best_word = Some(fuzzy_match);
-            }
-        } else {
-            best_distance = Some(distance);
-            best_word = Some(fuzzy_match);
-        }
-    }
-
-    best_word
-}
-
-/// Wraps around the `fuzzy_search` method and gets the fuzzy match with the lowest distance to the given string.
+/// Gets the fuzzy match with the lowest distance to the given string, using the `fuzzy_search` method.
 /// Returns `None` if there are no fuzzy matches and a `PackageName` if there is at least one fuzzy match.
 pub fn min_search<'a, I>(words: I, string: &str) -> Option<PackageName>
 where
@@ -152,12 +129,12 @@ fn calculate_distance(first_word: &str, second_word: &str) -> u64 {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
+    use crate::installer::types::package_name_tests::create_package_name;
 
     use super::*;
 
     #[test]
-    fn test_distance_calculation() {
+    fn distance_calculation() {
         assert_eq!(calculate_distance("same", "same"), 0);
         assert_eq!(calculate_distance("saem", "same"), 1);
         assert_eq!(calculate_distance("sema", "same"), 2);
@@ -166,29 +143,57 @@ mod tests {
     }
 
     #[test]
-    fn test_fuzzy_search() {
+    fn distance_calculation_empty() {
+        assert_eq!(calculate_distance("", "test"), 4);
+        assert_eq!(calculate_distance("test", ""), 4);
+        assert_eq!(calculate_distance("", ""), 0);
+    }
+
+    #[test]
+    fn fuzzy_search_test() {
         assert_eq!(
-            fuzzy_search(vec![&PackageName::from_str("hello").unwrap()], "hello"),
-            vec![(0 as u64, PackageName::from_str("hello").unwrap())]
+            fuzzy_search([&create_package_name("hello")], "hello"),
+            [(0, create_package_name("hello"))]
         );
 
+        assert_eq!(fuzzy_search([&create_package_name("hello")], "helloxxxx"), []);
+    }
+
+    #[test]
+    fn fuzzy_search_ordering() {
         assert_eq!(
             fuzzy_search(
-                vec![
-                    &PackageName::from_str("aahello").unwrap(),
-                    &PackageName::from_str("aahell").unwrap(),
-                    &PackageName::from_str("aahellow").unwrap(),
-                    &PackageName::from_str("aahelloxyz").unwrap(),
-                    &PackageName::from_str("aahelloxy").unwrap(),
+                [
+                    &create_package_name("aahello"),
+                    &create_package_name("aahell"),
+                    &create_package_name("aahellow"),
+                    &create_package_name("aahelloxyz"),
+                    &create_package_name("aahelloxy"),
                 ],
                 "aahello"
             ),
-            vec![
-                (0 as u64, PackageName::from_str("aahello").unwrap()),
-                (1 as u64, PackageName::from_str("aahell").unwrap()),
-                (1 as u64, PackageName::from_str("aahellow").unwrap()),
-                (2 as u64, PackageName::from_str("aahelloxy").unwrap()),
+            [
+                (0, create_package_name("aahello")),
+                (1, create_package_name("aahell")),
+                (1, create_package_name("aahellow")),
+                (2, create_package_name("aahelloxy")),
             ]
         );
+    }
+
+    #[test]
+    fn min_search_test() {
+        let fuzzy_match = min_search(
+            [
+                &create_package_name("aahelloxyz"),
+                &create_package_name("aahell"),
+                &create_package_name("aahellow"),
+                &create_package_name("aahelloxy"),
+            ],
+            "aahello",
+        );
+
+        let package_name = create_package_name("aahell");
+        assert_eq!(fuzzy_match, Some(package_name));
     }
 }

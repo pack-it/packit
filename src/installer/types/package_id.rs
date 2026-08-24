@@ -7,6 +7,7 @@ use thiserror::Error;
 use crate::installer::types::{PackageName, Version, VersionError, package_name::PackageNameError};
 
 /// Errors that occur when creating or using the package id.
+#[cfg_attr(test, derive(PartialEq))]
 #[derive(Error, Debug)]
 pub enum PackageIdError {
     #[error("Invalid package id version")]
@@ -85,52 +86,45 @@ impl FromStr for PackageId {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
+    use crate::installer::types::{package_name::tests::create_package_name, version::tests::create_version};
+
     use super::*;
+
+    /// This is a helper method which creates a `PackageId` from an id string which is assumed to be correct.
+    pub fn create_package_id(id: &str) -> PackageId {
+        PackageId::from_str(id).expect("Expected valid package id string")
+    }
 
     #[test]
     fn from_str() {
-        let package_name = PackageName::from_str("test").expect("Expected valid package name");
-        let version = Version::from_str("3.4.1").expect("Expected Version");
+        let package_name = create_package_name("test");
+        let version = create_version("3.4.1");
         let correct_version = PackageId::new(package_name, version);
 
-        match PackageId::from_str("test@3.4.1") {
-            Ok(id) => assert_eq!(id, correct_version),
-            Err(e) => panic!("Expected Ok(PackageId(name: 'test', version: Version(..))), got Err({e:?})"),
-        }
+        assert_eq!(PackageId::from_str("test@3.4.1"), Ok(correct_version));
     }
 
     #[test]
     fn from_str_no_version() {
-        assert!(matches!(
+        assert_eq!(
             PackageId::from_str("test"),
             Err(PackageIdError::VersionError(VersionError::NoneError))
-        ));
+        );
     }
 
     #[test]
     fn from_str_no_name() {
-        assert!(matches!(
+        assert_eq!(
             PackageId::from_str("@3.4.1"),
             Err(PackageIdError::PackageNameError(PackageNameError::InvalidPackageName))
-        ));
+        );
     }
 
     #[test]
-    fn from_str_invalid_chars() {
-        let invalid_chars = "!#$%^&*()~:;{}[]<>,.?/|\\\"\'`+=";
-        for char in invalid_chars.chars() {
-            assert!(matches!(
-                PackageId::from_str(format!("{char}@3.4.1").as_str()),
-                Err(PackageIdError::PackageNameError(PackageNameError::InvalidPackageName))
-            ));
-        }
-    }
-
-    #[test]
-    fn valid_format() {
-        let package_name = PackageName::from_str("test").expect("Expected valid package name");
-        let version = Version::from_str("3.4.1").expect("Expected Version");
+    fn format() {
+        let package_name = create_package_name("test");
+        let version = create_version("3.4.1");
         let correct_version = PackageId::new(package_name, version);
 
         assert_eq!(correct_version.to_string(), "test@3.4.1");

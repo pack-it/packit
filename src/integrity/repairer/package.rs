@@ -150,7 +150,7 @@ pub fn fix_inconsistent_register(
             symlinked,
             active,
             used_prebuild,
-        )?;
+        );
     }
 
     Ok(())

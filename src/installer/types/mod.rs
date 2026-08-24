@@ -26,4 +26,10 @@ pub use version_bounds::VersionBounds;
 pub use version_intervals::VersionIntervals;
 
 #[cfg(test)]
+pub use package_name::tests as package_name_tests;
+
+#[cfg(test)]
+pub use package_id::tests as package_id_tests;
+
+#[cfg(test)]
 pub use dependency::tests as dependency_tests;
