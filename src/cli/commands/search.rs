@@ -116,7 +116,7 @@ impl SearchArgs {
         let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
         let manager = RepositoryManager::new(&config);
 
-        let regex = Regex::new(&self.query).unwrap_or_exit_msg("Invalid regex pattern", 1);
+        let regex = Regex::new(&self.query).unwrap_or_exit_msg(&format!("Invalid regex pattern '{}'", self.query), 1);
         let mut matches = HashSet::new();
         for repository_id in manager.iter_supported_repositories_rank() {
             let index_meta = manager.read_index_metadata(repository_id).unwrap_or_exit(1);
