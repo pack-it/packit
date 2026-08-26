@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{fmt::Display, ops::Deref, path::Path, str::FromStr};
+use std::{fmt::Display, ops::Deref, path::Path, str::FromStr, sync::LazyLock};
 
 use regex::Regex;
 use serde::{Deserialize, Serialize, de};
 use thiserror::Error;
 
 const VALID_PACKAGE_NAME: &str = r"^[a-zA-Z0-9\-_]+$";
+const PACKAGE_NAME_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(VALID_PACKAGE_NAME).expect("Expected valid regex"));
 
 /// Errors that occur when creating or parsing the package name.
 #[cfg_attr(test, derive(PartialEq))]
@@ -68,8 +69,7 @@ impl FromStr for PackageName {
     /// Parses a string into a `PackageName`.
     /// Could return a `PackageNameError::InvalidPackageName` error.
     fn from_str(string: &str) -> Result<Self, Self::Err> {
-        let re = Regex::new(VALID_PACKAGE_NAME).expect("Expected valid regex");
-        if !re.is_match(string) {
+        if !PACKAGE_NAME_REGEX.is_match(string) {
             return Err(PackageNameError::InvalidPackageName);
         }
 
