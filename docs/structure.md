@@ -59,7 +59,7 @@ All available fields in the config are listed below.
 | Field                 | Explanation                                                                             |
 | --------------------- | --------------------------------------------------------------------------------------- |
 | `url`                 | Defines the url to the repository.                                                      |
-| `provider`            | Defines the provider of the repository, defaults to `web`.                              |
+| `provider`            | Defines the provider of the repository which can be `fs` or `web`, defaults to `web`.   |
 | `prebuilds_url`       | Defines the url of the prebuilds repository for this package repository.                |
 | `prebuilds_provider`  | Defines the provider of the prebuilds repository, defaults to `fs`.                     |
 | `disable_prebuilds`   | True to disable prebuild usage for the repository, false to use prebuild if available.  |
