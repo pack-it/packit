@@ -7,7 +7,7 @@ use crate::{
     cli::{
         commands::HandleCommand,
         display::{logging::error, not_found, standard_print, styled::Styled},
-        parameter_checks::{self, contains_package_id},
+        parameter_checks,
     },
     config::Config,
     installer::{
@@ -69,7 +69,7 @@ impl HandleCommand for UninstallArgs {
 
 impl UninstallArgs {
     /// Determines the order in which packages need to be uninstalled.
-    /// Shows an error and exists if a package is a dependency and the dependent is not in the given packages.
+    /// Shows an error and exits if a package is a dependency and the dependent is not in the given packages.
     fn get_uninstall_order(&self, register: &PackageRegister) -> Vec<OptionalPackageId> {
         let mut order = Vec::new();
         let mut packages = VecDeque::from(self.packages.clone());
@@ -80,7 +80,7 @@ impl UninstallArgs {
             // Get all the dependents which are missing in the ordered list
             let mut missing_dependents = Vec::new();
             for dependent in &dependents {
-                if !contains_package_id(&order, dependent) {
+                if !parameter_checks::contains_package_id(&order, dependent) {
                     missing_dependents.push(dependent);
                 }
             }
@@ -93,7 +93,7 @@ impl UninstallArgs {
 
             for dependent in &missing_dependents {
                 // If none of the given packages covers the dependent throw an error and exit
-                if !contains_package_id(&self.packages, &dependent) {
+                if !parameter_checks::contains_package_id(&self.packages, &dependent) {
                     error!(
                         msg: "{} cannot be uninstalled, because it is a dependency of the following packages:",
                         package.style()
@@ -103,8 +103,8 @@ impl UninstallArgs {
                 }
             }
 
-            // Note that because we know that the dependent is in the list of given packages it will be before the current package
-            // if we add it to the back of the queue.
+            // Note that because we know that the dependent is in the list of given packages
+            // it will be before the current package if we add it to the back of the queue.
             packages.push_back(package);
         }
 
@@ -114,15 +114,18 @@ impl UninstallArgs {
     /// Gets the dependents of the given `optional_id`.
     /// It also checks if the packages exists.
     fn get_dependents(&self, register: &PackageRegister, optional_id: &OptionalPackageId) -> Vec<PackageId> {
-        match optional_id.versioned() {
-            Some(package_id) if let Some(package_version) = register.get_package_version(&package_id) => {
-                return package_version.dependents.iter().cloned().collect();
-            },
-            Some(package_id) => not_found::register_package_version(&package_id, &register),
-            None if let Some(package) = register.get_package(&optional_id.name) => {
+        let Some(package_id) = optional_id.versioned() else {
+            if let Some(package) = register.get_package(&optional_id.name) {
                 return package.get_versions().iter().flat_map(|p| p.dependents.iter().cloned()).collect();
-            },
-            None => not_found::register_package(&optional_id.name, &register),
+            }
+
+            not_found::register_package(&optional_id.name, &register)
+        };
+
+        if let Some(package_version) = register.get_package_version(&package_id) {
+            return package_version.dependents.iter().cloned().collect();
         }
+
+        not_found::register_package_version(&package_id, &register)
     }
 }

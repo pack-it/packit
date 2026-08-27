@@ -75,7 +75,7 @@ pub fn expand_optional_ids(register: &PackageRegister, config: &Config, packages
 }
 
 /// Checks if a given list of `OptionalPackageId`s contains a `PackageId`.
-/// The list contains the given package id if any of the optional ids match with the package id.
+/// Returns true if any of the `packages` match the `package_id`, false otherwise.
 pub fn contains_package_id(packages: &Vec<OptionalPackageId>, package_id: &PackageId) -> bool {
     for package in packages {
         match package.versioned() {
