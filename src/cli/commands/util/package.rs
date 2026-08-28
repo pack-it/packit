@@ -39,7 +39,7 @@ pub struct PackageArgs {
     all: bool,
 
     /// Exclude packages when using the `--all` flag, specified with <PACKAGE-NAME> ...
-    /// Note that `num_args = 1..` is needed to consume all 'non-flag' values after the exclude
+    // Note that `num_args = 1..` is needed to consume all 'non-flag' values after the exclude
     #[arg(long, requires = "all", num_args = 1..)]
     exclude: Vec<OptionalPackageId>,
 }
