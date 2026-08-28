@@ -13,8 +13,10 @@ The Packit directory, which contains Packit data is called the [prefix](#prefix)
 
 ### Prefix
 The prefix directory of Packit contains all data of installed packages.<br>
-- Unix: `/opt/packit`<br>
-- Windows: `C:\Program Files\packit`
+| Platform | Directory                 |
+| -------- | ------------------------- |
+| Unix     | `/opt/packit`             |
+| Windows  | `C:\Program Files\packit` |
 
 ### Register.toml
 The `Register.toml` file is located inside the prefix and stores information about all installed packages. This file is managed by Packit and should not be changed directly.
@@ -39,10 +41,12 @@ For more detail about the reason why this directory exists see [TODO: a link to 
 Some packages have data and configuration files they need to keep. Packit puts those in the `<prefix>/etc` directory.
 
 ## Config
-The `Config.toml` contains the Packit configuration, it can be edited manually or with the [`pit config`](#pit-config-show) command. Its location differs for each platform:
-- Linux: `/etc/packit`<br>
-- MacOS: `/Library/Application Support/packit`<br>
-- Windows: `C:\Program Files\packit`
+The `Config.toml` contains the Packit configuration, it can be edited manually or with the [`pit config`](./commands/config.md) command. Its location differs for each platform:
+| Platform | Location                              |
+| ---------| ------------------------------------- |
+| Linux    | `/etc/packit`                         |
+| MacOS    | `/Library/Application Support/packit` |
+| Windows  | `C:\Program Files\packit`             |
 
 All available fields in the config are listed below. 
 

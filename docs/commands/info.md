@@ -7,6 +7,8 @@ The `info` command has the following command line syntax:<br>
 The `info` command shows information about the Packit installation or a package, using the following syntax:<br>
 `pit info [<PACKAGE-NAME>[@<VERSION>]]`
 
+If the version is specified, version specific information is shown.
+
 ### Examples
 To show information about the Packit installation, use:<br>
 `pit info`
