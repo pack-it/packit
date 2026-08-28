@@ -23,7 +23,7 @@ The `Register.toml` file is located inside the prefix and stores information abo
 All installed packages will go in `<prefix>/packages/<PACKAGE-NAME>/<PACKAGE-VERSION>/`.
 
 ### Symlinks
-The following package directories are symlinked in the prefix directory: bin, gnubin, lib, include and share. The gnubin directory exists on macOS to put GNU packages in which conflict with their macOS variants. In such cases a symlink `<prefix>/bin/g<package-name>` → `<prefix>/gnubin/<package-name>` with a 'g' prefix is created, to differentiate between a system and its GNU variant.
+The following package directories are symlinked in the prefix directory: bin, gnubin, lib, include and share. The gnubin directory exists on macOS to put GNU packages in which conflict with their macOS variants. In such cases a symlink `<prefix>/bin/g<package-name>` → `<prefix>/gnubin/<package-name>` with a 'g' prefix is created, to differentiate between a system and its GNU variant. To use use the GNU tools directly you could add the gnubin directory to your `PATH` as well.
 
 The [active](#active-packages) binaries will be symlinked in `<prefix>/bin/<EXECUTABLE-NAME>`. The `<prefix>/bin` directory needs to be present in the users `PATH` in order for installed binaries to be detected by the system.
 
@@ -38,13 +38,11 @@ For more detail about the reason why this directory exists see [TODO: a link to 
 ### Package Data
 Some packages have data and configuration files they need to keep. Packit puts those in the `<prefix>/etc` directory.
 
-
 ## Config
 The `Config.toml` contains the Packit configuration, it can be edited manually or with the [`pit config`](#pit-config-show) command. Its location differs for each platform:
 - Linux: `/etc/packit`<br>
 - MacOS: `/Library/Application Support/packit`<br>
 - Windows: `C:\Program Files\packit`
-
 
 All available fields in the config are listed below. 
 
@@ -55,7 +53,6 @@ All available fields in the config are listed below.
 | `multiuser`         | True to run Packit in multiuser mode, false for single user mode. |
 
 ### Repositories
-
 | Field                 | Explanation                                                                             |
 | --------------------- | --------------------------------------------------------------------------------------- |
 | `url`                 | Defines the url to the repository.                                                      |
@@ -66,7 +63,6 @@ All available fields in the config are listed below.
 
 
 ### Example config
-
 ```
 repositories_rank = ["core"]
 
@@ -76,5 +72,3 @@ repositories_rank = ["core"]
 provider = "web"
 url = "https://raw.githubusercontent.com/pack-it/core/main/"
 ```
-
-

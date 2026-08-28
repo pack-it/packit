@@ -4,17 +4,16 @@ The `fix` command has the following command line syntax:<br>
 `pit fix [<PACKAGE-NAME>[@<VERSION>] ...]`
 
 ## Basic fix
-
 The `fix` command fixes the specified packages, using the following syntax:<br>
 `pit fix [<PACKAGE-NAME>[@<VERSION>] ...]`
 
 The issues will be shown according to urgency, the first issue being the most urgent. The most urgent issue needs to be fixed first, as it could be causing the other issues.
 
-When an issue is found you will be prompted with a fix, you can choose to apply the fix and continue or ignore it and exit.
+When an issue is found, you will be prompted with a fix. You can choose to apply the fix and continue or skip it and exit.
 
-More information about the workings of this command can be found at [verifier](../verifier.md). If you only want Packit to show you the issues checkout the [check](./check.md) command.
+More information about the workings of this command can be found at [verifier](../verifier.md). If you only want Packit to show you the issues, check out the [check](./check.md) command.
 
->Note that when checking a single package other issues are not found. Issues with dependencies of the package are not found for example. So when using the `fix` command we recommend you fix everything.
+> Note that when checking a single package, other issues may not be found. For example, issues with dependencies of the package are not found. So when using the `fix` command we recommend you fix everything.
 
 ### Examples
 To fix everything use:<br>

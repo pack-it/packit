@@ -15,7 +15,6 @@ This file should be present in every Packit repository, it quickly describes wha
 | `prebuilds_url`           | Defines the URL of the suggested prebuilds repository for this repository.    |
 | `prebuilds_provider`      | Defines the provider of the suggested prebuilds repository, defaults to `fs`. |
 
-
 ## `index.toml`
 This file should be present in every Packit repository, it describes which packages are available.
 
@@ -23,10 +22,8 @@ This file should be present in every Packit repository, it describes which packa
 | -------------------- | ---------------------------------------------------------------------- |
 | `supported_packages` | A list of names of all packages that are available in this repository. |
 
-
 ## `packages`
 The packages directory contains the metadata of all packages which are supported by this repository.
-
 
 ## `package.toml`
 Each package contains this file, it describes the package as whole. It shows the following general package information:
@@ -38,7 +35,6 @@ Each package contains this file, it describes the package as whole. It shows the
 - Conflicting packages
 - Supported versions (for each target, see [Target bounds](#target-bounds))
 - Deprecation information about the package
-
 
 ## `targets.toml`
 Each package version directory contains a `targets.toml` file. This file describes version specific information. This information can be the same for all targets (global) or target specific. Some fields in a target section override their global value. Other fields are additive, meaning both the global and target-specific values are used.
@@ -52,9 +48,9 @@ See the tables below for all different fields, look at [Target fields](#target-f
 | `license`                       | The license of this version of the package.                                    |
 | `dependencies`                  | Defines all the dependencies of the package, that are shared by all targets.   |
 | `build_dependencies`            | Defines all build dependencies of the package, that are shared by all targets. |
-| `use_version_specific_<script>` | When set to yes, the specified script is read from the package version directory, instead of the package directory. |
+| `use_version_specific_<script>` | When set to true, the specified script is read from the package version directory, instead of the package directory. |
 | `use_<script>`                  | Needs to be set to true when the script should be used. (Only for `preinstall`, `postinstall` and `uninstall`) |
-| `skip_symlinking`               | When set to yes, the package is not symlinked after installation, preventing the package to be detectable through the PATH. |
+| `skip_symlinking`               | When set to true, the package is not symlinked after installation, preventing the package to be detectable through the PATH. |
 | `revisions`                     | A list of strings containing a description of what changed in each metadata or script revision. |
 | `deprecation`                   | Defines when the version deprecates, disables and the reason.                  |
 | `script_args`                   | A table of key-value pairs containing arguments passed to scripts.             |
@@ -136,7 +132,7 @@ Targets are specified as `[targets.<bounds>]`, where bounds specify the supporte
 | `build_dependencies`            | Defines all build dependencies of the package for the target, additional to the build dependencies specified in the global field. |
 | `build_requirements`            | Defines all requirements that are needed on the system for building the package, these need to be installed by the user manually. |
 | `test_requirements`             | Defines all requirements that are needed on the system for testing the package, these need to be installed by the user manually. |
-| `skip_symlinking`               | When set to yes, the package is not symlinked after installation, preventing the package to be detectable through the PATH. Overrides the value defined in the global field. |
+| `skip_symlinking`               | When set to true, the package is not symlinked after installation, preventing the package to be detectable through the PATH. Overrides the value defined in the global field. |
 | `<script-type>_script`          | Defines the name of the script to use instead of the default script name.            |
 | `use_<script>`                  | Overwrites the global `use_<script>` field. (Only for `preinstall`, `postinstall` and `uninstall`) |
 | `script_args`                   | A table of key-value pairs containing arguments passed to scripts, additional to the args defined in the global field. |
@@ -150,7 +146,6 @@ All available requirements for use with the `build_requirements` and `test_requi
 | ------ | ------------------------------------------------------------------------------------------------------------- |
 | `msvc` | The Microsoft Visual C++ toolchain, automatically adds `PACKIT_VS_PATH`, `PACKIT_VCVARSALL`, `PACKIT_VCVARSALL_ARCH` and `PACKIT_MSVC_VERSION` to the build environment. (Windows only) |
 
-
 ## `prebuilds.toml`
 The package version directory can contain an optional `prebuilds.toml` file. This file describes which prebuilds can be generated for the package version. If the file is not available, a default list of prebuilds is assumed, consisting of a prebuild for each target architecture that is supported by the package.
 
@@ -162,9 +157,7 @@ A prebuild is specified by using `[prebuild.<prebuild-id>]`. Each prebuild can h
 | `targets`       | Defines a list of [target bounds](#target-bounds) that the prebuild can be used for. (required) |
 | `exclude_paths` | Defines a list of paths that should not be included in the prebuild.                            |
 
-
 ## Target bounds
-
 The target bounds consist of a name, an addition and [version bounds](#target-version-bounds). The target name is required, the addition and version bounds are not. The syntax of a target bound is as follows: `<name>[:<addition>][@<version-bounds>]`.
 
 Packit selects the most specific matching target bound according to the following priority order, from lowest to highest:
@@ -177,7 +170,6 @@ Packit selects the most specific matching target bound according to the followin
 - Target architecture with addition and version bounds
 
 ### Target names 
-
 | Name                | Supported values            |
 | ------------------- | --------------------------- |
 | OS group            | `unix`                      |
@@ -185,20 +177,16 @@ Packit selects the most specific matching target bound according to the followin
 | Target architecture | `x86_64-apple-darwin`, `aarch64-apple-darwin`, `aarch64-unknown-linux-gnu`, `x86_64-unknown-linux-gnu`, `x86_64-unknown-linux-musl`, `x86_64-pc-windows-msvc`, `aarch64-pc-windows-msvc` |
 
 ### Target additions
-
 Currently additions are only supported for the `linux` target name and for the target architectures which reference a linux OS. The addition specifies a Linux distro, for example `debian` or `arch`.
 
 ### Target version bounds
-
 Version bounds specify the version of the target which is required for the target bounds to be satisfied. The version bounds specify the OS version on macOS and Windows. On Linux it specifies the kernel version when no addition is given, or the distro version when an addition is given. 
 
 Note that version bounds are not allowed on OS group target names and overlapping version bounds are not allowed within the same target name. Both will result in invalid package metadata.
 
 See [Version bounds](#version-bounds) for the version bounds syntax.
 
-
 ## Version bounds
-
 Version bounds are used by target bounds, dependencies and the supported versions to specify which versions satisfy a target or dependency.
 
 Please note version bounds are required to be in order of versions.
@@ -217,7 +205,6 @@ The following operators are available:
 
 
 ## Licenses
-
 The licenses can be specified in a structured format, that is easy to parse. A license field can have the following values:
 - `"<license-name>"`
 - `{ name = "<license-name>", with = ["<exception>"] }`
@@ -229,9 +216,7 @@ The `any` and `all` fields allow nesting another license value. For example, the
 
 Note that the `<license-name>` and `<exception>` should be an SPDX Identifier if it is available. See https://spdx.org/licenses/.
 
-
 ## Scripts
-
 The scripts define the specific behaviour to install, uninstall or test a specific package. They can be defined globally for a package, per version or per target. On Unix systems the scripts are written in `sh` and have the `.sh` extension. On Windows the scripts are written in `batch` and have the `.bat` extension.
 
 The available scripts are:
@@ -247,7 +232,6 @@ The available scripts are:
 Note that the `build` script must be present and that the `test` script should be present. The other scripts are optional and depend on the package.
 
 ### Script environment
-
 Scripts get certain environment variables from Packit:
 
 | Variable name                      | Explanation                                                                                |

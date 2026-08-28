@@ -271,7 +271,7 @@ impl SearchArgs {
         pair_aligner.add("Homepage", package.homepage.display());
         pair_aligner.add("License", &package_version.license);
         pair_aligner.add("Required Packit version", required_packit_version.display_or(|v| v.style()));
-        pair_aligner.add("Skip symlinking", if package_version.skip_symlinking { "on" } else { "off" });
+        pair_aligner.add("Skip symlinking", package_version.skip_symlinking);
         pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
         println!();
 

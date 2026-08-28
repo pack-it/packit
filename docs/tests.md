@@ -16,8 +16,6 @@ Run the following command to run the integration tests:
 cargo xtest
 ```
 
-
-
 For the setup this wrapper first checks for the `TestConfig.toml`, which is located next to the `Config.toml`. The `TestConfig.toml` is used if it exists, otherwise a default test config is created. The default test config uses `<prefix>/test` as the prefix directory, where `<prefix>` is the 'normal' prefix directory. Lastly the test prefix is created, containing an empty `Register.toml`.
 
 >Note that the setup fails if the test prefix already exists, because this could mean that the 'normal' prefix was used instead.
