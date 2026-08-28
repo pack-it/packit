@@ -10,9 +10,10 @@ use crate::{
     cli::{
         commands::HandleCommand,
         display::{Spinner, logging::error, not_found, styled::Styled},
+        parameter_checks,
     },
     config::{Config, Repository},
-    installer::types::PackageId,
+    installer::types::{OptionalPackageId, PackageId},
     packager,
     platforms::Target,
     register::package_register::PackageRegister,
@@ -34,8 +35,13 @@ pub struct PackageArgs {
     structured: bool,
 
     /// True to package all installed packages
-    #[arg(short, long, default_value = "false")]
+    #[arg(short, long, default_value = "false", conflicts_with = "packages")]
     all: bool,
+
+    /// Exclude packages when using the `--all` flag, specified with <PACKAGE-NAME> ...
+    /// Note that `num_args = 1..` is needed to consume all 'non-flag' values after the exclude
+    #[arg(long, requires = "all", num_args = 1..)]
+    exclude: Vec<OptionalPackageId>,
 }
 
 impl HandleCommand for PackageArgs {
@@ -49,12 +55,15 @@ impl HandleCommand for PackageArgs {
             false => self.packages.iter().collect(),
         };
 
+        // Exclude packages (note that the default value of exclude is an empty vec, so nothing is filtered)
+        let packages: Vec<&PackageId> = packages.into_iter().filter(|p| !parameter_checks::contains_package_id(&self.exclude, p)).collect();
+
         if packages.is_empty() {
             error!(msg: "Nothing packaged, no packages specified");
             exit(1);
         }
 
-        for package_id in &packages {
+        for package_id in packages {
             // Get the correct install directory
             let destination = match self.structured {
                 true => {
