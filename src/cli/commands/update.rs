@@ -14,14 +14,14 @@ use crate::{
         },
         parameter_checks,
     },
-    config::Config,
+    config::{Config, Repository},
     installer::{
         Installer, InstallerOptions,
         types::{OptionalPackageId, PackageName, Version},
     },
     platforms::Target,
-    register::package_register::PackageRegister,
-    repositories::manager::RepositoryManager,
+    register::{self, package_register::PackageRegister},
+    repositories::{manager::RepositoryManager, provider},
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
@@ -46,6 +46,10 @@ pub struct UpdateArgs {
     /// Exclude packages when using the `--all` flag, specified with <PACKAGE-NAME> ...
     #[arg(long, requires = "all")]
     exclude: Vec<PackageName>,
+
+    /// Only refresh the local metadata
+    #[arg(long)]
+    refresh_only: bool,
 }
 
 impl HandleCommand for UpdateArgs {
@@ -54,6 +58,27 @@ impl HandleCommand for UpdateArgs {
         let manager = RepositoryManager::new(&config);
         let register_dir = PackageRegister::get_path(&config.prefix_directory);
         let mut register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
+
+        if self.refresh_only {
+            for package_version in register.iterate_all() {
+                let package_id = &package_version.package_id;
+                let package_dir = &package_version.install_path;
+
+                let repository = Repository::new(
+                    &package_version.metadata_repository_url,
+                    &package_version.metadata_repository_provider,
+                );
+
+                let Some(provider) = provider::create_metadata_provider(&repository) else {
+                    error!(msg: "Cannot create provider for repository");
+                    continue;
+                };
+
+                register::metadata::store_metadata(&provider, package_id, package_dir).unwrap_or_exit(1);
+            }
+
+            return;
+        }
 
         let options = InstallerOptions::default();
         let installer = Installer::new(&config, &mut register, &manager, options);
