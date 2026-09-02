@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{fs, path::Path};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
+use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -44,7 +48,9 @@ pub struct LocalMetadata {
     dependencies: Vec<Dependency>,
 }
 
-pub fn store_metadata(provider: &Box<dyn MetadataProvider>, package_id: &PackageId, package_dir: &Path) -> Result<()> {
+/// Refreshes the local metadata of the given package.
+/// Returns true if the metadata was changed, false otherwise.
+pub fn refresh_metadata(provider: &Box<dyn MetadataProvider>, package_id: &PackageId, package_dir: &Path) -> Result<bool> {
     let metadata_dir = package_dir.join(DIRECTORY_NAME);
 
     let package_meta = provider.read_package(&package_id.name)?;
@@ -53,38 +59,63 @@ pub fn store_metadata(provider: &Box<dyn MetadataProvider>, package_id: &Package
     let target_meta = package_version_meta.get_target(&target_bounds)?;
 
     let local_metadata = create_local_metadata(&package_meta, &package_version_meta, target_meta)?;
+    let local_meta_str = toml::ser::to_string(&local_metadata)?;
+
+    let mut updated = false;
 
     // Create metadata dir if it does not exist
     if !metadata_dir.exists() {
         fs::create_dir_all(&metadata_dir).err_with_path("create dirs", &metadata_dir)?;
+        updated = true;
     }
 
-    // Write local metadata file
+    // Collect a list of all files in the metadata directory before refreshing
+    let mut before_files = Vec::new();
+    for entry in fs::read_dir(&metadata_dir).err_with_path("read", &metadata_dir)? {
+        let entry = entry.err_with_path("iterate", &metadata_dir)?;
+        before_files.push(entry.path());
+    }
+    let mut after_files = Vec::new();
+
+    // If the metadata is updated, write the metadata to the file
     let local_meta_destination = metadata_dir.join("metadata.toml");
-    let local_meta_str = toml::ser::to_string(&local_metadata)?;
-    fs::write(&local_meta_destination, local_meta_str).err_with_path("write", local_meta_destination)?;
+    let local_meta_bytes = local_meta_str.into();
+    updated = updated || write_file_if_changed(&before_files, &mut after_files, local_meta_destination, Some(local_meta_bytes))?;
 
     // Download external test files
     let external_test_files = package_version_meta.external_test_files.iter().chain(target_meta.external_test_files.iter());
     for external_file in external_test_files {
-        download_file(provider, &package_id, external_file, &metadata_dir.join(external_file), true)?;
+        let destination = metadata_dir.join(external_file);
+        let new_file = request_file(provider, &package_id, external_file, true)?;
+        updated = updated || write_file_if_changed(&before_files, &mut after_files, destination, new_file)?;
     }
 
     // Download test script
     let test_script_path = package_version_meta.get_test_script_path(&target_bounds)?;
     let test_script_destination = metadata_dir.join(format!("test.{SCRIPT_EXTENSION}"));
-    download_file(provider, &package_id, &test_script_path, &test_script_destination, false)?;
+    let new_file = request_file(provider, &package_id, &test_script_path, false)?;
+    updated = updated || write_file_if_changed(&before_files, &mut after_files, test_script_destination, new_file)?;
 
     // Download uninstall script
     if target_meta.use_uninstall.unwrap_or(package_version_meta.use_uninstall.unwrap_or(false)) {
         let uninstall_script_path = package_version_meta.get_test_script_path(&target_bounds)?;
         let uninstall_script_destination = metadata_dir.join(format!("uninstall.{SCRIPT_EXTENSION}"));
-        download_file(provider, &package_id, &uninstall_script_path, &uninstall_script_destination, false)?;
+        let new_file = request_file(provider, &package_id, &uninstall_script_path, true)?;
+        updated = updated || write_file_if_changed(&before_files, &mut after_files, uninstall_script_destination, new_file)?;
     }
 
-    Ok(())
+    // Remove files that are not needed anymore
+    let removed_files: Vec<_> = before_files.iter().filter(|x| !after_files.contains(x)).collect();
+    for removed_file in removed_files {
+        fs::remove_file(removed_file).err_with_path("remove", removed_file)?;
+        updated = true;
+    }
+
+    Ok(updated)
 }
 
+/// Creates the local metadata from the given package, version and target metadata.
+/// Returns the created `LocalMetadata`.
 fn create_local_metadata(
     package_meta: &PackageMeta,
     package_version_meta: &PackageVersionMeta,
@@ -95,16 +126,13 @@ fn create_local_metadata(
     })
 }
 
-fn download_file(
-    provider: &Box<dyn MetadataProvider>,
-    package_id: &PackageId,
-    file_path: &str,
-    destination: &Path,
-    required: bool,
-) -> Result<()> {
+/// Requests a file from the given provider.
+/// If the file cannot be found, it returns an `LocalMetadataError::MetadataFileNotFound`, or None if the file is not required.
+/// Returns the bytes of the file if it can be found.
+fn request_file(provider: &Box<dyn MetadataProvider>, package_id: &PackageId, file_path: &str, required: bool) -> Result<Option<Bytes>> {
     let Some(bytes) = provider.read_file_bytes(&package_id.name, &file_path)? else {
         if !required {
-            return Ok(());
+            return Ok(None);
         }
 
         return Err(LocalMetadataError::MetadataFileNotFound {
@@ -112,6 +140,38 @@ fn download_file(
         });
     };
 
-    fs::write(destination, bytes).err_with_path("write", destination)?;
-    Ok(())
+    Ok(Some(bytes))
+}
+
+/// Writes a metadata file when it is changed.
+/// Compares the new content with the old content of the file.
+/// Updates the list `after_files` when a file should be kept.
+/// Returns true if the file changed, false otherwise.
+fn write_file_if_changed(
+    before_files: &Vec<PathBuf>,
+    after_files: &mut Vec<PathBuf>,
+    destination: PathBuf,
+    new_content: Option<Bytes>,
+) -> Result<bool> {
+    // Get new content, return when the file is not available
+    // True is returned when the file was present before, false if the file never existed
+    let Some(new_content) = new_content else {
+        return Ok(before_files.contains(&destination));
+    };
+
+    // If the file already existed, check content equality
+    if before_files.contains(&destination) {
+        let old_content = fs::read(&destination).err_with_path("read", &destination)?;
+
+        // If the file did not change, skip writing and store it as new file
+        if new_content == old_content {
+            after_files.push(destination);
+            return Ok(false);
+        }
+    }
+
+    // Write new file data
+    fs::write(&destination, new_content).err_with_path("write", &destination)?;
+    after_files.push(destination);
+    Ok(true)
 }

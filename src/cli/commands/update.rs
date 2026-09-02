@@ -74,7 +74,9 @@ impl HandleCommand for UpdateArgs {
                     continue;
                 };
 
-                register::metadata::store_metadata(&provider, package_id, package_dir).unwrap_or_exit(1);
+                let updated_metadata = register::metadata::refresh_metadata(&provider, package_id, package_dir)
+                    .unwrap_or_exit_msg(&format!("Cannot refresh metadata of {package_id}"), 1);
+                println!("{package_id}: {updated_metadata}");
             }
 
             return;
