@@ -3,7 +3,7 @@ use std::{collections::HashSet, path::PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{config::Repository, installer::types::PackageId, repositories::types::Licenses};
+use crate::{config::Repository, installer::types::PackageId, register::metadata::LocalMetaHandler, repositories::types::Licenses};
 
 /// Represents a specific package version which is installed on the system.
 #[cfg_attr(test, derive(PartialEq))]
@@ -41,4 +41,11 @@ pub struct InstalledPackageVersion {
 
 fn is_repository_provider_default(value: &String) -> bool {
     *value == Repository::default_repository_provider()
+}
+
+impl InstalledPackageVersion {
+    /// Gets the local metadata handler for the installed package version.
+    pub fn get_local_metadata(&self) -> LocalMetaHandler<'_> {
+        LocalMetaHandler::new(&self.package_id, &self.install_path)
+    }
 }

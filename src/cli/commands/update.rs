@@ -20,7 +20,7 @@ use crate::{
         types::{OptionalPackageId, PackageName, Version},
     },
     platforms::Target,
-    register::{self, package_register::PackageRegister},
+    register::package_register::PackageRegister,
     repositories::{manager::RepositoryManager, provider},
     utils::unwrap_or_exit::UnwrapOrExit,
 };
@@ -205,8 +205,8 @@ impl UpdateArgs {
                 continue;
             };
 
-            let updated_metadata = register::metadata::refresh_metadata(&provider, package_id, &package_version.install_path)
-                .unwrap_or_exit_msg(&format!("Cannot refresh metadata of {package_id}"), 1);
+            let local_meta = package_version.get_local_metadata();
+            let updated_metadata = local_meta.refresh(&provider).unwrap_or_exit_msg(&format!("Cannot refresh metadata of {package_id}"), 1);
             println!("{package_id}: {updated_metadata}");
         }
     }

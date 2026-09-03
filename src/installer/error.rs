@@ -11,7 +11,7 @@ use crate::{
         unpack::UnpackError,
     },
     platforms::{permissions::error::PermissionError, symlink::SymlinkError},
-    register::error::RegisterError,
+    register::{error::RegisterError, metadata::error::LocalMetadataError},
     repositories::error::RepositoryError,
     utils::{ioerror, tree::TreeError},
 };
@@ -102,6 +102,9 @@ pub enum InstallerError {
 
     #[error("Error while setting or getting permissions")]
     PermissionError(#[from] PermissionError),
+
+    #[error("Error while using local metadata")]
+    LocalMetadataError(#[from] LocalMetadataError),
 
     #[error("Error while interacting with filesystem")]
     IOError(#[from] ioerror::IOError),
