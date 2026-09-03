@@ -30,6 +30,7 @@ The packages directory contains the metadata of all packages which are supported
 Each package contains this file, it describes the package as whole. It shows the following general package information:
 - Name
 - Short description
+- Optional `install_message` shown before installing the package
 - Package homepage url
 - Available versions
 - The minimum required Packit version
@@ -54,6 +55,7 @@ See the tables below for all different fields, see [Target fields](#target-field
 | `use_<script>`                  | Needs to be set to true when the script should be used. (Only for `preinstall`, `postinstall` and `uninstall`) |
 | `skip_symlinking`               | When set to yes, the package is not symlinked after installation, preventing the package to be detectable through the PATH. |
 | `revisions`                     | A list of strings containing a description of what changed in each metadata or script revision. |
+| `comments`                      | A list of messages shown before installing this package version.               |
 | `deprecation`                   | Defines when the version deprecates, disables and the reason.                  |
 | `script_args`                   | A table of key-value pairs containing arguments passed to scripts.             |
 | `external_test_files`           | A list of external test files that are needed for executing the test script. These files are automatically downloaded. |

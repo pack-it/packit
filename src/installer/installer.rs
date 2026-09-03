@@ -73,6 +73,13 @@ impl<'a> Installer<'a> {
         let (repository_id, package_metadata, version_metadata) =
             self.repository_manager.read_package_and_version(optional_id, &Target::current())?;
 
+        if let Some(message) = &package_metadata.install_message {
+            println!("{message}");
+        }
+        for comment in &version_metadata.comments {
+            println!("{comment}");
+        }
+
         // Create a package id of the current package
         let version = &version_metadata.version;
         let package_id = optional_id.versioned_or_cloned(version);
