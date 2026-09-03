@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::{
+    cmp::max,
+    collections::{HashMap, HashSet},
     fs,
     path::{Path, PathBuf},
 };
@@ -10,13 +12,13 @@ use serde::{Deserialize, Serialize};
 use crate::{
     installer::{
         scripts::SCRIPT_EXTENSION,
-        types::{Dependency, PackageId},
+        types::{Dependency, PackageId, PackageName, Version},
     },
     platforms::Target,
     register::metadata::error::{LocalMetadataError, Result},
     repositories::{
         provider::MetadataProvider,
-        types::{PackageMeta, PackageTarget, PackageVersionMeta},
+        types::{DeprecationInfo, PackageMeta, PackageVersionMeta, Requirement, TargetBounds},
     },
     utils::ioerror::IOResultExt,
 };
@@ -24,17 +26,40 @@ use crate::{
 pub const DIRECTORY_NAME: &str = ".packit";
 const METADATA_FILENAME: &str = "metadata.toml";
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+/// Represents the local metadata.
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct LocalMetadata {
-    dependencies: Vec<Dependency>,
+    pub required_packit_version: Option<Version>,
+
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub dependencies: Vec<Dependency>,
+
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub test_requirements: Vec<Requirement>,
+
+    #[serde(default, skip_serializing_if = "HashSet::is_empty")]
+    pub external_test_files: HashSet<String>,
+
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub script_args: HashMap<String, String>,
+
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub revisions: Vec<String>,
+    pub deprecation: Option<DeprecationInfo>,
+    pub skip_symlinking: bool,
+
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub conflicts_with: Vec<PackageName>,
 }
 
+/// Handler which handles the reading and refreshing of local metadata.
 pub struct LocalMetaHandler<'a> {
     package_id: &'a PackageId,
     package_install_dir: &'a Path,
 }
 
 impl<'a> LocalMetaHandler<'a> {
+    /// Creates a new `LocalMetaHandler` for the given package.
     pub fn new(package_id: &'a PackageId, package_install_dir: &'a Path) -> Self {
         Self {
             package_id,
@@ -76,7 +101,7 @@ impl<'a> LocalMetaHandler<'a> {
         let target_bounds = package_version_meta.get_best_target(&Target::current())?;
         let target_meta = package_version_meta.get_target(&target_bounds)?;
 
-        let local_metadata = self.create_local_metadata(&package_meta, &package_version_meta, target_meta)?;
+        let local_metadata = self.create_local_metadata(&package_meta, &package_version_meta, &target_bounds)?;
         let local_meta_str = toml::ser::to_string(&local_metadata)?;
 
         let mut updated = false;
@@ -103,9 +128,12 @@ impl<'a> LocalMetaHandler<'a> {
         }
 
         // Download external test files
-        let external_test_files = package_version_meta.external_test_files.iter().chain(target_meta.external_test_files.iter());
+        let external_test_files = package_version_meta.get_external_test_files(&target_bounds)?;
         for external_file in external_test_files {
-            let destination = metadata_dir.join(external_file);
+            // Flatten external file directory names
+            let normalized_file_name = external_file.replace("/", "-");
+
+            let destination = metadata_dir.join(normalized_file_name);
             let new_file = self.request_file(provider, external_file, true)?;
             if self.write_file_if_changed(&before_files, &mut after_files, destination, new_file)? {
                 updated = true;
@@ -146,10 +174,36 @@ impl<'a> LocalMetaHandler<'a> {
         &self,
         package_meta: &PackageMeta,
         package_version_meta: &PackageVersionMeta,
-        target_meta: &PackageTarget,
+        target_bounds: &TargetBounds,
     ) -> Result<LocalMetadata> {
+        let target_meta = package_version_meta.get_target(target_bounds)?;
+
+        let required_packit_version = max(&package_meta.required_packit_version, &package_version_meta.required_packit_version);
+        let dependencies = package_version_meta.dependencies.iter().chain(target_meta.dependencies.iter()).cloned().collect();
+
+        // Normalize external test files to flatten directories into the name
+        let external_test_files = package_version_meta
+            .get_external_test_files(target_bounds)?
+            .iter()
+            .map(ToString::to_string)
+            .map(|x| x.replace("/", "-"))
+            .collect();
+
+        let script_args =
+            package_version_meta.get_script_args(target_bounds)?.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect();
+
+        let deprecation = package_meta.deprecation.as_ref().or(package_version_meta.deprecation.as_ref()).cloned();
+
         Ok(LocalMetadata {
-            dependencies: package_version_meta.dependencies.iter().chain(target_meta.dependencies.iter()).cloned().collect(),
+            required_packit_version: required_packit_version.clone(),
+            dependencies,
+            test_requirements: target_meta.test_requirements.clone(),
+            external_test_files,
+            script_args,
+            revisions: package_version_meta.revisions.clone(),
+            deprecation,
+            skip_symlinking: target_meta.skip_symlinking.unwrap_or(package_version_meta.skip_symlinking),
+            conflicts_with: package_meta.conflicts_with.clone(),
         })
     }
 

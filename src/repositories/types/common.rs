@@ -71,7 +71,7 @@ pub struct FileSize(pub u32);
 pub struct Date(chrono::NaiveDate);
 
 /// Represents information about a package deprecation and disabling.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct DeprecationInfo {
     pub deprecated_from: Date,
 
