@@ -5,6 +5,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use chrono::DateTime;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -126,6 +127,8 @@ impl PackageRegister {
             dependents: HashSet::new(),
             install_path: install_path.into(),
             revisions: package_version.revisions.clone(),
+            last_metadata_refresh: DateTime::default(), // Initialize to UNIX epoch
+            last_metadata_change: DateTime::default(),  // Initialize to UNIX epoch
         };
 
         self.add_package_raw(
@@ -388,6 +391,8 @@ pub mod tests {
             dependents,
             install_path: "-".into(),
             revisions: Vec::new(),
+            last_metadata_refresh: DateTime::default(),
+            last_metadata_change: DateTime::default(),
         }
     }
 

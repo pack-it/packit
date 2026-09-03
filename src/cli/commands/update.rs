@@ -61,7 +61,7 @@ impl HandleCommand for UpdateArgs {
 
         // If refresh only is specified, only refresh the specified packages
         if self.refresh_only {
-            self.refresh_metadata(&register, &config);
+            self.refresh_metadata(&mut register, &config);
             return;
         }
 
@@ -140,7 +140,7 @@ impl HandleCommand for UpdateArgs {
         }
 
         // Refresh metadata of all given packages
-        self.refresh_metadata(&register, &config);
+        self.refresh_metadata(&mut register, &config);
     }
 }
 
@@ -177,7 +177,7 @@ impl UpdateArgs {
         filtered_updatables.into_iter().map(OptionalPackageId::from).collect()
     }
 
-    fn refresh_metadata(&self, register: &PackageRegister, config: &Config) {
+    fn refresh_metadata(&self, register: &mut PackageRegister, config: &Config) {
         // If `--all` is specified use all installed packages
         let packages = match self.all {
             // Only filter exclude packages when all is specified
@@ -190,23 +190,31 @@ impl UpdateArgs {
         };
 
         for package_id in packages {
-            let Some(package_version) = register.get_package_version(package_id) else {
+            let Some(package_version) = register.get_package_version_mut(package_id) else {
                 error!(msg: "Expected package version {} to exist, skipping refresh", package_id.style());
                 continue;
             };
 
+            // Create repository provider for package
             let repository = Repository::new(
                 &package_version.metadata_repository_url,
                 &package_version.metadata_repository_provider,
             );
-
             let Some(provider) = provider::create_metadata_provider(&repository) else {
                 error!(msg: "Cannot create provider for repository");
                 continue;
             };
 
+            // Refresh metadata
             let local_meta = package_version.get_local_metadata();
             let updated_metadata = local_meta.refresh(&provider).unwrap_or_exit_msg(&format!("Cannot refresh metadata of {package_id}"), 1);
+            package_version.update_metadata_refresh(updated_metadata);
+
+            // Save register to store updated timestamps
+            register
+                .save_to(&PackageRegister::get_path(&config.prefix_directory))
+                .unwrap_or_exit_msg("Error while saving register", 1);
+
             println!("{package_id}: {updated_metadata}");
         }
     }
