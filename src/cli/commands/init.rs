@@ -6,18 +6,19 @@ use std::{
     str::FromStr,
 };
 
+use chrono::DateTime;
 use clap::Args;
 
 use crate::{
     cli::{commands::HandleCommand, display::logging::error},
-    config::{Config, EditableConfig},
+    config::{Config, EditableConfig, Repository},
     installer::{
         Symlinker,
         types::{PackageId, PackageName, Version},
     },
     platforms::{DEFAULT_CONFIG_DIR, DEFAULT_PREFIX, permissions},
     register::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
-    repositories::types::Licenses,
+    repositories::provider,
     utils::{
         constants::{DEFAULT_METADATA_REPOSITORY_PROVIDER, DEFAULT_METADATA_REPOSITORY_URL},
         packit_version::packit_version,
@@ -108,7 +109,6 @@ impl HandleCommand for InitArgs {
 
         let installed_package_version = InstalledPackageVersion {
             package_id: package_id.clone(),
-            license: Licenses::Single("GPL-3.0-only".into()),
             metadata_repository_provider: DEFAULT_METADATA_REPOSITORY_PROVIDER.into(),
             metadata_repository_url: DEFAULT_METADATA_REPOSITORY_URL.into(),
             prebuilds_repository_url: None,
@@ -117,6 +117,8 @@ impl HandleCommand for InitArgs {
             dependents: HashSet::new(),
             install_path: packit_package_path,
             revisions: Vec::new(),
+            last_metadata_refresh: DateTime::default(), // Initialize to UNIX epoch
+            last_metadata_change: DateTime::default(),  // Initialize to UNIX epoch
         };
         let active = false;
         let symlinked = false;
@@ -150,5 +152,35 @@ impl HandleCommand for InitArgs {
             "Packit cannot be initialized: error while setting permissions of files in the prefix",
             1,
         );
+
+        // Get the installed package from the register
+        let Some(installed_package_version) = register.get_package_version_mut(&package_id) else {
+            error!(msg: "Packit cannot be initialized: newly created register does not contain the Packit version");
+            exit(1);
+        };
+
+        // Create the repository provider to fetch Packit metadata from
+        let repository = Repository::new(
+            &installed_package_version.metadata_repository_url,
+            &installed_package_version.metadata_repository_provider,
+        );
+        let Some(provider) = provider::create_metadata_provider(&repository) else {
+            error!(msg: "Packit cannot be initialized: cannot fetch Packit metadata from repository");
+            exit(1);
+        };
+
+        // Fetch Packit metadata from the default repository
+        let updated = installed_package_version
+            .get_local_metadata()
+            .refresh(&provider)
+            .unwrap_or_exit_msg("Packit cannot be initialized: error while retrieving Packit metadata", 1);
+
+        // Update last refresh in the package version
+        installed_package_version.update_metadata_refresh(updated);
+
+        // Save register
+        register
+            .save_to(&PackageRegister::get_path(&prefix_directory))
+            .unwrap_or_exit_msg("Packit cannot be initialized: error while saving register", 1);
     }
 }
