@@ -9,13 +9,15 @@ use crate::{
     config::{Config, Repository},
     installer::{
         self,
-        scripts::{self, ScriptData, ScriptError},
+        scripts::{self, SCRIPT_EXTENSION, ScriptData, ScriptError},
         types::{Dependency, PackageId, PackageName},
     },
     integrity::{Issue, error::Result, utils::get_storage_packages},
     packager,
     platforms::Target,
-    register::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
+    register::{
+        installed_package_version::InstalledPackageVersion, metadata::error::LocalMetadataError, package_register::PackageRegister,
+    },
     repositories::{
         provider::{self, create_metadata_provider},
         types::{Checksum, PackageVersionMeta, PrebuildsList},
@@ -69,6 +71,7 @@ fn check_package_alterations(package_id: &PackageId, register: &PackageRegister,
         disable_prebuilds: false,
     };
 
+    // TODO: prebuild list and prebuild provider are needed here
     // Create providers
     let Some(provider) = provider::create_metadata_provider(&repository) else {
         warning!("Cannot create metadata provider for {}, skipping check", package_id.style());
@@ -627,30 +630,18 @@ fn check_package_test(package_id: &PackageId, register: &PackageRegister, config
 
     let package_version = register.get_package_version(package_id).expect("Expected package to exist");
 
-    let repository = Repository::new(
-        &package_version.metadata_repository_url,
-        &package_version.metadata_repository_provider,
-    );
+    let local_meta_handler = package_version.get_local_metadata();
+    let local_metadata = local_meta_handler.read_metadata()?;
 
-    let provider = match provider::create_metadata_provider(&repository) {
-        Some(provider) => provider,
-        None => {
-            warning!("Cannot create metadata provider for '{package_id}', skipping check");
-            return Ok(false);
-        },
+    // Copy test script to tempfile if it exists
+    let script_text = match local_meta_handler.read_file(&format!("test.{SCRIPT_EXTENSION}")) {
+        Ok(script_text) => script_text,
+        Err(LocalMetadataError::LocalMetadataFileNotFound { .. }) => return Ok(false),
+        Err(e) => return Err(e.into()),
     };
-
-    // Get the target
-    let version_meta = provider.read_package_version(&package_id.name, &package_id.version)?;
-    let target_bounds = version_meta.get_best_target(&Target::current())?;
-    let target = version_meta.get_target(&target_bounds)?;
-
-    // Get the test script data
-    let script_path = version_meta.get_test_script_path(&target_bounds)?;
-    let script_args = version_meta.get_script_args(&target_bounds)?;
-    let script_text = provider.read_file(&package_id.name, &script_path)?;
-    let Some(script_text) = script_text else { return Ok(false) };
     let downloaded_script = scripts::write_script_to_tempfile(&script_text)?;
+
+    let script_args = local_metadata.script_args.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
     let script_data = ScriptData::new(
         &downloaded_script,
         &package_version.install_path,
@@ -661,25 +652,14 @@ fn check_package_test(package_id: &PackageId, register: &PackageRegister, config
     );
 
     // Get the external test files
-    let external_files = version_meta.external_test_files.iter().chain(&target.external_test_files);
     let mut read_files = Vec::new();
-    for file in external_files {
-        let file_content = provider.read_file_bytes(&package_id.name, file)?;
-
-        match file_content {
-            Some(content) => read_files.push((file, content)),
-            None => {
-                warning!(
-                    "Skipping {} test, because the required files could not be downloaded",
-                    package_id.style()
-                );
-                return Ok(false);
-            },
-        }
+    for file in &local_metadata.external_test_files {
+        let file_content = local_meta_handler.read_file_bytes(file)?;
+        read_files.push((file, file_content));
     }
 
     // Run the test script and only return true if the test itself failed
-    match scripts::run_test_script(&script_data, &read_files, &target.test_requirements) {
+    match scripts::run_test_script(&script_data, &read_files, &local_metadata.test_requirements) {
         Ok(_) => Ok(false),
         Err(ScriptError::RequirementNotSatisfied(requirement)) => {
             warning!(

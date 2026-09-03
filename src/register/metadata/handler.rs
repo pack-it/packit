@@ -80,8 +80,20 @@ impl<'a> LocalMetaHandler<'a> {
     }
 
     /// Reads the specified local metadata file from the storage of the given package.
+    /// Returns the file as string.
+    pub fn read_file(&self, file: &str) -> Result<String> {
+        let path = self.package_install_dir.join(DIRECTORY_NAME).join(file);
+        if !path.exists() {
+            return Err(LocalMetadataError::LocalMetadataFileNotFound { file_path: path });
+        }
+
+        let content = fs::read_to_string(&path).err_with_path("read", &path)?;
+        Ok(content)
+    }
+
+    /// Reads the specified local metadata file from the storage of the given package.
     /// Returns the file as bytes.
-    pub fn read_file(&self, file: &str) -> Result<Bytes> {
+    pub fn read_file_bytes(&self, file: &str) -> Result<Bytes> {
         let path = self.package_install_dir.join(DIRECTORY_NAME).join(file);
         if !path.exists() {
             return Err(LocalMetadataError::LocalMetadataFileNotFound { file_path: path });

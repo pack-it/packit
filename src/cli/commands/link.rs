@@ -8,18 +8,16 @@ use crate::{
     cli::{
         commands::HandleCommand,
         display::{
-            logging::{error, warning},
+            logging::warning,
             not_found, standard_print,
             styled::{MapStyled, Styled},
         },
     },
-    config::{Config, Repository},
+    config::Config,
     installer::{Symlinker, types::PackageName},
-    platforms::Target,
     register::{
         installed_package::InstalledPackage, installed_package_version::InstalledPackageVersion, package_register::PackageRegister,
     },
-    repositories::provider,
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
@@ -105,48 +103,11 @@ impl LinkArgs {
             return false;
         }
 
-        let repository = Repository::new(
-            &package_version.metadata_repository_url,
-            &package_version.metadata_repository_provider,
-        );
+        let local_meta_handler = package_version.get_local_metadata();
+        let local_metadata = local_meta_handler.read_metadata().unwrap_or_exit_msg("Unable to read local metadata", 1);
 
-        let Some(provider) = provider::create_metadata_provider(&repository) else {
-            error!(msg: "Cannot create provider for repository");
-            return false;
-        };
-
-        let package_version_meta = match provider.read_package_version(&self.package_name, &package.active_version) {
-            Ok(package_version_meta) => package_version_meta,
-            Err(e) => {
-                error!(e, "Unable to read package metadata for package");
-                return false;
-            },
-        };
-
-        // Skip if the package version metadata defines skip_symlinking
-        if package_version_meta.skip_symlinking {
-            warning!("The package metadata defines we should not symlink this package");
-            return false;
-        }
-
-        let target_bounds = match package_version_meta.get_best_target(&Target::current()) {
-            Ok(target_bounds) => target_bounds,
-            Err(e) => {
-                error!(e, "The metadata does not contain the current target");
-                return false;
-            },
-        };
-
-        let target = match package_version_meta.get_target(&target_bounds) {
-            Ok(target) => target,
-            Err(e) => {
-                error!(e, "Cannot get current target from package metadata");
-                return false;
-            },
-        };
-
-        // Skip if the package version target metadata defines skip_symlinking
-        if let Some(true) = target.skip_symlinking {
+        // Skip if the local metadata defines skip_symlinking
+        if local_metadata.skip_symlinking {
             warning!("The package metadata defines we should not symlink this package");
             return false;
         }
