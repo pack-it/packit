@@ -25,7 +25,7 @@ use crate::{
         unpack::unpack,
     },
     platforms::{DEFAULT_PREFIX, Target, permissions, symlink},
-    register::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
+    register::{self, installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
     repositories::{
         manager::RepositoryManager,
         provider,
@@ -231,6 +231,14 @@ impl<'a> Installer<'a> {
             use_prebuild,
         );
         self.register.save_to(&PackageRegister::get_path(&self.config.prefix_directory))?;
+
+        // TODO
+        register::metadata::refresh_metadata(
+            self.repository_manager.get_metadata_provider(&install_meta.repository_id)?,
+            &package_id,
+            &install_directory,
+        )
+        .unwrap();
 
         self.execute_postinstall(&package_id, install_meta, &install_directory, &script_args)?;
 

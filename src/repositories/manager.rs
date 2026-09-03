@@ -495,7 +495,7 @@ impl<'a> RepositoryManager<'a> {
     /// A helper method to get the metadata provider.
     /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     #[expect(clippy::borrowed_box)]
-    fn get_metadata_provider(&self, repository_id: &str) -> Result<&Box<dyn MetadataProvider>> {
+    pub fn get_metadata_provider(&self, repository_id: &str) -> Result<&Box<dyn MetadataProvider>> {
         // Check if repository is unsupported
         if self.unsupported_repositories.contains_key(repository_id) {
             return Err(RepositoryError::RepositoryNotSupported {
