@@ -25,7 +25,7 @@ use crate::{
         unpack::unpack,
     },
     platforms::{DEFAULT_PREFIX, Target, permissions, symlink},
-    register::{self, installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
+    register::{installed_package_version::InstalledPackageVersion, metadata::LocalMetaHandler, package_register::PackageRegister},
     repositories::{
         manager::RepositoryManager,
         provider,
@@ -232,13 +232,9 @@ impl<'a> Installer<'a> {
         );
         self.register.save_to(&PackageRegister::get_path(&self.config.prefix_directory))?;
 
-        // TODO
-        register::metadata::refresh_metadata(
-            self.repository_manager.get_metadata_provider(&install_meta.repository_id)?,
-            &package_id,
-            &install_directory,
-        )
-        .unwrap();
+        // Refresh the local metadata for the new package
+        let local_metadata = LocalMetaHandler::new(&package_id, &install_directory);
+        local_metadata.refresh(self.repository_manager.get_metadata_provider(&install_meta.repository_id)?)?;
 
         self.execute_postinstall(&package_id, install_meta, &install_directory, &script_args)?;
 
