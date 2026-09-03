@@ -11,7 +11,7 @@ use crate::{
     },
     packager::PackagerError,
     platforms::{permissions::error::PermissionError, symlink::SymlinkError},
-    register::error::RegisterError,
+    register::{error::RegisterError, metadata::error::LocalMetadataError},
     repositories::error::RepositoryError,
     utils::ioerror,
 };
@@ -63,6 +63,9 @@ pub enum VerifierError {
 
     #[error("Cannot perform check, because of an error when executing a script")]
     ScriptError(#[from] ScriptError),
+
+    #[error("Error while using local metadata")]
+    LocalMetadataError(#[from] LocalMetadataError),
 
     #[error("Cannot perform check or fix, because of an error while interacting with the filesystem")]
     IOError(#[from] ioerror::IOError),

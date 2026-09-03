@@ -13,22 +13,25 @@ use crate::{
         standard_print,
         styled::{MapStyled, Styled},
     },
-    config::{Config, Repository},
+    config::Config,
     installer::{
         InstallLabel,
         error::{InstallerError, Result},
         install_tree::{InstallMeta, InstallTree, InstallTreeBuilder, InstallType},
         options::InstallerOptions,
-        scripts::{self, ScriptData, ScriptError},
+        scripts::{self, SCRIPT_EXTENSION, ScriptData, ScriptError},
         symlinker::Symlinker,
         types::{OptionalPackageId, PackageId, PackageName, Version},
         unpack::unpack,
     },
     platforms::{DEFAULT_PREFIX, Target, permissions, symlink},
-    register::{installed_package_version::InstalledPackageVersion, metadata::LocalMetaHandler, package_register::PackageRegister},
+    register::{
+        installed_package_version::InstalledPackageVersion,
+        metadata::{LocalMetaHandler, error::LocalMetadataError},
+        package_register::PackageRegister,
+    },
     repositories::{
         manager::RepositoryManager,
-        provider,
         types::{Checksum, PackageTarget},
     },
     utils::{io, ioerror::IOResultExt, reading::ReadExt},
@@ -632,12 +635,9 @@ impl<'a> Installer<'a> {
             },
         };
 
-        // Load metadata repository
-        let repository = match installed_package.get_package_version(&package_id.version) {
-            Some(package_version) => Repository::new(
-                &package_version.metadata_repository_url,
-                &package_version.metadata_repository_provider,
-            ),
+        // Get installed package version
+        let installed_package_version = match installed_package.get_package_version(&package_id.version) {
+            Some(installed_package_version) => installed_package_version,
             None => {
                 return Err(InstallerError::UnreachableError {
                     msg: "Package version cannot be found eventhough it was found before".to_string(),
@@ -646,7 +646,7 @@ impl<'a> Installer<'a> {
         };
 
         // Run uninstall script
-        self.run_uninstall_script(&repository, &package_id, &directory)?;
+        self.run_uninstall_script(installed_package_version)?;
 
         // Remove the dependency symlinks if they exist
         let dependency_directory_path = self.config.prefix_directory.join("dependencies").join(package_id.to_string());
@@ -728,12 +728,6 @@ impl<'a> Installer<'a> {
 
         // Run uninstall scripts for all versions
         for package_version in &installed_versions {
-            // Create repository
-            let repository = Repository::new(
-                &package_version.metadata_repository_url,
-                &package_version.metadata_repository_provider,
-            );
-
             // Remove the dependency symlinks
             let dependency_directory_path = self.config.prefix_directory.join("dependencies").join(package_version.package_id.to_string());
             if fs::exists(&dependency_directory_path).err_with_path("check existence of", &dependency_directory_path)? {
@@ -741,7 +735,7 @@ impl<'a> Installer<'a> {
             }
 
             // Run uninstall script
-            self.run_uninstall_script(&repository, &package_version.package_id, &directory)?;
+            self.run_uninstall_script(package_version)?;
         }
 
         if let Some(directory) = directory.to_str() {
@@ -760,52 +754,28 @@ impl<'a> Installer<'a> {
 
     /// Downloads and runs the uninstall script of a given package.
     /// Could return an `InstallerError`.
-    fn run_uninstall_script(&self, repository: &Repository, package_id: &PackageId, install_directory: &Path) -> Result<()> {
-        // Create metadata repository provider for source repository
-        let provider = match provider::create_metadata_provider(repository) {
-            Some(provider) => provider,
-            None => {
-                warning!("Unable to create repository provider, skipping uninstall script execution. This may cause stray files");
+    fn run_uninstall_script(&self, installed_package_version: &InstalledPackageVersion) -> Result<()> {
+        let package_id = &installed_package_version.package_id;
+
+        let local_meta_handler = installed_package_version.get_local_metadata();
+        let local_metadata = local_meta_handler.read_metadata()?;
+
+        // Copy uninstall script to tempfile if it exists
+        let script_text = match local_meta_handler.read_file(&format!("uninstall.{SCRIPT_EXTENSION}")) {
+            Ok(script_text) => script_text,
+            Err(LocalMetadataError::LocalMetadataFileNotFound { .. }) => {
+                debug!("Skipping uninstall script execution since metadata does not define it");
                 return Ok(());
             },
-        };
-
-        // Load package version from metadata repository
-        let package_version = match provider.read_package_version(&package_id.name, &package_id.version) {
-            Ok(package_version) => package_version,
-            Err(e) => {
-                warning!(
-                    "Unable to read package version from metadata repository, skipping uninstall script execution. This may cause stray files"
-                );
-                warning!("{e}");
-                return Ok(());
-            },
-        };
-
-        let target_bounds = package_version.get_best_target(&Target::current())?;
-
-        // Check if uninstall script should be used
-        let target_meta = package_version.get_target(&target_bounds)?;
-        let use_script = target_meta.use_uninstall.unwrap_or(package_version.use_uninstall.unwrap_or(false));
-        if !use_script {
-            debug!("Skipping uninstall script execution since metadata does not define it");
-            return Ok(());
-        }
-
-        // Get script path from package version metadata
-        let script_path = package_version.get_uninstall_script_path(&target_bounds)?;
-
-        // Download uninstall script if it exists
-        let Some(script_text) = provider.read_file(&package_id.name, &script_path)? else {
-            return Err(ScriptError::ScriptNotFound(script_path).into());
+            Err(e) => return Err(e.into()),
         };
         let script_file = scripts::write_script_to_tempfile(&script_text)?;
 
         // Run script
-        let script_args = package_version.get_script_args(&target_bounds)?;
+        let script_args = local_metadata.script_args.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
         let script_data = ScriptData::new(
             &script_file,
-            &install_directory,
+            &installed_package_version.install_path,
             package_id,
             self.config,
             &script_args,

@@ -77,6 +77,7 @@ impl PackageArgs {
             None => not_found::register_package_version(package_id, register),
         };
 
+        // TODO: should we also store prebuilds.toml, or require the repository to be available?
         // Create metadata provider
         let repository = Repository::new(
             &package_version.metadata_repository_url,
