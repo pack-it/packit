@@ -170,7 +170,7 @@ impl<'a> Builder<'a> {
             };
 
             // Apply patch
-            patches::apply_patch(patch_bytes, apply_directory)?;
+            patches::apply_patch(patch_bytes, apply_directory, build_directory.path())?;
 
             println!("Applied patch '{id}' to {}", package_id.style());
         }
