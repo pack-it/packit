@@ -18,7 +18,7 @@ use crate::{
     register::metadata::error::{LocalMetadataError, Result},
     repositories::{
         provider::MetadataProvider,
-        types::{DeprecationInfo, PackageMeta, PackageVersionMeta, Requirement, TargetBounds},
+        types::{DeprecationInfo, Licenses, PackageMeta, PackageVersionMeta, Requirement, TargetBounds},
     },
     utils::ioerror::IOResultExt,
 };
@@ -30,6 +30,9 @@ const METADATA_FILENAME: &str = "metadata.toml";
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct LocalMetadata {
     pub required_packit_version: Option<Version>,
+
+    #[serde(default, skip_serializing_if = "Licenses::is_unknown")]
+    pub license: Licenses,
 
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub dependencies: Vec<Dependency>,
@@ -206,6 +209,7 @@ impl<'a> LocalMetaHandler<'a> {
 
         Ok(LocalMetadata {
             required_packit_version: required_packit_version.clone(),
+            license: package_version_meta.license.clone(),
             dependencies,
             test_requirements: target_meta.test_requirements.clone(),
             external_test_files,

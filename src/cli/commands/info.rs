@@ -207,12 +207,16 @@ impl InfoArgs {
             None => not_found::register_package_version(package_id, register),
         };
 
+        // Retrieve local metadata of package
+        let local_meta_handler = package_version.get_local_metadata();
+        let local_metadata = local_meta_handler.read_metadata().unwrap_or_exit_msg("Error while reading local metadata", 1);
+
         println!("{}", package_id.style());
         println!("{}", package.description.italic().cyan());
 
         let mut pair_aligner = PairAligner::new();
         pair_aligner.add("Homepage", package.homepage.display());
-        pair_aligner.add("License", package_version.license.style());
+        pair_aligner.add("License", local_metadata.license.style());
         pair_aligner.add("Install path", package_version.install_path.display());
         pair_aligner.add("Active", if package.active_version == package_id.version { "yes" } else { "no" });
         pair_aligner.add("Symlinked", if package.symlinked { "yes" } else { "no" });

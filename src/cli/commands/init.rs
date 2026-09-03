@@ -18,7 +18,7 @@ use crate::{
     },
     platforms::{DEFAULT_CONFIG_DIR, DEFAULT_PREFIX, permissions},
     register::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
-    repositories::{provider, types::Licenses},
+    repositories::provider,
     utils::{
         constants::{DEFAULT_METADATA_REPOSITORY_PROVIDER, DEFAULT_METADATA_REPOSITORY_URL},
         packit_version::packit_version,
@@ -109,7 +109,6 @@ impl HandleCommand for InitArgs {
 
         let installed_package_version = InstalledPackageVersion {
             package_id: package_id.clone(),
-            license: Licenses::Single("GPL-3.0-only".into()),
             metadata_repository_provider: DEFAULT_METADATA_REPOSITORY_PROVIDER.into(),
             metadata_repository_url: DEFAULT_METADATA_REPOSITORY_URL.into(),
             prebuilds_repository_url: None,
