@@ -59,33 +59,16 @@ impl HandleCommand for UpdateArgs {
         let register_dir = PackageRegister::get_path(&config.prefix_directory);
         let mut register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
+        // If refresh only is specified, only refresh the specified packages
         if self.refresh_only {
-            for package_version in register.iterate_all() {
-                let package_id = &package_version.package_id;
-                let package_dir = &package_version.install_path;
-
-                let repository = Repository::new(
-                    &package_version.metadata_repository_url,
-                    &package_version.metadata_repository_provider,
-                );
-
-                let Some(provider) = provider::create_metadata_provider(&repository) else {
-                    error!(msg: "Cannot create provider for repository");
-                    continue;
-                };
-
-                let updated_metadata = register::metadata::refresh_metadata(&provider, package_id, package_dir)
-                    .unwrap_or_exit_msg(&format!("Cannot refresh metadata of {package_id}"), 1);
-                println!("{package_id}: {updated_metadata}");
-            }
-
+            self.refresh_metadata(&register, &config);
             return;
         }
 
         let options = InstallerOptions::default();
         let installer = Installer::new(&config, &mut register, &manager, options);
 
-        // If `--all` is specified use all the updatable pacakges
+        // If `--all` is specified use all the updatable packages
         let optional_ids = match self.all {
             true => &self.get_updatables(installer),
             false if self.packages.is_empty() => {
@@ -108,6 +91,7 @@ impl HandleCommand for UpdateArgs {
             exit(1);
         }
 
+        // Update all given packages
         for optional_id in optional_ids {
             match optional_id.versioned() {
                 Some(package_id) if register.get_package_version(&package_id).is_some() => {},
@@ -154,6 +138,9 @@ impl HandleCommand for UpdateArgs {
                 None => println!("{} is up-to-date!", optional_id.name.style()),
             }
         }
+
+        // Refresh metadata of all given packages
+        self.refresh_metadata(&register, &config);
     }
 }
 
@@ -171,9 +158,10 @@ impl UpdateArgs {
             }
         }
 
+        // If there are no updatable packages, show a message and return an empty list
         if filtered_updatables.is_empty() {
             println!("All packages are up-to-date!");
-            exit(0);
+            return Vec::new();
         }
 
         println!("The following packages will be updated:");
@@ -187,5 +175,39 @@ impl UpdateArgs {
         }
 
         filtered_updatables.into_iter().map(OptionalPackageId::from).collect()
+    }
+
+    fn refresh_metadata(&self, register: &PackageRegister, config: &Config) {
+        // If `--all` is specified use all installed packages
+        let packages = match self.all {
+            // Only filter exclude packages when all is specified
+            true => &register.iterate_all().map(|x| x.package_id.clone()).filter(|x| !self.exclude.contains(&x.name)).collect(),
+            false if self.packages.is_empty() => {
+                error!(msg: "No packages specified to refresh");
+                exit(1);
+            },
+            false => &parameter_checks::expand_optional_ids(&register, &config, &self.packages),
+        };
+
+        for package_id in packages {
+            let Some(package_version) = register.get_package_version(package_id) else {
+                error!(msg: "Expected package version {} to exist, skipping refresh", package_id.style());
+                continue;
+            };
+
+            let repository = Repository::new(
+                &package_version.metadata_repository_url,
+                &package_version.metadata_repository_provider,
+            );
+
+            let Some(provider) = provider::create_metadata_provider(&repository) else {
+                error!(msg: "Cannot create provider for repository");
+                continue;
+            };
+
+            let updated_metadata = register::metadata::refresh_metadata(&provider, package_id, &package_version.install_path)
+                .unwrap_or_exit_msg(&format!("Cannot refresh metadata of {package_id}"), 1);
+            println!("{package_id}: {updated_metadata}");
+        }
     }
 }
