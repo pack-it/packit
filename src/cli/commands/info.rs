@@ -216,8 +216,10 @@ impl InfoArgs {
         pair_aligner.add("Install path", package_version.install_path.display());
         pair_aligner.add("Active", if package.active_version == package_id.version { "yes" } else { "no" });
         pair_aligner.add("Symlinked", if package.symlinked { "yes" } else { "no" });
+        pair_aligner.add("Last metadata refresh", package_version.last_metadata_refresh);
 
         if self.verbose {
+            pair_aligner.add("Last metadata change", package_version.last_metadata_change);
             pair_aligner.add("Metadata repository provider", &package_version.metadata_repository_provider);
             pair_aligner.add("Metadata repository url", &package_version.metadata_repository_url);
         }

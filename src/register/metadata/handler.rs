@@ -43,8 +43,6 @@ pub struct LocalMetadata {
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub script_args: HashMap<String, String>,
 
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub revisions: Vec<String>,
     pub deprecation: Option<DeprecationInfo>,
     pub skip_symlinking: bool,
 
@@ -212,7 +210,6 @@ impl<'a> LocalMetaHandler<'a> {
             test_requirements: target_meta.test_requirements.clone(),
             external_test_files,
             script_args,
-            revisions: package_version_meta.revisions.clone(),
             deprecation,
             skip_symlinking: target_meta.skip_symlinking.unwrap_or(package_version_meta.skip_symlinking),
             conflicts_with: package_meta.conflicts_with.clone(),

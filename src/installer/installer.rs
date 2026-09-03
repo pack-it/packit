@@ -235,9 +235,20 @@ impl<'a> Installer<'a> {
         );
         self.register.save_to(&PackageRegister::get_path(&self.config.prefix_directory))?;
 
+        let installed_package_version = match self.register.get_package_version_mut(&package_id) {
+            Some(installed_package_version) => installed_package_version,
+            None => {
+                return Err(InstallerError::UnreachableError {
+                    msg: "Package version cannot be found eventhough it was inserted right before".to_string(),
+                });
+            },
+        };
+
         // Refresh the local metadata for the new package
         let local_metadata = LocalMetaHandler::new(&package_id, &install_directory);
-        local_metadata.refresh(self.repository_manager.get_metadata_provider(&install_meta.repository_id)?)?;
+        let updated_metadata = local_metadata.refresh(self.repository_manager.get_metadata_provider(&install_meta.repository_id)?)?;
+        installed_package_version.update_metadata_refresh(updated_metadata);
+        self.register.save_to(&PackageRegister::get_path(&self.config.prefix_directory))?;
 
         self.execute_postinstall(&package_id, install_meta, &install_directory, &script_args)?;
 
