@@ -23,12 +23,18 @@ use crate::{
 };
 
 pub const DIRECTORY_NAME: &str = ".packit";
+const METADATA_FILENAME: &str = "metadata.toml";
 
 #[derive(Error, Debug)]
 pub enum LocalMetadataError {
-    #[error("Cannot find metadata file '{file_path}'")]
-    MetadataFileNotFound {
+    #[error("Cannot find metadata file '{file_path}' in source repository")]
+    RepositoryMetadataFileNotFound {
         file_path: String,
+    },
+
+    #[error("Cannot find local metadata file '{}'", file_path.display())]
+    LocalMetadataFileNotFound {
+        file_path: PathBuf,
     },
 
     #[error("Cannot fetch package metadata from repository")]
@@ -36,6 +42,9 @@ pub enum LocalMetadataError {
 
     #[error("Error while interacting with filesystem")]
     IOError(#[from] ioerror::IOError),
+
+    #[error("Cannot parse local metadata file")]
+    ParseError(#[from] toml::de::Error),
 
     #[error("Cannot serialize local metadata file")]
     SerializeError(#[from] toml::ser::Error),
@@ -48,10 +57,34 @@ pub struct LocalMetadata {
     dependencies: Vec<Dependency>,
 }
 
+/// Reads the local metadata file from the storage of the given package.
+/// Returns the `LocalMetadata` parsed from the storage.
+pub fn read_local_metadata(package_install_dir: &Path) -> Result<LocalMetadata> {
+    let path = package_install_dir.join(DIRECTORY_NAME).join(METADATA_FILENAME);
+    if !path.exists() {
+        return Err(LocalMetadataError::LocalMetadataFileNotFound { file_path: path });
+    }
+
+    let content = fs::read_to_string(&path).err_with_path("read", &path)?;
+    Ok(toml::de::from_str(&content)?)
+}
+
+/// Reads the specified local metadata file from the storage of the given package.
+/// Returns the file as bytes.
+pub fn read_local_meta_file(package_install_dir: &Path, file: &str) -> Result<Bytes> {
+    let path = package_install_dir.join(DIRECTORY_NAME).join(file);
+    if !path.exists() {
+        return Err(LocalMetadataError::LocalMetadataFileNotFound { file_path: path });
+    }
+
+    let content = fs::read(&path).err_with_path("read", &path)?;
+    Ok(content.into())
+}
+
 /// Refreshes the local metadata of the given package.
 /// Returns true if the metadata was changed, false otherwise.
-pub fn refresh_metadata(provider: &Box<dyn MetadataProvider>, package_id: &PackageId, package_dir: &Path) -> Result<bool> {
-    let metadata_dir = package_dir.join(DIRECTORY_NAME);
+pub fn refresh_metadata(provider: &Box<dyn MetadataProvider>, package_id: &PackageId, package_install_dir: &Path) -> Result<bool> {
+    let metadata_dir = package_install_dir.join(DIRECTORY_NAME);
 
     let package_meta = provider.read_package(&package_id.name)?;
     let package_version_meta = provider.read_package_version(&package_id.name, &package_id.version)?;
@@ -78,7 +111,7 @@ pub fn refresh_metadata(provider: &Box<dyn MetadataProvider>, package_id: &Packa
     let mut after_files = Vec::new();
 
     // If the metadata is updated, write the metadata to the file
-    let local_meta_destination = metadata_dir.join("metadata.toml");
+    let local_meta_destination = metadata_dir.join(METADATA_FILENAME);
     let local_meta_bytes = local_meta_str.into();
     if write_file_if_changed(&before_files, &mut after_files, local_meta_destination, Some(local_meta_bytes))? {
         updated = true;
@@ -143,7 +176,7 @@ fn request_file(provider: &Box<dyn MetadataProvider>, package_id: &PackageId, fi
             return Ok(None);
         }
 
-        return Err(LocalMetadataError::MetadataFileNotFound {
+        return Err(LocalMetadataError::RepositoryMetadataFileNotFound {
             file_path: file_path.into(),
         });
     };
