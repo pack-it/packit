@@ -80,28 +80,36 @@ pub fn refresh_metadata(provider: &Box<dyn MetadataProvider>, package_id: &Packa
     // If the metadata is updated, write the metadata to the file
     let local_meta_destination = metadata_dir.join("metadata.toml");
     let local_meta_bytes = local_meta_str.into();
-    updated = updated || write_file_if_changed(&before_files, &mut after_files, local_meta_destination, Some(local_meta_bytes))?;
+    if write_file_if_changed(&before_files, &mut after_files, local_meta_destination, Some(local_meta_bytes))? {
+        updated = true;
+    }
 
     // Download external test files
     let external_test_files = package_version_meta.external_test_files.iter().chain(target_meta.external_test_files.iter());
     for external_file in external_test_files {
         let destination = metadata_dir.join(external_file);
         let new_file = request_file(provider, &package_id, external_file, true)?;
-        updated = updated || write_file_if_changed(&before_files, &mut after_files, destination, new_file)?;
+        if write_file_if_changed(&before_files, &mut after_files, destination, new_file)? {
+            updated = true;
+        }
     }
 
     // Download test script
     let test_script_path = package_version_meta.get_test_script_path(&target_bounds)?;
     let test_script_destination = metadata_dir.join(format!("test.{SCRIPT_EXTENSION}"));
     let new_file = request_file(provider, &package_id, &test_script_path, false)?;
-    updated = updated || write_file_if_changed(&before_files, &mut after_files, test_script_destination, new_file)?;
+    if write_file_if_changed(&before_files, &mut after_files, test_script_destination, new_file)? {
+        updated = true;
+    }
 
     // Download uninstall script
     if target_meta.use_uninstall.unwrap_or(package_version_meta.use_uninstall.unwrap_or(false)) {
         let uninstall_script_path = package_version_meta.get_test_script_path(&target_bounds)?;
         let uninstall_script_destination = metadata_dir.join(format!("uninstall.{SCRIPT_EXTENSION}"));
         let new_file = request_file(provider, &package_id, &uninstall_script_path, true)?;
-        updated = updated || write_file_if_changed(&before_files, &mut after_files, uninstall_script_destination, new_file)?;
+        if write_file_if_changed(&before_files, &mut after_files, uninstall_script_destination, new_file)? {
+            updated = true;
+        }
     }
 
     // Remove files that are not needed anymore
