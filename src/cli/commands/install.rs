@@ -61,7 +61,7 @@ pub struct InstallArgs {
 
     /// True to skip the build tests (note that these are not the same as the Packit tests)
     #[arg(long, default_value = "false")]
-    skip_build_test: bool,
+    include_build_test: bool,
 
     /// True to pause the install after the build is completed (to debug builds)
     #[arg(long, default_value = "false")]
@@ -120,7 +120,7 @@ impl HandleCommand for InstallArgs {
             .skip_active(self.skip_active)
             .keep_build(self.keep_build)
             .verbose(self.verbose)
-            .skip_build_test(self.skip_build_test)
+            .include_build_test(self.include_build_test)
             .skip_test(self.skip_test)
             .pause_build(self.pause_build);
         let mut installer = Installer::new(&config, &mut register, &manager, installer_options);
