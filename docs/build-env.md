@@ -38,9 +38,9 @@ The following syntax is used to initialize the MSVC environment in a build scrip
 
 ## Extra environmental variables
 In addition to the variables listed above, there are some extra environmental variables. The following variables are added:
-| Key            | Value                                   | Explanation                                                                |
-| -------------- | --------------------------------------- | -------------------------------------------------------------------------- |
-| `TZ`           | `UTC0`                                  | Ensures that the timezone is the same across all builds.                   |
-| `M4`           | `<prefix>/packages/m4/<version>/bin/m4` | This variable is only added if it is a build dependency and unsures that `m4` is available.    |
-| `PERL`         | `/usr/bin/perl`                         | Makes Perl available. (macOS only)                                         |
-| `ZERO_AR_DATE` | `1`                                     | Ensures that there are no arbritary timestamps are in builds. (macOS only) |
+| Key            | Value                    | Explanation                                                                                 |
+| -------------- | ------------------------ | ------------------------------------------------------------------------------------------- |
+| `TZ`           | `UTC0`                   | Ensures that the timezone is the same across all builds.                                    |
+| `M4`           | `<package-prefix/bin/m4` | This variable is only added if it is a build dependency and unsures that `m4` is available. |
+| `PERL`         | `/usr/bin/perl`          | Makes Perl available. (macOS only)                                                          |
+| `ZERO_AR_DATE` | `1`                      | Ensures that there are no arbritary timestamps are in builds. (macOS only)                  |
