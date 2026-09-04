@@ -7,7 +7,7 @@ The `search` command has the following command line syntax:<br>
 The `search` command searches for a package, using the following syntax:<br>
 `pit search <QUERY>`
 
-The command shows information based on the package metadata. The `<QUERY>` needs to be a package name or a package name with a version. If the version is given that specific version is searched for.
+The command shows information based on the package metadata. The `<QUERY>` needs to be a package name or a package name with a version. If the version is given that specific version is searched for. Note that flags like `--regex` can change the default expected `<QUERY>` value.
 
 ### Examples
 To search a package called `foo`, use:<br>

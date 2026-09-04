@@ -9,13 +9,13 @@ You might be asking yourself: why use this new package manager when I already ha
 As mentioned before, Packit is a universal package manager that works on macOS, Linux and native Windows (no subsystem for Linux required!). Its interface and usage remain consistent across all platforms, making it ideal for developers who frequently switch between operating systems. In addition to being a universal package manager Packit also offers some unique features:
 - **Active versions**, which allows multiple package versions to be installed next to each other without conflict.
 - **Flexible dependency resolution**, each package dependency can be satisfied with any satisfying package, instead of requiring a single fixed version.
-- **(Un)linked packages**, which allows a package to be installed, but not in the PATH to avoid conflicts with existing packages when necessary.
+- **(Un)linked packages**, which allows a package to be installed, but not in the `PATH` to avoid conflicts with existing packages when necessary.
 - **Portable repositories** which can be used to create repositories for offline or air-gapped systems.
 
 ## Install
 Packit can be installed by simply copying one of the commands below in your terminal.
 
-After install you need to make sure you add the Packit prefix directory to your PATH, to ensure the `pit` command is available in your terminal. The command for this is shown after the install script finished installing.
+In most cases Packit can add its [prefix directory](./docs/structure.md#prefix) to the `PATH` automatically. Only a restart of the shell will be required. If you're on Unix and the shell is not one of: `bash`, `zsh` or `fish`, this doesn't happen and you will need to add Packit to your `PATH` manually.
 
 ### Unix
 ```
@@ -39,30 +39,30 @@ If you only need the `packit` binary itself, you could build it directly using `
 To install and initialize your locally built version of Packit, you need to:
 1. Move the build destination directory (`target/build`) to `<prefix>/packages/packit/<version>`.
 2. Run `<prefix>/packages/packit/<version>/packit init`. If you used another prefix than the [default prefix](./docs/structure.md#prefix), you need to specify your prefix in the `--prefix` flag to this command.
-3. Add `<prefix>/bin` to your PATH. The `pit` command should now be available and working. You can test this using `pit list`, this should only show Packit as installed package.
+3. Add `<prefix>/bin` to your `PATH`. The `pit` command should now be available and working. You can test this using `pit list`, this should only show Packit as installed package.
 
 ## Usage
 The general usage of Packit is: `pit <COMMAND>`. Underneath is a quick overview of the most important Packit commands. A lot more commands and flags are available. They can be found in the [commands documentation](./docs/commands).
 
 #### `pit install <PACKAGE-NAME>[@<VERSION>] ...` [🔗](./docs/commands/install.md)
-Installs the specified packages, if a version is given that version will be installed, if not the latest available version will be installed. Multiple packages can be specified by entering multiple names.
+Installs the specified packages, if a version is given that version will be installed, if not the latest available version will be installed. Multiple packages can be specified by passing multiple names.
 
 #### `pit uninstall <PACKAGE-NAME>[@<VERSION>] ...` [🔗](./docs/commands/uninstall.md)
-Uninstalls the specified packages, if a version is given that version will be uninstalled, if not, you will be asked if you want to delete all versions of `<PACKAGE-NAME>` in case there are multiple versions installed. Multiple packages can be specified by entering multiple names.
+Uninstalls the specified packages, if a version is given that version will be uninstalled, if not, you will be asked if you want to delete all versions of `<PACKAGE-NAME>` in case there are multiple versions installed. Multiple packages can be specified by passing multiple names.
 
 When uninstalling multiple packages at once, Packit will automatically determine the correct order. Dependencies are uninstalled after their dependents.
-
-#### `pit list` [🔗](./docs/commands/list.md)
-Lists all the installed packages.
-
-#### `pit search <PACKAGE-NAME>[@<VERSION>]` [🔗](./docs/commands/search.md)
-Searches for a package with `<PACKAGE-NAME>[@<VERSION>]` and information based on the package metadata is shown, if the version is given that specific version is searched for.
 
 #### `pit update <PACKAGE-NAME>[@<VERSION>] ...` [🔗](./docs/commands/update.md)
 Updates the specified packages to the latest version. If a version is specified, that version is updated. If no version is specified and only one version is installed that version is updated. If multiple versions are installed and no version is specified only the latest installed version is updated.
 
+#### `pit list` [🔗](./docs/commands/list.md)
+Lists all the installed packages.
+
 #### `pit info [<PACKAGE-NAME>[@<VERSION>]]` [🔗](./docs/commands/info.md)
 Shows info about the specified installed package. If the version is specified, version specific information is shown. If no arguments are given, information about the current Packit installation is shown.
+
+#### `pit search <PACKAGE-NAME>[@<VERSION>]` [🔗](./docs/commands/search.md)
+Searches for a package with `<PACKAGE-NAME>[@<VERSION>]` and information based on the package metadata is shown, if the version is given that specific version is searched for.
 
 #### `pit switch <PACKAGE-NAME> <VERSION>` [🔗](./docs/commands/switch.md)
 Switches the active version of the specified package to the specified version.
@@ -71,7 +71,7 @@ Switches the active version of the specified package to the specified version.
 Switches the dependency (`<DEPENDENCY-NAME>`) version used by a package (`<PACKAGE-NAME>@<VERSION>`) to another version (`NEW-DEPENDENCY-VERSION`).
 
 #### `pit link <PACKAGE-NAME>` [🔗](./docs/commands/link.md)
-The `link` command symlinks the specified package. To learn more about Packit symlinks, check out [symlinks](./docs/structure.md#symlinks).
+Symlinks the specified package in the prefix directory. To learn more about Packit symlinks, take a look at [symlinks](./docs/structure.md#symlinks).
 
 #### `pit unlink <PACKAGE-NAME>` [🔗](./docs/commands/unlink.md)
 Unlinks the specified package, causing the package to be unavailable from the `PATH` environment variable.
@@ -80,7 +80,7 @@ Unlinks the specified package, causing the package to be unavailable from the `P
 Checks the Packit installation for issues.
 
 #### `pit fix` [🔗](./docs/commands/fix.md)
-Fix all issues found by the check command. You will be asked if you want to fix an issue for each issue type.
+Fixes all issues found by the check command. You will be asked if you want to fix an issue for each issue type.
 
 ## Config
 The `Config.toml` contains the Packit configuration, it can be edited manually or with the [`pit config`](./docs/commands/config.md) command. Its location differs for each platform:

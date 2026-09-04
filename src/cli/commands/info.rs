@@ -145,7 +145,7 @@ impl InfoArgs {
         pair_aligner.add("Prefix directory", config.prefix_directory.display());
         pair_aligner.add("Multiuser mode", config.multiuser);
         pair_aligner.add("Installed packages", register.iterate_all().count());
-        pair_aligner.add("New version available", new_version_disp);
+        pair_aligner.add("New available version", new_version_disp);
         pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
         println!();
 

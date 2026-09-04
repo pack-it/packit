@@ -9,7 +9,7 @@ The `check` command checks the specified packages, using the following syntax:<b
 
 The issues will be listed according to urgency, the first issue being the most urgent. The most urgent issue needs to be fixed first, as it could be causing the other issues.
 
-More information about the workings of this command can be found at [verifier](../verifier.md). If you also want Packit to fix the issues for you check out the [fix](./fix.md) command.
+More information about the workings of this command can be found at [verifier](../verifier.md). If you also want Packit to fix the issues for you, take a look at the [fix](./fix.md) command.
 
 ### Examples
 To check everything use:<br>

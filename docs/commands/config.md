@@ -3,7 +3,7 @@
 The `config` command starts with:<br>
 `pit config`
 
-It has multiple sub-commands, which are explained below. If you want to learn more about the configuration structure, check out [config](../structure.md#config).
+It has multiple sub-commands, which are explained below. If you want to learn more about the configuration structure, take a look at the [config](../structure.md#config).
 
 ## Show
 #### `pit config show`

@@ -56,6 +56,8 @@ See the tables below for all different fields, look at [Target fields](#target-f
 | `script_args`                   | A table of key-value pairs containing arguments passed to scripts.             |
 | `external_test_files`           | A list of external test files that are needed for executing the test script. These files are automatically downloaded. |
 
+> Note that for the `license` field we try to be as accurate as possible. However sometimes the specific version of a license can be difficult to find, so it could be wrong. In such a case please create an issue on Packit.
+
 ### Sources
 The targets.toml file can contain one or more sources, specified in the following format. When multiple sources are defined, they need to be named.
 
@@ -76,12 +78,12 @@ In this example there are multiple sources, because Unix and Windows have differ
 ```
 [source.unix]
 url = "https://some-package/unix-version/4.3.tar.gz"
-checksum = "svwergw8e9r6f9w8er6v98we6rv9w8e6rvg9we86rvg0w8ev0werv768669e69vg"
+checksum = "a0d5b7389f4e067e34ceebabbefbe26dd9b55ffd0a097c26087b4897b25a8659"
 size = 87625
 
 [source.windows]
 url = "https://some-package/windows-version/4.3.tar.gz"
-checksum = "cba4bb7a44edf2877bb6f059932896383babe435b3a8c3b5df48b4aa41c9bb85"
+checksum = "8719374f5a0e8089cd8bf3960d46c6b236d45217509cd07cc6931b41f91b55af"
 size = 89825
 ```
 
@@ -95,22 +97,22 @@ The `patches` field in a source is specified in the following format. Patches ar
 | `mirrors`  | Defines a list of mirrors which could be used to download the patch if the original URL is unavailable. |
 | `apply_in` | Defines the directory that should be used to apply this specific patch in.                              |
 
-Please note that the `mirrors` is not used when the URL contains a file in the repository, this file is then expected to exist.
+Please note that the `mirrors` field should not be used when the URL points to a file in the repository, this file is then expected to exist.
 
 #### Example
 This example shows a source with two patches. Note that the patches are numbered, this determines the execution order.
 ```
 [source]
 url = "https://some-package/some-2.7.tar.gz"
-checksum = "cba4bb7a44edf2877bb6f059932896383babe435b3a8c3b5df48b4aa41c9bb85"
+checksum = "b307462038a9b908ba93f655b2e3b122e3c701c8cfa04478f848195bd748a5ec"
 size = 12971567
 patches.0 = {
     url = "https://some-package/some.patch",
-    checksum = "78297d75748708730441c9196fea6b32722924870c05178bd2182b9b4c40f1cd"
+    checksum = "b649db750d28a4283c392f9912f60bdb7601ae579bd5ddc20d1fe992b2727f25"
 }
 patches.1 = {
     url = "https://other-package/other.patch",
-    checksum = "ed93ec1cdff8333ca69fd536c86bcbc6d0ef36c463fa7b43c2ced102c7cabeb9"
+    checksum = "e0c5e4c5fe2f2fac8db101e22263a0981506a5237ebf2b22ff79a19a3c399b41"
 }
 ```
 
@@ -144,7 +146,7 @@ All available requirements for use with the `build_requirements` and `test_requi
 
 | Field  | Explanation                                                                                                   |
 | ------ | ------------------------------------------------------------------------------------------------------------- |
-| `msvc` | The Microsoft Visual C++ toolchain, automatically adds `PACKIT_VS_PATH`, `PACKIT_VCVARSALL`, `PACKIT_VCVARSALL_ARCH` and `PACKIT_MSVC_VERSION` to the build environment. (Windows only) |
+| `msvc` | The Microsoft Visual C++ toolchain, automatically adds `PACKIT_VS_PATH`, `PACKIT_VCVARSALL`, `PACKIT_VCVARSALL_ARCH` and `PACKIT_MSVC_VERSION` to the build environment. Find out more [here](./build-env.md#windows-msvc) (Windows only) |
 
 ## `prebuilds.toml`
 The package version directory can contain an optional `prebuilds.toml` file. This file describes which prebuilds can be generated for the package version. If the file is not available, a default list of prebuilds is assumed, consisting of a prebuild for each target architecture that is supported by the package.
@@ -192,17 +194,16 @@ Version bounds are used by target bounds, dependencies and the supported version
 Please note version bounds are required to be in order of versions.
 
 The following operators are available:
-| Operator    | Explanation                                                                          |
-| ----------- | ------------------------------------------------------------------------------------ |
-| No operator | Specifies a specific version.                                                        |
-| `-`         | Specifies a version range, for example `1-2` (does not include 2).                   |
-| `-=`        | Specifies an including version range, for example `1-=2` (does include 2).           |
-| `<=`        | Specifies a version upper bound including the specified version, for example `<=2`.  |
-| `<`         | Specifies a version upper bound excluding the specified version, for example `<2`.   |
-| `>=`        | Specifies a version lower bound including the specified version, for example `>=1`.  |
-| `>`         | Specifies a version lower bound excluding the specified version, for example `>1`.   |
+| Operator    | Explanation                                                                            |
+| ----------- | -------------------------------------------------------------------------------------- |
+| No operator | Specifies a specific version.                                                          |
+| `-`         | Specifies a version range, for example `1-2` (does not include 2).                     |
+| `-=`        | Specifies an including version range, for example `1-=2` (does include 2).             |
+| `<=`        | Specifies a version upper bound including the specified version, for example `<=2`.    |
+| `<`         | Specifies a version upper bound excluding the specified version, for example `<2`.     |
+| `>=`        | Specifies a version lower bound including the specified version, for example `>=1`.    |
+| `>`         | Specifies a version lower bound excluding the specified version, for example `>1`.     |
 | `\|`        | Can be used to chain multiple bounds, works as an `OR` operator, for example `3\|5-7`. |
-
 
 ## Licenses
 The licenses can be specified in a structured format, that is easy to parse. A license field can have the following values:

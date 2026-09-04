@@ -7,7 +7,7 @@ The `switch` command has the following command line syntax:<br>
 The `switch` command switches the active version of a package, using the following syntax:<br>
 `pit switch <PACKAGE-NAME> <VERSION>`
 
-Where `<PACKAGE-NAME>` is the name of the package to switch and `<VERSION>` is the new active version. To learn more about active versions, check out [active packages](../structure.md#active-packages).
+Where `<PACKAGE-NAME>` is the name of the package to switch and `<VERSION>` is the new active version. To learn more about active versions, take a look at [active packages](../structure.md#active-packages).
 
 Note that the new active version should already be installed.
 
@@ -19,4 +19,4 @@ To switch the version of a package called `foo`, use:<br>
 This is a complete list of all flags that can be used with the `pit switch` command.
 
 ### `--skip-symlinking`
-Packit packages are symlinked, to learn more about this see [symlinks](../structure.md#symlinks). To skip symlinking `--skip-symlinking` can be used.
+In most cases the active packages are symlinked. The `--skip-symlinking` flag can be used to skip this. To learn more about this see [symlinks](../structure.md#symlinks).

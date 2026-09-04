@@ -25,17 +25,19 @@ The `Register.toml` file is located inside the prefix and stores information abo
 All installed packages will go in `<prefix>/packages/<PACKAGE-NAME>/<PACKAGE-VERSION>/`.
 
 ### Symlinks
-The following package directories are symlinked in the prefix directory: bin, gnubin, lib, include and share. The gnubin directory exists on macOS to put GNU packages in which conflict with their macOS variants. In such cases a symlink `<prefix>/bin/g<package-name>` → `<prefix>/gnubin/<package-name>` with a 'g' prefix is created, to differentiate between a system and its GNU variant. To use use the GNU tools directly you could add the gnubin directory to your `PATH` as well.
+The following package directories are symlinked in the prefix directory: bin, gnubin, lib, include and share. The gnubin directory exists on macOS to isolate GNU packages that conflict with their macOS variants. In such case a symlink `<prefix>/bin/g<package-name>` → `<prefix>/gnubin/<package-name>` with a 'g' prefix is created, to differentiate between a system package and its GNU variant. To use the GNU tools and overwrite the macOS variants, you could add the gnubin directory to the front of your `PATH` as well.
 
 The [active](#active-packages) binaries will be symlinked in `<prefix>/bin/<EXECUTABLE-NAME>`. The `<prefix>/bin` directory needs to be present in the users `PATH` in order for installed binaries to be detected by the system.
+
+Some packages should not be symlinked, if this is the case it is specified in the [metadata](./metadata.md). A reason for not symlinking a package could be that it conflicts with another package or with a system library. 
 
 ### Active packages
 Packit can install multiple versions of a package next to each other. A package always has one active version, which will be symlinked as `<prefix>/active/<PACKAGE-NAME>` → `<prefix>/packages/<PACKAGE-NAME>/<ACTIVE-PACKAGE-VERSION>`
 
 ### Dependencies
-The dependencies directory contains symlinks to the dependencies of a package. The structure is as follows `<prefix>/dependencies/<package-name>/<dependency>`, where `<package-name>` is a package with dependency `<dependency>`. `<dependency>` is a symlink to the current active package. 
+The dependencies directory contains symlinks to the dependencies of a package. The structure is as follows `<prefix>/dependencies/<package>/<dependency>`, where `<package>` is a package with dependency `<dependency>`. `<dependency>` is a symlink to the current active package. 
 
-For more detail about the reason why this directory exists see [TODO: a link to some explanation about the patching and how it's used for active ]
+For more details about the reason why this directory exists see [building from source](./installation-process.md#building-from-source).
 
 ### Package Data
 Some packages have data and configuration files they need to keep. Packit puts those in the `<prefix>/etc` directory.
@@ -59,7 +61,7 @@ All available fields in the config are listed below.
 ### Repositories
 | Field                 | Explanation                                                                             |
 | --------------------- | --------------------------------------------------------------------------------------- |
-| `url`                 | Defines the url to the repository.                                                      |
+| `url`                 | Defines the url of the repository.                                                      |
 | `provider`            | Defines the provider of the repository which can be `fs` or `web`, defaults to `web`.   |
 | `prebuilds_url`       | Defines the url of the prebuilds repository for this package repository.                |
 | `prebuilds_provider`  | Defines the provider of the prebuilds repository, defaults to `fs`.                     |

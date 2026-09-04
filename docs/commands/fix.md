@@ -11,7 +11,7 @@ The issues will be shown according to urgency, the first issue being the most ur
 
 When an issue is found, you will be prompted with a fix. You can choose to apply the fix and continue or skip it and exit.
 
-More information about the workings of this command can be found at [verifier](../verifier.md). If you only want Packit to show you the issues, check out the [check](./check.md) command.
+More information about the workings of this command can be found at [verifier](../verifier.md). If you only want Packit to show you the issues, take a look at the [check](./check.md) command.
 
 > Note that when checking a single package, other issues may not be found. For example, issues with dependencies of the package are not found. So when using the `fix` command we recommend you fix everything.
 

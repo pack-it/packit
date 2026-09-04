@@ -7,7 +7,7 @@ The `link` command has the following command line syntax:<br>
 The `link` command links a package, using the following syntax:<br>
 `pit link <PACKAGE-NAME>`
 
-The `link` command symlinks the specified package. To learn more about Packit symlinks, check out [symlinks](../structure.md#symlinks).
+The `link` command symlinks the specified package. To learn more about Packit symlinks, take a look at [symlinks](../structure.md#symlinks).
 
 ### Examples
 To link a package called `foo`, use:<br>
