@@ -12,7 +12,7 @@ use crate::{
         Target,
         tool_detection::{self, error::ToolDetectionError},
     },
-    register::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
+    register::installed_package_version::InstalledPackageVersion,
     repositories::types::Requirement,
     utils::env::Environment,
 };
@@ -60,7 +60,6 @@ pub struct BuildEnv<'a> {
     dependencies: &'a Vec<&'a InstalledPackageVersion>,
     build_dependencies: Vec<&'a InstalledPackageVersion>,
     build_requirements: &'a Vec<Requirement>,
-    register: &'a PackageRegister,
 }
 
 impl<'a> TryInto<Environment> for BuildEnv<'a> {
@@ -113,13 +112,11 @@ impl<'a> BuildEnv<'a> {
         dependencies: &'a Vec<&'a InstalledPackageVersion>,
         build_dependencies: Vec<&'a InstalledPackageVersion>,
         build_requirements: &'a Vec<Requirement>,
-        register: &'a PackageRegister,
     ) -> Self {
         Self {
             dependencies,
             build_dependencies,
             build_requirements,
-            register,
         }
     }
 
@@ -202,14 +199,8 @@ impl<'a> BuildEnv<'a> {
     fn create_cmake_prefix_path(&self) -> Result<String> {
         let mut parts: Vec<String> = Vec::new();
 
-        // Add non symlinked dependencies to CMAKE_PREFIX_PATH
+        // Add dependencies to CMAKE_PREFIX_PATH
         for dependency in self.dependencies {
-            if let Some(package) = self.register.get_package(&dependency.package_id.name) {
-                if package.symlinked {
-                    continue;
-                }
-            }
-
             parts.push(path_to_string(&dependency.install_path, "CMAKE_PREFIX_PATH")?);
         }
 
@@ -220,14 +211,8 @@ impl<'a> BuildEnv<'a> {
     fn create_aclocal_path(&self) -> Result<String> {
         let mut parts: Vec<String> = Vec::new();
 
-        // Add non symlinked dependencies to ACLOCAL_PATH
+        // Add dependencies to ACLOCAL_PATH
         for dependency in self.dependencies.iter().chain(self.build_dependencies.iter()) {
-            if let Some(package) = self.register.get_package(&dependency.package_id.name) {
-                if package.symlinked {
-                    continue;
-                }
-            }
-
             let share_path = dependency.install_path.join("share").join("aclocal");
 
             // Adding the share dir if it exists

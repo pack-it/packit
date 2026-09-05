@@ -2,7 +2,7 @@
 
 The build environment tries to create an environment which is as 'clean' as possible. This will help with more stable and reproducible builds. This is done by stripping and adding some environment variables.
 
-## Adjusted PATH
+## Adjusted `PATH`
 The build environment creates an adjusted `PATH`. The `PATH` will contain the bin directories of all (build) dependencies. If on Unix, it will also include the standard Unix system bin paths, which are:
 - `/usr/bin`
 - `/bin`
@@ -15,11 +15,14 @@ When on Windows the standard Windows system bin paths are added to the `PATH`, w
 - `C:\Windows\System32\Wbem`
 - `C:\Windows\System32\WindowsPowerShell\v1.0`
 
-## Pkgconfig path
+## `PKG_CONFIG_PATH`
 Packit looks for the presence of a `pkgconfig` directory inside of the `share` and `lib` directories of the dependencies of a package. These paths are then added to the `PKG_CONFIG_PATH` to make them available. It also adds `/usr/lib/pkgconfig` which is a macOS specific path.
 
-## Non-symlinked dependencies
-Some packages are not symlinked, so they cannot be found by cmake in the build process. For that reason, dependencies which are not symlinked are added to the `CMAKE_PREFIX_PATH`. The same applies to the `ACLOCAL_PATH`, with the small difference that build dependencies are also added in this case.
+## `CMAKE_PREFIX_PATH`
+When CMake is used to build packages, it needs to be able to find the dependencies. All dependencies of the package are therefore added to the `CMAKE_PREFIX_PATH`. CMake is then able to automatically detect these dependencies.
+
+## `ACLOCAL_PATH`
+When a package needs aclocal in its build process, aclocal needs to be able to find m4 macro files. All dependencies and build dependencies of the package are added to `ACLOCAL_PATH`. This makes the macro files available and ensures aclocal can find all needed files.
 
 ## Requirement environment
 Some requirements need a certain environment setup. This is different for each requirement. All requirement environments are explained here.

@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Fix patch apply directory meta check reporting wrong issues.
 - Fix patches being able to change files outside of the build directory.
 - Fix the `license_include` file being able to include a file outside of the build directory.
+- Fix build environment to also add symlinked packages in `CMAKE_PREFIX_PATH` and `ACLOCAL_PATH`.
 
 
 ## [v0.0.4](https://github.com/pack-it/packit/compare/0.0.3...0.0.4) - 2026-08-16
