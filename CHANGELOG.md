@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The build scripts now get the `PACKIT_BUILD_JOBS_COUNT` variable to use for parallel builds and tests.
 - The uninstall now uninstalls packages in the correct order (so dependents before dependencies).
 - The `--exclude` flag for the `pit util package` command, to exclude certain packages when using the `--all` flag.
+- New and improved documentation.
 
 ### Fixed
 - Fix patch apply directory meta check reporting wrong issues.

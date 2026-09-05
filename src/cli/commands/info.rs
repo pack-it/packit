@@ -133,8 +133,8 @@ impl InfoArgs {
 
         // Create display for new version
         let new_version_disp = match latest_version {
-            Some(latest_version) if latest_version > current_packit_version() => format!("yes, {}", latest_version.style()),
-            Some(_) | None => "no".into(),
+            Some(latest_version) if latest_version > current_packit_version() => format!("{}", latest_version.style()),
+            Some(_) | None => "None".dimmed().to_string(),
         };
 
         println!("{}", package_id.style());
@@ -143,9 +143,9 @@ impl InfoArgs {
         let mut pair_aligner = PairAligner::new();
         pair_aligner.add("Config directory", DEFAULT_CONFIG_DIR);
         pair_aligner.add("Prefix directory", config.prefix_directory.display());
-        pair_aligner.add("Multiuser mode", if config.multiuser { "on" } else { "off" });
+        pair_aligner.add("Multiuser mode", config.multiuser);
         pair_aligner.add("Installed packages", register.iterate_all().count());
-        pair_aligner.add("New version available", new_version_disp);
+        pair_aligner.add("New available version", new_version_disp);
         pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
         println!();
 
@@ -190,7 +190,7 @@ impl InfoArgs {
         pair_aligner.add("Homepage", package.homepage.display());
         pair_aligner.add("Installed versions", installed_versions.iter().map_styled().display(" | "));
         pair_aligner.add("Active version", &package.active_version);
-        pair_aligner.add("Symlinked", if package.symlinked { "yes" } else { "no" });
+        pair_aligner.add("Symlinked", package.symlinked);
         pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
         println!();
 
@@ -214,8 +214,8 @@ impl InfoArgs {
         pair_aligner.add("Homepage", package.homepage.display());
         pair_aligner.add("License", package_version.license.style());
         pair_aligner.add("Install path", package_version.install_path.display());
-        pair_aligner.add("Active", if package.active_version == package_id.version { "yes" } else { "no" });
-        pair_aligner.add("Symlinked", if package.symlinked { "yes" } else { "no" });
+        pair_aligner.add("Active", package.active_version == package_id.version);
+        pair_aligner.add("Symlinked", package.symlinked);
 
         if self.verbose {
             pair_aligner.add("Metadata repository provider", &package_version.metadata_repository_provider);

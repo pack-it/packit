@@ -149,7 +149,7 @@ impl Config {
     pub fn display(&self) {
         let mut pair_aligner = PairAligner::new();
         pair_aligner.add("Prefix directory", self.prefix_directory.display());
-        pair_aligner.add("Multiuser mode", if self.multiuser { "on" } else { "off" });
+        pair_aligner.add("Multiuser mode", self.multiuser);
         pair_aligner.add("Repositories rank", self.repositories_rank.join(", "));
         pair_aligner.display("");
 
@@ -162,7 +162,7 @@ impl Config {
             pair_aligner.add("Provider", &repo.provider);
             pair_aligner.add("Prebuilds url", repo.prebuilds_url.display());
             pair_aligner.add("Prebuilds provider", repo.prebuilds_provider.display());
-            pair_aligner.add("Prebuilds disabled", if repo.disable_prebuilds { "yes" } else { "no" });
+            pair_aligner.add("Prebuilds disabled", repo.disable_prebuilds);
             pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
         }
     }

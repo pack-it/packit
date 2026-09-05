@@ -8,7 +8,7 @@ To check issues for specific packages you can use `pit check <package-name>[@<pa
 
 To fix the issues the `pit fix` command can be used or `pit fix <package-name>[@<package-version>] ...` to fix issues for specific packages.
 
-When packages are specified only those packages are checked when doing package related checks. Note that the initial checks and general (non-register package related checks) are still done as well. Also note that there is a small chance that a package specific check will miss an issue which indirectly causes problems for the specified package (for example if the issue has to do with a dependency of the specified package). Thats why we recommend using the more general check command (especially when doing a fix).
+When packages are specified only those packages are checked when doing package related checks. Note that the initial checks and general (non-register package related checks) are still done as well. Also note that there is a small chance that a package specific check will miss an issue which indirectly causes problems for the specified package (for example if the issue has to do with a dependency of the specified package). **Thats why we recommend using the more general check command (especially when doing a fix).**
 <br>
 
 ## Checks & Issues
