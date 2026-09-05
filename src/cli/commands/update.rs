@@ -206,7 +206,7 @@ impl UpdateArgs {
             };
 
             // Refresh metadata
-            let local_meta = package_version.get_local_metadata();
+            let local_meta = package_version.get_local_metadata(&config.prefix_directory);
             let updated_metadata = local_meta.refresh(&provider).unwrap_or_exit_msg(&format!("Cannot refresh metadata of {package_id}"), 1);
             package_version.update_metadata_refresh(updated_metadata);
 
