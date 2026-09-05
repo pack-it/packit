@@ -17,7 +17,7 @@ use crate::{
     packager,
     platforms::Target,
     register::package_register::PackageRegister,
-    repositories::{provider, types::PrebuildsList},
+    repositories::{metadata::MetadataProvider, types::PrebuildsList},
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
@@ -91,7 +91,7 @@ impl PackageArgs {
             &package_version.metadata_repository_url,
             &package_version.metadata_repository_provider,
         );
-        let Some(provider) = provider::create_metadata_provider(&repository) else {
+        let Some(provider) = MetadataProvider::create_from_repository(&repository) else {
             error!(msg: "Cannot create provider for {}, skipping packaging", package_id.style());
             return;
         };

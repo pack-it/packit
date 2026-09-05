@@ -19,7 +19,7 @@ use crate::{
     register::{
         installed_package::InstalledPackage, installed_package_version::InstalledPackageVersion, package_register::PackageRegister,
     },
-    repositories::provider,
+    repositories::metadata::MetadataProvider,
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
@@ -110,7 +110,7 @@ impl LinkArgs {
             &package_version.metadata_repository_provider,
         );
 
-        let Some(provider) = provider::create_metadata_provider(&repository) else {
+        let Some(provider) = MetadataProvider::create_from_repository(&repository) else {
             error!(msg: "Cannot create provider for repository");
             return false;
         };

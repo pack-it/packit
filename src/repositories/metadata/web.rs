@@ -7,7 +7,7 @@ use crate::{
     installer::types::{PackageName, Version},
     repositories::{
         error::{RepositoryError, Result},
-        provider::MetadataProvider,
+        metadata::provider::MetadataProviderImpl,
         types::{IndexMeta, PackageMeta, PackageVersionMeta, PrebuildsList, RepositoryMeta},
     },
     utils::requests,
@@ -20,7 +20,7 @@ pub struct WebMetadataProvider {
     url: String,
 }
 
-impl MetadataProvider for WebMetadataProvider {
+impl MetadataProviderImpl for WebMetadataProvider {
     fn read_repository_metadata(&self) -> Result<RepositoryMeta> {
         let data = self.request_metadata(format!("{}/repository.toml", self.url))?;
 

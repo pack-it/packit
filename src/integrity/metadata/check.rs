@@ -5,7 +5,7 @@ use crate::{
     integrity::metadata::issue::{IssueType, MetaIssue},
     repositories::{
         error::RepositoryError,
-        provider::MetadataProvider,
+        metadata::MetadataProvider,
         types::{
             Checksum, IndexMeta, Licenses, PackageMeta, PackageTarget, PackageVersionMeta, Patch, RepositoryMeta, Source, Sources,
             TargetBounds,
@@ -17,14 +17,14 @@ use crate::{
 /// The `MetaCheck` is used during metadata checks and holds information about the issues.
 pub struct MetaCheck {
     repository: String,
-    provider: Box<dyn MetadataProvider>,
+    provider: MetadataProvider,
     issues: Vec<MetaIssue>,
     checks_skipped: bool,
 }
 
 impl MetaCheck {
     /// Constructs a new `MetaCheck` with the given repository and metadata provider.
-    pub fn new(repository: &str, provider: Box<dyn MetadataProvider>) -> Self {
+    pub fn new(repository: &str, provider: MetadataProvider) -> Self {
         Self {
             repository: repository.to_string(),
             provider,

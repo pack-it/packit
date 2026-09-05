@@ -16,7 +16,8 @@ use crate::{
     platforms::Target,
     repositories::{
         error::{PackageNotFoundReason, RepositoryError, Result},
-        provider::{self, MetadataProvider, PrebuildProvider},
+        metadata::MetadataProvider,
+        prebuilds::PrebuildProvider,
         types::{Date, IndexMeta, PackageMeta, PackageVersionMeta, PrebuildFileMeta, PrebuildsList, RepositoryMeta},
     },
     utils::{ioerror::IOResultExt, packit_version::current_packit_version, reading::ReadExt},
@@ -26,8 +27,8 @@ use crate::{
 pub struct RepositoryManager<'a> {
     config: &'a Config,
     unsupported_repositories: HashMap<String, RepositoryMeta>,
-    metadata_providers: HashMap<String, Box<dyn MetadataProvider>>,
-    prebuild_providers: HashMap<String, Box<dyn PrebuildProvider>>,
+    metadata_providers: HashMap<String, MetadataProvider>,
+    prebuild_providers: HashMap<String, PrebuildProvider>,
 }
 
 impl<'a> RepositoryManager<'a> {
@@ -38,7 +39,7 @@ impl<'a> RepositoryManager<'a> {
         let mut prebuild_providers = HashMap::new();
 
         for (id, repository) in &config.repositories {
-            let provider = provider::create_metadata_provider(repository);
+            let provider = MetadataProvider::create_from_repository(repository);
             let Some(provider) = provider else {
                 warning!("Cannot create repository provider for repository '{id}'");
                 continue;
@@ -75,7 +76,7 @@ impl<'a> RepositoryManager<'a> {
             }
 
             // Try to create the prebuild provider
-            let prebuild_provider = provider::create_prebuild_provider(repository);
+            let prebuild_provider = PrebuildProvider::create_from_repository(repository);
             let Some(prebuild_provider) = prebuild_provider else {
                 warning!("Cannot create prebuild provider for repository '{id}'");
                 continue;
@@ -494,8 +495,7 @@ impl<'a> RepositoryManager<'a> {
 
     /// A helper method to get the metadata provider.
     /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
-    #[expect(clippy::borrowed_box)]
-    fn get_metadata_provider(&self, repository_id: &str) -> Result<&Box<dyn MetadataProvider>> {
+    fn get_metadata_provider(&self, repository_id: &str) -> Result<&MetadataProvider> {
         // Check if repository is unsupported
         if self.unsupported_repositories.contains_key(repository_id) {
             return Err(RepositoryError::RepositoryNotSupported {
@@ -513,8 +513,7 @@ impl<'a> RepositoryManager<'a> {
 
     /// A helper method to get the prebuild provider.
     /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
-    #[expect(clippy::borrowed_box)]
-    fn get_prebuid_provider(&self, repository_id: &str) -> Result<&Box<dyn PrebuildProvider>> {
+    fn get_prebuid_provider(&self, repository_id: &str) -> Result<&PrebuildProvider> {
         // Check if repository is unsupported
         if self.unsupported_repositories.contains_key(repository_id) {
             return Err(RepositoryError::RepositoryNotSupported {

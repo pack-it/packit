@@ -18,7 +18,11 @@ use crate::{
     },
     config::{Config, EditableConfig, Repository},
     register::package_register::PackageRegister,
-    repositories::{manager::RepositoryManager, metadata::DEFAULT_METADATA_PROVIDER_ID, provider, types::RepositoryMeta},
+    repositories::{
+        manager::RepositoryManager,
+        metadata::{DEFAULT_METADATA_PROVIDER_ID, MetadataProvider},
+        types::RepositoryMeta,
+    },
     utils::{packit_version::current_packit_version, unwrap_or_exit::UnwrapOrExit},
 };
 
@@ -471,7 +475,7 @@ impl ConfigArgs {
     /// Returns the repository metadata if the repository is available, false otherwise.
     fn check_metadata_repository_availability(&self, repository: &Repository) -> Option<RepositoryMeta> {
         // Check if the provider can be created
-        let Some(provider) = provider::create_metadata_provider(repository) else {
+        let Some(provider) = MetadataProvider::create_from_repository(repository) else {
             warning!("Cannot connect to repository");
             return None;
         };

@@ -13,7 +13,7 @@ use crate::{
     config::{Config, Repository},
     installer::types::PackageName,
     integrity::metadata::MetaCheck,
-    repositories::provider,
+    repositories::metadata::MetadataProvider,
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
@@ -39,7 +39,7 @@ impl HandleCommand for MetaCheckArgs {
 
         let config = Config::from(&Config::get_default_path()).unwrap_or_exit(1);
         let repository = self.get_repository(&config);
-        let provider = provider::create_metadata_provider(&repository).unwrap_or_exit_msg("Could not create metadata provider", 1);
+        let provider = MetadataProvider::create_from_repository(&repository).unwrap_or_exit_msg("Could not create metadata provider", 1);
         let mut meta_checker = MetaCheck::new(&self.repository, provider);
         meta_checker.check(&self.packages);
         meta_checker.display_issues();

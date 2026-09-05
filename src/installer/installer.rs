@@ -28,7 +28,7 @@ use crate::{
     register::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
     repositories::{
         manager::RepositoryManager,
-        provider,
+        metadata::MetadataProvider,
         types::{Checksum, PackageTarget},
     },
     utils::{io, ioerror::IOResultExt, reading::ReadExt},
@@ -758,7 +758,7 @@ impl<'a> Installer<'a> {
     /// Could return an `InstallerError`.
     fn run_uninstall_script(&self, repository: &Repository, package_id: &PackageId, install_directory: &Path) -> Result<()> {
         // Create metadata repository provider for source repository
-        let provider = match provider::create_metadata_provider(repository) {
+        let provider = match MetadataProvider::create_from_repository(repository) {
             Some(provider) => provider,
             None => {
                 warning!("Unable to create repository provider, skipping uninstall script execution. This may cause stray files");
