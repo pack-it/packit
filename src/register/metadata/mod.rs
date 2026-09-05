@@ -4,3 +4,4 @@ mod handler;
 
 pub use handler::LocalMetaHandler;
 pub use handler::LocalMetadata;
+pub use handler::LocalPrebuildMetadata;

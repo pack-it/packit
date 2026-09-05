@@ -18,7 +18,7 @@ use crate::{
     register::metadata::error::{LocalMetadataError, Result},
     repositories::{
         provider::MetadataProvider,
-        types::{DeprecationInfo, Licenses, PackageMeta, PackageVersionMeta, Requirement, TargetBounds},
+        types::{DeprecationInfo, Licenses, PackageMeta, PackageVersionMeta, PrebuildMeta, PrebuildsList, Requirement, TargetBounds},
     },
     utils::ioerror::IOResultExt,
 };
@@ -51,6 +51,17 @@ pub struct LocalMetadata {
 
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub conflicts_with: Vec<PackageName>,
+
+    pub prebuild: Option<LocalPrebuildMetadata>,
+}
+
+/// Represents a prebuild in local metadata.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct LocalPrebuildMetadata {
+    pub id: String,
+
+    #[serde(flatten)]
+    pub info: PrebuildMeta,
 }
 
 /// Handler which handles the reading and refreshing of local metadata.
@@ -113,8 +124,9 @@ impl<'a> LocalMetaHandler<'a> {
         let package_version_meta = provider.read_package_version(&self.package_id.name, &self.package_id.version)?;
         let target_bounds = package_version_meta.get_best_target(&Target::current())?;
         let target_meta = package_version_meta.get_target(&target_bounds)?;
+        let prebuilds_list = provider.read_prebuilds_list(&self.package_id.name, &self.package_id.version)?;
 
-        let local_metadata = self.create_local_metadata(&package_meta, &package_version_meta, &target_bounds)?;
+        let local_metadata = self.create_local_metadata(&package_meta, &package_version_meta, &target_bounds, prebuilds_list)?;
         let local_meta_str = toml::ser::to_string(&local_metadata)?;
 
         let mut updated = false;
@@ -163,7 +175,7 @@ impl<'a> LocalMetaHandler<'a> {
 
         // Download uninstall script
         if target_meta.use_uninstall.unwrap_or(package_version_meta.use_uninstall.unwrap_or(false)) {
-            let uninstall_script_path = package_version_meta.get_test_script_path(&target_bounds)?;
+            let uninstall_script_path = package_version_meta.get_uninstall_script_path(&target_bounds)?;
             let uninstall_script_destination = metadata_dir.join(format!("uninstall.{SCRIPT_EXTENSION}"));
             let new_file = self.request_file(provider, &uninstall_script_path, true)?;
             if self.write_file_if_changed(&before_files, &mut after_files, uninstall_script_destination, new_file)? {
@@ -188,6 +200,7 @@ impl<'a> LocalMetaHandler<'a> {
         package_meta: &PackageMeta,
         package_version_meta: &PackageVersionMeta,
         target_bounds: &TargetBounds,
+        prebuilds_list: Option<PrebuildsList>,
     ) -> Result<LocalMetadata> {
         let target_meta = package_version_meta.get_target(target_bounds)?;
 
@@ -207,6 +220,16 @@ impl<'a> LocalMetaHandler<'a> {
 
         let deprecation = package_meta.deprecation.as_ref().or(package_version_meta.deprecation.as_ref()).cloned();
 
+        let mut prebuild = None;
+        if let Some(prebuilds_list) = prebuilds_list {
+            if let Some((prebuild_id, prebuild_meta)) = prebuilds_list.get_best_prebuild(&Target::current()) {
+                prebuild = Some(LocalPrebuildMetadata {
+                    id: prebuild_id.clone(),
+                    info: prebuild_meta.clone(),
+                });
+            }
+        }
+
         Ok(LocalMetadata {
             required_packit_version: required_packit_version.clone(),
             license: package_version_meta.license.clone(),
@@ -217,6 +240,7 @@ impl<'a> LocalMetaHandler<'a> {
             deprecation,
             skip_symlinking: target_meta.skip_symlinking.unwrap_or(package_version_meta.skip_symlinking),
             conflicts_with: package_meta.conflicts_with.clone(),
+            prebuild,
         })
     }
 
