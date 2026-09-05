@@ -24,6 +24,9 @@ pub enum PatchError {
     #[error("Unknown patch format")]
     UnknownPatchFormat,
 
+    #[error("Patch tries to change a file outside of the allowed path")]
+    PatchFilePathEscape,
+
     #[error("Error while interacting with filesystem")]
     IoError(#[from] ioerror::IOError),
 
@@ -58,7 +61,7 @@ pub enum PatchFormat {
 }
 
 /// Applies the given patch to the given directory directory.
-pub fn apply_patch(patch: Bytes, directory: &Path) -> Result<()> {
+pub fn apply_patch(patch: Bytes, directory: &Path, allowed_upper_directory: &Path) -> Result<()> {
     // Detect the format of the patch
     let patch_format = detect_patch_format(&patch)?;
     debug!("Detected patch format: {patch_format:?}");
@@ -79,6 +82,9 @@ pub fn apply_patch(patch: Bytes, directory: &Path) -> Result<()> {
         PatchFormat::Unknown => return Err(PatchError::UnknownPatchFormat),
     };
 
+    // Ensure the `allowed_upper_directory` is normalized for comparison
+    let allowed_upper_directory = io::normalize_path(allowed_upper_directory);
+
     // Parse patch from bytes
     let patches = PatchSet::parse_bytes(&patch, options);
     for file_patch in patches {
@@ -91,23 +97,32 @@ pub fn apply_patch(patch: Bytes, directory: &Path) -> Result<()> {
             _ => operation,
         };
 
-        handle_file_operation(operation, &file_patch, directory)?;
+        handle_file_operation(operation, &file_patch, directory, &allowed_upper_directory)?;
     }
 
     Ok(())
 }
 
 /// Handles the file operation to apply the different patch operations.
-fn handle_file_operation(operation: &FileOperation<[u8]>, patch: &FilePatch<[u8]>, directory: &Path) -> Result<()> {
+fn handle_file_operation(
+    operation: &FileOperation<[u8]>,
+    patch: &FilePatch<[u8]>,
+    directory: &Path,
+    allowed_upper_directory: &Path,
+) -> Result<()> {
     match operation {
         FileOperation::Create(path) => {
             let path = create_path(directory, path)?;
+            check_escapes_upper_dir(&path, allowed_upper_directory)?;
+
             debug!("Creating file '{}'", path.display());
 
             apply_path(patch.patch(), None, &path)?;
         },
         FileOperation::Delete(path) => {
             let path = create_path(directory, path)?;
+            check_escapes_upper_dir(&path, allowed_upper_directory)?;
+
             debug!("Deleting file '{}'", path.display());
 
             fs::remove_file(&path).err_with_path("remove", path)?;
@@ -116,6 +131,10 @@ fn handle_file_operation(operation: &FileOperation<[u8]>, patch: &FilePatch<[u8]
             let source = create_path(directory, original)?;
             let destination = create_path(directory, modified)?;
             let (source, destination) = resolve_paths(&source, &destination);
+
+            check_escapes_upper_dir(source, allowed_upper_directory)?;
+            check_escapes_upper_dir(destination, allowed_upper_directory)?;
+
             if source == destination {
                 debug!("Modifying file '{}'", source.display());
             } else {
@@ -133,6 +152,10 @@ fn handle_file_operation(operation: &FileOperation<[u8]>, patch: &FilePatch<[u8]
             let source = create_path(directory, from)?;
             let destination = create_path(directory, to)?;
             let (source, destination) = resolve_paths(&source, &destination);
+
+            check_escapes_upper_dir(source, allowed_upper_directory)?;
+            check_escapes_upper_dir(destination, allowed_upper_directory)?;
+
             debug!("Renaming file '{}' to '{}'", source.display(), destination.display());
 
             if let Some(parent) = destination.parent() {
@@ -145,6 +168,10 @@ fn handle_file_operation(operation: &FileOperation<[u8]>, patch: &FilePatch<[u8]
             let source = create_path(directory, from)?;
             let destination = create_path(directory, to)?;
             let (source, destination) = resolve_paths(&source, &destination);
+
+            check_escapes_upper_dir(source, allowed_upper_directory)?;
+            check_escapes_upper_dir(destination, allowed_upper_directory)?;
+
             debug!("Copying file '{}' to '{}'", source.display(), destination.display());
 
             if let Some(parent) = destination.parent() {
@@ -162,6 +189,17 @@ fn handle_file_operation(operation: &FileOperation<[u8]>, patch: &FilePatch<[u8]
 fn create_path(directory: &Path, patch_path: &[u8]) -> Result<PathBuf> {
     let path = directory.join(io::parse_path_from_bytes(patch_path)?);
     Ok(io::normalize_path(&path))
+}
+
+/// Checks if the given path escapes the specified allowed upper directory.
+/// Note that this requires `path` and `upper_dir` to be a normalized path.
+/// Returns `Err(PatchError::PatchFilePathEscape)` if the path escapes, `Ok` otherwise.
+fn check_escapes_upper_dir(path: &Path, upper_dir: &Path) -> Result<()> {
+    if !path.starts_with(upper_dir) {
+        return Err(PatchError::PatchFilePathEscape);
+    }
+
+    Ok(())
 }
 
 /// Resolves the source and destination paths to a full pair with an existing source.

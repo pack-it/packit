@@ -151,6 +151,15 @@ impl<'a> Builder<'a> {
         // Find inner build directory (a directory with more than just a single directory inside)
         let inner_build_directory = self.find_inner_build_dir(build_directory.path().to_path_buf())?;
 
+        // Check if `license_include` does not escape the build directory
+        for path in &source.license_include {
+            let path = io::normalize_path(&inner_build_directory.join(path));
+
+            if !path.starts_with(build_directory.path()) {
+                return Err(BuilderError::LicenseFilePathEscape);
+            }
+        }
+
         // Construct default apply directory for patches
         let mut apply_directory = inner_build_directory.clone();
         if let Some(apply_in) = &source.apply_patches_in {
@@ -170,7 +179,7 @@ impl<'a> Builder<'a> {
             };
 
             // Apply patch
-            patches::apply_patch(patch_bytes, apply_directory)?;
+            patches::apply_patch(patch_bytes, apply_directory, build_directory.path())?;
 
             println!("Applied patch '{id}' to {}", package_id.style());
         }
