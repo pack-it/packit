@@ -24,6 +24,9 @@ pub enum BuilderError {
         requirement: Requirement,
     },
 
+    #[error("The metadata tries to include a license outside of the allowed path")]
+    LicenseFilePathEscape,
+
     #[error("Checksum does not match")]
     ChecksumError,
 
