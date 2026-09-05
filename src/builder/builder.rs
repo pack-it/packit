@@ -176,12 +176,7 @@ impl<'a> Builder<'a> {
         }
 
         // Create build env
-        let env = BuildEnv::new(
-            &installed_dependencies,
-            installed_build_dependencies,
-            &target.build_requirements,
-            self.register,
-        );
+        let env = BuildEnv::new(&installed_dependencies, installed_build_dependencies, &target.build_requirements);
 
         // Construct args for the build script
         let script_args = install_meta.version_metadata.get_script_args(&install_meta.target_bounds)?;
