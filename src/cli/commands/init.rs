@@ -171,7 +171,7 @@ impl HandleCommand for InitArgs {
 
         // Fetch Packit metadata from the default repository
         let updated = installed_package_version
-            .get_local_metadata()
+            .get_local_metadata(&prefix_directory)
             .refresh(&provider)
             .unwrap_or_exit_msg("Packit cannot be initialized: error while retrieving Packit metadata", 1);
 

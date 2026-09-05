@@ -245,7 +245,7 @@ impl<'a> Installer<'a> {
         };
 
         // Refresh the local metadata for the new package
-        let local_metadata = LocalMetaHandler::new(&package_id, &install_directory);
+        let local_metadata = LocalMetaHandler::new(&package_id, &self.config.prefix_directory);
         let updated_metadata = local_metadata.refresh(self.repository_manager.get_metadata_provider(&install_meta.repository_id)?)?;
         installed_package_version.update_metadata_refresh(updated_metadata);
         self.register.save_to(&PackageRegister::get_path(&self.config.prefix_directory))?;
@@ -768,7 +768,7 @@ impl<'a> Installer<'a> {
     fn run_uninstall_script(&self, installed_package_version: &InstalledPackageVersion) -> Result<()> {
         let package_id = &installed_package_version.package_id;
 
-        let local_meta_handler = installed_package_version.get_local_metadata();
+        let local_meta_handler = installed_package_version.get_local_metadata(&self.config.prefix_directory);
         let local_metadata = local_meta_handler.read_metadata()?;
 
         // Copy uninstall script to tempfile if it exists

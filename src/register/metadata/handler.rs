@@ -23,7 +23,6 @@ use crate::{
     utils::ioerror::IOResultExt,
 };
 
-pub const DIRECTORY_NAME: &str = ".packit";
 const METADATA_FILENAME: &str = "metadata.toml";
 
 /// Represents the local metadata.
@@ -67,22 +66,24 @@ pub struct LocalPrebuildMetadata {
 /// Handler which handles the reading and refreshing of local metadata.
 pub struct LocalMetaHandler<'a> {
     package_id: &'a PackageId,
-    package_install_dir: &'a Path,
+    prefix_dir: &'a Path,
 }
 
 impl<'a> LocalMetaHandler<'a> {
     /// Creates a new `LocalMetaHandler` for the given package.
-    pub fn new(package_id: &'a PackageId, package_install_dir: &'a Path) -> Self {
-        Self {
-            package_id,
-            package_install_dir,
-        }
+    pub fn new(package_id: &'a PackageId, prefix_dir: &'a Path) -> Self {
+        Self { package_id, prefix_dir }
+    }
+
+    /// Gets the base path of the local metadata storage for the current package.
+    fn get_base_path(&self) -> PathBuf {
+        self.prefix_dir.join("metadata").join(&self.package_id.name).join(self.package_id.version.to_string())
     }
 
     /// Reads the local metadata file from the storage of the given package.
     /// Returns the `LocalMetadata` parsed from the storage.
     pub fn read_metadata(&self) -> Result<LocalMetadata> {
-        let path = self.package_install_dir.join(DIRECTORY_NAME).join(METADATA_FILENAME);
+        let path = self.get_base_path().join(METADATA_FILENAME);
         if !path.exists() {
             return Err(LocalMetadataError::LocalMetadataFileNotFound { file_path: path });
         }
@@ -94,7 +95,7 @@ impl<'a> LocalMetaHandler<'a> {
     /// Reads the specified local metadata file from the storage of the given package.
     /// Returns the file as string.
     pub fn read_file(&self, file: &str) -> Result<String> {
-        let path = self.package_install_dir.join(DIRECTORY_NAME).join(file);
+        let path = self.get_base_path().join(file);
         if !path.exists() {
             return Err(LocalMetadataError::LocalMetadataFileNotFound { file_path: path });
         }
@@ -106,7 +107,7 @@ impl<'a> LocalMetaHandler<'a> {
     /// Reads the specified local metadata file from the storage of the given package.
     /// Returns the file as bytes.
     pub fn read_file_bytes(&self, file: &str) -> Result<Bytes> {
-        let path = self.package_install_dir.join(DIRECTORY_NAME).join(file);
+        let path = self.get_base_path().join(file);
         if !path.exists() {
             return Err(LocalMetadataError::LocalMetadataFileNotFound { file_path: path });
         }
@@ -118,7 +119,7 @@ impl<'a> LocalMetaHandler<'a> {
     /// Refreshes the local metadata of the given package.
     /// Returns true if the metadata was changed, false otherwise.
     pub fn refresh(&self, provider: &Box<dyn MetadataProvider>) -> Result<bool> {
-        let metadata_dir = self.package_install_dir.join(DIRECTORY_NAME);
+        let metadata_dir = self.get_base_path();
 
         let package_meta = provider.read_package(&self.package_id.name)?;
         let package_version_meta = provider.read_package_version(&self.package_id.name, &self.package_id.version)?;

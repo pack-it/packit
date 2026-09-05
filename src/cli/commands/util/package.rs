@@ -78,7 +78,7 @@ impl PackageArgs {
         };
 
         // Get local metadata to get prebuild information
-        let local_meta_handler = package_version.get_local_metadata();
+        let local_meta_handler = package_version.get_local_metadata(&config.prefix_directory);
         let local_metadata = local_meta_handler.read_metadata().unwrap_or_exit_msg("Error while reading local metadata", 1);
 
         // Get prebuild information from local metadata, or use default

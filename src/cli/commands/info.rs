@@ -100,7 +100,7 @@ impl HandleCommand for InfoArgs {
         // Show package version specific information
         if let Some(package_version) = package_version {
             let package_id = PackageId::new(package.name.clone(), package_version.clone());
-            self.display_package_version_info(&package_id, &register, installed_package);
+            self.display_package_version_info(&package_id, &register, &config, installed_package);
             return;
         }
 
@@ -201,14 +201,20 @@ impl InfoArgs {
     }
 
     /// Displays the package version info, also checking for the verbose flag for some info.
-    fn display_package_version_info(&self, package_id: &PackageId, register: &PackageRegister, package: &InstalledPackage) {
+    fn display_package_version_info(
+        &self,
+        package_id: &PackageId,
+        register: &PackageRegister,
+        config: &Config,
+        package: &InstalledPackage,
+    ) {
         let package_version = match register.get_package_version(package_id) {
             Some(package) => package,
             None => not_found::register_package_version(package_id, register),
         };
 
         // Retrieve local metadata of package
-        let local_meta_handler = package_version.get_local_metadata();
+        let local_meta_handler = package_version.get_local_metadata(&config.prefix_directory);
         let local_metadata = local_meta_handler.read_metadata().unwrap_or_exit_msg("Error while reading local metadata", 1);
 
         println!("{}", package_id.style());

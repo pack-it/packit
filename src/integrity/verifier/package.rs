@@ -630,7 +630,7 @@ fn check_package_test(package_id: &PackageId, register: &PackageRegister, config
 
     let package_version = register.get_package_version(package_id).expect("Expected package to exist");
 
-    let local_meta_handler = package_version.get_local_metadata();
+    let local_meta_handler = package_version.get_local_metadata(&config.prefix_directory);
     let local_metadata = local_meta_handler.read_metadata()?;
 
     // Copy test script to tempfile if it exists
