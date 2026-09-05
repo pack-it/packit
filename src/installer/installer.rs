@@ -108,7 +108,7 @@ impl<'a> Installer<'a> {
             self.options.install_type = InstallType::BuildAll;
         }
 
-        // Create flattened dependency sequence
+        // Get the metadata of the package for the current target
         let target_bounds = version_metadata.get_best_target(&Target::current())?;
         let root_meta = InstallMeta {
             package_metadata,
@@ -210,7 +210,7 @@ impl<'a> Installer<'a> {
                 self.register,
                 self.repository_manager,
                 self.options.verbose,
-                self.options.skip_build_test,
+                self.options.execute_build_test,
                 self.options.pause_build,
             )
             .build(install_meta, &install_directory)?,

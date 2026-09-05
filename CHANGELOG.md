@@ -13,6 +13,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The `--exclude` flag for the `pit util package` command, to exclude certain packages when using the `--all` flag.
 - New and improved documentation.
 
+### Changes
+- The build tests are now turned off by default and can be turned on with `--execute-build-test` (`--skip-build-test` is removed).
+
 ### Fixed
 - Fix patch apply directory meta check reporting wrong issues.
 

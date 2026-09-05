@@ -50,7 +50,7 @@ pub struct Builder<'a> {
     register: &'a mut PackageRegister,
     repository_manager: &'a RepositoryManager<'a>,
     verbose: bool,
-    skip_build_test: bool,
+    execute_build_test: bool,
     pause_build: bool,
 }
 
@@ -61,7 +61,7 @@ impl<'a> Builder<'a> {
         register: &'a mut PackageRegister,
         repository_manager: &'a RepositoryManager,
         verbose: bool,
-        skip_build_test: bool,
+        execute_build_test: bool,
         pause_build: bool,
     ) -> Self {
         Self {
@@ -69,7 +69,7 @@ impl<'a> Builder<'a> {
             register,
             repository_manager,
             verbose,
-            skip_build_test,
+            execute_build_test,
             pause_build,
         }
     }
@@ -200,7 +200,7 @@ impl<'a> Builder<'a> {
             spinner.show();
 
             // Run build script
-            script_result = scripts::run_build_script(&script_data, &inner_build_directory, env, self.skip_build_test);
+            script_result = scripts::run_build_script(&script_data, &inner_build_directory, env, self.execute_build_test);
 
             // Finish build spinner
             spinner.finish();
@@ -208,7 +208,7 @@ impl<'a> Builder<'a> {
             println!("Executing build script of {}", package_id.style());
 
             // Run build script
-            script_result = scripts::run_build_script(&script_data, &inner_build_directory, env, self.skip_build_test);
+            script_result = scripts::run_build_script(&script_data, &inner_build_directory, env, self.execute_build_test);
         }
 
         // Wait before continuing when pause build is enabled
