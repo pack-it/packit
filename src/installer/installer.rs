@@ -210,7 +210,7 @@ impl<'a> Installer<'a> {
                 self.register,
                 self.repository_manager,
                 self.options.verbose,
-                self.options.include_build_test,
+                self.options.execute_build_test,
                 self.options.pause_build,
             )
             .build(install_meta, &install_directory)?,

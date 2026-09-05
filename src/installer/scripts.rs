@@ -139,9 +139,9 @@ pub fn run_pre_script(script_data: &ScriptData, run_dir: impl AsRef<Path>) -> Re
 
 /// Runs the given build script, in the given directory.
 /// Note that the script should be a `.sh` script on Linux and macOS and a `.bat` on Windows.
-pub fn run_build_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, build_env: BuildEnv, include_build_test: bool) -> Result<()> {
+pub fn run_build_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, build_env: BuildEnv, execute_build_test: bool) -> Result<()> {
     let mut env: Environment = build_env.try_into()?;
-    env.insert_var("PACKIT_INCLUDE_BUILD_TEST", if include_build_test { "1" } else { "0" });
+    env.insert_var("PACKIT_EXECUTE_BUILD_TEST", if execute_build_test { "1" } else { "0" });
     run_script(script_data, run_dir, env, script_data.verbose)
 }
 
