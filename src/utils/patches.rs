@@ -192,6 +192,7 @@ fn create_path(directory: &Path, patch_path: &[u8]) -> Result<PathBuf> {
 }
 
 /// Checks if the given path escapes the specified allowed upper directory.
+/// Note that this requires `path` and `upper_dir` to be a normalized path.
 /// Returns `Err(PatchError::PatchFilePathEscape)` if the path escapes, `Ok` otherwise.
 fn check_escapes_upper_dir(path: &Path, upper_dir: &Path) -> Result<()> {
     if !path.starts_with(upper_dir) {
