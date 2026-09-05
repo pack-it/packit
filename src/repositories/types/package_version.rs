@@ -66,8 +66,11 @@ pub struct PackageVersionMeta {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub revisions: Vec<String>,
 
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub comments: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub preinstall_notice: Option<String>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub postinstall_notice: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub deprecation: Option<DeprecationInfo>,

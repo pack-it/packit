@@ -18,9 +18,6 @@ pub struct PackageMeta {
     pub name: PackageName,
     pub description: String,
 
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub install_message: Option<String>,
-
     pub homepage: Option<String>,
     pub versions: Vec<Version>,
     pub required_packit_version: Option<Version>,

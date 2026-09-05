@@ -73,13 +73,6 @@ impl<'a> Installer<'a> {
         let (repository_id, package_metadata, version_metadata) =
             self.repository_manager.read_package_and_version(optional_id, &Target::current())?;
 
-        if let Some(message) = &package_metadata.install_message {
-            println!("{message}");
-        }
-        for comment in &version_metadata.comments {
-            println!("{comment}");
-        }
-
         // Create a package id of the current package
         let version = &version_metadata.version;
         let package_id = optional_id.versioned_or_cloned(version);
@@ -198,6 +191,11 @@ impl<'a> Installer<'a> {
 
         let version_meta = &install_meta.version_metadata;
         let script_args = version_meta.get_script_args(&install_meta.target_bounds)?;
+        let target_meta = version_meta.get_target(&install_meta.target_bounds)?;
+
+        if let Some(notice) = target_meta.preinstall_notice.as_ref().or(version_meta.preinstall_notice.as_ref()) {
+            println!("{notice}");
+        }
 
         self.execute_preinstall(&package_id, install_meta, &install_directory, &script_args)?;
 
@@ -241,8 +239,12 @@ impl<'a> Installer<'a> {
 
         self.execute_postinstall(&package_id, install_meta, &install_directory, &script_args)?;
 
+        if let Some(notice) = target_meta.postinstall_notice.as_ref().or(version_meta.postinstall_notice.as_ref()) {
+            println!("{notice}");
+        }
+
         // Get the target information from the package version info
-        let target = version_meta.get_target(&install_meta.target_bounds)?;
+        let target = target_meta;
 
         self.determine_active(install_meta, &package_id, target)?;
 
