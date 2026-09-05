@@ -21,7 +21,8 @@ use crate::{
         package_register::PackageRegister,
     },
     repositories::{
-        provider::{self, create_metadata_provider},
+        metadata::MetadataProvider,
+        prebuilds::PrebuildProvider,
         types::{Checksum, PackageVersionMeta, PrebuildsList},
     },
     utils::{io::directory_is_empty, ioerror::IOResultExt},
@@ -77,7 +78,7 @@ fn check_package_alterations(package_id: &PackageId, register: &PackageRegister,
     let local_metadata = local_meta_handler.read_metadata()?;
 
     // Create prebuild provider
-    let Some(prebuild_provider) = provider::create_prebuild_provider(&repository) else {
+    let Some(prebuild_provider) = PrebuildProvider::create_from_repository(&repository) else {
         warning!("Cannot create prebuild provider for {}, skipping check", package_id.style());
         return Ok(false);
     };
@@ -656,7 +657,7 @@ fn check_package_test(package_id: &PackageId, register: &PackageRegister, config
 /// Gets the package version meta, or `None` if the provider cannot be found.
 fn get_package_version_meta(package_id: &PackageId, package: &InstalledPackageVersion) -> Result<Option<PackageVersionMeta>> {
     let repository = Repository::new(&package.metadata_repository_url, &package.metadata_repository_provider);
-    let Some(provider) = create_metadata_provider(&repository) else {
+    let Some(provider) = MetadataProvider::create_from_repository(&repository) else {
         return Ok(None);
     };
 

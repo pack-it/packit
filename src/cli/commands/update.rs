@@ -21,7 +21,7 @@ use crate::{
     },
     platforms::Target,
     register::{metadata::LocalMetaHandler, package_register::PackageRegister},
-    repositories::{manager::RepositoryManager, provider},
+    repositories::{manager::RepositoryManager, metadata::MetadataProvider},
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
@@ -223,7 +223,7 @@ impl UpdateArgs {
                 &package_version.metadata_repository_url,
                 &package_version.metadata_repository_provider,
             );
-            let Some(provider) = provider::create_metadata_provider(&repository) else {
+            let Some(provider) = MetadataProvider::create_from_repository(&repository) else {
                 error!(msg: "Cannot create provider for repository");
                 found_error = true;
                 continue;

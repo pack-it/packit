@@ -9,7 +9,7 @@ use crate::{
     installer::{types::PackageId, unpack::ArchiveExtension},
     repositories::{
         error::{RepositoryError, Result},
-        provider::PrebuildProvider,
+        prebuilds::provider::PrebuildProviderImpl,
         types::PrebuildFileMeta,
     },
     utils::ioerror::IOResultExt,
@@ -22,7 +22,7 @@ pub struct FileSystemPrebuildProvider {
     path: PathBuf,
 }
 
-impl PrebuildProvider for FileSystemPrebuildProvider {
+impl PrebuildProviderImpl for FileSystemPrebuildProvider {
     fn get_prebuild_meta(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<PrebuildFileMeta> {
         let path = self.get_file_path(package_id, revision, prebuild_id, "toml")?;
 
