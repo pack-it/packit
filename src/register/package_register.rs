@@ -522,6 +522,8 @@ pub mod tests {
             use_postinstall: None,
             use_uninstall: None,
             revisions: Vec::new(),
+            preinstall_notice: None,
+            postinstall_notice: None,
         }
     }
 
