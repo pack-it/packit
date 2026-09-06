@@ -3,6 +3,7 @@ use crate::{
     cli::display::{standard_print::DisplayJoined, styled::MapStyled},
     installer::types::PackageName,
     platforms::{DEFAULT_CONFIG_DIR, OsVersion, Target},
+    register::metadata::LocalMetaHandler,
     repositories::manager::RepositoryManager,
     utils::packit_version::{current_packit_version, packit_version_name},
 };
@@ -104,7 +105,7 @@ impl HandleCommand for InfoArgs {
             return;
         }
 
-        self.display_package_info(&package.name, installed_package);
+        self.display_package_info(&config, &package.name, installed_package);
     }
 }
 
@@ -178,7 +179,7 @@ impl InfoArgs {
     }
 
     /// Displays package info.
-    fn display_package_info(&self, package_name: &PackageName, package: &InstalledPackage) {
+    fn display_package_info(&self, config: &Config, package_name: &PackageName, package: &InstalledPackage) {
         // Sort installed versions for display
         let mut installed_versions: Vec<_> = package.versions.keys().collect();
         installed_versions.sort();
@@ -195,8 +196,10 @@ impl InfoArgs {
         println!();
 
         if self.verbose {
+            let conflicts = LocalMetaHandler::read_package_conflicts(package, &config.prefix_directory)
+                .unwrap_or_exit_msg("Error while reading local metadata", 1);
             print!("Conflicts with: ");
-            standard_print::print_list_or_none(package.conflicts_with.iter());
+            standard_print::print_list_or_none(conflicts.iter());
         }
     }
 

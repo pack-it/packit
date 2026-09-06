@@ -16,7 +16,10 @@ use crate::{
     config::Config,
     installer::{Symlinker, types::PackageName},
     register::{
-        installed_package::InstalledPackage, installed_package_version::InstalledPackageVersion, package_register::PackageRegister,
+        installed_package::InstalledPackage,
+        installed_package_version::InstalledPackageVersion,
+        metadata::{LocalMetaHandler, PackageRegisterExt},
+        package_register::PackageRegister,
     },
     utils::unwrap_or_exit::UnwrapOrExit,
 };
@@ -101,7 +104,15 @@ impl LinkArgs {
         package: &InstalledPackage,
         package_version: &InstalledPackageVersion,
     ) -> bool {
-        let conflicts = register.get_conflicting_packages(&self.package_name, &package.conflicts_with);
+        // Read and get conflicts
+        let package_conflicts: Vec<_> = LocalMetaHandler::read_package_conflicts(package, &config.prefix_directory)
+            .unwrap_or_exit_msg("Error while reading local metadata", 1)
+            .into_iter()
+            .collect();
+        let conflicts = register
+            .get_conflicting_packages(&self.package_name, &package_conflicts, &config.prefix_directory)
+            .unwrap_or_exit_msg("Error while reading local metadata", 1);
+
         if !conflicts.is_empty() {
             warning!("The package has conflicts with other packages, cancelling linking");
             println!("Conflicting packages:");

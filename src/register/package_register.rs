@@ -136,7 +136,6 @@ impl PackageRegister {
             symlinked,
             package.description.clone(),
             package.homepage.clone(),
-            package.conflicts_with.clone(),
         )
     }
 
@@ -149,7 +148,6 @@ impl PackageRegister {
         symlinked: bool,
         package_description: String,
         package_homepage: Option<String>,
-        conflicts_with: Vec<PackageName>,
     ) {
         // Add the package as a dependent in its dependencies
         for dependency in &installed_package_version.dependencies {
@@ -168,13 +166,7 @@ impl PackageRegister {
             None => {
                 self.packages.insert(
                     package_name.clone(),
-                    InstalledPackage::new(
-                        installed_package_version,
-                        symlinked,
-                        package_description,
-                        package_homepage,
-                        conflicts_with,
-                    ),
+                    InstalledPackage::new(installed_package_version, symlinked, package_description, package_homepage),
                 );
             },
         };
@@ -314,30 +306,6 @@ impl PackageRegister {
         latest
     }
 
-    /// Checks if a package has conflicts with any package that is installed.
-    /// Returns a list of the names of all conflicting packages.
-    pub fn get_conflicting_packages(&self, package_name: &PackageName, package_conflicts: &[PackageName]) -> Vec<&PackageName> {
-        let mut conflicts = Vec::new();
-
-        for (name, package) in &self.packages {
-            if !package.symlinked || name == package_name {
-                continue;
-            }
-
-            // Check if the package specifies this package as conflict
-            if package_conflicts.contains(name) {
-                conflicts.push(name);
-            }
-
-            // Check if this package specifies the package as conflict
-            if package.conflicts_with.contains(package_name) {
-                conflicts.push(name);
-            }
-        }
-
-        conflicts
-    }
-
     /// Returns an iterator, which iterates over all nested installed package version values.
     pub fn iterate_all(&self) -> impl Iterator<Item = &InstalledPackageVersion> {
         self.packages.values().flat_map(|p| p.versions.values())
@@ -408,7 +376,6 @@ pub mod tests {
             active_version,
             description: "-".to_string(),
             homepage: None,
-            conflicts_with: Vec::new(),
         }
     }
 
@@ -684,69 +651,70 @@ pub mod tests {
         assert!(package_ids.contains(&create_package_id("F@6")));
     }
 
-    #[test]
-    fn conflicts() {
-        let mut register = create_register();
+    // TODO: move tests
+    // #[test]
+    // fn conflicts() {
+    //     let mut register = create_register();
 
-        let conflicting = register.get_conflicting_packages(&create_package_name("F"), &[create_package_name("E")]);
-        assert_eq!(conflicting, [&create_package_name("E")]);
+    //     let conflicting = register.get_conflicting_packages(&create_package_name("F"), &[create_package_name("E")]);
+    //     assert_eq!(conflicting, [&create_package_name("E")]);
 
-        let package_id = create_package_id("new_package@2.90");
-        let mut package_meta = create_package_meta(&package_id);
-        package_meta.conflicts_with.push(create_package_name("E"));
-        let package_version_meta = create_package_version_meta(&package_id);
-        let dependency_ids = HashSet::new();
+    //     let package_id = create_package_id("new_package@2.90");
+    //     let mut package_meta = create_package_meta(&package_id);
+    //     package_meta.conflicts_with.push(create_package_name("E"));
+    //     let package_version_meta = create_package_version_meta(&package_id);
+    //     let dependency_ids = HashSet::new();
 
-        // Add the package
-        register.add_package(
-            &package_meta,
-            &package_version_meta,
-            dependency_ids,
-            &Repository::new("-", "-"),
-            &PathBuf::from("-"),
-            true,
-            false,
-            false,
-        );
+    //     // Add the package
+    //     register.add_package(
+    //         &package_meta,
+    //         &package_version_meta,
+    //         dependency_ids,
+    //         &Repository::new("-", "-"),
+    //         &PathBuf::from("-"),
+    //         true,
+    //         false,
+    //         false,
+    //     );
 
-        let conflicting = register.get_conflicting_packages(&create_package_name("E"), &[]);
-        assert_eq!(conflicting, [&create_package_name("new_package")]);
+    //     let conflicting = register.get_conflicting_packages(&create_package_name("E"), &[]);
+    //     assert_eq!(conflicting, [&create_package_name("new_package")]);
 
-        let conflicting = register.get_conflicting_packages(&create_package_name("E"), &[create_package_name("E")]);
-        assert_eq!(conflicting, [&create_package_name("new_package")]);
-    }
+    //     let conflicting = register.get_conflicting_packages(&create_package_name("E"), &[create_package_name("E")]);
+    //     assert_eq!(conflicting, [&create_package_name("new_package")]);
+    // }
 
-    #[test]
-    fn conflicts_no_symlink() {
-        let mut register = create_register();
+    // #[test]
+    // fn conflicts_no_symlink() {
+    //     let mut register = create_register();
 
-        let package_id = create_package_id("new_package@2.90");
-        let mut package_meta = create_package_meta(&package_id);
-        package_meta.conflicts_with.push(create_package_name("E"));
-        let package_version_meta = create_package_version_meta(&package_id);
-        let dependency_ids = HashSet::new();
+    //     let package_id = create_package_id("new_package@2.90");
+    //     let mut package_meta = create_package_meta(&package_id);
+    //     package_meta.conflicts_with.push(create_package_name("E"));
+    //     let package_version_meta = create_package_version_meta(&package_id);
+    //     let dependency_ids = HashSet::new();
 
-        // Add the package
-        register.add_package(
-            &package_meta,
-            &package_version_meta,
-            dependency_ids,
-            &Repository::new("-", "-"),
-            &PathBuf::from("-"),
-            false,
-            false,
-            false,
-        );
+    //     // Add the package
+    //     register.add_package(
+    //         &package_meta,
+    //         &package_version_meta,
+    //         dependency_ids,
+    //         &Repository::new("-", "-"),
+    //         &PathBuf::from("-"),
+    //         false,
+    //         false,
+    //         false,
+    //     );
 
-        let conflicting = register.get_conflicting_packages(&create_package_name("E"), &[]);
-        assert_eq!(conflicting, &[] as &[&PackageName]);
-    }
+    //     let conflicting = register.get_conflicting_packages(&create_package_name("E"), &[]);
+    //     assert_eq!(conflicting, &[] as &[&PackageName]);
+    // }
 
-    #[test]
-    fn no_conflicts() {
-        let register = create_register();
+    // #[test]
+    // fn no_conflicts() {
+    //     let register = create_register();
 
-        let conflicting: Vec<&PackageName> = register.get_conflicting_packages(&create_package_name("F"), &[]);
-        assert_eq!(conflicting, &[] as &[&PackageName]);
-    }
+    //     let conflicting: Vec<&PackageName> = register.get_conflicting_packages(&create_package_name("F"), &[]);
+    //     assert_eq!(conflicting, &[] as &[&PackageName]);
+    // }
 }

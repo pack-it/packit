@@ -15,7 +15,10 @@ use crate::{
         types::{Dependency, PackageId, PackageName, Version},
     },
     platforms::Target,
-    register::metadata::error::{LocalMetadataError, Result},
+    register::{
+        installed_package::InstalledPackage,
+        metadata::error::{LocalMetadataError, Result},
+    },
     repositories::{
         provider::MetadataProvider,
         types::{DeprecationInfo, Licenses, PackageMeta, PackageVersionMeta, PrebuildMeta, PrebuildsList, Requirement, TargetBounds},
@@ -73,6 +76,22 @@ impl<'a> LocalMetaHandler<'a> {
     /// Creates a new `LocalMetaHandler` for the given package.
     pub fn new(package_id: &'a PackageId, prefix_dir: &'a Path) -> Self {
         Self { package_id, prefix_dir }
+    }
+
+    /// Gets the conflicts of the given package.
+    /// Returns a list of conflicts defined in the metadata, which can contain packages that are not installed.
+    pub fn read_package_conflicts(package: &InstalledPackage, prefix_dir: &Path) -> Result<HashSet<PackageName>> {
+        let mut conflicts = HashSet::new();
+
+        for version in package.versions.values() {
+            let metadata = version.get_local_metadata(prefix_dir).read_metadata()?;
+
+            for conflict in metadata.conflicts_with {
+                conflicts.insert(conflict);
+            }
+        }
+
+        Ok(conflicts)
     }
 
     /// Gets the base path of the local metadata storage for the current package.

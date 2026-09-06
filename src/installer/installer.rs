@@ -27,7 +27,7 @@ use crate::{
     platforms::{DEFAULT_PREFIX, Target, permissions, symlink},
     register::{
         installed_package_version::InstalledPackageVersion,
-        metadata::{LocalMetaHandler, error::LocalMetadataError},
+        metadata::{LocalMetaHandler, PackageRegisterExt, error::LocalMetadataError},
         package_register::PackageRegister,
     },
     repositories::{
@@ -435,7 +435,11 @@ impl<'a> Installer<'a> {
             };
 
         // Check if the package has conflicting packages
-        let conflicts = self.register.get_conflicting_packages(&package_id.name, &install_meta.package_metadata.conflicts_with);
+        let conflicts = self.register.get_conflicting_packages(
+            &package_id.name,
+            &install_meta.package_metadata.conflicts_with,
+            &self.config.prefix_directory,
+        )?;
         if !conflicts.is_empty() {
             warning!("Skipping symlinking because of conflicting packages:");
             standard_print::print_list(conflicts.iter().map_styled());
