@@ -16,7 +16,7 @@ use crate::{
     installer::types::{OptionalPackageId, PackageId},
     packager,
     platforms::Target,
-    register::package_register::PackageRegister,
+    register::{metadata::LocalMetaHandler, package_register::PackageRegister},
     repositories::types::PrebuildsList,
     utils::unwrap_or_exit::UnwrapOrExit,
 };
@@ -87,7 +87,7 @@ impl PackageArgs {
         };
 
         // Get local metadata to get prebuild information
-        let local_meta_handler = package_version.get_local_metadata(&config.prefix_directory);
+        let local_meta_handler = LocalMetaHandler::new(&config.prefix_directory).get_package(package_id);
         let local_metadata = local_meta_handler.read_metadata().unwrap_or_exit_msg("Error while reading local metadata", 1);
 
         // Get prebuild information from local metadata, or use default

@@ -196,8 +196,8 @@ impl InfoArgs {
         println!();
 
         if self.verbose {
-            let conflicts = LocalMetaHandler::read_package_conflicts(package, &config.prefix_directory)
-                .unwrap_or_exit_msg("Error while reading local metadata", 1);
+            let local_meta_handler = LocalMetaHandler::new(&config.prefix_directory);
+            let conflicts = local_meta_handler.read_package_conflicts(package).unwrap_or_exit_msg("Error while reading local metadata", 1);
             print!("Conflicts with: ");
             standard_print::print_list_or_none(conflicts.iter());
         }
@@ -217,7 +217,7 @@ impl InfoArgs {
         };
 
         // Retrieve local metadata of package
-        let local_meta_handler = package_version.get_local_metadata(&config.prefix_directory);
+        let local_meta_handler = LocalMetaHandler::new(&config.prefix_directory).get_package(package_id);
         let local_metadata = local_meta_handler.read_metadata().unwrap_or_exit_msg("Error while reading local metadata", 1);
 
         println!("{}", package_id.style());

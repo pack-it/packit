@@ -651,7 +651,7 @@ pub mod tests {
         assert!(package_ids.contains(&create_package_id("F@6")));
     }
 
-    // TODO: move tests
+    // TODO: move tests, problem is that local metadata requires IO
     // #[test]
     // fn conflicts() {
     //     let mut register = create_register();

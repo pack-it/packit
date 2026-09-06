@@ -17,7 +17,7 @@ use crate::{
         types::{PackageId, PackageName, Version},
     },
     platforms::{DEFAULT_CONFIG_DIR, DEFAULT_PREFIX, permissions},
-    register::{installed_package_version::InstalledPackageVersion, package_register::PackageRegister},
+    register::{installed_package_version::InstalledPackageVersion, metadata::LocalMetaHandler, package_register::PackageRegister},
     repositories::provider,
     utils::{
         constants::{DEFAULT_METADATA_REPOSITORY_PROVIDER, DEFAULT_METADATA_REPOSITORY_URL},
@@ -163,8 +163,8 @@ impl HandleCommand for InitArgs {
         };
 
         // Fetch Packit metadata from the default repository
-        let updated = installed_package_version
-            .get_local_metadata(&prefix_directory)
+        let updated = LocalMetaHandler::new(&prefix_directory)
+            .get_package(&package_id)
             .refresh(&provider)
             .unwrap_or_exit_msg("Packit cannot be initialized: error while retrieving Packit metadata", 1);
 

@@ -16,7 +16,9 @@ use crate::{
     packager,
     platforms::Target,
     register::{
-        installed_package_version::InstalledPackageVersion, metadata::error::LocalMetadataError, package_register::PackageRegister,
+        installed_package_version::InstalledPackageVersion,
+        metadata::{LocalMetaHandler, error::LocalMetadataError},
+        package_register::PackageRegister,
     },
     repositories::{
         provider::{self, create_metadata_provider},
@@ -630,7 +632,7 @@ fn check_package_test(package_id: &PackageId, register: &PackageRegister, config
 
     let package_version = register.get_package_version(package_id).expect("Expected package to exist");
 
-    let local_meta_handler = package_version.get_local_metadata(&config.prefix_directory);
+    let local_meta_handler = LocalMetaHandler::new(&config.prefix_directory).get_package(package_id);
     let local_metadata = local_meta_handler.read_metadata()?;
 
     // Copy test script to tempfile if it exists

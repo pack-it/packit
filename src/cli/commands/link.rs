@@ -14,13 +14,11 @@ use crate::{
         },
     },
     config::Config,
-    installer::{Symlinker, types::PackageName},
-    register::{
-        installed_package::InstalledPackage,
-        installed_package_version::InstalledPackageVersion,
-        metadata::{LocalMetaHandler, PackageRegisterExt},
-        package_register::PackageRegister,
+    installer::{
+        Symlinker,
+        types::{PackageId, PackageName},
     },
+    register::{installed_package::InstalledPackage, metadata::LocalMetaHandler, package_register::PackageRegister},
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
@@ -68,7 +66,7 @@ impl HandleCommand for LinkArgs {
             .unwrap_or_exit_msg("Unable to retrieve active version of package", 1);
 
         // Check if linking is allowed, exit if force is not enabled
-        if !self.linking_allowed(&register, &config, package, package_version) {
+        if !self.linking_allowed(&register, &config, package, &package_version.package_id) {
             if !self.force {
                 println!("Try '--force' if you are sure you want to link, note that this can result in issues");
                 exit(1);
@@ -97,20 +95,16 @@ impl HandleCommand for LinkArgs {
 impl LinkArgs {
     /// Checks if linking is allowed and shows a message when it is not allowed or cannot be checked.
     /// Returns true if linking is allowed, false otherwise.
-    fn linking_allowed(
-        &self,
-        register: &PackageRegister,
-        config: &Config,
-        package: &InstalledPackage,
-        package_version: &InstalledPackageVersion,
-    ) -> bool {
+    fn linking_allowed(&self, register: &PackageRegister, config: &Config, package: &InstalledPackage, package_id: &PackageId) -> bool {
         // Read and get conflicts
-        let package_conflicts: Vec<_> = LocalMetaHandler::read_package_conflicts(package, &config.prefix_directory)
+        let local_meta_handler = LocalMetaHandler::new(&config.prefix_directory);
+        let package_conflicts: Vec<_> = local_meta_handler
+            .read_package_conflicts(package)
             .unwrap_or_exit_msg("Error while reading local metadata", 1)
             .into_iter()
             .collect();
-        let conflicts = register
-            .get_conflicting_packages(&self.package_name, &package_conflicts, &config.prefix_directory)
+        let conflicts = local_meta_handler
+            .get_conflicting_packages(&register, &self.package_name, &package_conflicts)
             .unwrap_or_exit_msg("Error while reading local metadata", 1);
 
         if !conflicts.is_empty() {
@@ -120,7 +114,7 @@ impl LinkArgs {
             return false;
         }
 
-        let local_meta_handler = package_version.get_local_metadata(&config.prefix_directory);
+        let local_meta_handler = LocalMetaHandler::new(&config.prefix_directory).get_package(&package_id);
         let local_metadata = local_meta_handler.read_metadata().unwrap_or_exit_msg("Unable to read local metadata", 1);
 
         // Skip if the local metadata defines skip_symlinking

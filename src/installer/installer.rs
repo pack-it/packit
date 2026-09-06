@@ -27,7 +27,7 @@ use crate::{
     platforms::{DEFAULT_PREFIX, Target, permissions, symlink},
     register::{
         installed_package_version::InstalledPackageVersion,
-        metadata::{LocalMetaHandler, PackageRegisterExt, error::LocalMetadataError},
+        metadata::{LocalMetaHandler, error::LocalMetadataError},
         package_register::PackageRegister,
     },
     repositories::{
@@ -253,7 +253,7 @@ impl<'a> Installer<'a> {
         };
 
         // Refresh the local metadata for the new package
-        let local_metadata = LocalMetaHandler::new(&package_id, &self.config.prefix_directory);
+        let local_metadata = LocalMetaHandler::new(&self.config.prefix_directory).get_package(&package_id);
         let updated_metadata = local_metadata.refresh(self.repository_manager.get_metadata_provider(&install_meta.repository_id)?)?;
         installed_package_version.update_metadata_refresh(updated_metadata);
         self.register.save_to(&PackageRegister::get_path(&self.config.prefix_directory))?;
@@ -435,11 +435,9 @@ impl<'a> Installer<'a> {
             };
 
         // Check if the package has conflicting packages
-        let conflicts = self.register.get_conflicting_packages(
-            &package_id.name,
-            &install_meta.package_metadata.conflicts_with,
-            &self.config.prefix_directory,
-        )?;
+        let local_meta_handler = LocalMetaHandler::new(&self.config.prefix_directory);
+        let conflicts =
+            local_meta_handler.get_conflicting_packages(self.register, &package_id.name, &install_meta.package_metadata.conflicts_with)?;
         if !conflicts.is_empty() {
             warning!("Skipping symlinking because of conflicting packages:");
             standard_print::print_list(conflicts.iter().map_styled());
@@ -795,7 +793,7 @@ impl<'a> Installer<'a> {
     fn run_uninstall_script(&self, installed_package_version: &InstalledPackageVersion) -> Result<()> {
         let package_id = &installed_package_version.package_id;
 
-        let local_meta_handler = installed_package_version.get_local_metadata(&self.config.prefix_directory);
+        let local_meta_handler = LocalMetaHandler::new(&self.config.prefix_directory).get_package(package_id);
         let local_metadata = local_meta_handler.read_metadata()?;
 
         // Copy uninstall script to tempfile if it exists

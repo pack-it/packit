@@ -18,6 +18,7 @@ use crate::{
     register::{
         installed_package::InstalledPackage,
         metadata::error::{LocalMetadataError, Result},
+        package_register::PackageRegister,
     },
     repositories::{
         provider::MetadataProvider,
@@ -68,23 +69,35 @@ pub struct LocalPrebuildMetadata {
 
 /// Handler which handles the reading and refreshing of local metadata.
 pub struct LocalMetaHandler<'a> {
-    package_id: &'a PackageId,
     prefix_dir: &'a Path,
 }
 
+pub struct LocalMetaPackageHandler<'a> {
+    prefix_dir: &'a Path,
+    package_id: &'a PackageId,
+}
+
 impl<'a> LocalMetaHandler<'a> {
-    /// Creates a new `LocalMetaHandler` for the given package.
-    pub fn new(package_id: &'a PackageId, prefix_dir: &'a Path) -> Self {
-        Self { package_id, prefix_dir }
+    /// Creates a new `LocalMetaHandler`.
+    pub fn new(prefix_dir: &'a Path) -> Self {
+        Self { prefix_dir }
+    }
+
+    /// Gets the local metadata handler for the given package.
+    pub fn get_package(&self, package_id: &'a PackageId) -> LocalMetaPackageHandler<'a> {
+        LocalMetaPackageHandler {
+            prefix_dir: self.prefix_dir,
+            package_id,
+        }
     }
 
     /// Gets the conflicts of the given package.
     /// Returns a list of conflicts defined in the metadata, which can contain packages that are not installed.
-    pub fn read_package_conflicts(package: &InstalledPackage, prefix_dir: &Path) -> Result<HashSet<PackageName>> {
+    pub fn read_package_conflicts(&self, package: &InstalledPackage) -> Result<HashSet<PackageName>> {
         let mut conflicts = HashSet::new();
 
         for version in package.versions.values() {
-            let metadata = version.get_local_metadata(prefix_dir).read_metadata()?;
+            let metadata = self.get_package(&version.package_id).read_metadata()?;
 
             for conflict in metadata.conflicts_with {
                 conflicts.insert(conflict);
@@ -94,6 +107,38 @@ impl<'a> LocalMetaHandler<'a> {
         Ok(conflicts)
     }
 
+    /// Checks if a package has conflicts with any package that is installed.
+    /// Returns a list of the names of all conflicting packages.
+    pub fn get_conflicting_packages(
+        &self,
+        register: &PackageRegister,
+        package_name: &PackageName,
+        package_conflicts: &[PackageName],
+    ) -> Result<Vec<PackageName>> {
+        let mut conflicting_packages = Vec::new();
+
+        for (name, package) in register.iterate_packages() {
+            if !package.symlinked || name == package_name {
+                continue;
+            }
+
+            // Check if the package specifies this package as conflict
+            if package_conflicts.contains(name) {
+                conflicting_packages.push(name.clone());
+            }
+
+            // Check if this package specifies the package as conflict
+            let conflicts = self.read_package_conflicts(package)?;
+            if conflicts.contains(package_name) {
+                conflicting_packages.push(name.clone());
+            }
+        }
+
+        Ok(conflicting_packages)
+    }
+}
+
+impl<'a> LocalMetaPackageHandler<'a> {
     /// Gets the base path of the local metadata storage for the current package.
     fn get_base_path(&self) -> PathBuf {
         self.prefix_dir.join("metadata").join(&self.package_id.name).join(self.package_id.version.to_string())

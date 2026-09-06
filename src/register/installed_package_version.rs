@@ -1,13 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{
-    collections::HashSet,
-    path::{Path, PathBuf},
-};
+use std::{collections::HashSet, path::PathBuf};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::{config::Repository, installer::types::PackageId, register::metadata::LocalMetaHandler};
+use crate::{config::Repository, installer::types::PackageId};
 
 /// Represents a specific package version which is installed on the system.
 #[cfg_attr(test, derive(PartialEq))]
@@ -52,11 +49,6 @@ fn is_repository_provider_default(value: &String) -> bool {
 }
 
 impl InstalledPackageVersion {
-    /// Gets the local metadata handler for the installed package version.
-    pub fn get_local_metadata<'a>(&'a self, prefix_dir: &'a Path) -> LocalMetaHandler<'a> {
-        LocalMetaHandler::new(&self.package_id, prefix_dir)
-    }
-
     // Updates the `last_metadata_refresh` and the `last_metadata_change` based on the `updated` paramter.
     pub fn update_metadata_refresh(&mut self, updated_metadata: bool) {
         let now = Utc::now();
