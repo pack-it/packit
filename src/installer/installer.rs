@@ -643,8 +643,8 @@ impl<'a> Installer<'a> {
         }
 
         // Remove entire package directory if there is only one version, otherwise only remove the package version directory
-        let installed_versions = self.register.get_all_package_versions(&package_id.name);
-        let directory = match installed_versions.len() {
+        let installed_versions = self.register.get_all_package_versions(&package_id.name).len();
+        let directory = match installed_versions {
             1 => self.config.prefix_directory.join("packages").join(&package_id.name),
             _ => self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string()),
         };
@@ -695,14 +695,20 @@ impl<'a> Installer<'a> {
         }
 
         // Delete the determined directory
-        if let Some(directory) = directory.to_str() {
-            debug!("Removing the package directory: {directory}");
-        }
+        debug!("Removing the package directory: {}", directory.display());
         fs::remove_dir_all(&directory).err_with_path("remove dirs", &directory)?;
 
         // Remove package from the register
         debug!("Removing {} from the package register", package_id.style());
         self.register.remove_package_version(&package_id);
+
+        // Remove local metadata
+        let local_metadata_path = match installed_versions {
+            1 => self.config.prefix_directory.join("metadata").join(&package_id.name),
+            _ => self.config.prefix_directory.join("metadata").join(&package_id.name).join(package_id.version.to_string()),
+        };
+        debug!("Removing the local metadata directory: {}", local_metadata_path.display());
+        fs::remove_dir_all(&local_metadata_path).err_with_path("remove dirs", &directory)?;
 
         Ok(vec![package_id])
     }
@@ -771,6 +777,11 @@ impl<'a> Installer<'a> {
         // Delete the installed package from toml
         debug!("Removing {} from the package register", package_name.style());
         self.register.remove_package(package_name);
+
+        // Remove local metadata
+        let local_metadata_path = self.config.prefix_directory.join("metadata").join(package_name);
+        debug!("Removing the local metadata directory: {}", local_metadata_path.display());
+        fs::remove_dir_all(&local_metadata_path).err_with_path("remove dirs", &directory)?;
 
         Ok(uninstalled)
     }
