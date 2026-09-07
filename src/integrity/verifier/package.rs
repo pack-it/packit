@@ -73,46 +73,23 @@ fn check_package_alterations(package_id: &PackageId, register: &PackageRegister,
         disable_prebuilds: false,
     };
 
-    // TODO: prebuild list and prebuild provider are needed here
-    // Create providers
-    let Some(provider) = provider::create_metadata_provider(&repository) else {
-        warning!("Cannot create metadata provider for {}, skipping check", package_id.style());
-        return Ok(false);
-    };
+    let local_meta_handler = LocalMetaHandler::new(&config.prefix_directory).get_package(package_id);
+    let local_metadata = local_meta_handler.read_metadata()?;
+
+    // Create prebuild provider
     let Some(prebuild_provider) = provider::create_prebuild_provider(&repository) else {
         warning!("Cannot create prebuild provider for {}, skipping check", package_id.style());
         return Ok(false);
     };
 
-    // Request package metadata
-    let package_meta = match provider.read_package(&package_id.name) {
-        Ok(package_meta) => package_meta,
-        Err(e) => {
-            warning!("Cannot read package metadata of {}, skipping check", package_id.style());
-            debug!(err: e, "Retrieving package metadata failed");
-            return Ok(false);
-        },
-    };
-
-    // Request prebuilds list
-    let prebuilds_list = match provider.read_prebuilds_list(&package_id.name, &package_id.version) {
-        Ok(Some(prebuilds_list)) => prebuilds_list,
-        Ok(None) => PrebuildsList::default(package_meta.supported_versions.keys()),
-        Err(e) => {
-            warning!("Cannot read prebuild list for {}, skipping check", package_id.style());
-            debug!(err: e, "Retrieving prebuilds list failed");
-            return Ok(false);
-        },
-    };
-
-    // Retrieve `prebuild_id` to use
-    let Some((prebuild_id, prebuild_meta)) = prebuilds_list.get_best_prebuild(&Target::current()) else {
-        warning!("Cannot find prebuild to create for {}, skipping packaging", package_id.style());
-        return Ok(false);
+    // Get prebuild information from local metadata, or use default
+    let (prebuild_id, prebuild_meta) = match local_metadata.prebuild {
+        Some(prebuild) => (prebuild.id, prebuild.info),
+        None => PrebuildsList::default_for_target(&Target::current()),
     };
 
     let revision = package_version.revisions.len() as u64;
-    let prebuild_file_meta = match prebuild_provider.get_prebuild_meta(package_id, revision, prebuild_id) {
+    let prebuild_file_meta = match prebuild_provider.get_prebuild_meta(package_id, revision, &prebuild_id) {
         Ok(prebuild_file_meta) => prebuild_file_meta,
         Err(e) => {
             warning!(
@@ -125,7 +102,7 @@ fn check_package_alterations(package_id: &PackageId, register: &PackageRegister,
     };
 
     let install_directory = config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
-    let compressed = packager::compress(&install_directory, prebuild_meta)?;
+    let compressed = packager::compress(&install_directory, &prebuild_meta)?;
     let checksum = Checksum::from_bytes(&compressed);
 
     Ok(checksum != prebuild_file_meta.checksum)

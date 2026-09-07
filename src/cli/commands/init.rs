@@ -152,7 +152,7 @@ impl HandleCommand for InitArgs {
             exit(1);
         };
 
-        // Create the repository provider to fetch Packit metadata from
+        // Create the repository provider to fetch Packit metadata
         let repository = Repository::new(
             &installed_package_version.metadata_repository_url,
             &installed_package_version.metadata_repository_provider,

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
@@ -21,8 +21,8 @@ pub struct PackageMeta {
     pub versions: Vec<Version>,
     pub required_packit_version: Option<Version>,
 
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub conflicts_with: Vec<PackageName>,
+    #[serde(default, skip_serializing_if = "HashSet::is_empty")]
+    pub conflicts_with: HashSet<PackageName>,
     pub supported_versions: HashMap<TargetBounds, VersionIntervals>,
 
     #[serde(skip_serializing_if = "Option::is_none")]

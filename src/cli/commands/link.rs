@@ -98,11 +98,8 @@ impl LinkArgs {
     fn linking_allowed(&self, register: &PackageRegister, config: &Config, package: &InstalledPackage, package_id: &PackageId) -> bool {
         // Read and get conflicts
         let local_meta_handler = LocalMetaHandler::new(&config.prefix_directory);
-        let package_conflicts: Vec<_> = local_meta_handler
-            .read_package_conflicts(package)
-            .unwrap_or_exit_msg("Error while reading local metadata", 1)
-            .into_iter()
-            .collect();
+        let package_conflicts =
+            local_meta_handler.read_package_conflicts(package).unwrap_or_exit_msg("Error while reading local metadata", 1);
         let conflicts = local_meta_handler
             .get_conflicting_packages(&register, &self.package_name, &package_conflicts)
             .unwrap_or_exit_msg("Error while reading local metadata", 1);

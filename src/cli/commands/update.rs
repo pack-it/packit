@@ -48,8 +48,12 @@ pub struct UpdateArgs {
     exclude: Vec<PackageName>,
 
     /// Only refresh the local metadata
-    #[arg(long)]
+    #[arg(long, default_value = "false", conflicts_with = "skip_refresh")]
     refresh_only: bool,
+
+    /// Skips refreshing of the local metadata
+    #[arg(long, default_value = "false", conflicts_with = "refresh_only")]
+    skip_refresh: bool,
 }
 
 impl HandleCommand for UpdateArgs {
@@ -140,7 +144,9 @@ impl HandleCommand for UpdateArgs {
         }
 
         // Refresh metadata of all given packages
-        self.refresh_metadata(&mut register, &config);
+        if !self.skip_refresh {
+            self.refresh_metadata(&mut register, &config);
+        }
     }
 }
 

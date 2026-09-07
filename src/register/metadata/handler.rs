@@ -52,8 +52,8 @@ pub struct LocalMetadata {
     pub deprecation: Option<DeprecationInfo>,
     pub skip_symlinking: bool,
 
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub conflicts_with: Vec<PackageName>,
+    #[serde(default, skip_serializing_if = "HashSet::is_empty")]
+    pub conflicts_with: HashSet<PackageName>,
 
     pub prebuild: Option<LocalPrebuildMetadata>,
 }
@@ -113,9 +113,9 @@ impl<'a> LocalMetaHandler<'a> {
         &self,
         register: &PackageRegister,
         package_name: &PackageName,
-        package_conflicts: &[PackageName],
-    ) -> Result<Vec<PackageName>> {
-        let mut conflicting_packages = Vec::new();
+        package_conflicts: &HashSet<PackageName>,
+    ) -> Result<HashSet<PackageName>> {
+        let mut conflicting_packages = HashSet::new();
 
         for (name, package) in register.iterate_packages() {
             if !package.symlinked || name == package_name {
@@ -124,13 +124,13 @@ impl<'a> LocalMetaHandler<'a> {
 
             // Check if the package specifies this package as conflict
             if package_conflicts.contains(name) {
-                conflicting_packages.push(name.clone());
+                conflicting_packages.insert(name.clone());
             }
 
             // Check if this package specifies the package as conflict
             let conflicts = self.read_package_conflicts(package)?;
             if conflicts.contains(package_name) {
-                conflicting_packages.push(name.clone());
+                conflicting_packages.insert(name.clone());
             }
         }
 
@@ -249,7 +249,7 @@ impl<'a> LocalMetaPackageHandler<'a> {
         }
 
         // Remove files that are not needed anymore
-        let removed_files: Vec<_> = before_files.iter().filter(|x| !after_files.contains(x)).collect();
+        let removed_files = before_files.iter().filter(|x| !after_files.contains(x));
         for removed_file in removed_files {
             fs::remove_file(removed_file).err_with_path("remove", removed_file)?;
             updated = true;
@@ -347,7 +347,7 @@ impl<'a> LocalMetaPackageHandler<'a> {
         if before_files.contains(&destination) {
             let old_content = fs::read(&destination).err_with_path("read", &destination)?;
 
-            // If the file did not change, skip writing and store it as new file
+            // If the file did not change, skip writing and store it in `after_files`
             if new_content == old_content {
                 after_files.push(destination);
                 return Ok(false);

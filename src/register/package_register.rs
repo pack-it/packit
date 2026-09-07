@@ -453,7 +453,7 @@ pub mod tests {
             homepage: None,
             versions: vec![package_id.version.clone()],
             required_packit_version: None,
-            conflicts_with: Vec::new(),
+            conflicts_with: HashSet::new(),
             supported_versions: HashMap::from([(current_target_bounds, version_intervals)]),
             deprecation: None,
         }
@@ -650,71 +650,4 @@ pub mod tests {
         assert!(package_ids.contains(&create_package_id("F@5")));
         assert!(package_ids.contains(&create_package_id("F@6")));
     }
-
-    // TODO: move tests, problem is that local metadata requires IO
-    // #[test]
-    // fn conflicts() {
-    //     let mut register = create_register();
-
-    //     let conflicting = register.get_conflicting_packages(&create_package_name("F"), &[create_package_name("E")]);
-    //     assert_eq!(conflicting, [&create_package_name("E")]);
-
-    //     let package_id = create_package_id("new_package@2.90");
-    //     let mut package_meta = create_package_meta(&package_id);
-    //     package_meta.conflicts_with.push(create_package_name("E"));
-    //     let package_version_meta = create_package_version_meta(&package_id);
-    //     let dependency_ids = HashSet::new();
-
-    //     // Add the package
-    //     register.add_package(
-    //         &package_meta,
-    //         &package_version_meta,
-    //         dependency_ids,
-    //         &Repository::new("-", "-"),
-    //         &PathBuf::from("-"),
-    //         true,
-    //         false,
-    //         false,
-    //     );
-
-    //     let conflicting = register.get_conflicting_packages(&create_package_name("E"), &[]);
-    //     assert_eq!(conflicting, [&create_package_name("new_package")]);
-
-    //     let conflicting = register.get_conflicting_packages(&create_package_name("E"), &[create_package_name("E")]);
-    //     assert_eq!(conflicting, [&create_package_name("new_package")]);
-    // }
-
-    // #[test]
-    // fn conflicts_no_symlink() {
-    //     let mut register = create_register();
-
-    //     let package_id = create_package_id("new_package@2.90");
-    //     let mut package_meta = create_package_meta(&package_id);
-    //     package_meta.conflicts_with.push(create_package_name("E"));
-    //     let package_version_meta = create_package_version_meta(&package_id);
-    //     let dependency_ids = HashSet::new();
-
-    //     // Add the package
-    //     register.add_package(
-    //         &package_meta,
-    //         &package_version_meta,
-    //         dependency_ids,
-    //         &Repository::new("-", "-"),
-    //         &PathBuf::from("-"),
-    //         false,
-    //         false,
-    //         false,
-    //     );
-
-    //     let conflicting = register.get_conflicting_packages(&create_package_name("E"), &[]);
-    //     assert_eq!(conflicting, &[] as &[&PackageName]);
-    // }
-
-    // #[test]
-    // fn no_conflicts() {
-    //     let register = create_register();
-
-    //     let conflicting: Vec<&PackageName> = register.get_conflicting_packages(&create_package_name("F"), &[]);
-    //     assert_eq!(conflicting, &[] as &[&PackageName]);
-    // }
 }
