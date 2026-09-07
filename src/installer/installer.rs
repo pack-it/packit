@@ -191,6 +191,14 @@ impl<'a> Installer<'a> {
 
         let version_meta = &install_meta.version_metadata;
         let script_args = version_meta.get_script_args(&install_meta.target_bounds)?;
+        let target_meta = version_meta.get_target(&install_meta.target_bounds)?;
+
+        if let Some(notice) = &version_meta.preinstall_notice {
+            println!("{notice}");
+        }
+        if let Some(notice) = &target_meta.preinstall_notice {
+            println!("{notice}");
+        }
 
         self.execute_preinstall(&package_id, install_meta, &install_directory, &script_args)?;
 
@@ -234,14 +242,18 @@ impl<'a> Installer<'a> {
 
         self.execute_postinstall(&package_id, install_meta, &install_directory, &script_args)?;
 
-        // Get the target information from the package version info
-        let target = version_meta.get_target(&install_meta.target_bounds)?;
-
-        self.determine_active(install_meta, &package_id, target)?;
+        self.determine_active(install_meta, &package_id, target_meta)?;
 
         // Only run the test if the skip test option is false
         if !self.options.skip_test {
-            self.execute_test(&package_id, install_meta, &install_directory, &script_args, target)?;
+            self.execute_test(&package_id, install_meta, &install_directory, &script_args, target_meta)?;
+        }
+
+        if let Some(notice) = &version_meta.postinstall_notice {
+            println!("{notice}");
+        }
+        if let Some(notice) = &target_meta.postinstall_notice {
+            println!("{notice}");
         }
 
         Ok(())

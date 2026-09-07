@@ -34,6 +34,12 @@ pub struct PackageTarget {
     pub uninstall_script: Option<Script>,
 
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub preinstall_notice: Option<String>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub postinstall_notice: Option<String>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub use_preinstall: Option<bool>,
 
     #[serde(default, skip_serializing_if = "Option::is_none")]
