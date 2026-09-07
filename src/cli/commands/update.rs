@@ -183,6 +183,7 @@ impl UpdateArgs {
         filtered_updatables.into_iter().map(OptionalPackageId::from).collect()
     }
 
+    /// Refreshes the metadata for the packages given in the command.
     fn refresh_metadata(&self, register: &mut PackageRegister, config: &Config) {
         // If `--all` is specified use all installed packages
         let packages = match self.all {
@@ -221,7 +222,10 @@ impl UpdateArgs {
                 .save_to(&PackageRegister::get_path(&config.prefix_directory))
                 .unwrap_or_exit_msg("Error while saving register", 1);
 
-            println!("{package_id}: {updated_metadata}");
+            // Show message
+            if updated_metadata {
+                println!("Updated local metadata of {}", package_id.style());
+            }
         }
     }
 }

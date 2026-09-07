@@ -24,7 +24,7 @@ use crate::{
         provider::MetadataProvider,
         types::{DeprecationInfo, Licenses, PackageMeta, PackageVersionMeta, PrebuildMeta, PrebuildsList, Requirement, TargetBounds},
     },
-    utils::ioerror::IOResultExt,
+    utils::{ioerror::IOResultExt, serialization},
 };
 
 const METADATA_FILENAME: &str = "metadata.toml";
@@ -44,15 +44,18 @@ pub struct LocalMetadata {
     pub test_requirements: Vec<Requirement>,
 
     #[serde(default, skip_serializing_if = "HashSet::is_empty")]
+    #[serde(serialize_with = "serialization::serialize_set_sorted")]
     pub external_test_files: HashSet<String>,
 
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(serialize_with = "serialization::serialize_map_sorted")]
     pub script_args: HashMap<String, String>,
 
     pub deprecation: Option<DeprecationInfo>,
     pub skip_symlinking: bool,
 
     #[serde(default, skip_serializing_if = "HashSet::is_empty")]
+    #[serde(serialize_with = "serialization::serialize_set_sorted")]
     pub conflicts_with: HashSet<PackageName>,
 
     pub prebuild: Option<LocalPrebuildMetadata>,
@@ -72,6 +75,7 @@ pub struct LocalMetaHandler<'a> {
     prefix_dir: &'a Path,
 }
 
+/// Handler which handles the reading and refreshing of local metadata for a specific package.
 pub struct LocalMetaPackageHandler<'a> {
     prefix_dir: &'a Path,
     package_id: &'a PackageId,
