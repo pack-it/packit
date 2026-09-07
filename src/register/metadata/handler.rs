@@ -186,6 +186,7 @@ impl<'a> LocalMetaPackageHandler<'a> {
 
     /// Refreshes the local metadata of the given package.
     /// Returns true if the metadata was changed, false otherwise.
+    #[expect(clippy::borrowed_box)]
     pub fn refresh(&self, provider: &Box<dyn MetadataProvider>) -> Result<bool> {
         let metadata_dir = self.get_base_path();
 
@@ -316,8 +317,9 @@ impl<'a> LocalMetaPackageHandler<'a> {
     /// Requests a file from the given provider.
     /// If the file cannot be found, it returns an `LocalMetadataError::MetadataFileNotFound`, or None if the file is not required.
     /// Returns the bytes of the file if it can be found.
+    #[expect(clippy::borrowed_box)]
     fn request_file(&self, provider: &Box<dyn MetadataProvider>, file_path: &str, required: bool) -> Result<Option<Bytes>> {
-        let Some(bytes) = provider.read_file_bytes(&self.package_id.name, &file_path)? else {
+        let Some(bytes) = provider.read_file_bytes(&self.package_id.name, file_path)? else {
             if !required {
                 return Ok(None);
             }
@@ -336,7 +338,7 @@ impl<'a> LocalMetaPackageHandler<'a> {
     /// Returns true if the file changed, false otherwise.
     fn write_file_if_changed(
         &self,
-        before_files: &Vec<PathBuf>,
+        before_files: &[PathBuf],
         after_files: &mut Vec<PathBuf>,
         destination: PathBuf,
         new_content: Option<Bytes>,

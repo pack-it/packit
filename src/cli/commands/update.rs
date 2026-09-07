@@ -193,7 +193,7 @@ impl UpdateArgs {
                 error!(msg: "No packages specified to refresh");
                 exit(1);
             },
-            false => &parameter_checks::expand_optional_ids(&register, &config, &self.packages),
+            false => &parameter_checks::expand_optional_ids(register, config, &self.packages),
         };
 
         for package_id in packages {

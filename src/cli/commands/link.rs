@@ -101,7 +101,7 @@ impl LinkArgs {
         let package_conflicts =
             local_meta_handler.read_package_conflicts(package).unwrap_or_exit_msg("Error while reading local metadata", 1);
         let conflicts = local_meta_handler
-            .get_conflicting_packages(&register, &self.package_name, &package_conflicts)
+            .get_conflicting_packages(register, &self.package_name, &package_conflicts)
             .unwrap_or_exit_msg("Error while reading local metadata", 1);
 
         if !conflicts.is_empty() {
@@ -111,7 +111,7 @@ impl LinkArgs {
             return false;
         }
 
-        let local_meta_handler = LocalMetaHandler::new(&config.prefix_directory).get_package(&package_id);
+        let local_meta_handler = LocalMetaHandler::new(&config.prefix_directory).get_package(package_id);
         let local_metadata = local_meta_handler.read_metadata().unwrap_or_exit_msg("Unable to read local metadata", 1);
 
         // Skip if the local metadata defines skip_symlinking
