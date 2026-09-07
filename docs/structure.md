@@ -5,6 +5,7 @@ This file explains the Packit structure and configuration.
 ## File Structure
 The Packit directory, which contains Packit data is called the [prefix](#prefix) directory. This directory contains the following files and directories:
 - [Register.toml](#registertoml)
+- [metadata](#local-metadata)
 - [packages](#packages)
 - [bin, gnubin, lib, include and share](#symlinks)
 - [active](#active-packages)
@@ -20,6 +21,9 @@ The prefix directory of Packit contains all data of installed packages.<br>
 
 ### Register.toml
 The `Register.toml` file is located inside the prefix and stores information about all installed packages. This file is managed by Packit and should not be changed directly.
+
+### Local Metadata
+The `metadata` directory contains all of the local metadata of the installed packages. This directory is managed by Packit and should not be changed directly.
 
 ### Packages
 All installed packages will go in `<prefix>/packages/<PACKAGE-NAME>/<PACKAGE-VERSION>/`.

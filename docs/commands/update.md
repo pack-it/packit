@@ -1,7 +1,7 @@
 # Update
 
 The `update` command has the following command line syntax:<br>
-`pit update [<PACKAGE-NAME>[@<VERSION>] ...] [--new-version <NEW-VERSION>] [--all] [--exclude <PACKAGE-NAME> ...]`
+`pit update [<PACKAGE-NAME>[@<VERSION>] ...] [--new-version <NEW-VERSION>] [--all] [--exclude <PACKAGE-NAME> ...] [--refresh-only] [--skip-refresh]`
 
 ## Basic update
 The `update` command updates the specified packages, using the following syntax:<br>
@@ -34,3 +34,9 @@ The `--all` flag can be used to update all latest installed versions to the late
 
 ### `--exclude <PACKAGE-NAME> ...`
 The `--exclude` flag can be used to exclude certain packages when using the `--all` flag.
+
+### `--refresh-only`
+The `--refresh-only` flag can be used to only refresh the local metadata of the specified packages. It cannot be used together with the `--skip-refresh` flag.
+
+### `--skip-refresh`
+The `--skip-refresh` flag can be used to skip the refreshing of the local metadata of the packages. It cannot be used together with the `--refresh-only` flag.
