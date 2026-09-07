@@ -92,7 +92,9 @@ pub fn contains_package_id(packages: &Vec<OptionalPackageId>, package_id: &Packa
 #[cfg(test)]
 pub mod tests {
 
-    use crate::installer::types::{optional_id_tests::create_optional_id, package_name_tests::create_package_name};
+    use crate::installer::types::{
+        optional_id_tests::create_optional_id, package_id_tests::create_package_id, package_name_tests::create_package_name,
+    };
 
     use super::*;
 
@@ -146,5 +148,43 @@ pub mod tests {
         let packages = vec![];
         let duplicates = get_package_duplicates(&packages);
         assert_eq!(duplicates, HashSet::new());
+    }
+
+    #[test]
+    fn empty_contains_package_id() {
+        assert!(!contains_package_id(&vec![], &create_package_id("test@1")));
+    }
+
+    #[test]
+    fn contains_package_id_test() {
+        let optional_ids = vec![create_optional_id("test"), create_optional_id("foo"), create_optional_id("beh@4")];
+
+        // Does contain
+        assert!(contains_package_id(&optional_ids, &create_package_id("test@1")));
+        assert!(contains_package_id(&optional_ids, &create_package_id("foo@2")));
+        assert!(contains_package_id(&optional_ids, &create_package_id("beh@4")));
+
+        // Does not contain
+        assert!(!contains_package_id(&optional_ids, &create_package_id("bar@3")));
+        assert!(!contains_package_id(&optional_ids, &create_package_id("beh@3")));
+    }
+
+    #[test]
+    fn contains_both_package_id() {
+        let optional_ids = vec![
+            create_optional_id("foo@1"),
+            create_optional_id("foo"),
+            create_optional_id("beh@3"),
+            create_optional_id("beh@4"),
+        ];
+
+        // Does contain
+        assert!(contains_package_id(&optional_ids, &create_package_id("foo@1")));
+        assert!(contains_package_id(&optional_ids, &create_package_id("foo@2")));
+        assert!(contains_package_id(&optional_ids, &create_package_id("beh@3")));
+        assert!(contains_package_id(&optional_ids, &create_package_id("beh@4")));
+
+        // Does not contain
+        assert!(!contains_package_id(&optional_ids, &create_package_id("beh@1")));
     }
 }
