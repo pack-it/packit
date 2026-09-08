@@ -39,4 +39,4 @@ The `--exclude` flag can be used to exclude certain packages when using the `--a
 The `--refresh-only` flag can be used to only refresh the local metadata of the specified packages. It cannot be used together with the `--skip-refresh` flag.
 
 ### `--skip-refresh`
-The `--skip-refresh` flag can be used to skip the refreshing of the local metadata of the packages. It cannot be used together with the `--refresh-only` flag.
+The `--skip-refresh` flag can be used to skip the refresh of the local metadata of the packages. It cannot be used together with the `--refresh-only` flag.

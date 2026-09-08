@@ -11,7 +11,7 @@ where
     V: Serialize,
 {
     let mut entries: Vec<_> = map.iter().collect();
-    entries.sort_by_key(|(x, _)| *x);
+    entries.sort_by_key(|(k, _)| *k);
 
     let mut map_serializer = serializer.serialize_map(Some(entries.len()))?;
 

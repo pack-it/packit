@@ -52,7 +52,7 @@ pub struct UpdateArgs {
     refresh_only: bool,
 
     /// Skips refreshing of the local metadata
-    #[arg(long, default_value = "false", conflicts_with = "refresh_only")]
+    #[arg(long, default_value = "false", conflicts_with_all = ["refresh_only", "new_version"])]
     skip_refresh: bool,
 }
 
@@ -198,8 +198,10 @@ impl UpdateArgs {
 
         for package_id in packages {
             let Some(package_version) = register.get_package_version_mut(package_id) else {
-                error!(msg: "Expected package version {} to exist, skipping refresh", package_id.style());
-                continue;
+                error!(msg: "Expected package version {} to exist", package_id.style());
+
+                // Exit because we encountered an unexpected error.
+                exit(1);
             };
 
             // Create repository provider for package

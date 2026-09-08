@@ -96,8 +96,17 @@ impl LinkArgs {
     /// Checks if linking is allowed and shows a message when it is not allowed or cannot be checked.
     /// Returns true if linking is allowed, false otherwise.
     fn linking_allowed(&self, register: &PackageRegister, config: &Config, package: &InstalledPackage, package_id: &PackageId) -> bool {
-        // Read and get conflicts
         let local_meta_handler = LocalMetaHandler::new(&config.prefix_directory);
+        let local_meta_package_handler = local_meta_handler.get_package(package_id);
+        let local_metadata = local_meta_package_handler.read_metadata().unwrap_or_exit_msg("Unable to read local metadata", 1);
+
+        // Skip if the local metadata defines skip_symlinking
+        if local_metadata.skip_symlinking {
+            warning!("The package metadata defines we should not symlink this package");
+            return false;
+        }
+
+        // Read and get conflicts
         let package_conflicts =
             local_meta_handler.read_package_conflicts(package).unwrap_or_exit_msg("Error while reading local metadata", 1);
         let conflicts = local_meta_handler
@@ -108,15 +117,6 @@ impl LinkArgs {
             warning!("The package has conflicts with other packages, cancelling linking");
             println!("Conflicting packages:");
             standard_print::print_list(conflicts.iter().map_styled());
-            return false;
-        }
-
-        let local_meta_handler = LocalMetaHandler::new(&config.prefix_directory).get_package(package_id);
-        let local_metadata = local_meta_handler.read_metadata().unwrap_or_exit_msg("Unable to read local metadata", 1);
-
-        // Skip if the local metadata defines skip_symlinking
-        if local_metadata.skip_symlinking {
-            warning!("The package metadata defines we should not symlink this package");
             return false;
         }
 

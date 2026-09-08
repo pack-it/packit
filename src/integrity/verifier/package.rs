@@ -9,7 +9,7 @@ use crate::{
     config::{Config, Repository},
     installer::{
         self,
-        scripts::{self, SCRIPT_EXTENSION, ScriptData, ScriptError},
+        scripts::{self, ScriptData, ScriptError},
         types::{Dependency, PackageId, PackageName},
     },
     integrity::{Issue, error::Result, utils::get_storage_packages},
@@ -613,7 +613,7 @@ fn check_package_test(package_id: &PackageId, register: &PackageRegister, config
     let local_metadata = local_meta_handler.read_metadata()?;
 
     // Copy test script to tempfile if it exists
-    let script_text = match local_meta_handler.read_file(&format!("test.{SCRIPT_EXTENSION}")) {
+    let script_text = match local_meta_handler.read_test_script() {
         Ok(script_text) => script_text,
         Err(LocalMetadataError::LocalMetadataFileNotFound { .. }) => return Ok(false),
         Err(e) => return Err(e.into()),

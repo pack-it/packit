@@ -52,6 +52,9 @@ pub struct LocalMetadata {
     pub script_args: HashMap<String, String>,
 
     pub deprecation: Option<DeprecationInfo>,
+
+    #[serde(default = "PackageVersionMeta::default_skip_symlinking")]
+    #[serde(skip_serializing_if = "PackageVersionMeta::is_default_skip_symlinking")]
     pub skip_symlinking: bool,
 
     #[serde(default, skip_serializing_if = "HashSet::is_empty")]
@@ -102,10 +105,7 @@ impl<'a> LocalMetaHandler<'a> {
 
         for version in package.versions.values() {
             let metadata = self.get_package(&version.package_id).read_metadata()?;
-
-            for conflict in metadata.conflicts_with {
-                conflicts.insert(conflict);
-            }
+            conflicts.extend(metadata.conflicts_with);
         }
 
         Ok(conflicts)
@@ -129,6 +129,7 @@ impl<'a> LocalMetaHandler<'a> {
             // Check if the package specifies this package as conflict
             if package_conflicts.contains(name) {
                 conflicting_packages.insert(name.clone());
+                continue;
             }
 
             // Check if this package specifies the package as conflict
@@ -184,6 +185,18 @@ impl<'a> LocalMetaPackageHandler<'a> {
         Ok(content.into())
     }
 
+    /// Reads the test script from the storage of the given package.
+    /// Returns the file as string.
+    pub fn read_test_script(&self) -> Result<String> {
+        self.read_file(&format!("test.{SCRIPT_EXTENSION}"))
+    }
+
+    /// Reads the uninstall script from the storage of the given package.
+    /// Returns the file as string.
+    pub fn read_uninstall_script(&self) -> Result<String> {
+        self.read_file(&format!("uninstall.{SCRIPT_EXTENSION}"))
+    }
+
     /// Refreshes the local metadata of the given package.
     /// Returns true if the metadata was changed, false otherwise.
     #[expect(clippy::borrowed_box)]
@@ -208,6 +221,7 @@ impl<'a> LocalMetaPackageHandler<'a> {
         }
 
         // Collect a list of all files in the metadata directory before refreshing
+        // Note that this assumes a flat metadata directory structure
         let mut before_files = Vec::new();
         for entry in fs::read_dir(&metadata_dir).err_with_path("read", &metadata_dir)? {
             let entry = entry.err_with_path("iterate", &metadata_dir)?;
@@ -226,7 +240,7 @@ impl<'a> LocalMetaPackageHandler<'a> {
         let external_test_files = package_version_meta.get_external_test_files(&target_bounds)?;
         for external_file in external_test_files {
             // Flatten external file directory names
-            let normalized_file_name = external_file.replace("/", "-");
+            let normalized_file_name = normalize_external_test_file_path(external_file);
 
             let destination = metadata_dir.join(normalized_file_name);
             let new_file = self.request_file(provider, external_file, true)?;
@@ -280,9 +294,8 @@ impl<'a> LocalMetaPackageHandler<'a> {
         // Normalize external test files to flatten directories into the name
         let external_test_files = package_version_meta
             .get_external_test_files(target_bounds)?
-            .iter()
-            .map(ToString::to_string)
-            .map(|x| x.replace("/", "-"))
+            .into_iter()
+            .map(normalize_external_test_file_path)
             .collect();
 
         let script_args =
@@ -365,4 +378,9 @@ impl<'a> LocalMetaPackageHandler<'a> {
         after_files.push(destination);
         Ok(true)
     }
+}
+
+/// Normalizes the external test file path by flattening directories into the filename.
+fn normalize_external_test_file_path(external_test_file: &str) -> String {
+    external_test_file.replace("/", "-")
 }

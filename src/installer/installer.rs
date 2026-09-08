@@ -19,7 +19,7 @@ use crate::{
         error::{InstallerError, Result},
         install_tree::{InstallMeta, InstallTree, InstallTreeBuilder, InstallType},
         options::InstallerOptions,
-        scripts::{self, SCRIPT_EXTENSION, ScriptData, ScriptError},
+        scripts::{self, ScriptData, ScriptError},
         symlinker::Symlinker,
         types::{OptionalPackageId, PackageId, PackageName, Version},
         unpack::unpack,
@@ -435,13 +435,15 @@ impl<'a> Installer<'a> {
             };
 
         // Check if the package has conflicting packages
-        let local_meta_handler = LocalMetaHandler::new(&self.config.prefix_directory);
-        let conflicts =
-            local_meta_handler.get_conflicting_packages(self.register, &package_id.name, &install_meta.package_metadata.conflicts_with)?;
-        if !conflicts.is_empty() {
-            warning!("Skipping symlinking because of conflicting packages:");
-            standard_print::print_list(conflicts.iter().map_styled());
-            should_symlink = false;
+        if should_symlink {
+            let package_conflicts = &install_meta.package_metadata.conflicts_with;
+            let local_meta_handler = LocalMetaHandler::new(&self.config.prefix_directory);
+            let conflicts = local_meta_handler.get_conflicting_packages(self.register, &package_id.name, package_conflicts)?;
+            if !conflicts.is_empty() {
+                warning!("Skipping symlinking because of conflicting packages:");
+                standard_print::print_list(conflicts.iter().map_styled());
+                should_symlink = false;
+            }
         }
 
         let mut should_set_active = true;
@@ -797,7 +799,7 @@ impl<'a> Installer<'a> {
         let local_metadata = local_meta_handler.read_metadata()?;
 
         // Copy uninstall script to tempfile if it exists
-        let script_text = match local_meta_handler.read_file(&format!("uninstall.{SCRIPT_EXTENSION}")) {
+        let script_text = match local_meta_handler.read_uninstall_script() {
             Ok(script_text) => script_text,
             Err(LocalMetadataError::LocalMetadataFileNotFound { .. }) => {
                 debug!("Skipping uninstall script execution since metadata does not define it");
