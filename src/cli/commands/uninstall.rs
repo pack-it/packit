@@ -93,7 +93,7 @@ impl UninstallArgs {
 
             for dependent in &missing_dependents {
                 // If none of the given packages covers the dependent throw an error and exit
-                if !parameter_checks::contains_package_id(&self.packages, &dependent) {
+                if !parameter_checks::contains_package_id(&self.packages, dependent) {
                     error!(
                         msg: "{} cannot be uninstalled, because it is a dependency of the following packages:",
                         package.style()
@@ -119,13 +119,13 @@ impl UninstallArgs {
                 return package.get_versions().iter().flat_map(|p| p.dependents.iter().cloned()).collect();
             }
 
-            not_found::register_package(&optional_id.name, &register)
+            not_found::register_package(&optional_id.name, register)
         };
 
         if let Some(package_version) = register.get_package_version(&package_id) {
             return package_version.dependents.iter().cloned().collect();
         }
 
-        not_found::register_package_version(&package_id, &register)
+        not_found::register_package_version(&package_id, register)
     }
 }

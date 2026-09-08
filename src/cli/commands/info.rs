@@ -3,6 +3,7 @@ use crate::{
     cli::display::{standard_print::DisplayJoined, styled::MapStyled},
     installer::types::PackageName,
     platforms::{DEFAULT_CONFIG_DIR, OsVersion, Target},
+    register::metadata::LocalMetaHandler,
     repositories::manager::RepositoryManager,
     utils::packit_version::{current_packit_version, packit_version_name},
 };
@@ -100,11 +101,11 @@ impl HandleCommand for InfoArgs {
         // Show package version specific information
         if let Some(package_version) = package_version {
             let package_id = PackageId::new(package.name.clone(), package_version.clone());
-            self.display_package_version_info(&package_id, &register, installed_package);
+            self.display_package_version_info(&package_id, &register, &config, installed_package);
             return;
         }
 
-        self.display_package_info(&package.name, installed_package);
+        self.display_package_info(&config, &package.name, installed_package);
     }
 }
 
@@ -178,7 +179,7 @@ impl InfoArgs {
     }
 
     /// Displays package info.
-    fn display_package_info(&self, package_name: &PackageName, package: &InstalledPackage) {
+    fn display_package_info(&self, config: &Config, package_name: &PackageName, package: &InstalledPackage) {
         // Sort installed versions for display
         let mut installed_versions: Vec<_> = package.versions.keys().collect();
         installed_versions.sort();
@@ -195,29 +196,43 @@ impl InfoArgs {
         println!();
 
         if self.verbose {
+            let local_meta_handler = LocalMetaHandler::new(&config.prefix_directory);
+            let conflicts = local_meta_handler.read_package_conflicts(package).unwrap_or_exit_msg("Error while reading local metadata", 1);
             print!("Conflicts with: ");
-            standard_print::print_list_or_none(package.conflicts_with.iter());
+            standard_print::print_list_or_none(conflicts.iter());
         }
     }
 
     /// Displays the package version info, also checking for the verbose flag for some info.
-    fn display_package_version_info(&self, package_id: &PackageId, register: &PackageRegister, package: &InstalledPackage) {
+    fn display_package_version_info(
+        &self,
+        package_id: &PackageId,
+        register: &PackageRegister,
+        config: &Config,
+        package: &InstalledPackage,
+    ) {
         let package_version = match register.get_package_version(package_id) {
             Some(package) => package,
             None => not_found::register_package_version(package_id, register),
         };
+
+        // Retrieve local metadata of package
+        let local_meta_handler = LocalMetaHandler::new(&config.prefix_directory).get_package(package_id);
+        let local_metadata = local_meta_handler.read_metadata().unwrap_or_exit_msg("Error while reading local metadata", 1);
 
         println!("{}", package_id.style());
         println!("{}", package.description.italic().cyan());
 
         let mut pair_aligner = PairAligner::new();
         pair_aligner.add("Homepage", package.homepage.display());
-        pair_aligner.add("License", package_version.license.style());
+        pair_aligner.add("License", local_metadata.license.style());
         pair_aligner.add("Install path", package_version.install_path.display());
         pair_aligner.add("Active", package.active_version == package_id.version);
         pair_aligner.add("Symlinked", package.symlinked);
+        pair_aligner.add("Last metadata refresh", package_version.last_metadata_refresh);
 
         if self.verbose {
+            pair_aligner.add("Last metadata change", package_version.last_metadata_change);
             pair_aligner.add("Metadata repository provider", &package_version.metadata_repository_provider);
             pair_aligner.add("Metadata repository url", &package_version.metadata_repository_url);
         }

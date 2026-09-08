@@ -8,5 +8,6 @@ pub mod packit_version;
 pub mod patches;
 pub mod reading;
 pub mod requests;
+pub mod serialization;
 pub mod tree;
 pub mod unwrap_or_exit;

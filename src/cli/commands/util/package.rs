@@ -12,12 +12,12 @@ use crate::{
         display::{Spinner, logging::error, not_found, styled::Styled},
         parameter_checks,
     },
-    config::{Config, Repository},
+    config::Config,
     installer::types::{OptionalPackageId, PackageId},
     packager,
     platforms::Target,
-    register::package_register::PackageRegister,
-    repositories::{provider, types::PrebuildsList},
+    register::{metadata::LocalMetaHandler, package_register::PackageRegister},
+    repositories::types::PrebuildsList,
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
@@ -86,39 +86,14 @@ impl PackageArgs {
             None => not_found::register_package_version(package_id, register),
         };
 
-        // Create metadata provider
-        let repository = Repository::new(
-            &package_version.metadata_repository_url,
-            &package_version.metadata_repository_provider,
-        );
-        let Some(provider) = provider::create_metadata_provider(&repository) else {
-            error!(msg: "Cannot create provider for {}, skipping packaging", package_id.style());
-            return;
-        };
+        // Get local metadata to get prebuild information
+        let local_meta_handler = LocalMetaHandler::new(&config.prefix_directory).get_package(package_id);
+        let local_metadata = local_meta_handler.read_metadata().unwrap_or_exit_msg("Error while reading local metadata", 1);
 
-        // Request package metadata
-        let package_meta = match provider.read_package(&package_id.name) {
-            Ok(package_meta) => package_meta,
-            Err(e) => {
-                error!(e, "Cannot read package metadata of {}, skipping packaging", package_id.style());
-                return;
-            },
-        };
-
-        // Request prebuilds list
-        let prebuilds_list = match provider.read_prebuilds_list(&package_id.name, &package_id.version) {
-            Ok(Some(prebuilds_list)) => prebuilds_list,
-            Ok(None) => PrebuildsList::default(package_meta.supported_versions.keys()),
-            Err(e) => {
-                error!(e, "Cannot read prebuild list for {}, skipping packaging", package_id.style());
-                return;
-            },
-        };
-
-        // Retrieve `prebuild_id` to use
-        let Some((prebuild_id, prebuild_meta)) = prebuilds_list.get_best_prebuild(&Target::current()) else {
-            error!(msg: "Cannot find prebuild to create for {}, skipping packaging", package_id.style());
-            return;
+        // Get prebuild information from local metadata, or use default
+        let (prebuild_id, prebuild_meta) = match local_metadata.prebuild {
+            Some(prebuild) => (prebuild.id, prebuild.info),
+            None => PrebuildsList::default_for_target(&Target::current()),
         };
 
         // Automatically create the destination directory
@@ -129,7 +104,7 @@ impl PackageArgs {
         let spinner = Spinner::new(spinner_message);
         spinner.show();
         let revisions = package_version.revisions.len() as u64;
-        packager::package(config, package_id, destination, revisions, prebuild_id, prebuild_meta).unwrap_or_exit(1);
+        packager::package(config, package_id, destination, revisions, &prebuild_id, &prebuild_meta).unwrap_or_exit(1);
         spinner.finish();
     }
 }

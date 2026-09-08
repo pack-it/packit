@@ -241,11 +241,13 @@ impl PackageVersionMeta {
         Ok(())
     }
 
-    fn default_skip_symlinking() -> bool {
+    /// Returns the default value of the `skip_symlinking` field.
+    pub fn default_skip_symlinking() -> bool {
         false
     }
 
-    fn is_default_skip_symlinking(val: &bool) -> bool {
+    /// Checks if the given value is the default value of the `skip_symlinking` field.
+    pub fn is_default_skip_symlinking(val: &bool) -> bool {
         *val == Self::default_skip_symlinking()
     }
 

@@ -8,18 +8,17 @@ use crate::{
     cli::{
         commands::HandleCommand,
         display::{
-            logging::{error, warning},
+            logging::warning,
             not_found, standard_print,
             styled::{MapStyled, Styled},
         },
     },
-    config::{Config, Repository},
-    installer::{Symlinker, types::PackageName},
-    platforms::Target,
-    register::{
-        installed_package::InstalledPackage, installed_package_version::InstalledPackageVersion, package_register::PackageRegister,
+    config::Config,
+    installer::{
+        Symlinker,
+        types::{PackageId, PackageName},
     },
-    repositories::provider,
+    register::{installed_package::InstalledPackage, metadata::LocalMetaHandler, package_register::PackageRegister},
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
@@ -67,7 +66,7 @@ impl HandleCommand for LinkArgs {
             .unwrap_or_exit_msg("Unable to retrieve active version of package", 1);
 
         // Check if linking is allowed, exit if force is not enabled
-        if !self.linking_allowed(&register, package, package_version) {
+        if !self.linking_allowed(&register, &config, package, &package_version.package_id) {
             if !self.force {
                 println!("Try '--force' if you are sure you want to link, note that this can result in issues");
                 exit(1);
@@ -96,58 +95,28 @@ impl HandleCommand for LinkArgs {
 impl LinkArgs {
     /// Checks if linking is allowed and shows a message when it is not allowed or cannot be checked.
     /// Returns true if linking is allowed, false otherwise.
-    fn linking_allowed(&self, register: &PackageRegister, package: &InstalledPackage, package_version: &InstalledPackageVersion) -> bool {
-        let conflicts = register.get_conflicting_packages(&self.package_name, &package.conflicts_with);
+    fn linking_allowed(&self, register: &PackageRegister, config: &Config, package: &InstalledPackage, package_id: &PackageId) -> bool {
+        let local_meta_handler = LocalMetaHandler::new(&config.prefix_directory);
+        let local_meta_package_handler = local_meta_handler.get_package(package_id);
+        let local_metadata = local_meta_package_handler.read_metadata().unwrap_or_exit_msg("Unable to read local metadata", 1);
+
+        // Skip if the local metadata defines skip_symlinking
+        if local_metadata.skip_symlinking {
+            warning!("The package metadata defines we should not symlink this package");
+            return false;
+        }
+
+        // Read and get conflicts
+        let package_conflicts =
+            local_meta_handler.read_package_conflicts(package).unwrap_or_exit_msg("Error while reading local metadata", 1);
+        let conflicts = local_meta_handler
+            .get_conflicting_packages(register, &self.package_name, &package_conflicts)
+            .unwrap_or_exit_msg("Error while reading local metadata", 1);
+
         if !conflicts.is_empty() {
             warning!("The package has conflicts with other packages, cancelling linking");
             println!("Conflicting packages:");
             standard_print::print_list(conflicts.iter().map_styled());
-            return false;
-        }
-
-        let repository = Repository::new(
-            &package_version.metadata_repository_url,
-            &package_version.metadata_repository_provider,
-        );
-
-        let Some(provider) = provider::create_metadata_provider(&repository) else {
-            error!(msg: "Cannot create provider for repository");
-            return false;
-        };
-
-        let package_version_meta = match provider.read_package_version(&self.package_name, &package.active_version) {
-            Ok(package_version_meta) => package_version_meta,
-            Err(e) => {
-                error!(e, "Unable to read package metadata for package");
-                return false;
-            },
-        };
-
-        // Skip if the package version metadata defines skip_symlinking
-        if package_version_meta.skip_symlinking {
-            warning!("The package metadata defines we should not symlink this package");
-            return false;
-        }
-
-        let target_bounds = match package_version_meta.get_best_target(&Target::current()) {
-            Ok(target_bounds) => target_bounds,
-            Err(e) => {
-                error!(e, "The metadata does not contain the current target");
-                return false;
-            },
-        };
-
-        let target = match package_version_meta.get_target(&target_bounds) {
-            Ok(target) => target,
-            Err(e) => {
-                error!(e, "Cannot get current target from package metadata");
-                return false;
-            },
-        };
-
-        // Skip if the package version target metadata defines skip_symlinking
-        if let Some(true) = target.skip_symlinking {
-            warning!("The package metadata defines we should not symlink this package");
             return false;
         }
 

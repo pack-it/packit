@@ -28,7 +28,7 @@ pub struct PrebuildsList {
 }
 
 /// Represents the information about a prebuild in the `prebuilds.toml` file.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct PrebuildMeta {
     targets: Vec<TargetBounds>,
 
@@ -94,5 +94,21 @@ impl PrebuildsList {
         }
 
         Self { prebuilds }
+    }
+
+    /// Creates the default prebuild id and meta pair for the given target.
+    pub fn default_for_target(target: &Target) -> (String, PrebuildMeta) {
+        let target_bounds = TargetBounds {
+            name: TargetName::Architecture(target.architecture.clone()),
+            addition: None,
+            version_intervals: VersionIntervals::default(),
+        };
+
+        let prebuild_meta = PrebuildMeta {
+            targets: vec![target_bounds],
+            exclude_paths: Vec::new(),
+        };
+
+        (target.architecture.to_string(), prebuild_meta)
     }
 }

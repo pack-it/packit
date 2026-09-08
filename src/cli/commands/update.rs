@@ -14,14 +14,14 @@ use crate::{
         },
         parameter_checks,
     },
-    config::Config,
+    config::{Config, Repository},
     installer::{
         Installer, InstallerOptions,
         types::{OptionalPackageId, PackageName, Version},
     },
     platforms::Target,
-    register::package_register::PackageRegister,
-    repositories::manager::RepositoryManager,
+    register::{metadata::LocalMetaHandler, package_register::PackageRegister},
+    repositories::{manager::RepositoryManager, provider},
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
@@ -46,6 +46,14 @@ pub struct UpdateArgs {
     /// Exclude packages when using the `--all` flag, specified with <PACKAGE-NAME> ...
     #[arg(long, requires = "all")]
     exclude: Vec<PackageName>,
+
+    /// Only refresh the local metadata
+    #[arg(long, default_value = "false", conflicts_with = "skip_refresh")]
+    refresh_only: bool,
+
+    /// Skips refreshing of the local metadata
+    #[arg(long, default_value = "false", conflicts_with_all = ["refresh_only", "new_version"])]
+    skip_refresh: bool,
 }
 
 impl HandleCommand for UpdateArgs {
@@ -55,10 +63,16 @@ impl HandleCommand for UpdateArgs {
         let register_dir = PackageRegister::get_path(&config.prefix_directory);
         let mut register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
 
+        // If refresh only is specified, only refresh the specified packages
+        if self.refresh_only {
+            self.refresh_metadata(&mut register, &config);
+            return;
+        }
+
         let options = InstallerOptions::default();
         let installer = Installer::new(&config, &mut register, &manager, options);
 
-        // If `--all` is specified use all the updatable pacakges
+        // If `--all` is specified use all the updatable packages
         let optional_ids = match self.all {
             true => &self.get_updatables(installer),
             false if self.packages.is_empty() => {
@@ -81,6 +95,7 @@ impl HandleCommand for UpdateArgs {
             exit(1);
         }
 
+        // Update all given packages
         for optional_id in optional_ids {
             match optional_id.versioned() {
                 Some(package_id) if register.get_package_version(&package_id).is_some() => {},
@@ -127,6 +142,11 @@ impl HandleCommand for UpdateArgs {
                 None => println!("{} is up-to-date!", optional_id.name.style()),
             }
         }
+
+        // Refresh metadata of all given packages
+        if !self.skip_refresh {
+            self.refresh_metadata(&mut register, &config);
+        }
     }
 }
 
@@ -144,9 +164,10 @@ impl UpdateArgs {
             }
         }
 
+        // If there are no updatable packages, show a message and return an empty list
         if filtered_updatables.is_empty() {
             println!("All packages are up-to-date!");
-            exit(0);
+            return Vec::new();
         }
 
         println!("The following packages will be updated:");
@@ -160,5 +181,53 @@ impl UpdateArgs {
         }
 
         filtered_updatables.into_iter().map(OptionalPackageId::from).collect()
+    }
+
+    /// Refreshes the metadata for the packages given in the command.
+    fn refresh_metadata(&self, register: &mut PackageRegister, config: &Config) {
+        // If `--all` is specified use all installed packages
+        let packages = match self.all {
+            // Only filter exclude packages when all is specified
+            true => &register.iterate_all().map(|x| x.package_id.clone()).filter(|x| !self.exclude.contains(&x.name)).collect(),
+            false if self.packages.is_empty() => {
+                error!(msg: "No packages specified to refresh");
+                exit(1);
+            },
+            false => &parameter_checks::expand_optional_ids(register, config, &self.packages),
+        };
+
+        for package_id in packages {
+            let Some(package_version) = register.get_package_version_mut(package_id) else {
+                error!(msg: "Expected package version {} to exist", package_id.style());
+
+                // Exit because we encountered an unexpected error.
+                exit(1);
+            };
+
+            // Create repository provider for package
+            let repository = Repository::new(
+                &package_version.metadata_repository_url,
+                &package_version.metadata_repository_provider,
+            );
+            let Some(provider) = provider::create_metadata_provider(&repository) else {
+                error!(msg: "Cannot create provider for repository");
+                continue;
+            };
+
+            // Refresh metadata
+            let local_meta = LocalMetaHandler::new(&config.prefix_directory).get_package(package_id);
+            let updated_metadata = local_meta.refresh(&provider).unwrap_or_exit_msg(&format!("Cannot refresh metadata of {package_id}"), 1);
+            package_version.update_metadata_refresh(updated_metadata);
+
+            // Save register to store updated timestamps
+            register
+                .save_to(&PackageRegister::get_path(&config.prefix_directory))
+                .unwrap_or_exit_msg("Error while saving register", 1);
+
+            // Show message
+            if updated_metadata {
+                println!("Updated local metadata of {}", package_id.style());
+            }
+        }
     }
 }
