@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize, de};
 use thiserror::Error;
 
 const VALID_PACKAGE_NAME: &str = r"^[a-z0-9\-_]+$";
-const PACKAGE_NAME_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(VALID_PACKAGE_NAME).expect("Expected valid regex"));
+static PACKAGE_NAME_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(VALID_PACKAGE_NAME).expect("Expected valid regex"));
 
 /// Errors that occur when creating or parsing the package name.
 #[cfg_attr(test, derive(PartialEq))]

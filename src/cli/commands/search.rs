@@ -72,7 +72,7 @@ impl HandleCommand for SearchArgs {
 
         // Get the optional id
         let message = "The given search query isn't a valid package. For regex use '--regex'";
-        let optional_id = OptionalPackageId::from_str(&self.query).unwrap_or_exit_msg(message, 1);
+        let optional_id = OptionalPackageId::from_str(&self.query.to_lowercase()).unwrap_or_exit_msg(message, 1);
 
         // Check if there is version ambiguity (version and `--latest` specified)
         if optional_id.version.is_some() && self.latest {
