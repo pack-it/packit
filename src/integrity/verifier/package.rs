@@ -21,9 +21,8 @@ use crate::{
         package_register::PackageRegister,
     },
     repositories::{
-        metadata::MetadataProvider,
         prebuilds::PrebuildProvider,
-        types::{Checksum, PackageVersionMeta, PrebuildsList},
+        types::{Checksum, PrebuildsList},
     },
     utils::{io::directory_is_empty, ioerror::IOResultExt},
 };
@@ -203,10 +202,10 @@ fn check_invalid_package_active(package_name: &PackageName, register: &PackageRe
 
 /// Checks the given packages for a forbidden link. Where a forbidden link is a package which is symlinked
 /// while it shouldn't be according to the repository metadata.
-pub fn check_forbidden_link(packages: &Vec<PackageId>, register: &PackageRegister) -> Result<Option<Issue>> {
+pub fn check_forbidden_link(packages: &Vec<PackageId>, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
     let mut forbidden = Vec::new();
     for package_id in packages {
-        if let Some(package) = check_forbidden_package_link(package_id, register)? {
+        if let Some(package) = check_forbidden_package_link(package_id, register, config)? {
             forbidden.push(package);
         }
     }
@@ -220,26 +219,13 @@ pub fn check_forbidden_link(packages: &Vec<PackageId>, register: &PackageRegiste
 
 /// Checks a given package for a forbidden link. Where a forbidden link is a package which is symlinked
 /// while it shouldn't be according to the repository metadata.
-fn check_forbidden_package_link(package_id: &PackageId, register: &PackageRegister) -> Result<Option<PackageName>> {
-    let Some(package_version) = register.get_package_version(package_id) else {
-        return Ok(None);
-    };
-
-    // Check if this package is allowed to be symlinked
-    // Assume the package version meta can be found (otherwise no issue is returned)
-    let link_allowed = match get_package_version_meta(package_id, package_version)? {
-        Some(package_version) => {
-            let package_target = package_version.get_target(&package_version.get_best_target(&Target::current())?)?;
-            match package_target.skip_symlinking {
-                Some(skip_symlinking) => !skip_symlinking,
-                None => !package_version.skip_symlinking,
-            }
-        },
-        None => true,
-    };
+fn check_forbidden_package_link(package_id: &PackageId, register: &PackageRegister, config: &Config) -> Result<Option<PackageName>> {
+    // Read local metadata
+    let local_meta_handler = LocalMetaHandler::new(&config.prefix_directory).get_package(package_id);
+    let local_metadata = local_meta_handler.read_metadata()?;
 
     // Return early if symlinking is allowed according to the metadata
-    if link_allowed {
+    if !local_metadata.skip_symlinking {
         return Ok(None);
     }
 
@@ -403,14 +389,14 @@ fn check_missing_package_dependents(package_id: &PackageId, register: &PackageRe
 
 /// Checks for missing dependencies in the given packages.
 /// Returns an `Issue::MissingDependencies` with the missing dependencies, or `None` if no dependencies are missing.
-pub fn check_missing_dependencies(packages: &Vec<PackageId>, register: &PackageRegister) -> Result<Option<Issue>> {
+pub fn check_missing_dependencies(packages: &Vec<PackageId>, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
     let mut missing = Vec::new();
     for package_id in packages {
         let Some(package) = register.get_package_version(package_id) else {
             continue;
         };
 
-        missing.extend(missing_dependencies_impl(package)?);
+        missing.extend(missing_dependencies_impl(package, config)?);
     }
 
     if missing.is_empty() {
@@ -422,17 +408,16 @@ pub fn check_missing_dependencies(packages: &Vec<PackageId>, register: &PackageR
 
 /// Checks if a given package misses dependencies in the register according to the repository metadata.
 /// Returns a list of missing dependencies for the given package (can be empty).
-fn missing_dependencies_impl(package: &InstalledPackageVersion) -> Result<Vec<(PackageId, Dependency)>> {
+fn missing_dependencies_impl(package: &InstalledPackageVersion, config: &Config) -> Result<Vec<(PackageId, Dependency)>> {
     let package_id = &package.package_id;
     let mut missing = Vec::new();
 
-    // Assume the package version meta can be found (otherwise no issue is returned)
-    let Some(package_version_meta) = get_package_version_meta(package_id, package)? else {
-        return Ok(Vec::new());
-    };
+    // Read local metadata
+    let local_meta_handler = LocalMetaHandler::new(&config.prefix_directory).get_package(package_id);
+    let local_metadata = local_meta_handler.read_metadata()?;
 
     // Check if each dependency is satisfied
-    for metadata_dependency in package_version_meta.dependencies {
+    for metadata_dependency in local_metadata.dependencies {
         let mut satisfied = false;
         for dependency in &package.dependencies {
             if metadata_dependency.satisfied(&dependency.name, &dependency.version) {
@@ -450,14 +435,14 @@ fn missing_dependencies_impl(package: &InstalledPackageVersion) -> Result<Vec<(P
 
 /// Checks for invalid dependencies in the given packages.
 /// Returns an `Issue::InvalidDependencies` with the invalid dependencies, or `None` if no dependencies are invalid.
-pub fn check_invalid_dependencies(packages: &Vec<PackageId>, register: &PackageRegister) -> Result<Option<Issue>> {
+pub fn check_invalid_dependencies(packages: &Vec<PackageId>, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
     let mut invalid = Vec::new();
     for package_id in packages {
         let Some(package) = register.get_package_version(package_id) else {
             continue;
         };
 
-        invalid.extend(invalid_dependencies_impl(package)?);
+        invalid.extend(invalid_dependencies_impl(package, config)?);
     }
 
     if invalid.is_empty() {
@@ -469,24 +454,18 @@ pub fn check_invalid_dependencies(packages: &Vec<PackageId>, register: &PackageR
 
 /// Checks if a given package has invalid dependencies in the register according to the repository metadata.
 /// Returns a list of invalid dependencies for the given package (can be empty).
-fn invalid_dependencies_impl(package: &InstalledPackageVersion) -> Result<Vec<(PackageId, PackageId)>> {
+fn invalid_dependencies_impl(package: &InstalledPackageVersion, config: &Config) -> Result<Vec<(PackageId, PackageId)>> {
     let package_id = &package.package_id;
     let mut invalid = Vec::new();
 
-    // Assume the package version meta can be found (otherwise no issue is returned)
-    let Some(package_version_meta) = get_package_version_meta(package_id, package)? else {
-        return Ok(Vec::new());
-    };
-
-    // Get current target
-    let target_bounds = package_version_meta.get_best_target(&Target::current())?;
-    let target = package_version_meta.get_target(&target_bounds)?;
-    let dependencies: Vec<_> = package_version_meta.dependencies.iter().chain(target.dependencies.iter()).collect();
+    // Read local metadata
+    let local_meta_handler = LocalMetaHandler::new(&config.prefix_directory).get_package(package_id);
+    let local_metadata = local_meta_handler.read_metadata()?;
 
     // Check if there is a package dependency which doesn't satisfy any of the metadata dependencies
     for dependency in &package.dependencies {
         let mut satisfied = false;
-        for metadata_dependency in &dependencies {
+        for metadata_dependency in &local_metadata.dependencies {
             if metadata_dependency.satisfied(&dependency.name, &dependency.version) {
                 satisfied = true;
             }
@@ -652,14 +631,4 @@ fn check_package_test(package_id: &PackageId, register: &PackageRegister, config
         Err(ScriptError::ScriptFailed { .. }) => Ok(true),
         Err(e) => Err(e.into()),
     }
-}
-
-/// Gets the package version meta, or `None` if the provider cannot be found.
-fn get_package_version_meta(package_id: &PackageId, package: &InstalledPackageVersion) -> Result<Option<PackageVersionMeta>> {
-    let repository = Repository::new(&package.metadata_repository_url, &package.metadata_repository_provider);
-    let Some(provider) = MetadataProvider::create_from_repository(&repository) else {
-        return Ok(None);
-    };
-
-    Ok(Some(provider.read_package_version(&package_id.name, &package_id.version)?))
 }
