@@ -5,7 +5,7 @@ use thiserror::Error;
 
 use crate::installer::types::{PackageName, Version, version_intervals::VersionIntervals};
 
-/// Errors that occur when creating or using the target bounds.
+/// Errors that occur when creating or using the dependencies.
 #[cfg_attr(test, derive(PartialEq))]
 #[derive(Error, Debug)]
 pub enum DependencyError {
@@ -30,7 +30,7 @@ impl<'de> Deserialize<'de> for Dependency {
         let string: String = de::Deserialize::deserialize(deserializer)?;
 
         let (name, version) = match string.split_once('@') {
-            Some(value) if value.1.is_empty() => return Err(DependencyError::ExpectedVersion).map_err(serde::de::Error::custom)?,
+            Some(value) if value.1.is_empty() => return Err(serde::de::Error::custom(DependencyError::ExpectedVersion)),
             Some(value) => value,
             None => (string.as_str(), ""),
         };
