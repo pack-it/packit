@@ -5,14 +5,14 @@ use regex::Regex;
 use serde::{Deserialize, Serialize, de};
 use thiserror::Error;
 
-const VALID_PACKAGE_NAME: &str = r"^[a-zA-Z0-9\-_]+$";
-const PACKAGE_NAME_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(VALID_PACKAGE_NAME).expect("Expected valid regex"));
+const VALID_PACKAGE_NAME: &str = r"^[a-z0-9\-_]+$";
+static PACKAGE_NAME_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(VALID_PACKAGE_NAME).expect("Expected valid regex"));
 
 /// Errors that occur when creating or parsing the package name.
 #[cfg_attr(test, derive(PartialEq))]
 #[derive(Error, Debug)]
 pub enum PackageNameError {
-    #[error("Package name cannot be empty and can only contain characters: 'a-z', 'A-Z', '0-9', '-' and '_'")]
+    #[error("Package name cannot be empty and can only contain characters: 'a-z', '0-9', '-' and '_'")]
     InvalidPackageName,
 }
 
@@ -106,7 +106,7 @@ pub mod tests {
 
     #[test]
     fn valid_from_str() {
-        let name = &"_Test-123";
+        let name = &"_test-123";
         assert_eq!(PackageName::from_str(name), Ok(PackageName(name.to_string())));
     }
 
@@ -117,7 +117,7 @@ pub mod tests {
 
     #[test]
     fn from_str_illegal_chars() {
-        let illegal_chars = " ./\\!@#$%^&*():;'\"<>[]{}?|~`±§=+\u{1234}";
+        let illegal_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ ./\\!@#$%^&*():;'\"<>[]{}?|~`±§=+\u{1234}";
         for name in illegal_chars.chars() {
             assert_eq!(
                 PackageName::from_str(&name.to_string()),
@@ -129,13 +129,13 @@ pub mod tests {
 
     #[test]
     fn format() {
-        let package_name = PackageName("_Test-123".to_string());
-        assert_eq!(package_name.to_string(), "_Test-123");
+        let package_name = PackageName("_test-123".to_string());
+        assert_eq!(package_name.to_string(), "_test-123");
     }
 
     #[test]
     fn get_prefix() {
-        let package_name = PackageName("_Test-123".to_string());
+        let package_name = PackageName("_test-123".to_string());
         assert_eq!(package_name.get_prefix(), '_');
     }
 

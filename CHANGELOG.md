@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changes
 - The build tests are now turned off by default and can be turned on with `--execute-build-test` (`--skip-build-test` is removed).
+- Package names are now always lowercase, the commands translate uppercase to lowercase.
 
 ### Fixed
 - Fix patch apply directory meta check reporting wrong issues.
