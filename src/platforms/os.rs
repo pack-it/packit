@@ -7,6 +7,7 @@ use crate::{
         styled::Styled,
     },
     installer::types::Version,
+    repositories::types::Addition,
 };
 
 #[cfg(any(target_os = "macos", target_os = "linux"))]
@@ -66,7 +67,7 @@ pub enum OsVersion {
         version: Version,
     },
     Linux {
-        distro: String,
+        distro: Addition,
         distro_version: Version,
         kernel_version: Version,
     },

@@ -36,6 +36,7 @@ pub use self::index::IndexMeta;
 
 pub use self::license::Licenses;
 
+pub use self::target_bounds::Addition;
 pub use self::target_bounds::TargetBounds;
 
 pub use self::requirement::Requirement;

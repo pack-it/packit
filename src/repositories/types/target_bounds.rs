@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{fmt::Display, str::FromStr};
+use std::{fmt::Display, str::FromStr, sync::LazyLock};
 
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -9,6 +10,9 @@ use crate::{
     installer::types::{VersionError, VersionIntervals},
     platforms::{Os, OsVersion, Target, TargetArchitecture},
 };
+
+const VALID_ADDITION_NAME: &str = r"^[a-z0-9\-_]+$";
+const ADDITION_NAME_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(VALID_ADDITION_NAME).expect("Expected valid regex"));
 
 /// Errors that occur when creating or using the target bounds.
 #[cfg_attr(test, derive(PartialEq))]
@@ -25,6 +29,9 @@ pub enum TargetBoundsError {
 
     #[error("Expected a version, because '@' was used")]
     ExpectedVersion,
+
+    #[error("Addition name cannot be empty and can only contain characters: 'a-z', '0-9', '-' and '_'")]
+    InvalidAdditionName,
 
     #[error("Cannot parse version number")]
     VersionError(#[from] VersionError),
@@ -96,11 +103,37 @@ impl TargetName {
     }
 }
 
+/// Represents the name of an addition.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Addition(String);
+
+impl FromStr for Addition {
+    type Err = TargetBoundsError;
+
+    /// Parses a string into an `Addition`.
+    /// Could return a `TargetBoundsError::InvalidAdditionName` error.
+    fn from_str(string: &str) -> Result<Self, Self::Err> {
+        if !ADDITION_NAME_REGEX.is_match(string) {
+            return Err(TargetBoundsError::InvalidAdditionName);
+        }
+
+        Ok(Self(string.to_string()))
+    }
+}
+
+impl Display for Addition {
+    /// Formats an `Addition` into the following format: <name>.
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)?;
+        Ok(())
+    }
+}
+
 /// Represents the bounds of a target. Specifying its name, optionally an addition (e.g. Linux distro) and possible versions.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TargetBounds {
     pub name: TargetName,
-    pub addition: Option<String>,
+    pub addition: Option<Addition>,
     pub version_intervals: VersionIntervals,
 }
 
@@ -157,9 +190,15 @@ impl FromStr for TargetBounds {
             return Err(TargetBoundsError::VersionBoundsNotAllowed);
         }
 
+        // Parse the addition
+        let addition = match addition {
+            Some(addition) => Some(Addition::from_str(addition)?),
+            None => None,
+        };
+
         Ok(Self {
             name,
-            addition: addition.map(|x| x.into()),
+            addition,
             version_intervals,
         })
     }
@@ -288,7 +327,7 @@ pub mod tests {
             TargetBounds::from_str("linux:mint@1.1.1"),
             Ok(TargetBounds {
                 name: TargetName::Os(Linux),
-                addition: Some("mint".to_string()),
+                addition: Some(Addition("mint".to_string())),
                 version_intervals: create_version_intervals("1.1.1")
             })
         );
@@ -325,5 +364,18 @@ pub mod tests {
     fn from_str_empty_name() {
         assert_eq!(TargetBounds::from_str("@1.1.1"), Err(TargetBoundsError::InvalidTargetName));
         assert_eq!(TargetBounds::from_str(""), Err(TargetBoundsError::InvalidTargetName));
+    }
+
+    #[test]
+    fn from_str_invalid_addition() {
+        assert_eq!(TargetBounds::from_str("linux:@1.1.1"), Err(TargetBoundsError::InvalidAdditionName));
+        let illegal_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ ./\\!@#$%^&*():;'\"<>[]{}?|~`±§=+\u{1234}";
+        for name in illegal_chars.chars() {
+            assert_eq!(
+                Addition::from_str(&name.to_string()),
+                Err(TargetBoundsError::InvalidAdditionName),
+                "expected {name:?} to be invalid"
+            );
+        }
     }
 }
