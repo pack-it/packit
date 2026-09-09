@@ -59,3 +59,89 @@ impl PackageMeta {
         Ok(versions)
     }
 }
+
+#[cfg(test)]
+pub mod tests {
+
+    use std::str::FromStr;
+
+    use crate::{
+        installer::types::{
+            package_name_tests::create_package_name, version_intervals_test::create_version_intervals, version_tests::create_version,
+        },
+        platforms::{OsVersion, TargetArchitecture},
+    };
+
+    use super::*;
+
+    /// A helper method to create a simple package meta test structure
+    fn create_package_meta(versions: Vec<Version>, supported_versions: HashMap<TargetBounds, VersionIntervals>) -> PackageMeta {
+        PackageMeta {
+            name: create_package_name("test"),
+            description: "-".to_string(),
+            homepage: Some("-".to_string()),
+            versions,
+            required_packit_version: None,
+            conflicts_with: HashSet::new(),
+            supported_versions,
+            deprecation: None,
+        }
+    }
+
+    #[test]
+    fn supported_versions() {
+        let target = Target {
+            architecture: TargetArchitecture::MacOsAarch64,
+            os: OsVersion::MacOs {
+                version: create_version("3.4.1"),
+            },
+        };
+
+        let versions = vec![create_version("1"), create_version("2"), create_version("3"), create_version("4")];
+        let supported_versions = HashMap::from([
+            (TargetBounds::from_str("mac").unwrap(), create_version_intervals("2-=4")),
+            (TargetBounds::from_str("unix").unwrap(), create_version_intervals("1-3")),
+        ]);
+        let package_meta = create_package_meta(versions, supported_versions);
+
+        let versions = package_meta.get_supported_versions(&target).unwrap();
+        assert_eq!(versions, vec![&create_version("2"), &create_version("3"), &create_version("4")]);
+    }
+
+    #[test]
+    fn supported_versions_no_target() {
+        let target = Target {
+            architecture: TargetArchitecture::MacOsAarch64,
+            os: OsVersion::MacOs {
+                version: create_version("3.4.1"),
+            },
+        };
+
+        let versions = vec![create_version("1")];
+        let supported_versions = HashMap::new();
+        let package_meta = create_package_meta(versions, supported_versions);
+        assert!(matches!(
+            package_meta.get_supported_versions(&target),
+            Err(RepositoryError::TargetError)
+        ));
+    }
+
+    #[test]
+    fn supported_versions_no_match() {
+        let target = Target {
+            architecture: TargetArchitecture::MacOsAarch64,
+            os: OsVersion::MacOs {
+                version: create_version("3.4.1"),
+            },
+        };
+
+        let versions = vec![create_version("1")];
+        let supported_versions = HashMap::from([(TargetBounds::from_str("mac").unwrap(), create_version_intervals("2-=4"))]);
+        let package_meta = create_package_meta(versions, supported_versions);
+
+        assert!(matches!(
+            package_meta.get_supported_versions(&target),
+            Err(RepositoryError::SupportError(name)) if name == "test"
+        ));
+    }
+}
