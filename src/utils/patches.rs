@@ -202,8 +202,7 @@ fn check_escapes_upper_dir(path: &Path, upper_dir: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Resolves the source and destination paths to a full pair with an existing source.
-/// TODO
+/// Resolves the source and destination paths to a full pair with an existing source if possible.
 fn resolve_paths<'a>(source: &'a Path, destination: &'a Path) -> (&'a Path, &'a Path) {
     // If the source does not exist and the destination does exist, check if we can assume same file
     if !source.exists() && destination.exists() {
@@ -250,7 +249,6 @@ fn apply_path(patch: &PatchKind<[u8]>, source: Option<&Path>, destination: &Path
 }
 
 /// Detect the format of the given patch.
-/// TODO
 fn detect_patch_format(patch: &Bytes) -> Result<PatchFormat> {
     let mut found_git_header = false;
 
@@ -309,7 +307,6 @@ fn detect_patch_format(patch: &Bytes) -> Result<PatchFormat> {
 }
 
 /// Checks if a file operation contains git `a/` and `b/` prefixes.
-/// TODO
 fn contains_git_prefix(operation: &FileOperation<[u8]>) -> bool {
     match operation {
         FileOperation::Delete(path) if path.starts_with(b"a/") => true,
@@ -318,5 +315,49 @@ fn contains_git_prefix(operation: &FileOperation<[u8]>) -> bool {
         FileOperation::Rename { from, to } if from.starts_with(b"a/") && to.starts_with(b"b/") => true,
         FileOperation::Copy { from, to } if from.starts_with(b"a/") && to.starts_with(b"b/") => true,
         _ => false,
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+
+    use std::fs::File;
+
+    use tempfile::tempdir;
+
+    use super::*;
+
+    #[test]
+    fn resolve_paths_source_exists() {
+        let source = tempdir().unwrap();
+        let source = source.path();
+        let destination = tempdir().unwrap();
+        let destination = destination.path();
+        assert_eq!(resolve_paths(source, destination), (source, destination));
+        assert!(source.exists());
+        assert!(destination.exists());
+    }
+
+    #[test]
+    fn resolve_paths_test() {
+        let source = tempdir().unwrap();
+        let source = source.path().join("test.txt");
+        let destination = tempdir().unwrap();
+        let destination = destination.path();
+        let test_file = destination.join("test.txt");
+        File::create(&test_file).unwrap();
+        assert_eq!(resolve_paths(&source, &test_file), (test_file.as_path(), test_file.as_path()));
+    }
+
+    #[test]
+    fn source_not_resolved() {
+        let source = tempdir().unwrap();
+        let source = source.path().join("foo.txt");
+        let destination = tempdir().unwrap();
+        let destination = destination.path();
+        let test_file = destination.join("test.txt");
+        File::create(&test_file).unwrap();
+        assert_eq!(resolve_paths(&source, &test_file), (source.as_path(), test_file.as_path()));
+        assert!(!source.exists());
     }
 }
