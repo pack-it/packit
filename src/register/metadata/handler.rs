@@ -61,6 +61,9 @@ pub struct LocalMetadata {
     #[serde(serialize_with = "serialization::serialize_set_sorted")]
     pub conflicts_with: HashSet<PackageName>,
 
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub revisions: Vec<String>,
+
     pub prebuild: Option<LocalPrebuildMetadata>,
 }
 
@@ -327,6 +330,7 @@ impl<'a> LocalMetaPackageHandler<'a> {
             deprecation,
             skip_symlinking: target_meta.skip_symlinking.unwrap_or(package_version_meta.skip_symlinking),
             conflicts_with: package_meta.conflicts_with.clone(),
+            revisions: package_version_meta.revisions.clone(),
             prebuild,
         })
     }

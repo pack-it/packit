@@ -234,7 +234,7 @@ impl UpdateArgs {
 
             // Refresh metadata
             let local_meta = LocalMetaHandler::new(&config.prefix_directory).get_package(package_id);
-            let updated_metadata = match local_meta.refresh(&provider, package_version.get_revision_count()) {
+            let updated_metadata = match local_meta.refresh(&provider, package_version.revision) {
                 Ok(updated_metadata) => updated_metadata,
                 Err(LocalMetadataError::MetadataRevisionMismatch) => continue, // Skip refresh if the revisions do not match
                 Err(e) => {

@@ -118,6 +118,7 @@ impl PackageRegister {
 
         let installed_package_version = InstalledPackageVersion {
             package_id: PackageId::new(package.name.clone(), package_version.version.clone()),
+            revision: package_version.revisions.len() as u64,
             metadata_repository_url: source_repository.url.clone(),
             metadata_repository_provider: source_repository.provider.clone(),
             prebuilds_repository_url,
@@ -125,7 +126,6 @@ impl PackageRegister {
             dependencies: dependency_ids,
             dependents: HashSet::new(),
             install_path: install_path.into(),
-            revisions: package_version.revisions.clone(),
             last_metadata_refresh: DateTime::default(), // Initialize to UNIX epoch
             last_metadata_change: DateTime::default(),  // Initialize to UNIX epoch
         };
@@ -350,6 +350,7 @@ pub mod tests {
     ) -> InstalledPackageVersion {
         InstalledPackageVersion {
             package_id,
+            revision: 0,
             metadata_repository_provider: "-".to_string(),
             metadata_repository_url: "-".to_string(),
             prebuilds_repository_url: None,
@@ -357,7 +358,6 @@ pub mod tests {
             dependencies,
             dependents,
             install_path: "-".into(),
-            revisions: Vec::new(),
             last_metadata_refresh: DateTime::default(),
             last_metadata_change: DateTime::default(),
         }

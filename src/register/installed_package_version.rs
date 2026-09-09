@@ -11,6 +11,7 @@ use crate::{config::Repository, installer::types::PackageId};
 #[derive(Serialize, Deserialize, Debug)]
 pub struct InstalledPackageVersion {
     pub package_id: PackageId,
+    pub revision: u64,
 
     #[serde(default = "Repository::default_repository_provider")]
     #[serde(skip_serializing_if = "is_repository_provider_default")]
@@ -33,9 +34,6 @@ pub struct InstalledPackageVersion {
 
     pub install_path: PathBuf,
 
-    #[serde(default)]
-    pub revisions: Vec<String>,
-
     // The default on the `last_metadata_refresh` and `last_metadata_change` is required to ensure backwards compatibility
     #[serde(default)]
     pub last_metadata_refresh: DateTime<Utc>,
@@ -49,11 +47,6 @@ fn is_repository_provider_default(value: &String) -> bool {
 }
 
 impl InstalledPackageVersion {
-    /// Gets the number of revisions of the installed package version.
-    pub fn get_revision_count(&self) -> u64 {
-        self.revisions.len() as u64
-    }
-
     // Updates the `last_metadata_refresh` and the `last_metadata_change` based on the `updated` paramter.
     pub fn update_metadata_refresh(&mut self, updated_metadata: bool) {
         let now = Utc::now();

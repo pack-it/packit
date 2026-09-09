@@ -32,7 +32,10 @@ pub struct InitArgs {
     /// The prefix to use
     #[arg(long)]
     prefix: Option<PathBuf>,
-    // TODO: get revisions as input here
+
+    /// The revision of the Packit install
+    #[arg(long)]
+    revision: Option<u64>,
 }
 
 #[cfg(unix)]
@@ -107,9 +110,11 @@ impl HandleCommand for InitArgs {
         let package_name = PackageName::from_str("packit").expect("Expected 'packit' to be a valid package name");
         let package_version = Version::from_str(packit_version!()).expect("Expected Packit version to be in the correct format");
         let package_id = PackageId::new(package_name, package_version);
+        let revision = self.revision.unwrap_or(0);
 
         let installed_package_version = InstalledPackageVersion {
             package_id: package_id.clone(),
+            revision,
             metadata_repository_provider: DEFAULT_METADATA_REPOSITORY_PROVIDER.into(),
             metadata_repository_url: DEFAULT_METADATA_REPOSITORY_URL.into(),
             prebuilds_repository_url: None,
@@ -117,7 +122,6 @@ impl HandleCommand for InitArgs {
             dependencies: HashSet::new(),
             dependents: HashSet::new(),
             install_path: packit_package_path,
-            revisions: Vec::new(),
             last_metadata_refresh: DateTime::default(), // Initialize to UNIX epoch
             last_metadata_change: DateTime::default(),  // Initialize to UNIX epoch
         };
@@ -166,7 +170,7 @@ impl HandleCommand for InitArgs {
         // Fetch Packit metadata from the default repository
         let updated = LocalMetaHandler::new(&prefix_directory)
             .get_package(&package_id)
-            .refresh(&provider, 0)
+            .refresh(&provider, revision)
             .unwrap_or_exit_msg("Packit cannot be initialized: error while retrieving Packit metadata", 1);
 
         // Update last refresh in the package version
