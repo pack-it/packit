@@ -103,7 +103,7 @@ impl PackageArgs {
         let spinner_message = format!("Packaging {} to '{}'", package_id.style(), destination.display());
         let spinner = Spinner::new(spinner_message);
         spinner.show();
-        let revisions = package_version.revisions.len() as u64;
+        let revisions = package_version.get_revision_count();
         packager::package(config, package_id, destination, revisions, &prebuild_id, &prebuild_meta).unwrap_or_exit(1);
         spinner.finish();
     }

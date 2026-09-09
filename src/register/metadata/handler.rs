@@ -199,7 +199,7 @@ impl<'a> LocalMetaPackageHandler<'a> {
 
     /// Refreshes the local metadata of the given package.
     /// Returns true if the metadata was changed, false otherwise.
-    pub fn refresh(&self, provider: &MetadataProvider) -> Result<bool> {
+    pub fn refresh(&self, provider: &MetadataProvider, current_revision: u64) -> Result<bool> {
         let metadata_dir = self.get_base_path();
 
         let package_meta = provider.read_package(&self.package_id.name)?;
@@ -207,6 +207,11 @@ impl<'a> LocalMetaPackageHandler<'a> {
         let target_bounds = package_version_meta.get_best_target(&Target::current())?;
         let target_meta = package_version_meta.get_target(&target_bounds)?;
         let prebuilds_list = provider.read_prebuilds_list(&self.package_id.name, &self.package_id.version)?;
+
+        // Check if current revision is the same as the revision of the metadata
+        if package_version_meta.get_revision_count() != current_revision {
+            return Err(LocalMetadataError::MetadataRevisionMismatch);
+        }
 
         let local_metadata = self.create_local_metadata(&package_meta, &package_version_meta, &target_bounds, prebuilds_list)?;
         let local_meta_str = toml::ser::to_string(&local_metadata)?;

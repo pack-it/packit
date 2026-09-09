@@ -32,6 +32,7 @@ pub struct InitArgs {
     /// The prefix to use
     #[arg(long)]
     prefix: Option<PathBuf>,
+    // TODO: get revisions as input here
 }
 
 #[cfg(unix)]
@@ -165,7 +166,7 @@ impl HandleCommand for InitArgs {
         // Fetch Packit metadata from the default repository
         let updated = LocalMetaHandler::new(&prefix_directory)
             .get_package(&package_id)
-            .refresh(&provider)
+            .refresh(&provider, 0)
             .unwrap_or_exit_msg("Packit cannot be initialized: error while retrieving Packit metadata", 1);
 
         // Update last refresh in the package version

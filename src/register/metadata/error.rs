@@ -17,6 +17,9 @@ pub enum LocalMetadataError {
         file_path: PathBuf,
     },
 
+    #[error("The remote metadata revision does not match the revision of the installed package")]
+    MetadataRevisionMismatch,
+
     #[error("Cannot fetch package metadata from repository")]
     RepositoryError(#[from] RepositoryError),
 

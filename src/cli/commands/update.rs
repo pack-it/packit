@@ -20,7 +20,10 @@ use crate::{
         types::{OptionalPackageId, PackageName, Version},
     },
     platforms::Target,
-    register::{metadata::LocalMetaHandler, package_register::PackageRegister},
+    register::{
+        metadata::{LocalMetaHandler, error::LocalMetadataError},
+        package_register::PackageRegister,
+    },
     repositories::{manager::RepositoryManager, metadata::MetadataProvider},
     utils::unwrap_or_exit::UnwrapOrExit,
 };
@@ -231,7 +234,14 @@ impl UpdateArgs {
 
             // Refresh metadata
             let local_meta = LocalMetaHandler::new(&config.prefix_directory).get_package(package_id);
-            let updated_metadata = local_meta.refresh(&provider).unwrap_or_exit_msg(&format!("Cannot refresh metadata of {package_id}"), 1);
+            let updated_metadata = match local_meta.refresh(&provider, package_version.get_revision_count()) {
+                Ok(updated_metadata) => updated_metadata,
+                Err(LocalMetadataError::MetadataRevisionMismatch) => continue, // Skip refresh if the revisions do not match
+                Err(e) => {
+                    error!(e, "Cannot refresh metadata of {}", package_id.style());
+                    exit(1);
+                },
+            };
             package_version.update_metadata_refresh(updated_metadata);
 
             // Save register to store updated timestamps
