@@ -12,7 +12,7 @@ use crate::{
     },
     config::{Config, Repository},
     installer::types::PackageName,
-    integrity::metadata::MetaCheck,
+    integrity::metadata::{IssueType, MetaCheck},
     repositories::provider,
     utils::unwrap_or_exit::UnwrapOrExit,
 };
@@ -42,7 +42,15 @@ impl HandleCommand for MetaCheckArgs {
         let provider = provider::create_metadata_provider(&repository).unwrap_or_exit_msg("Could not create metadata provider", 1);
         let mut meta_checker = MetaCheck::new(&self.repository, provider);
         meta_checker.check(&self.packages);
-        meta_checker.display_issues();
+
+        let most_urgent_issue_type = meta_checker.display_issues();
+
+        // Exit based on the most urgent issue type
+        match most_urgent_issue_type {
+            Some(IssueType::Fatal) => exit(3),
+            Some(IssueType::Breaking) => exit(2),
+            Some(IssueType::Warning) | None => (),
+        }
     }
 }
 

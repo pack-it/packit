@@ -50,6 +50,7 @@ impl HandleCommand for UninstallArgs {
         let mut installer = Installer::new(&config, &mut register, &manager, InstallerOptions::default());
 
         // Uninstall all specified packages
+        let mut found_error = false;
         for optional_id in &uninstall_order {
             match installer.uninstall(optional_id) {
                 Ok(uninstalled_packages) => {
@@ -58,12 +59,20 @@ impl HandleCommand for UninstallArgs {
                         println!("{styled_message}");
                     }
                 },
-                Err(error) => error!(error, "Cannot uninstall package {}", optional_id.style()),
+                Err(error) => {
+                    error!(error, "Cannot uninstall package {}", optional_id.style());
+                    found_error = true;
+                },
             }
         }
 
         // Save changes
         register.save_to(&register_dir).unwrap_or_exit(1);
+
+        // If one of the uninstalls resulted in an error, exit with a non-zero status code
+        if found_error {
+            exit(1);
+        }
     }
 }
 

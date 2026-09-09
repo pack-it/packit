@@ -45,3 +45,8 @@ The `meta-check` command has the following syntax:<br>
 `pit util meta-check <REPOSITORY> [<PACKAGE-NAME> ...]`
 
 The command checks the metadata from the given repository. The `<REPOSITORY>` argument can be a URL or a path to the repository or a repository id specified in `Config.toml`. If package names are given, only that package and the given repository are checked. If no package names are given, all packages specified in the repository's `index.toml` are checked.
+
+Returns a different exit code, dependending on the type of issue:
+- Error while running the checks result in exit code `1`.
+- Breaking issues result in exit code `2`.
+- Fatal issues result in exit code `3`.

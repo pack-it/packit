@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The build tests are now turned off by default and can be turned on with `--execute-build-test` (`--skip-build-test` is removed).
 - Package names are now always lowercase, the commands translate uppercase to lowercase.
 - The parsing for dependencies and targets bounds doesn't allow for `name@` anymore.
+- The `pit util meta-check` command now returns a different exit code, dependending on the most urgent issue type found.
 
 ### Fixed
 - Fix patch apply directory meta check reporting wrong issues.
@@ -32,6 +33,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Fix the target priority calculations, now the priority for os or architectures with an addition and version are also correctly calculated.
 - Fix double recursion display for the licenses.
 - Fix the `include_license` field resolving symlinks, now they are not resolved anymore.
+- Fix errors in command not resulting in non-zero exit code.
 
 
 ## [v0.0.4](https://github.com/pack-it/packit/compare/0.0.3...0.0.4) - 2026-08-16

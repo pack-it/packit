@@ -96,6 +96,7 @@ impl HandleCommand for UpdateArgs {
         }
 
         // Update all given packages
+        let mut found_error = false;
         for optional_id in optional_ids {
             match optional_id.versioned() {
                 Some(package_id) if register.get_package_version(&package_id).is_some() => {},
@@ -127,6 +128,7 @@ impl HandleCommand for UpdateArgs {
                 Ok(new_package_id) => new_package_id,
                 Err(error) => {
                     error!(error, "Cannot update package {}", optional_id.style());
+                    found_error = true;
                     continue;
                 },
             };
@@ -146,6 +148,11 @@ impl HandleCommand for UpdateArgs {
         // Refresh metadata of all given packages
         if !self.skip_refresh {
             self.refresh_metadata(&mut register, &config);
+        }
+
+        // If one of the updates resulted in an error, exit with a non-zero status code
+        if found_error {
+            exit(1);
         }
     }
 }
@@ -196,6 +203,7 @@ impl UpdateArgs {
             false => &parameter_checks::expand_optional_ids(register, config, &self.packages),
         };
 
+        let mut found_error = false;
         for package_id in packages {
             let Some(package_version) = register.get_package_version_mut(package_id) else {
                 error!(msg: "Expected package version {} to exist", package_id.style());
@@ -211,6 +219,7 @@ impl UpdateArgs {
             );
             let Some(provider) = provider::create_metadata_provider(&repository) else {
                 error!(msg: "Cannot create provider for repository");
+                found_error = true;
                 continue;
             };
 
@@ -228,6 +237,11 @@ impl UpdateArgs {
             if updated_metadata {
                 println!("Updated local metadata of {}", package_id.style());
             }
+        }
+
+        // If one of the refreshes resulted in an error, exit with a non-zero status code
+        if found_error {
+            exit(1);
         }
     }
 }

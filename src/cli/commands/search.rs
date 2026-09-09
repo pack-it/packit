@@ -198,7 +198,7 @@ impl SearchArgs {
             Err(RepositoryError::PackageNotFoundError { reason, .. }) => not_found::repository_package(package_name, manager, reason),
             Err(e) => {
                 error!(e, "Cannot read package");
-                return;
+                exit(1);
             },
         };
 
@@ -207,11 +207,11 @@ impl SearchArgs {
             Ok(version) => version,
             Err(RepositoryError::PackageNotFoundError { reason, .. }) => {
                 println!("Package cannot be found: {reason}");
-                return;
+                exit(1);
             },
             Err(e) => {
                 error!(e, "Unable to retrieve latest version of package");
-                return;
+                exit(1);
             },
         };
 
@@ -243,7 +243,7 @@ impl SearchArgs {
             Err(RepositoryError::PackageNotFoundError { reason, .. }) => not_found::repository_package_version(package_id, manager, reason),
             Err(e) => {
                 error!(e, "Cannot read package");
-                return;
+                exit(1);
             },
         };
 
@@ -254,7 +254,7 @@ impl SearchArgs {
             Ok(target) => target,
             Err(e) => {
                 error!(e, "Cannot read {} from repository '{repository_id}'", package_id.style());
-                return;
+                exit(1);
             },
         };
 
