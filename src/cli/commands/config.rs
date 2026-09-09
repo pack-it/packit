@@ -313,7 +313,8 @@ impl ConfigArgs {
             let is_repository_reachable = repo_meta.as_ref().map(|x| self.check_metadata_repository_compatibility(x)).unwrap_or(false);
 
             // Check if the repository is reachable
-            if is_repository_reachable {
+            if !is_repository_reachable {
+                // Note that the check availability and compatibility functions print warnings
                 if ask_user("Are you sure you want to add this repository?", QuestionResponse::No).unwrap_or_exit(1).is_no_or_invalid() {
                     println!("Cancelling adding of repository");
                     return;
@@ -386,6 +387,7 @@ impl ConfigArgs {
 
             // Check if the repository is reachable
             if !is_repository_reachable {
+                // Note that the check availability and compatibility functions print warnings
                 if ask_user("Are you sure you want to change the url to this repository?", QuestionResponse::No)
                     .unwrap_or_exit(1)
                     .is_no_or_invalid()

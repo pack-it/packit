@@ -1,7 +1,7 @@
 # Update
 
 The `update` command has the following command line syntax:<br>
-`pit update [<PACKAGE-NAME>[@<VERSION>] ...] [--new-version <NEW-VERSION>] [--all] [--exclude <PACKAGE-NAME> ...] [--refresh-only] [--skip-refresh]`
+`pit update [<PACKAGE-NAME>[@<VERSION>] ...] [--new-version <NEW-VERSION>] [--yes | -y] [--all] [--exclude <PACKAGE-NAME> ...] [--refresh-only] [--skip-refresh]`
 
 ## Basic update
 The `update` command updates the specified packages, using the following syntax:<br>
@@ -28,6 +28,9 @@ This is a complete list of all flags that can be used with the `pit update` comm
 With this flag you can specify the new version to update to.
 
 Note that this flag can only be used when a single package is specified.
+
+### `--yes`
+The `--yes` flag or `-y` can be used to skip a confirmation prompt asking you if you want to proceed with updating.
 
 ### `--all`
 The `--all` flag can be used to update all latest installed versions to the latest available version. It cannot be used when packages are specified.

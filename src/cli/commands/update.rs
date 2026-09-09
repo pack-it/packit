@@ -39,6 +39,10 @@ pub struct UpdateArgs {
     #[arg(long, requires = "packages")]
     new_version: Option<Version>,
 
+    /// Skips a confirmation prompt
+    #[arg(short, long, conflicts_with = "refresh_only")]
+    yes: bool,
+
     /// Updates all the installed packages to the latest version possible
     #[arg(long, default_value = "false", conflicts_with = "packages")]
     all: bool,
@@ -181,10 +185,12 @@ impl UpdateArgs {
         grid::print_grid(&filtered_updatables.iter().map_styled().collect());
 
         // Check if the user wants to proceed with the update of the found packages
-        let question = "Do you wish to proceed?";
-        if ask_user(question, QuestionResponse::Yes).unwrap_or_exit(1).is_no_or_invalid() {
-            println!("Update canceled");
-            exit(0);
+        if !self.yes {
+            let question = "Do you wish to proceed?";
+            if ask_user(question, QuestionResponse::Yes).unwrap_or_exit(1).is_no_or_invalid() {
+                println!("Update canceled");
+                exit(0);
+            }
         }
 
         filtered_updatables.into_iter().map(OptionalPackageId::from).collect()
