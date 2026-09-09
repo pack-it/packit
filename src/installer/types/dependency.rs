@@ -1,10 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use serde::{Deserialize, Serialize, de};
 use std::{fmt::Display, str::FromStr};
+use thiserror::Error;
 
 use crate::installer::types::{PackageName, Version, version_intervals::VersionIntervals};
 
+/// Errors that occur when creating or using the target bounds.
+#[cfg_attr(test, derive(PartialEq))]
+#[derive(Error, Debug)]
+pub enum DependencyError {
+    #[error("Expected a version, because '@' was used")]
+    ExpectedVersion,
+}
+
 /// Holds a dependency name and its allowed versions.
+#[cfg_attr(test, derive(PartialEq))]
 #[derive(Debug, Clone)]
 pub struct Dependency {
     name: PackageName,
@@ -18,15 +28,12 @@ impl<'de> Deserialize<'de> for Dependency {
         D: serde::Deserializer<'de>,
     {
         let string: String = de::Deserialize::deserialize(deserializer)?;
-        let index = string.chars().position(|c| c == '@');
 
-        let (name, version) = match index {
-            Some(index) => string.split_at(index),
+        let (name, version) = match string.split_once('@') {
+            Some(value) if value.1.is_empty() => return Err(DependencyError::ExpectedVersion).map_err(serde::de::Error::custom)?,
+            Some(value) => value,
             None => (string.as_str(), ""),
         };
-
-        // Remove @ character from version number
-        let version = version.strip_prefix("@").unwrap_or("");
 
         let version_intervals = VersionIntervals::from_str(version).map_err(de::Error::custom)?;
 
@@ -82,7 +89,14 @@ impl Dependency {
 pub mod tests {
     use std::str::FromStr;
 
-    use crate::installer::types::{package_name::tests::create_package_name, version::tests::create_version};
+    use serde::de::{
+        IntoDeserializer,
+        value::{Error, StrDeserializer},
+    };
+
+    use crate::installer::types::{
+        package_name::tests::create_package_name, version::tests::create_version, version_intervals_test::create_version_intervals,
+    };
 
     use super::*;
 
@@ -92,6 +106,42 @@ pub mod tests {
             name: create_package_name(name),
             version_intervals: VersionIntervals::from_str(version_intervals).expect("Expected correct version intervals"),
         }
+    }
+
+    #[test]
+    fn deserialize() {
+        let input: StrDeserializer<'_, Error> = "test".into_deserializer();
+        assert_eq!(
+            Dependency::deserialize(input),
+            Ok(Dependency {
+                name: create_package_name("test"),
+                version_intervals: create_version_intervals("")
+            })
+        );
+
+        let input: StrDeserializer<'_, Error> = "test@1.1".into_deserializer();
+        assert_eq!(
+            Dependency::deserialize(input),
+            Ok(Dependency {
+                name: create_package_name("test"),
+                version_intervals: create_version_intervals("1.1")
+            })
+        );
+    }
+
+    #[test]
+    fn deserialize_missing_version() {
+        let input: StrDeserializer<'_, Error> = "test@".into_deserializer();
+        assert_eq!(
+            Dependency::deserialize(input),
+            Err(DependencyError::ExpectedVersion).map_err(de::Error::custom)
+        );
+
+        let input: StrDeserializer<'_, Error> = "@".into_deserializer();
+        assert_eq!(
+            Dependency::deserialize(input),
+            Err(DependencyError::ExpectedVersion).map_err(de::Error::custom)
+        );
     }
 
     #[test]
