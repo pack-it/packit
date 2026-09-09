@@ -3,8 +3,8 @@ pub mod error;
 mod handler;
 
 pub use handler::LocalMetaHandler;
+pub use handler::LocalMetaPackageHandler;
 
-#[expect(unused_imports)]
 pub use handler::LocalMetadata;
 
 #[expect(unused_imports)]

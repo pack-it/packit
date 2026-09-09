@@ -284,6 +284,25 @@ impl<'a> LocalMetaPackageHandler<'a> {
         Ok(updated)
     }
 
+    /// Writes the given `LocalMetadata` for the package.
+    /// Note that this should normally not be used, it only exists for use in the init command.
+    pub fn write_raw_metadata(&self, metadata: LocalMetadata) -> Result<()> {
+        let metadata_dir = self.get_base_path();
+
+        // Create metadata dir if it does not exist
+        if !metadata_dir.exists() {
+            fs::create_dir_all(&metadata_dir).err_with_path("create dirs", &metadata_dir)?;
+        }
+
+        let metadata_file = metadata_dir.join(METADATA_FILENAME);
+        let local_meta_str = toml::ser::to_string(&metadata)?;
+
+        // Write metadata to file
+        fs::write(&metadata_file, local_meta_str).err_with_path("write", &metadata_file)?;
+
+        Ok(())
+    }
+
     /// Creates the local metadata from the given package, version and target metadata.
     /// Returns the created `LocalMetadata`.
     fn create_local_metadata(
