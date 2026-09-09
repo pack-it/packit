@@ -143,7 +143,7 @@ impl VersionIntervals {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use crate::installer::types::version::tests::create_version;
 
     use super::*;

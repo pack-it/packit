@@ -11,6 +11,7 @@ use crate::{
 };
 
 /// Errors that occur when creating or using the target bounds.
+#[cfg_attr(test, derive(PartialEq))]
 #[derive(Error, Debug)]
 pub enum TargetBoundsError {
     #[error("Target additions are not allowed for this target name")]
@@ -21,6 +22,9 @@ pub enum TargetBoundsError {
 
     #[error("Target name is invalid")]
     InvalidTargetName,
+
+    #[error("Expected a version, because '@' was used")]
+    ExpectedVersion,
 
     #[error("Cannot parse version number")]
     VersionError(#[from] VersionError),
@@ -128,7 +132,8 @@ impl FromStr for TargetBounds {
     fn from_str(string: &str) -> Result<Self, Self::Err> {
         // Split name and version_bounds
         let (name, version_bounds) = match string.split_once('@') {
-            Some(val) => val,
+            Some(value) if value.1.is_empty() => return Err(TargetBoundsError::ExpectedVersion),
+            Some(value) => value,
             None => (string, ""),
         };
 
@@ -148,7 +153,7 @@ impl FromStr for TargetBounds {
         }
 
         // Check if version bounds are given for the unix target
-        if matches!(name, TargetName::Unix) && !version_bounds.is_empty() {
+        if matches!(name, TargetName::Unix) && !version_intervals.is_empty() {
             return Err(TargetBoundsError::VersionBoundsNotAllowed);
         }
 
@@ -267,5 +272,58 @@ impl TargetBounds {
         }
 
         current_best.map(|x| (current_best_priority, x))
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+
+    use crate::{installer::types::version_intervals_test::create_version_intervals, platforms::Os::Linux};
+
+    use super::*;
+
+    #[test]
+    fn from_str() {
+        assert_eq!(
+            TargetBounds::from_str("linux:mint@1.1.1"),
+            Ok(TargetBounds {
+                name: TargetName::Os(Linux),
+                addition: Some("mint".to_string()),
+                version_intervals: create_version_intervals("1.1.1")
+            })
+        );
+    }
+
+    #[test]
+    fn from_str_addition_not_allowed() {
+        assert_eq!(TargetBounds::from_str("mac:mint@1.1.1"), Err(TargetBoundsError::AdditionNotAllowed));
+        assert_eq!(
+            TargetBounds::from_str("windows:mint@1.1.1"),
+            Err(TargetBoundsError::AdditionNotAllowed)
+        );
+        assert_eq!(
+            TargetBounds::from_str("unix:mint@1.1.1"),
+            Err(TargetBoundsError::AdditionNotAllowed)
+        );
+    }
+
+    #[test]
+    fn from_str_version_for_unix() {
+        assert_eq!(
+            TargetBounds::from_str("unix@1.1.1"),
+            Err(TargetBoundsError::VersionBoundsNotAllowed)
+        );
+    }
+
+    #[test]
+    fn from_str_missing_version() {
+        assert_eq!(TargetBounds::from_str("linux@"), Err(TargetBoundsError::ExpectedVersion));
+        assert_eq!(TargetBounds::from_str("@"), Err(TargetBoundsError::ExpectedVersion));
+    }
+
+    #[test]
+    fn from_str_empty_name() {
+        assert_eq!(TargetBounds::from_str("@1.1.1"), Err(TargetBoundsError::InvalidTargetName));
+        assert_eq!(TargetBounds::from_str(""), Err(TargetBoundsError::InvalidTargetName));
     }
 }

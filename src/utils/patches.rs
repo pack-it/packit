@@ -203,6 +203,7 @@ fn check_escapes_upper_dir(path: &Path, upper_dir: &Path) -> Result<()> {
 }
 
 /// Resolves the source and destination paths to a full pair with an existing source.
+/// TODO
 fn resolve_paths<'a>(source: &'a Path, destination: &'a Path) -> (&'a Path, &'a Path) {
     // If the source does not exist and the destination does exist, check if we can assume same file
     if !source.exists() && destination.exists() {
@@ -249,6 +250,7 @@ fn apply_path(patch: &PatchKind<[u8]>, source: Option<&Path>, destination: &Path
 }
 
 /// Detect the format of the given patch.
+/// TODO
 fn detect_patch_format(patch: &Bytes) -> Result<PatchFormat> {
     let mut found_git_header = false;
 
@@ -307,6 +309,7 @@ fn detect_patch_format(patch: &Bytes) -> Result<PatchFormat> {
 }
 
 /// Checks if a file operation contains git `a/` and `b/` prefixes.
+/// TODO
 fn contains_git_prefix(operation: &FileOperation<[u8]>) -> bool {
     match operation {
         FileOperation::Delete(path) if path.starts_with(b"a/") => true,
