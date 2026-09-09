@@ -14,7 +14,7 @@ use crate::{
         Symlinker,
         types::{PackageId, PackageName, Version},
     },
-    register::package_register::PackageRegister,
+    register::{metadata::LocalMetaHandler, package_register::PackageRegister},
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
@@ -59,6 +59,20 @@ impl HandleCommand for SwitchDependencyArgs {
                 self.dependency_version.style()
             );
             return;
+        }
+
+        // Retrieve local metadata of package
+        let local_meta_handler = LocalMetaHandler::new(&config.prefix_directory).get_package(&self.package);
+        let local_metadata = local_meta_handler.read_metadata().unwrap_or_exit_msg("Error while reading local metadata", 1);
+        let Some(dependency_specification) = local_metadata.dependencies.iter().find(|x| *x.get_name() == self.dependency_name) else {
+            error!(msg: "Cannot find dependency details in local metadata of {}", self.package.style());
+            exit(1);
+        };
+
+        // Check if new version satisfies the dependency of the package
+        if !dependency_specification.satisfied(&self.dependency_name, &self.dependency_version) {
+            error!(msg: "Dependency {} is not satisfied by version {}", self.dependency_name.style(), self.dependency_version.style());
+            exit(1)
         }
 
         // Get dependency
