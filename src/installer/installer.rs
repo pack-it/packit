@@ -866,30 +866,32 @@ impl<'a> Installer<'a> {
         let mut dependents = HashSet::new();
         let mut unsatisfied_dependents = HashSet::new();
         for dependent in &old_package.dependents {
-            let (repository_id, _) = self.repository_manager.read_package(&dependent.name)?;
-            let package_version_meta = self.repository_manager.read_repo_package_version(&repository_id, dependent)?;
-            let dependency = match package_version_meta.dependencies.iter().find(|d| *d.get_name() == old_package.package_id.name) {
-                Some(dependency) => dependency,
-                None => {
-                    warning!(
-                        "Dependent is not a dependent of {} eventhough it should be",
-                        old_package.package_id.style()
-                    );
-                    continue;
-                },
+            // Retrieve local metadata of dependent
+            let local_meta_handler = LocalMetaHandler::new(&self.config.prefix_directory).get_package(&dependent);
+            let local_metadata = local_meta_handler.read_metadata()?;
+            let Some(dependency) = local_metadata.dependencies.iter().find(|x| *x.get_name() == old_package.package_id.name) else {
+                warning!(
+                    "Dependent {} is not a dependent of {} eventhough it should be",
+                    dependent.style(),
+                    old_package.package_id.style()
+                );
+                continue;
             };
 
+            // Check if the dependent is satisfied with the new version
             if dependency.satisfied(&new_package_id.name, new_version) {
                 dependents.insert(dependent.clone());
                 continue;
             }
 
+            // If not satisfied, add to unsatisfied list
             unsatisfied_dependents.insert(dependent.clone());
             if unsatisfied_dependents.len() > 1 {
                 continue;
             }
 
-            let question = "Could not update, because the current version has dependents. Do you wish to install the newer version as active version, but keep the older version as well?";
+            // Ask user to keep both versions after first unsatisfied dependency is found
+            let question = "Could not update, because the current version has dependents. Do you wish to install the newer version while keeping the older version as well?";
             if ask_user(question, QuestionResponse::Yes)?.is_no() {
                 return Err(InstallerError::SatisfyError {
                     new_version: new_version.clone(),

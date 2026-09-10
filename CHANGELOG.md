@@ -35,6 +35,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Fix double recursion display for the licenses.
 - Fix the `include_license` field resolving symlinks, now they are not resolved anymore.
 - Fix errors in command not resulting in non-zero exit code.
+- Fix update functionality checking if dependency is still satisfied in a wrong way.
 
 
 ## [v0.0.4](https://github.com/pack-it/packit/compare/0.0.3...0.0.4) - 2026-08-16
