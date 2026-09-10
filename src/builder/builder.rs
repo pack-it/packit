@@ -222,7 +222,7 @@ impl<'a> Builder<'a> {
             }
 
             println!("Paused building in '{}'", inner_build_directory.display());
-            display::wait_for_continue();
+            display::wait_for_continue()?;
         }
 
         // Propagate script result

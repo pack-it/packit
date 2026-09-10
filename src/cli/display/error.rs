@@ -6,6 +6,9 @@ use crate::utils::ioerror;
 /// The errors that occur during display.
 #[derive(Error, Debug)]
 pub enum DisplayError {
+    #[error("Unable to prompt user, since prompts are disabled")]
+    UserPromptsDisabled,
+
     #[error("Failed to read user input")]
     IOError(#[source] ioerror::IOError),
 }

@@ -35,6 +35,10 @@ impl QuestionResponse {
 
 /// Prompts the user with a yes or no question.
 pub fn ask_user(question: &str, default: QuestionResponse) -> Result<QuestionResponse> {
+    if prompts_disabled() {
+        return Err(DisplayError::UserPromptsDisabled);
+    }
+
     // Make default bold
     match default {
         QuestionResponse::Yes => print!("{question} [Y/n]: "),
@@ -64,6 +68,10 @@ pub fn ask_user(question: &str, default: QuestionResponse) -> Result<QuestionRes
 
 /// Prompts the user to give input. The user can skip by pressing enter.
 pub fn ask_user_input(question: &str) -> Result<Option<String>> {
+    if prompts_disabled() {
+        return Err(DisplayError::UserPromptsDisabled);
+    }
+
     print!("{question} [press enter to skip]: ");
 
     // Get user input
@@ -76,11 +84,16 @@ pub fn ask_user_input(question: &str) -> Result<Option<String>> {
 }
 
 /// Prompts the user to press enter to continue.
-pub fn wait_for_continue() {
+pub fn wait_for_continue() -> Result<()> {
+    if prompts_disabled() {
+        return Err(DisplayError::UserPromptsDisabled);
+    }
+
     print!("Press enter to continue...");
 
     // Wait for user input
-    _ = read_line();
+    read_line()?;
+    Ok(())
 }
 
 /// Reads a line from stdin.
@@ -90,4 +103,12 @@ fn read_line() -> Result<String> {
     io::stdin().read_line(&mut input).err_operation("read stdin").map_err(DisplayError::IOError)?;
 
     Ok(input.trim().to_string())
+}
+
+fn prompts_disabled() -> bool {
+    match std::env::var("PACKIT_DISABLE_PROMPTS") {
+        Ok(value) => value == "1" || value == "true",
+        Err(std::env::VarError::NotPresent) => false,
+        Err(std::env::VarError::NotUnicode(_)) => false, // If the value is not unicode, it cannot be "1" or "true"
+    }
 }

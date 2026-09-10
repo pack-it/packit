@@ -609,10 +609,11 @@ impl MetaCheck {
     }
 
     /// Displays the issues which have been found.
-    pub fn display_issues(&self) {
+    /// Returns the `IssueType` of the most urgent issue, or None if no issues were found.
+    pub fn display_issues(&self) -> Option<IssueType> {
         if self.issues.is_empty() {
             println!("No issues were found!");
-            return;
+            return None;
         }
 
         let mut count_fatal = 0;
@@ -636,14 +637,23 @@ impl MetaCheck {
 
         for issue in &self.issues {
             println!("{issue}");
-
-            if matches!(issue.issue_type, IssueType::Fatal) {
-                return;
-            }
         }
 
         if self.checks_skipped {
             println!("Some checks were skipped due to errors NOT created by invalid metadata");
         }
+
+        // Return `IssueType` based on number of issues found
+        if count_fatal > 0 {
+            return Some(IssueType::Fatal);
+        }
+        if count_breaking > 0 {
+            return Some(IssueType::Breaking);
+        }
+        if count_warning > 0 {
+            return Some(IssueType::Warning);
+        }
+
+        None
     }
 }

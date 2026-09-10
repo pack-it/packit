@@ -3,7 +3,7 @@ use thiserror::Error;
 
 use crate::{
     builder::BinaryPatcherError,
-    cli::display::styled::Styled,
+    cli::display::{error::DisplayError, styled::Styled},
     installer::{scripts::ScriptError, types::PackageName, unpack::UnpackError},
     platforms::tool_detection::error::ToolDetectionError,
     repositories::{error::RepositoryError, types::Requirement},
@@ -56,6 +56,9 @@ pub enum BuilderError {
 
     #[error("Error while detecting tool on the system")]
     ToolDetectionError(#[from] ToolDetectionError),
+
+    #[error("Error while displaying message on console")]
+    DisplayError(#[from] DisplayError),
 
     #[error("Error while requesting files for building")]
     RequestError(#[from] reqwest::Error),

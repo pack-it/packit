@@ -126,17 +126,26 @@ impl HandleCommand for InstallArgs {
         let mut installer = Installer::new(&config, &mut register, &manager, installer_options);
 
         // Install all packages
+        let mut found_error = false;
         for optional_id in &self.packages {
             match installer.install(optional_id) {
                 Ok(installed_package) => {
                     let styled_message = format!("Successfully installed {}", installed_package.style()).bold().green();
                     println!("{styled_message}");
                 },
-                Err(error) => error!(error, "Cannot install package {}", optional_id.style()),
+                Err(error) => {
+                    error!(error, "Cannot install package {}", optional_id.style());
+                    found_error = true;
+                },
             }
         }
 
         // Save changes
         register.save_to(&register_dir).unwrap_or_exit(1);
+
+        // If one of the installs resulted in an error, exit with a non-zero status code
+        if found_error {
+            exit(1);
+        }
     }
 }
