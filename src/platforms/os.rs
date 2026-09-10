@@ -61,7 +61,7 @@ impl Os {
 
 /// Represents an OS version. In case of Linux this also includes the distro and distro version.
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[expect(dead_code)]
+#[cfg_attr(not(test), expect(dead_code))]
 pub enum OsVersion {
     MacOs {
         version: Version,
@@ -189,10 +189,15 @@ impl OsVersion {
             }
         }
 
-        let distro = match distro {
-            Some(distro) => TargetAddition::from_str(&distro.to_lowercase()).ok()?,
-            None => {
-                error!(msg: "Cannot read distro name");
+        let Some(distro) = distro else {
+            error!(msg: "Cannot read distro name");
+            return None;
+        };
+
+        let distro = match TargetAddition::from_str(&distro.to_lowercase()) {
+            Ok(distro) => distro,
+            Err(e) => {
+                error!(e, "Cannot parse distro name");
                 return None;
             },
         };

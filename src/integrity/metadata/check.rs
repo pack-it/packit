@@ -552,14 +552,6 @@ impl MetaCheck {
             let description = format!("List of license exceptions from {} is empty", package_id.style());
             self.issues.push(MetaIssue::default(description));
         }
-
-        // Check if one of the excptions is an empty string
-        for exception in exceptions {
-            if exception.is_empty() {
-                let description = format!("Package {} has an empty license exception", package_id.style());
-                self.issues.push(MetaIssue::default(description));
-            }
-        }
     }
 
     /// Checks the deprecation (and disable) dates of a package and a package version.

@@ -202,7 +202,8 @@ pub mod tests {
     fn create_folder_symlinks_missing_original() {
         let original = tempdir().unwrap();
         let original = original.path().join("does").join("not").join("exist");
-        assert!(create_folder_symlinks(&original, &PathBuf::from_str("/foo").unwrap(), false).is_ok());
+        let link = tempdir().unwrap();
+        assert!(create_folder_symlinks(&original, &link.path().join("foo"), false).is_ok());
         assert!(!original.exists());
     }
 

@@ -1,8 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use serde::{
-    Deserialize, Serialize,
-    de::{self, Error},
-};
+use serde::{Deserialize, Serialize, de};
 use std::{fmt::Display, str::FromStr};
 use thiserror::Error;
 
@@ -33,7 +30,7 @@ impl<'de> Deserialize<'de> for Dependency {
         let string: String = de::Deserialize::deserialize(deserializer)?;
 
         let (name, version) = match string.split_once('@') {
-            Some(value) if value.1.is_empty() => return Err(Error::custom(DependencyError::ExpectedVersion)),
+            Some(value) if value.1.is_empty() => return Err(de::Error::custom(DependencyError::ExpectedVersion)),
             Some(value) => value,
             None => (string.as_str(), ""),
         };

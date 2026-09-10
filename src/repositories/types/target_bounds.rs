@@ -442,7 +442,7 @@ pub mod tests {
     fn satisfied_by_unknown() {
         let target = Target {
             architecture: TargetArchitecture::MacOsAarch64,
-            os: OsVersion::MacOs {
+            os: OsVersion::Windows {
                 version: create_version("3.4.1"),
             },
         };

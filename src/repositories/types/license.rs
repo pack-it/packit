@@ -1,5 +1,5 @@
-use regex::Regex;
 // SPDX-License-Identifier: GPL-3.0-only
+use regex::Regex;
 use serde::{Deserialize, Serialize, de};
 use std::{fmt::Display, str::FromStr, sync::LazyLock};
 use thiserror::Error;
@@ -67,7 +67,7 @@ pub enum Licenses {
         name: LicenseIdentifier,
 
         #[serde(rename = "with")]
-        exceptions: Vec<String>,
+        exceptions: Vec<LicenseIdentifier>,
     },
     Any {
         any: Vec<Licenses>,
@@ -105,7 +105,7 @@ impl Licenses {
             Licenses::Unknown => write!(f, "Unknown")?,
             Licenses::Single(license) => write!(f, "{license}")?,
             Licenses::SingleWithExceptions { name, exceptions } => {
-                let exceptions_str = exceptions.join(", ");
+                let exceptions_str = exceptions.iter().map(|e| e.to_string()).collect::<Vec<_>>().join(", ");
                 match exceptions.len() {
                     0 => write!(f, "{name}")?,
                     1 => write!(f, "{name} WITH {exceptions_str}")?,
@@ -190,7 +190,7 @@ pub mod tests {
 
         let license = Licenses::SingleWithExceptions {
             name: LicenseIdentifier("MIT".into()),
-            exceptions: vec!["Test-Exception".to_string()],
+            exceptions: vec![LicenseIdentifier("Test-Exception".into())],
         };
         assert_eq!(license.get_length(), 1);
 
@@ -223,7 +223,7 @@ pub mod tests {
     fn format_single_with_single_exception() {
         let license = Licenses::SingleWithExceptions {
             name: LicenseIdentifier("MIT".into()),
-            exceptions: vec!["Test-Exception".to_string()],
+            exceptions: vec![LicenseIdentifier("Test-Exception".into())],
         };
         assert_eq!(license.to_string(), "MIT WITH Test-Exception".to_string());
     }
@@ -232,7 +232,10 @@ pub mod tests {
     fn format_single_with_exceptions() {
         let license = Licenses::SingleWithExceptions {
             name: LicenseIdentifier("MIT".into()),
-            exceptions: vec!["Test-Exception".to_string(), "Second-Exception".to_string()],
+            exceptions: vec![
+                LicenseIdentifier("Test-Exception".into()),
+                LicenseIdentifier("Second-Exception".into()),
+            ],
         };
         assert_eq!(license.to_string(), "MIT WITH (Test-Exception, Second-Exception)".to_string());
     }
