@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The notice fields in the metadata to show a message before or after an installation.
 - The local metadata storage, which stores the metadata of installed packages.
 - Parsing for target additions, which doesn't allow for empty additions or additions with invalid characters.
+- License identifiers are now checked for invalid characters and being empty.
 
 ### Changes
 - The build tests are now turned off by default and can be turned on with `--execute-build-test` (`--skip-build-test` is removed).

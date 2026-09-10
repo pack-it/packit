@@ -521,10 +521,10 @@ impl MetaCheck {
 
     /// Checks the licenses of a package.
     fn check_license(&mut self, license: &Licenses, package_id: &PackageId) {
-        let (license, exceptions) = match &license {
+        let exceptions = match &license {
             Licenses::Unknown => return,
-            Licenses::Single(license) => (license, None),
-            Licenses::SingleWithExceptions { name, exceptions } => (name, Some(exceptions)),
+            Licenses::Single(_) => return,
+            Licenses::SingleWithExceptions { exceptions, .. } => exceptions,
             Licenses::Any { any: licenses } | Licenses::All { all: licenses } => {
                 // Check if the list of licenses is empty
                 if licenses.is_empty() {
@@ -547,26 +547,17 @@ impl MetaCheck {
             },
         };
 
-        // Check if the license is an empty string
-        if license.is_empty() {
-            let description = format!("Package {} has an empty license", package_id.style());
+        // Check if the list of exceptions is empty
+        if exceptions.is_empty() {
+            let description = format!("List of license exceptions from {} is empty", package_id.style());
             self.issues.push(MetaIssue::default(description));
         }
 
-        // Check exceptions if specified
-        if let Some(exceptions) = exceptions {
-            // Check if the list of exceptions is empty
-            if exceptions.is_empty() {
-                let description = format!("List of license exceptions from {} is empty", package_id.style());
+        // Check if one of the excptions is an empty string
+        for exception in exceptions {
+            if exception.is_empty() {
+                let description = format!("Package {} has an empty license exception", package_id.style());
                 self.issues.push(MetaIssue::default(description));
-            }
-
-            // Check if one of the excptions is an empty string
-            for exception in exceptions {
-                if exception.is_empty() {
-                    let description = format!("Package {} has an empty license exception", package_id.style());
-                    self.issues.push(MetaIssue::default(description));
-                }
             }
         }
     }
