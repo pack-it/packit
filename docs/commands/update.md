@@ -30,7 +30,7 @@ With this flag you can specify the new version to update to.
 Note that this flag can only be used when a single package is specified.
 
 ### `--yes`
-The `--yes` flag or `-y` can be used to skip a confirmation prompt asking you if you want to proceed with updating.
+The `--yes` flag or `-y` can be used to skip a confirmation prompt asking you if you want to proceed with updating. Note that this currently only skips the prompt asking you if you want to update the updatable packages, prompts about the install process are still possible.
 
 ### `--all`
 The `--all` flag can be used to update all latest installed versions to the latest available version. It cannot be used when packages are specified.
