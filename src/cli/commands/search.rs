@@ -206,7 +206,7 @@ impl SearchArgs {
         let latest_version = match manager.read_latest_supported_version(&repository_id, &package, &Target::current()) {
             Ok(version) => version,
             Err(RepositoryError::PackageNotFoundError { reason, .. }) => {
-                println!("Package cannot be found: {reason}");
+                error!(msg: "Package cannot be found: {reason}");
                 exit(1);
             },
             Err(e) => {

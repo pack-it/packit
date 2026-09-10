@@ -637,10 +637,6 @@ impl MetaCheck {
 
         for issue in &self.issues {
             println!("{issue}");
-
-            if matches!(issue.issue_type, IssueType::Fatal) {
-                return Some(IssueType::Fatal);
-            }
         }
 
         if self.checks_skipped {

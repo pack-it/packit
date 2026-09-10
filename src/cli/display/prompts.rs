@@ -84,16 +84,16 @@ pub fn ask_user_input(question: &str) -> Result<Option<String>> {
 }
 
 /// Prompts the user to press enter to continue.
-pub fn wait_for_continue() {
+pub fn wait_for_continue() -> Result<()> {
     if prompts_disabled() {
-        // Panic for now, to prevent unnecessary usage of `Result`
-        panic!("Cannot wait for continue, since prompts are disabled");
+        return Err(DisplayError::UserPromptsDisabled);
     }
 
     print!("Press enter to continue...");
 
     // Wait for user input
-    _ = read_line();
+    read_line()?;
+    Ok(())
 }
 
 /// Reads a line from stdin.
