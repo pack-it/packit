@@ -202,7 +202,7 @@ fn check_escapes_upper_dir(path: &Path, upper_dir: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Resolves the source and destination paths to a full pair with an existing source.
+/// Resolves the source and destination paths to a full pair with an existing source if possible.
 fn resolve_paths<'a>(source: &'a Path, destination: &'a Path) -> (&'a Path, &'a Path) {
     // If the source does not exist and the destination does exist, check if we can assume same file
     if !source.exists() && destination.exists() {
@@ -315,5 +315,47 @@ fn contains_git_prefix(operation: &FileOperation<[u8]>) -> bool {
         FileOperation::Rename { from, to } if from.starts_with(b"a/") && to.starts_with(b"b/") => true,
         FileOperation::Copy { from, to } if from.starts_with(b"a/") && to.starts_with(b"b/") => true,
         _ => false,
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+
+    use std::fs::File;
+
+    use tempfile::tempdir;
+
+    use super::*;
+
+    #[test]
+    fn resolve_paths_source_exists() {
+        let source = tempdir().unwrap();
+        let source = source.path();
+        let destination = tempdir().unwrap();
+        let destination = destination.path();
+        assert_eq!(resolve_paths(source, destination), (source, destination));
+        assert!(source.exists());
+        assert!(destination.exists());
+    }
+
+    #[test]
+    fn resolve_paths_test() {
+        let source = tempdir().unwrap();
+        let source = source.path().join("test.txt");
+        let destination = tempdir().unwrap();
+        let destination = destination.path().join("test.txt");
+        File::create(&destination).unwrap();
+        assert_eq!(resolve_paths(&source, &destination), (destination.as_path(), destination.as_path()));
+    }
+
+    #[test]
+    fn source_not_resolved() {
+        let source = tempdir().unwrap();
+        let source = source.path().join("foo.txt");
+        let destination = tempdir().unwrap();
+        let destination = destination.path().join("test.txt");
+        File::create(&destination).unwrap();
+        assert_eq!(resolve_paths(&source, &destination), (source.as_path(), destination.as_path()));
+        assert!(!source.exists());
     }
 }

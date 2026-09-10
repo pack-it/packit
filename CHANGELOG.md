@@ -14,10 +14,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - New and improved documentation.
 - The notice fields in the metadata to show a message before or after an installation.
 - The local metadata storage, which stores the metadata of installed packages.
+- Parsing for target additions, which doesn't allow for empty additions or additions with invalid characters.
+- License identifiers are now checked for invalid characters and being empty.
 
 ### Changes
 - The build tests are now turned off by default and can be turned on with `--execute-build-test` (`--skip-build-test` is removed).
 - Package names are now always lowercase, the commands translate uppercase to lowercase.
+- The parsing for dependencies and targets bounds doesn't allow for `name@` anymore.
 
 ### Fixed
 - Fix patch apply directory meta check reporting wrong issues.
@@ -25,6 +28,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Fix the `license_include` file being able to include a file outside of the build directory.
 - Fix build environment to also add symlinked packages in `CMAKE_PREFIX_PATH` and `ACLOCAL_PATH`.
 - Fix `pit switch-dependency` command not checking if dependency is still satisfied.
+- Fix the tree cycle check, it now also checks cycles to the root.
+- Fix the target priority calculations, now the priority for os or architectures with an addition and version are also correctly calculated.
+- Fix double recursion display for the licenses.
+- Fix the `include_license` field resolving symlinks, now they are not resolved anymore.
 
 
 ## [v0.0.4](https://github.com/pack-it/packit/compare/0.0.3...0.0.4) - 2026-08-16

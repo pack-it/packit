@@ -36,8 +36,12 @@ pub use self::index::IndexMeta;
 
 pub use self::license::Licenses;
 
+pub use self::target_bounds::TargetAddition;
 pub use self::target_bounds::TargetBounds;
 
 pub use self::requirement::Requirement;
 #[expect(unused_imports)]
 pub use self::requirement::RequirementError;
+
+#[cfg(test)]
+pub use package::tests as package_meta_tests;

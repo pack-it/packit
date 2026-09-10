@@ -132,7 +132,7 @@ impl<'a> Builder<'a> {
         debug!("Source size: {}", source.size);
 
         // Download the build files
-        let bytes = self.download_source(source, package_name)?;
+        let bytes = download_source(source, package_name)?;
 
         // Create temp directory to build in
         let build_directory = TempDir::new().err_operation("create temp dir")?;
@@ -149,7 +149,7 @@ impl<'a> Builder<'a> {
         }
 
         // Find inner build directory (a directory with more than just a single directory inside)
-        let inner_build_directory = self.find_inner_build_dir(build_directory.path().to_path_buf())?;
+        let inner_build_directory = find_inner_build_dir(build_directory.path().to_path_buf())?;
 
         // Check if `license_include` does not escape the build directory
         for path in &source.license_include {
@@ -230,53 +230,12 @@ impl<'a> Builder<'a> {
 
         // Copy license files
         let license_directory = destination_dir.as_ref().join("share").join("licenses").join(&install_meta.package_metadata.name);
-        self.copy_license_files(&inner_build_directory, &license_directory, source)?;
+        copy_license_files(&inner_build_directory, &license_directory, source)?;
 
         // Patch binaries
         BinaryPatcher::new(self.config).patch_binaries_in(destination_dir.as_ref().to_path_buf(), &package_id, installed_dependencies)?;
 
         Ok(())
-    }
-
-    // Finds the inner build directory by looking for a directory with more than just a single directory inside.
-    // Returns the found inner directory, or the `build_directory` if that is already the inner directory.
-    fn find_inner_build_dir(&self, build_directory: PathBuf) -> Result<PathBuf> {
-        let mut inner_build_directory = build_directory;
-        let mut found_dir = None;
-
-        // Keep searching until we found the absolute inner directory
-        loop {
-            // Read build directory to see if it contains more than just one directory
-            for entry in fs::read_dir(&inner_build_directory).err_with_path("read", &inner_build_directory)? {
-                let entry = entry.err_with_path("iterate", &inner_build_directory)?;
-                let metadata = entry.metadata().err_with_path("read metadata of", entry.path())?;
-
-                // Found inner directory if the directory contains files
-                if !metadata.is_dir() {
-                    return Ok(inner_build_directory);
-                }
-
-                // Found inner directory if the directory contains more than one directory
-                if found_dir.is_some() {
-                    return Ok(inner_build_directory);
-                }
-
-                // Set found dir to the current subdirectory
-                found_dir = Some(entry.path());
-            }
-
-            // If we found only one directory, use it as new `inner_build_directory` and search this new directory
-            // Otherwise stop searching, inner directory is already found
-            match found_dir {
-                Some(found_build_dir) => {
-                    inner_build_directory = found_build_dir;
-                    found_dir = None;
-                },
-                None => break,
-            }
-        }
-
-        Ok(inner_build_directory)
     }
 
     /// Downloads a patch, either from the given url or from the repository. Shows a spinner during the download.
@@ -298,7 +257,7 @@ impl<'a> Builder<'a> {
                 spinner.adjust_message(message);
             };
 
-            let bytes = self.download_file(&patch.url, &patch.mirrors, &patch.checksum, callback, None)?;
+            let bytes = download_file(&patch.url, &patch.mirrors, &patch.checksum, callback, None)?;
             spinner.finish();
             return Ok(bytes);
         }
@@ -327,195 +286,502 @@ impl<'a> Builder<'a> {
 
         Ok(file)
     }
+}
 
-    /// Downloads the source file of the package. Shows the download progress in a `ProgressBar`.
-    fn download_source(&self, source: &Source, package_name: &PackageName) -> Result<Bytes> {
-        let retrieve_message = format!("Retrieving {} from '{}'", package_name.style(), source.url.cyan());
-        let full_message = format!("{retrieve_message}\nDownloading {}", package_name.style());
-        let mut progressbar = ProgressBar::new(source.size.0.into(), full_message);
+/// Downloads the source file of the package. Shows the download progress in a `ProgressBar`.
+fn download_source(source: &Source, package_name: &PackageName) -> Result<Bytes> {
+    let retrieve_message = format!("Retrieving {} from '{}'", package_name.style(), source.url.cyan());
+    let full_message = format!("{retrieve_message}\nDownloading {}", package_name.style());
+    let mut progressbar = ProgressBar::new(source.size.0.into(), full_message);
 
-        let callback = |(alternative, progress): (Option<&str>, Option<usize>)| {
-            if let Some(alternative) = alternative {
-                let retrieve_message = format!("Retrieving {} from alternative '{}'", package_name.style(), alternative.cyan());
-                progressbar.adjust_prefix(format!("{retrieve_message}\nDownloading {}", package_name.style()));
-            }
+    let callback = |(alternative, progress): (Option<&str>, Option<usize>)| {
+        if let Some(alternative) = alternative {
+            let retrieve_message = format!("Retrieving {} from alternative '{}'", package_name.style(), alternative.cyan());
+            progressbar.adjust_prefix(format!("{retrieve_message}\nDownloading {}", package_name.style()));
+        }
 
-            if let Some(progress) = progress {
-                progressbar.set_position(progress as u64);
-            }
-        };
+        if let Some(progress) = progress {
+            progressbar.set_position(progress as u64);
+        }
+    };
 
-        let size = source.size.0 as usize;
-        self.download_file(&source.url, &source.mirrors, &source.checksum, callback, Some(size))
+    let size = source.size.0 as usize;
+    download_file(&source.url, &source.mirrors, &source.checksum, callback, Some(size))
+}
+
+/// Downloads a file from the url, or one of the mirrors. Checks against a checksum and returns progress with a callback.
+/// Note that it only returns progress in the callback when `size` is `Some`.
+fn download_file<F>(url: &str, mirrors: &[String], checksum: &Checksum, mut callback: F, size: Option<usize>) -> Result<Bytes>
+where
+    F: FnMut((Option<&str>, Option<usize>)),
+{
+    // Try to download from the main url
+    let mut mirrors = mirrors.iter();
+    let mut response = requests::get(url).map_err(BuilderError::RequestError);
+    if let Ok(status_response) = &response
+        && !status_response.status().is_success()
+    {
+        response = Err(BuilderError::RequestUnsuccessful(status_response.status()));
     }
 
-    /// Downloads a file from the url, or one of the mirrors. Checks against a checksum and returns progress with a callback.
-    /// Note that it only returns progress in the callback when `size` is `Some`.
-    fn download_file<F>(&self, url: &str, mirrors: &[String], checksum: &Checksum, mut callback: F, size: Option<usize>) -> Result<Bytes>
-    where
-        F: FnMut((Option<&str>, Option<usize>)),
+    // Loop through mirrors for alternatives in case of error
+    while response.is_err()
+        && let Some(mirror) = mirrors.next()
     {
-        // Try to download from the main url
-        let mut mirrors = mirrors.iter();
-        let mut response = requests::get(url).map_err(BuilderError::RequestError);
+        // Call callback with new download url
+        callback((Some(mirror), None));
+
+        // Get response from alternative mirror
+        response = requests::get(mirror).map_err(BuilderError::RequestError);
+
+        // Check if the response itself is unsuccessful
         if let Ok(status_response) = &response
             && !status_response.status().is_success()
         {
             response = Err(BuilderError::RequestUnsuccessful(status_response.status()));
         }
+    }
+    let response = response?;
 
-        // Loop through mirrors for alternatives in case of error
-        while response.is_err()
-            && let Some(mirror) = mirrors.next()
-        {
-            // Call callback with new download url
-            callback((Some(mirror), None));
+    // Get the bytes from the response
+    let bytes = match size {
+        Some(size) => response.read_progress(Some(size), |x| callback((None, Some(x)))).err_operation("read source bytes")?,
+        None => response.bytes()?,
+    };
 
-            // Get response from alternative mirror
-            response = requests::get(mirror).map_err(BuilderError::RequestError);
+    // Calculate the checksum
+    let calculated_checksum = Checksum::from_bytes(&bytes);
 
-            // Check if the response itself is unsuccessful
-            if let Ok(status_response) = &response
-                && !status_response.status().is_success()
-            {
-                response = Err(BuilderError::RequestUnsuccessful(status_response.status()));
-            }
-        }
-        let response = response?;
-
-        // Get the bytes from the response
-        let bytes = match size {
-            Some(size) => response.read_progress(Some(size), |x| callback((None, Some(x)))).err_operation("read source bytes")?,
-            None => response.bytes()?,
-        };
-
-        // Calculate the checksum
-        let calculated_checksum = Checksum::from_bytes(&bytes);
-
-        // Check equality of checksum
-        if *checksum != calculated_checksum {
-            return Err(BuilderError::ChecksumError);
-        }
-
-        Ok(bytes)
+    // Check equality of checksum
+    if *checksum != calculated_checksum {
+        return Err(BuilderError::ChecksumError);
     }
 
-    /// Copies license files from the original source into the destination directory.
-    /// Does a breadth-first search from the build directory and stops when it finds license files.
-    /// Only traverse to depth 2, to prevent detecting third party license files.
-    fn copy_license_files(&self, build_directory: &Path, destination_dir: &Path, source: &Source) -> Result<()> {
-        // Copy all include paths first
-        self.copy_include_license_files(build_directory, destination_dir, source)?;
+    Ok(bytes)
+}
 
-        // Skip copying entirely if exclude `*` is specified
-        if source.license_exclude.iter().any(|x| x == "*") {
-            debug!("Skipping license file copying");
-            return Ok(());
-        }
+/// Copies license files from the original source into the destination directory.
+/// Does a breadth-first search from the build directory and stops when it finds license files.
+/// Only traverse to depth 2, to prevent detecting third party license files.
+fn copy_license_files(build_directory: &Path, destination_dir: &Path, source: &Source) -> Result<()> {
+    // Copy all include paths first
+    copy_include_license_files(build_directory, destination_dir, source)?;
 
-        let exclude_paths: Vec<_> = source.license_exclude.iter().map(|x| build_directory.join(x)).collect();
+    // Skip copying entirely if exclude `*` is specified
+    if source.license_exclude.iter().any(|x| x == "*") {
+        debug!("Skipping license file copying");
+        return Ok(());
+    }
 
-        let mut queue = VecDeque::from([(0, build_directory.to_path_buf())]);
-        while let Some((depth, item)) = queue.pop_front() {
-            let mut found_files = false;
+    let exclude_paths: Vec<_> = source.license_exclude.iter().map(|x| build_directory.join(x)).collect();
 
-            // Read all files in the directory
-            for entry in fs::read_dir(&item).err_with_path("read", &item)? {
-                let entry = entry.err_with_path("iterate", &item)?;
+    let mut queue = VecDeque::from([(0, build_directory.to_path_buf())]);
+    while let Some((depth, item)) = queue.pop_front() {
+        let mut found_files = false;
 
-                // Skip paths that should be excluded
-                if exclude_paths.contains(&entry.path()) {
-                    continue;
+        // Read all files in the directory
+        for entry in fs::read_dir(&item).err_with_path("read", &item)? {
+            let entry = entry.err_with_path("iterate", &item)?;
+
+            // Skip paths that should be excluded
+            if exclude_paths.contains(&entry.path()) {
+                continue;
+            }
+
+            let metadata = entry.metadata().err_with_path("read metadata of", entry.path())?;
+
+            // If the entry is a directory, add it to the queue
+            if metadata.is_dir() {
+                // Only add next level if depth is below 2
+                if depth < 2 {
+                    queue.push_back((depth + 1, entry.path()));
                 }
+                continue;
+            }
 
-                let metadata = entry.metadata().err_with_path("read metadata of", entry.path())?;
+            let file_name = entry.file_name().to_ascii_lowercase();
+            let Some(file_name) = file_name.to_str() else { continue };
 
-                // If the entry is a directory, add it to the queue
-                if metadata.is_dir() {
-                    // Only add next level if depth is below 2
-                    if depth < 2 {
-                        queue.push_back((depth + 1, entry.path()));
-                    }
-                    continue;
-                }
-
-                let file_name = entry.file_name().to_ascii_lowercase();
-                let Some(file_name) = file_name.to_str() else { continue };
-
-                // Check if file name matches license file names and has the correct extension
-                for license_file_name in LICENSE_FILE_NAMES {
-                    if file_name.starts_with(license_file_name) {
-                        // Skip file if it has an extension and it is not a correct extension
-                        if let Some(extension) = io::get_last_extension(file_name)
-                            && !LICENSE_FILE_EXTENSIONS.contains(&&*extension.to_lowercase())
-                        {
-                            break;
-                        }
-
-                        found_files = true;
-                        debug!(
-                            "Found license file at '{}'",
-                            entry.path().strip_prefix(build_directory).unwrap_or(build_directory).display()
-                        );
-
-                        // Check if file was already copied (for example using `license_include`)
-                        let destination_path = destination_dir.join(entry.file_name());
-                        if destination_path.exists() {
-                            debug!("License file with same name is already copied, skipping file");
-                        }
-
-                        // Create destination directory if it does not exist
-                        if !destination_dir.exists() {
-                            fs::create_dir_all(destination_dir).err_with_path("create dirs", destination_dir)?;
-                        }
-
-                        fs::copy(entry.path(), destination_path).err_with_path("copy", entry.path())?;
+            // Check if file name matches license file names and has the correct extension
+            for license_file_name in LICENSE_FILE_NAMES {
+                if file_name.starts_with(license_file_name) {
+                    // Skip file if it has an extension and it is not a correct extension
+                    if let Some(extension) = io::get_last_extension(file_name)
+                        && !LICENSE_FILE_EXTENSIONS.contains(&&*extension.to_lowercase())
+                    {
                         break;
                     }
+
+                    found_files = true;
+                    debug!(
+                        "Found license file at '{}'",
+                        entry.path().strip_prefix(build_directory).unwrap_or(build_directory).display()
+                    );
+
+                    // Check if file was already copied (for example using `license_include`)
+                    let destination_path = destination_dir.join(entry.file_name());
+                    if destination_path.exists() {
+                        debug!("License file with same name is already copied, skipping file");
+                    }
+
+                    // Create destination directory if it does not exist
+                    if !destination_dir.exists() {
+                        fs::create_dir_all(destination_dir).err_with_path("create dirs", destination_dir)?;
+                    }
+
+                    fs::copy(entry.path(), destination_path).err_with_path("copy", entry.path())?;
+                    break;
                 }
             }
-
-            // Stop searching if we found files in this directory
-            if found_files {
-                return Ok(());
-            }
         }
 
-        debug!("Unable to find license files for package");
-        Ok(())
+        // Stop searching if we found files in this directory
+        if found_files {
+            return Ok(());
+        }
     }
 
-    /// Copies license files that are listed as `license_include` into the destination directory.
-    fn copy_include_license_files(&self, build_directory: &Path, destination_dir: &Path, source: &Source) -> Result<()> {
-        for include_path_str in &source.license_include {
-            let include_path = build_directory.join(include_path_str);
+    debug!("Unable to find license files for package");
+    Ok(())
+}
 
-            // Skip if the path does not exist
-            if !include_path.exists() {
-                warning!("Specified license file include path '{include_path_str}' does not exist");
-                continue;
-            }
+/// Copies license files that are listed as `license_include` into the destination directory.
+fn copy_include_license_files(build_directory: &Path, destination_dir: &Path, source: &Source) -> Result<()> {
+    for include_path_str in &source.license_include {
+        let include_path = build_directory.join(include_path_str);
 
-            // Check if the path is a file
-            let metadata = fs::metadata(&include_path).err_with_path("read metadata", &include_path)?;
-            if !metadata.is_file() {
-                warning!("Specified license file include path '{include_path_str}' is not a file");
-                continue;
-            }
-
-            let Some(file_name) = include_path.file_name() else {
-                warning!("Specified license file include path '{include_path_str}' is not a valid path");
-                continue;
-            };
-
-            // Create destination directory if it does not exist
-            if !destination_dir.exists() {
-                fs::create_dir_all(destination_dir).err_with_path("create dirs", destination_dir)?;
-            }
-
-            fs::copy(&include_path, destination_dir.join(file_name)).err_with_path("copy", include_path)?;
+        // Skip if the path does not exist
+        if !include_path.exists() {
+            warning!("Specified license file include path '{include_path_str}' does not exist");
+            continue;
         }
 
-        Ok(())
+        // Check if the path is a file
+        let metadata = include_path.symlink_metadata().err_with_path("read metadata", &include_path)?;
+        if !metadata.is_file() {
+            warning!("Specified license file include path '{include_path_str}' is not a file");
+            continue;
+        }
+
+        let Some(file_name) = include_path.file_name() else {
+            warning!("Specified license file include path '{include_path_str}' is not a valid path");
+            continue;
+        };
+
+        // Create destination directory if it does not exist
+        if !destination_dir.exists() {
+            fs::create_dir_all(destination_dir).err_with_path("create dirs", destination_dir)?;
+        }
+
+        fs::copy(&include_path, destination_dir.join(file_name)).err_with_path("copy", include_path)?;
+    }
+
+    Ok(())
+}
+
+// Finds the inner build directory by looking for a directory with more than just a single directory inside.
+// Returns the found inner directory, or the `build_directory` if that is already the inner directory.
+fn find_inner_build_dir(build_directory: PathBuf) -> Result<PathBuf> {
+    let mut inner_build_directory = build_directory;
+    let mut found_dir = None;
+
+    // Keep searching until we found the absolute inner directory
+    loop {
+        // Read build directory to see if it contains more than just one directory
+        for entry in fs::read_dir(&inner_build_directory).err_with_path("read", &inner_build_directory)? {
+            let entry = entry.err_with_path("iterate", &inner_build_directory)?;
+            let metadata = entry.metadata().err_with_path("read metadata of", entry.path())?;
+
+            // Found inner directory if the directory contains files
+            if !metadata.is_dir() {
+                return Ok(inner_build_directory);
+            }
+
+            // Found inner directory if the directory contains more than one directory
+            if found_dir.is_some() {
+                return Ok(inner_build_directory);
+            }
+
+            // Set found dir to the current subdirectory
+            found_dir = Some(entry.path());
+        }
+
+        // If we found only one directory, use it as new `inner_build_directory` and search this new directory
+        // Otherwise stop searching, inner directory is already found
+        match found_dir {
+            Some(found_build_dir) => {
+                inner_build_directory = found_build_dir;
+                found_dir = None;
+            },
+            None => break,
+        }
+    }
+
+    Ok(inner_build_directory)
+}
+
+#[cfg(test)]
+pub mod tests {
+
+    use std::{
+        collections::{HashMap, HashSet},
+        fs::File,
+    };
+
+    use tempfile::tempdir;
+
+    use crate::{platforms::symlink::create_symlink, repositories::types::FileSize};
+
+    use super::*;
+
+    /// A helper script which creates a test source struct.
+    fn create_source(license_exclude: HashSet<String>, license_include: HashSet<String>) -> Source {
+        Source {
+            url: "-".to_string(),
+            mirrors: vec![],
+            checksum: Checksum { sha256: [0u8; 32] },
+            size: FileSize(0),
+            skip_unpack: false,
+            license_exclude,
+            license_include,
+            apply_patches_in: None,
+            patches: HashMap::new(),
+        }
+    }
+
+    #[test]
+    fn copy_license_files_test() {
+        let build_dir = tempdir().unwrap();
+        let build_dir = build_dir.path();
+        let destination = tempdir().unwrap();
+        let destination = destination.path().join("foo");
+        File::create(&build_dir.join("License")).unwrap();
+        File::create(&build_dir.join("COPYING")).unwrap();
+
+        // This also tests if the destination is created if it doesn't exist yet
+        let source = &create_source(HashSet::new(), HashSet::new());
+        copy_license_files(build_dir, &destination, source).unwrap();
+        assert!(destination.join("License").exists());
+        assert!(destination.join("COPYING").exists());
+    }
+
+    #[test]
+    fn copy_license_files_top_dir() {
+        let build_dir = tempdir().unwrap();
+        let build_dir = build_dir.path();
+        let destination = tempdir().unwrap();
+        let destination = destination.path();
+        File::create(&build_dir.join("License")).unwrap();
+        fs::create_dir(&build_dir.join("foo")).unwrap();
+        File::create(&build_dir.join("foo").join("COPYING")).unwrap();
+
+        let source = &create_source(HashSet::new(), HashSet::new());
+        copy_license_files(build_dir, destination, source).unwrap();
+        assert!(destination.join("License").exists());
+        assert!(!destination.join("COPYING").exists());
+        assert!(!destination.join("foo").join("COPYING").exists());
+    }
+
+    #[test]
+    fn exclude_licenses() {
+        let build_dir = tempdir().unwrap();
+        let build_dir = build_dir.path();
+        let destination = tempdir().unwrap();
+        let destination = destination.path();
+        File::create(&build_dir.join("License")).unwrap();
+        File::create(&build_dir.join("COPYING")).unwrap();
+
+        let source = &create_source(HashSet::from(["License".to_string()]), HashSet::new());
+        copy_license_files(build_dir, destination, source).unwrap();
+        assert!(!destination.join("License").exists());
+        assert!(destination.join("COPYING").exists());
+    }
+
+    #[test]
+    fn exclude_all_licenses() {
+        let build_dir = tempdir().unwrap();
+        let build_dir = build_dir.path();
+        let destination = tempdir().unwrap();
+        let destination = destination.path();
+        File::create(&build_dir.join("License")).unwrap();
+        File::create(&build_dir.join("COPYING")).unwrap();
+
+        let source = &create_source(HashSet::from(["*".to_string()]), HashSet::new());
+        copy_license_files(build_dir, destination, source).unwrap();
+        assert!(!destination.join("License").exists());
+        assert!(!destination.join("COPYING").exists());
+    }
+
+    #[test]
+    fn include_exclude_license() {
+        let build_dir = tempdir().unwrap();
+        let build_dir = build_dir.path();
+        let destination = tempdir().unwrap();
+        let destination = destination.path();
+        File::create(&build_dir.join("foo")).unwrap();
+
+        let source = &create_source(HashSet::from(["foo".to_string()]), HashSet::from(["foo".to_string()]));
+        copy_license_files(build_dir, destination, source).unwrap();
+        assert!(destination.join("foo").exists());
+    }
+
+    #[test]
+    fn include_exclude_all_licenses() {
+        let build_dir = tempdir().unwrap();
+        let build_dir = build_dir.path();
+        let destination = tempdir().unwrap();
+        let destination = destination.path();
+        File::create(&build_dir.join("license")).unwrap();
+        File::create(&build_dir.join("foo")).unwrap();
+
+        let source = &create_source(HashSet::from(["*".to_string()]), HashSet::from(["foo".to_string()]));
+        copy_license_files(build_dir, destination, source).unwrap();
+        assert!(!destination.join("license").exists());
+        assert!(destination.join("foo").exists());
+    }
+
+    #[test]
+    fn license_too_deep() {
+        let build_dir = tempdir().unwrap();
+        let build_dir = build_dir.path();
+        let destination = tempdir().unwrap();
+        let destination = destination.path();
+        let long_path = build_dir.join("x").join("y").join("z");
+        fs::create_dir_all(&long_path).unwrap();
+        File::create(&long_path.join("license")).unwrap();
+
+        let source = &create_source(HashSet::new(), HashSet::new());
+        copy_license_files(build_dir, destination, source).unwrap();
+        assert!(!destination.join("license").exists());
+    }
+
+    #[test]
+    fn no_files_to_copy() {
+        let build_dir = tempdir().unwrap();
+        let build_dir = build_dir.path();
+        let destination = tempdir().unwrap();
+        let destination = destination.path();
+        let source = &create_source(HashSet::new(), HashSet::new());
+        assert!(copy_license_files(build_dir, destination, source).is_ok());
+        assert!(fs::read_dir(&destination).unwrap().next().is_none());
+    }
+
+    #[test]
+    fn include_license_files() {
+        let build_dir = tempdir().unwrap();
+        let build_dir = build_dir.path();
+        let destination = tempdir().unwrap();
+        let destination = destination.path();
+        File::create(&build_dir.join("non-license-name")).unwrap();
+        File::create(&build_dir.join("license")).unwrap();
+
+        // Test license which is not a license name and a capitalized license file (matching with lowercase file)
+        let source = &create_source(
+            HashSet::new(),
+            HashSet::from(["non-license-name".to_string(), "license".to_string()]),
+        );
+        copy_include_license_files(build_dir, destination, source).unwrap();
+        assert!(destination.join("non-license-name").exists());
+        assert!(destination.join("license").exists());
+    }
+
+    #[test]
+    fn non_existent_include_path() {
+        let build_dir = tempdir().unwrap();
+        let build_dir = build_dir.path();
+        let destination = tempdir().unwrap();
+        let destination = destination.path();
+        let source = &create_source(HashSet::new(), HashSet::from(["foo".to_string()]));
+        copy_include_license_files(build_dir, destination, source).unwrap();
+        assert!(!destination.join("foo").exists());
+    }
+
+    #[test]
+    fn non_existent_destination_path() {
+        let build_dir = tempdir().unwrap();
+        let build_dir = build_dir.path();
+        let destination = tempdir().unwrap();
+        let destination = destination.path().join("non-existent");
+        File::create(&build_dir.join("foo")).unwrap();
+
+        // Test if the function creates the destination directory
+        let source = &create_source(HashSet::new(), HashSet::from(["foo".to_string()]));
+        copy_include_license_files(build_dir, &destination, source).unwrap();
+        assert!(destination.join("foo").exists());
+    }
+
+    #[test]
+    fn incorrect_include_path_types() {
+        let build_dir = tempdir().unwrap();
+        let build_dir = build_dir.path();
+        let destination = tempdir().unwrap();
+        let destination = destination.path();
+        fs::create_dir(&build_dir.join("foo")).unwrap();
+        File::create(&build_dir.join("original")).unwrap();
+        create_symlink(&build_dir.join("original"), &build_dir.join("link")).unwrap();
+
+        let source = &create_source(HashSet::new(), HashSet::from(["foo".to_string(), "link".to_string()]));
+        copy_include_license_files(build_dir, destination, source).unwrap();
+        assert!(!destination.join("foo").exists());
+        assert!(!destination.join("link").exists());
+    }
+
+    #[test]
+    fn find_inner_build() {
+        // One file inside of the build directory
+        let build_dir = tempdir().unwrap();
+        let test_dir = build_dir.path().join("test.txt");
+        File::create(&test_dir).unwrap();
+        let inner_dir = find_inner_build_dir(build_dir.path().to_path_buf()).unwrap();
+        assert_eq!(inner_dir, build_dir.path());
+
+        // One directory with a file
+        let build_dir = tempdir().unwrap();
+        let test_dir = build_dir.path().join("foo");
+        fs::create_dir(&test_dir).unwrap();
+        let test_file = test_dir.join("test.txt");
+        File::create(&test_file).unwrap();
+        let inner_dir = find_inner_build_dir(build_dir.path().to_path_buf()).unwrap();
+        assert_eq!(inner_dir, build_dir.path().join("foo"));
+    }
+
+    #[test]
+    fn serial_empty_dirs() {
+        let build_dir = tempdir().unwrap();
+        let build_dir = build_dir.path();
+        let test_dir = build_dir.join("foo").join("bar");
+        fs::create_dir_all(&test_dir).unwrap();
+        let inner_dir = find_inner_build_dir(build_dir.to_path_buf()).unwrap();
+        assert_eq!(inner_dir, test_dir);
+    }
+
+    #[test]
+    fn parallel_empty_dirs() {
+        let build_dir = tempdir().unwrap();
+        let build_dir = build_dir.path();
+        let foo_dir = build_dir.join("foo");
+        fs::create_dir(&foo_dir).unwrap();
+        let bar_dir = build_dir.join("bar");
+        fs::create_dir(&bar_dir).unwrap();
+        let inner_dir = find_inner_build_dir(build_dir.to_path_buf()).unwrap();
+        assert_eq!(inner_dir, build_dir);
+
+        let test_file = foo_dir.join("test.txt");
+        File::create(&test_file).unwrap();
+
+        let inner_dir = find_inner_build_dir(build_dir.to_path_buf()).unwrap();
+        assert_eq!(inner_dir, build_dir);
+    }
+
+    #[test]
+    fn symlink_to_empty_dir() {
+        let build_dir = tempdir().unwrap();
+        let build_dir = build_dir.path();
+        let other_dir = tempdir().unwrap();
+        let other_dir = other_dir.path();
+
+        create_symlink(other_dir, &build_dir.join("other")).unwrap();
+        let inner_dir = find_inner_build_dir(build_dir.to_path_buf()).unwrap();
+        assert_eq!(inner_dir, build_dir);
     }
 }

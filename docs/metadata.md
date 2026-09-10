@@ -172,6 +172,8 @@ Packit selects the most specific matching target bound according to the followin
 - Target architecture
 - OS name with version bounds
 - Target architecture with version bounds
+- OS name with addition
+- Target architecture with addition
 - OS name with addition and version bounds
 - Target architecture with addition and version bounds
 

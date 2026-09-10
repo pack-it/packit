@@ -7,6 +7,7 @@ use crate::{
         styled::Styled,
     },
     installer::types::Version,
+    repositories::types::TargetAddition,
 };
 
 #[cfg(any(target_os = "macos", target_os = "linux"))]
@@ -60,13 +61,13 @@ impl Os {
 
 /// Represents an OS version. In case of Linux this also includes the distro and distro version.
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[expect(dead_code)]
+#[cfg_attr(not(test), expect(dead_code))]
 pub enum OsVersion {
     MacOs {
         version: Version,
     },
     Linux {
-        distro: String,
+        distro: TargetAddition,
         distro_version: Version,
         kernel_version: Version,
     },
@@ -188,10 +189,15 @@ impl OsVersion {
             }
         }
 
-        let distro = match distro {
-            Some(distro) => distro,
-            None => {
-                error!(msg: "Cannot read distro name");
+        let Some(distro) = distro else {
+            error!(msg: "Cannot read distro name");
+            return None;
+        };
+
+        let distro = match TargetAddition::from_str(&distro.to_lowercase()) {
+            Ok(distro) => distro,
+            Err(e) => {
+                error!(e, "Cannot parse distro name");
                 return None;
             },
         };
@@ -213,7 +219,7 @@ impl OsVersion {
         debug!("Retrieved current distro {distro} with version {}", distro_version.style());
 
         Some(Self::Linux {
-            distro: distro.into(),
+            distro,
             distro_version,
             kernel_version,
         })

@@ -15,6 +15,7 @@ const VERTICAL_LINE: &str = "\u{2502}    ";
 const EMPTY_SPACE: &str = "     ";
 
 /// The errors that occur while doing tree operations.
+#[cfg_attr(test, derive(PartialEq))]
 #[derive(Error, Debug)]
 pub enum TreeError {
     #[error("Package id {} cannot be found", .0.style())]
@@ -77,7 +78,6 @@ impl<V, L: Eq + DisplayNode<V>> Tree<V, L> {
     }
 
     /// Gets the root of the tree.
-    #[expect(unused)]
     pub fn get_root(&self) -> &Node<V, L> {
         self.nodes.first().expect("Expected root to exist")
     }
@@ -115,6 +115,11 @@ impl<V, L: Eq + DisplayNode<V>> Tree<V, L> {
     /// Returns true if a cycle will be formed, false if not.
     /// Returns `TreeError::NonExistentParent` if the given `parent_index` doesn't exist.
     fn is_cyclic(&self, parent_index: usize, package_id: &PackageId) -> Result<bool> {
+        // Return true if the root node is given
+        if self.get_root().get_package_id() == package_id {
+            return Ok(true);
+        }
+
         let mut current_parent = parent_index;
         while current_parent != 0 {
             let Some(parent_node) = self.get_node_by_index(current_parent) else {
@@ -254,5 +259,110 @@ impl<V> DisplayNode<V> for () {
         Self: Sized,
     {
         write!(f, "{}", node.package_id.style())
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+
+    use crate::installer::types::package_id_tests::create_package_id;
+
+    use super::*;
+
+    #[test]
+    fn create_tree() {
+        let package_id = create_package_id("test@1");
+        let root = Node::new(package_id, (), ());
+        let mut tree = Tree::new(root);
+        let dependency = create_package_id("dependency@2");
+        let dependency_node = Node::new(dependency.clone(), (), ());
+        assert_eq!(tree.add_node(0, dependency_node), Ok(1));
+        let dependency_node = Node::new(dependency.clone(), (), ());
+        assert_eq!(tree.add_node(1, dependency_node), Err(TreeError::CycleError(dependency)));
+    }
+
+    #[test]
+    fn non_existent_parent() {
+        let package_id = create_package_id("test@1");
+        let root = Node::new(package_id, (), ());
+        let mut tree = Tree::new(root);
+        let dependency = create_package_id("dependency@2");
+        let dependency_node = Node::new(dependency, (), ());
+        assert_eq!(tree.add_node(1, dependency_node), Err(TreeError::NonExistentParent(1)));
+    }
+
+    #[test]
+    fn cyclic_tree() {
+        let package_id = create_package_id("test@1");
+        let root = Node::new(package_id.clone(), (), ());
+        let mut tree = Tree::new(root);
+
+        let dependency = create_package_id("dependency@2");
+        let dependency_node = Node::new(dependency.clone(), (), ());
+        tree.add_node(0, dependency_node).unwrap();
+
+        let other = create_package_id("other@3");
+        let other_node = Node::new(other.clone(), (), ());
+        tree.add_node(1, other_node).unwrap();
+
+        // Cyclic assertions
+        assert_eq!(tree.is_cyclic(0, &dependency), Ok(false));
+        assert_eq!(tree.is_cyclic(0, &package_id), Ok(true));
+        assert_eq!(tree.is_cyclic(1, &dependency), Ok(true));
+        assert_eq!(tree.is_cyclic(1, &package_id), Ok(true));
+        assert_eq!(tree.is_cyclic(2, &dependency), Ok(true));
+        assert_eq!(tree.is_cyclic(2, &package_id), Ok(true));
+
+        // Non existent parent checks in cyclic check
+        assert_eq!(tree.is_cyclic(10, &dependency), Err(TreeError::NonExistentParent(10)));
+        assert_eq!(tree.is_cyclic(10, &package_id), Ok(true));
+    }
+
+    #[test]
+    fn filter_children() {
+        let package_id = create_package_id("test@1");
+        let root = Node::new(package_id.clone(), (), ());
+        let mut tree = Tree::new(root);
+
+        assert_eq!(tree.get_children_ids_filtered(tree.get_root(), |_| true), HashSet::new());
+
+        let dependency = create_package_id("dependency@2");
+        let dependency_node = Node::new(dependency.clone(), (), ());
+        tree.add_node(0, dependency_node).unwrap();
+
+        assert_eq!(tree.get_children_ids_filtered(tree.get_root(), |_| false), HashSet::new());
+        assert_eq!(
+            tree.get_children_ids_filtered(tree.get_root(), |_| true),
+            HashSet::from([dependency.clone()])
+        );
+    }
+
+    #[test]
+    fn format() {
+        let package_id = create_package_id("test@1");
+        let root = Node::new(package_id.clone(), (), ());
+        let mut tree = Tree::new(root);
+        let dependency = create_package_id("dependency@2");
+        let dependency_node = Node::new(dependency.clone(), (), ());
+        tree.add_node(0, dependency_node).unwrap();
+
+        let other = create_package_id("other@3");
+        let other_node = Node::new(other.clone(), (), ());
+        tree.add_node(0, other_node).unwrap();
+
+        let foo = create_package_id("foo@2");
+        let foo_node = Node::new(foo.clone(), (), ());
+        tree.add_node(1, foo_node).unwrap();
+
+        assert_eq!(
+            tree.to_string(),
+            format!(
+                "{}\n{BRANCH}{}\n{VERTICAL_LINE}{LAST_BRANCH}{}\n{LAST_BRANCH}{}\n",
+                package_id.style(),
+                dependency.style(),
+                foo.style(),
+                other.style()
+            )
+        );
     }
 }

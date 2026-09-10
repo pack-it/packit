@@ -28,6 +28,7 @@ pub struct PrebuildsList {
 }
 
 /// Represents the information about a prebuild in the `prebuilds.toml` file.
+#[cfg_attr(test, derive(PartialEq))]
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct PrebuildMeta {
     targets: Vec<TargetBounds>,
@@ -110,5 +111,63 @@ impl PrebuildsList {
         };
 
         (target.architecture.to_string(), prebuild_meta)
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+
+    use std::str::FromStr;
+
+    use crate::{installer::types::version_tests::create_version, platforms::OsVersion};
+
+    use super::*;
+
+    #[test]
+    fn best_prebuild() {
+        let target = Target {
+            architecture: TargetArchitecture::MacOsAarch64,
+            os: OsVersion::MacOs {
+                version: create_version("3.4.1"),
+            },
+        };
+
+        let prebuild_meta_a = PrebuildMeta {
+            targets: vec![TargetBounds::from_str("unix").unwrap(), TargetBounds::from_str("mac").unwrap()],
+            exclude_paths: vec![],
+        };
+
+        let prebuild_meta_b = PrebuildMeta {
+            targets: vec![TargetBounds::from_str("linux").unwrap()],
+            exclude_paths: vec![],
+        };
+
+        let prebuilds = HashMap::from([("a".into(), prebuild_meta_a.clone()), ("b".into(), prebuild_meta_b)]);
+        let prebuilds_list = PrebuildsList { prebuilds };
+
+        assert_eq!(
+            prebuilds_list.get_best_prebuild(&target),
+            Some((&"a".to_string(), &prebuild_meta_a))
+        );
+    }
+
+    #[test]
+    fn best_prebuild_no_match() {
+        let target = Target {
+            architecture: TargetArchitecture::MacOsAarch64,
+            os: OsVersion::MacOs {
+                version: create_version("3.4.1"),
+            },
+        };
+
+        let prebuild_meta = PrebuildMeta {
+            targets: vec![TargetBounds::from_str("linux").unwrap()],
+            exclude_paths: vec![],
+        };
+
+        let prebuilds = HashMap::from([("a".into(), prebuild_meta.clone())]);
+        let prebuilds_list = PrebuildsList { prebuilds };
+
+        assert_eq!(prebuilds_list.get_best_prebuild(&target), None);
     }
 }
