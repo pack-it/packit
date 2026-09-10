@@ -561,7 +561,7 @@ pub mod tests {
         // This also tests if the destination is created if it doesn't exist yet
         let source = &create_source(HashSet::new(), HashSet::new());
         copy_license_files(build_dir, &destination, source).unwrap();
-        assert!(destination.join("license").exists());
+        assert!(destination.join("License").exists());
         assert!(destination.join("COPYING").exists());
     }
 
@@ -678,7 +678,7 @@ pub mod tests {
         // Test license which is not a license name and a capitalized license file (matching with lowercase file)
         let source = &create_source(
             HashSet::new(),
-            HashSet::from(["non-license-name".to_string(), "License".to_string()]),
+            HashSet::from(["non-license-name".to_string(), "license".to_string()]),
         );
         copy_include_license_files(build_dir, destination, source).unwrap();
         assert!(destination.join("non-license-name").exists());

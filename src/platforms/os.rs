@@ -190,7 +190,7 @@ impl OsVersion {
         }
 
         let distro = match distro {
-            Some(distro) => distro.to_lowercase(),
+            Some(distro) => TargetAddition::from_str(&distro.to_lowercase()).ok()?,
             None => {
                 error!(msg: "Cannot read distro name");
                 return None;
