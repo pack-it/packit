@@ -336,6 +336,7 @@ pub mod tests {
         dependency_tests::create_dependency, package_id_tests::create_package_id, package_name_tests::create_package_name,
     };
     use crate::platforms::TargetArchitecture;
+    use crate::repositories::types::package_meta_tests::create_package_meta;
     use crate::repositories::types::{Checksum, FileSize, Licenses, Source, Sources, TargetBounds};
 
     use super::*;
@@ -440,25 +441,6 @@ pub mod tests {
         PackageRegister { packages }
     }
 
-    /// A helper function which creates `PackageMeta` with a given `package_id` and default values.
-    fn create_package_meta(package_id: &PackageId) -> PackageMeta {
-        let current_target_bounds =
-            TargetBounds::from_str(&TargetArchitecture::current().to_string()).expect("Expected valid target bounds");
-
-        let version_intervals = VersionIntervals::from_str(&package_id.version.to_string()).expect("Expected valid version intervals");
-
-        PackageMeta {
-            name: package_id.name.clone(),
-            description: "-".to_string(),
-            homepage: None,
-            versions: vec![package_id.version.clone()],
-            required_packit_version: None,
-            conflicts_with: HashSet::new(),
-            supported_versions: HashMap::from([(current_target_bounds, version_intervals)]),
-            deprecation: None,
-        }
-    }
-
     /// A helper function which creates `PackageVersionMeta` with default values and a given `package_id`.
     fn create_package_version_meta(package_id: &PackageId) -> PackageVersionMeta {
         PackageVersionMeta {
@@ -500,8 +482,18 @@ pub mod tests {
     #[test]
     fn add_package() {
         let mut register = create_register();
+
+        // Create the package metadata
         let package_id = create_package_id("new_package@2.90");
-        let package_meta = create_package_meta(&package_id);
+        let current_target_bounds =
+            TargetBounds::from_str(&TargetArchitecture::current().to_string()).expect("Expected valid target bounds");
+        let version_intervals = VersionIntervals::from_str(&package_id.version.to_string()).expect("Expected valid version intervals");
+        let package_meta = create_package_meta(
+            package_id.clone(),
+            vec![package_id.version.clone()],
+            HashMap::from([(current_target_bounds, version_intervals)]),
+        );
+
         let package_version_meta = create_package_version_meta(&package_id);
         let mut dependency_ids = HashSet::new();
         let package_id_b = create_package_id("b@2.72");

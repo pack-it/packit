@@ -108,11 +108,15 @@ pub mod tests {
         let duplicates = get_duplicates(&packages);
         assert_eq!(duplicates, HashSet::new());
 
-        let mut packages = vec![create_optional_id("test@3.4.1"), create_optional_id("test@3.4.2")];
+        let packages = vec![create_optional_id("test@3.4.1"), create_optional_id("test@3.4.2")];
         let duplicates = get_duplicates(&packages);
         assert_eq!(duplicates, HashSet::new());
 
-        packages.push(create_optional_id("test"));
+        let packages = vec![
+            create_optional_id("test@3.4.1"),
+            create_optional_id("test@3.4.2"),
+            create_optional_id("test"),
+        ];
         let duplicates = get_duplicates(&packages);
         assert_eq!(duplicates, HashSet::from([create_package_name("test").style().to_string()]));
 

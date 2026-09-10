@@ -299,11 +299,11 @@ pub mod tests {
 
         let dependency = create_package_id("dependency@2");
         let dependency_node = Node::new(dependency.clone(), (), ());
-        _ = tree.add_node(0, dependency_node);
+        tree.add_node(0, dependency_node).unwrap();
 
         let other = create_package_id("other@3");
         let other_node = Node::new(other.clone(), (), ());
-        _ = tree.add_node(1, other_node);
+        tree.add_node(1, other_node).unwrap();
 
         // Cyclic assertions
         assert_eq!(tree.is_cyclic(0, &dependency), Ok(false));
@@ -328,8 +328,9 @@ pub mod tests {
 
         let dependency = create_package_id("dependency@2");
         let dependency_node = Node::new(dependency.clone(), (), ());
-        _ = tree.add_node(0, dependency_node);
+        tree.add_node(0, dependency_node).unwrap();
 
+        assert_eq!(tree.get_children_ids_filtered(tree.get_root(), |_| false), HashSet::new());
         assert_eq!(
             tree.get_children_ids_filtered(tree.get_root(), |_| true),
             HashSet::from([dependency.clone()])
@@ -343,15 +344,15 @@ pub mod tests {
         let mut tree = Tree::new(root);
         let dependency = create_package_id("dependency@2");
         let dependency_node = Node::new(dependency.clone(), (), ());
-        _ = tree.add_node(0, dependency_node);
+        tree.add_node(0, dependency_node).unwrap();
 
         let other = create_package_id("other@3");
         let other_node = Node::new(other.clone(), (), ());
-        _ = tree.add_node(0, other_node);
+        tree.add_node(0, other_node).unwrap();
 
         let foo = create_package_id("foo@2");
         let foo_node = Node::new(foo.clone(), (), ());
-        _ = tree.add_node(1, foo_node);
+        tree.add_node(1, foo_node).unwrap();
 
         assert_eq!(
             tree.to_string(),

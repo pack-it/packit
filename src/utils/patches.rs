@@ -343,10 +343,9 @@ pub mod tests {
         let source = tempdir().unwrap();
         let source = source.path().join("test.txt");
         let destination = tempdir().unwrap();
-        let destination = destination.path();
-        let test_file = destination.join("test.txt");
-        File::create(&test_file).unwrap();
-        assert_eq!(resolve_paths(&source, &test_file), (test_file.as_path(), test_file.as_path()));
+        let destination = destination.path().join("test.txt");
+        File::create(&destination).unwrap();
+        assert_eq!(resolve_paths(&source, &destination), (destination.as_path(), destination.as_path()));
     }
 
     #[test]
@@ -354,10 +353,9 @@ pub mod tests {
         let source = tempdir().unwrap();
         let source = source.path().join("foo.txt");
         let destination = tempdir().unwrap();
-        let destination = destination.path();
-        let test_file = destination.join("test.txt");
-        File::create(&test_file).unwrap();
-        assert_eq!(resolve_paths(&source, &test_file), (source.as_path(), test_file.as_path()));
+        let destination = destination.path().join("test.txt");
+        File::create(&destination).unwrap();
+        assert_eq!(resolve_paths(&source, &destination), (source.as_path(), destination.as_path()));
         assert!(!source.exists());
     }
 }

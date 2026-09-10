@@ -535,15 +535,15 @@ pub mod tests {
     use super::*;
 
     /// A helper script which creates a test source struct.
-    fn create_source(exclude: HashSet<String>, include: HashSet<String>) -> Source {
+    fn create_source(license_exclude: HashSet<String>, license_include: HashSet<String>) -> Source {
         Source {
             url: "-".to_string(),
             mirrors: vec![],
             checksum: Checksum { sha256: [0u8; 32] },
             size: FileSize(0),
             skip_unpack: false,
-            license_exclude: exclude,
-            license_include: include,
+            license_exclude,
+            license_include,
             apply_patches_in: None,
             patches: HashMap::new(),
         }
@@ -593,7 +593,7 @@ pub mod tests {
 
         let source = &create_source(HashSet::from(["License".to_string()]), HashSet::new());
         copy_license_files(build_dir, destination, source).unwrap();
-        assert!(!destination.join("license").exists());
+        assert!(!destination.join("License").exists());
         assert!(destination.join("COPYING").exists());
     }
 
@@ -608,7 +608,7 @@ pub mod tests {
 
         let source = &create_source(HashSet::from(["*".to_string()]), HashSet::new());
         copy_license_files(build_dir, destination, source).unwrap();
-        assert!(!destination.join("license").exists());
+        assert!(!destination.join("License").exists());
         assert!(!destination.join("COPYING").exists());
     }
 

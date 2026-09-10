@@ -70,7 +70,7 @@ pub fn create_folder_symlinks(original_dir: &Path, link_dir: &Path, overwrite: b
 
 /// Searches for symlinks with a certain destination (destinations inside of the destination are also a match) and removes them.
 pub fn remove_symlinks(search_dir: &Path, destination_dir: &Path) -> symlink::Result<()> {
-    if !search_dir.exists() || !destination_dir.exists() {
+    if !search_dir.exists() {
         return Ok(());
     }
 
@@ -200,7 +200,8 @@ pub mod tests {
 
     #[test]
     fn create_folder_symlinks_missing_original() {
-        let original = PathBuf::from_str("/does/not/exist").unwrap();
+        let original = tempdir().unwrap();
+        let original = original.path().join("does").join("not").join("exist");
         assert!(create_folder_symlinks(&original, &PathBuf::from_str("/foo").unwrap(), false).is_ok());
         assert!(!original.exists());
     }
@@ -338,7 +339,7 @@ pub mod tests {
     }
 
     #[test]
-    fn emtpy_normalize() {
+    fn empty_normalize() {
         assert_eq!(
             normalize_path(&PathBuf::from_str("foo/..").unwrap()),
             PathBuf::from_str("").unwrap()

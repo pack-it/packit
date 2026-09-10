@@ -112,7 +112,7 @@ pub mod tests {
 
         let license = Licenses::SingleWithExceptions {
             name: "MIT".to_string(),
-            exceptions: vec!["Test Exception".to_string()],
+            exceptions: vec!["Test-Exception".to_string()],
         };
         assert_eq!(license.get_length(), 1);
 
@@ -145,18 +145,18 @@ pub mod tests {
     fn format_single_with_single_exception() {
         let license = Licenses::SingleWithExceptions {
             name: "MIT".to_string(),
-            exceptions: vec!["Test Exception".to_string()],
+            exceptions: vec!["Test-Exception".to_string()],
         };
-        assert_eq!(license.to_string(), "MIT WITH Test Exception".to_string());
+        assert_eq!(license.to_string(), "MIT WITH Test-Exception".to_string());
     }
 
     #[test]
     fn format_single_with_exceptions() {
         let license = Licenses::SingleWithExceptions {
             name: "MIT".to_string(),
-            exceptions: vec!["Test Exception".to_string(), "Second Exception".to_string()],
+            exceptions: vec!["Test-Exception".to_string(), "Second-Exception".to_string()],
         };
-        assert_eq!(license.to_string(), "MIT WITH (Test Exception, Second Exception)".to_string());
+        assert_eq!(license.to_string(), "MIT WITH (Test-Exception, Second-Exception)".to_string());
     }
 
     #[test]
@@ -181,9 +181,6 @@ pub mod tests {
             any: vec![recursive_license, license],
         };
         assert_eq!(recursive_license.to_string(), "Test OR Test");
-
-        let license = Licenses::Any { any: Vec::new() };
-        assert_eq!(license.to_string(), "");
     }
 
     #[test]

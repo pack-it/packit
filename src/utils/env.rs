@@ -80,6 +80,7 @@ mod tests {
                 ("test2".to_string(), "".to_string())
             ])
         );
+        assert!(env.stripped_vars.is_empty());
     }
 
     #[test]
@@ -96,10 +97,19 @@ mod tests {
 
     #[test]
     fn insert_vars_empty() {
-        let mut env = Environment::new();
+        let vars = HashMap::from([
+            ("test".to_string(), "some_value".to_string()),
+            ("test2".to_string(), "".to_string()),
+        ]);
+
+        let mut env = Environment {
+            env_vars: vars.clone(),
+            stripped_vars: HashSet::new(),
+        };
+
         env.insert_vars(HashMap::<String, String>::new());
-        assert_eq!(env.env_vars, Environment::new().env_vars);
-        assert_eq!(env.stripped_vars, Environment::new().stripped_vars);
+        assert_eq!(env.env_vars, vars);
+        assert_eq!(env.stripped_vars, HashSet::new());
     }
 
     #[test]

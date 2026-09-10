@@ -11,7 +11,7 @@ use crate::{
     platforms::{Os, OsVersion, Target, TargetArchitecture},
 };
 
-static VALID_ADDITION_NAME: &str = r"^[a-z0-9\-_]+$";
+const VALID_ADDITION_NAME: &str = r"^[a-z0-9\-_]+$";
 static ADDITION_NAME_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(VALID_ADDITION_NAME).expect("Expected valid regex"));
 
 /// Errors that occur when creating or using the target bounds.
@@ -27,8 +27,8 @@ pub enum TargetBoundsError {
     #[error("Target name is invalid")]
     InvalidTargetName,
 
-    #[error("Expected a version, because '@' was used")]
-    ExpectedVersion,
+    #[error("Expected version intervals, because '@' was used")]
+    ExpectedVersionIntervals,
 
     #[error("Addition name cannot be empty and can only contain characters: 'a-z', '0-9', '-' and '_'")]
     InvalidAdditionName,
@@ -110,7 +110,7 @@ pub struct TargetAddition(String);
 impl FromStr for TargetAddition {
     type Err = TargetBoundsError;
 
-    /// Parses a string into an `TargetAddition`.
+    /// Parses a string into a `TargetAddition`.
     /// Could return a `TargetBoundsError::InvalidAdditionName` error.
     fn from_str(string: &str) -> Result<Self, Self::Err> {
         if !ADDITION_NAME_REGEX.is_match(string) {
@@ -122,7 +122,7 @@ impl FromStr for TargetAddition {
 }
 
 impl Display for TargetAddition {
-    /// Formats an `TargetAddition` into the following format: <name>.
+    /// Formats a `TargetAddition` into the following format: <name>.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)?;
         Ok(())
@@ -165,7 +165,7 @@ impl FromStr for TargetBounds {
     fn from_str(string: &str) -> Result<Self, Self::Err> {
         // Split name and version_bounds
         let (name, version_bounds) = match string.split_once('@') {
-            Some(value) if value.1.is_empty() => return Err(TargetBoundsError::ExpectedVersion),
+            Some(value) if value.1.is_empty() => return Err(TargetBoundsError::ExpectedVersionIntervals),
             Some(value) => value,
             None => (string, ""),
         };
@@ -370,8 +370,8 @@ pub mod tests {
 
     #[test]
     fn from_str_missing_version() {
-        assert_eq!(TargetBounds::from_str("linux@"), Err(TargetBoundsError::ExpectedVersion));
-        assert_eq!(TargetBounds::from_str("@"), Err(TargetBoundsError::ExpectedVersion));
+        assert_eq!(TargetBounds::from_str("linux@"), Err(TargetBoundsError::ExpectedVersionIntervals));
+        assert_eq!(TargetBounds::from_str("@"), Err(TargetBoundsError::ExpectedVersionIntervals));
     }
 
     #[test]
@@ -439,7 +439,7 @@ pub mod tests {
     }
 
     #[test]
-    fn satisfied_by_unknown_arch() {
+    fn satisfied_by_unknown() {
         let target = Target {
             architecture: TargetArchitecture::MacOsAarch64,
             os: OsVersion::MacOs {
@@ -447,13 +447,20 @@ pub mod tests {
             },
         };
 
-        let target_bounds = TargetBounds {
+        let target_bounds_arch = TargetBounds {
             name: TargetName::Architecture(TargetArchitecture::Unknown(None)),
             addition: None,
             version_intervals: create_version_intervals(""),
         };
 
-        assert!(!target_bounds.satisfied_by(&target))
+        let target_bounds_os = TargetBounds {
+            name: TargetName::Os(Os::Unknown),
+            addition: None,
+            version_intervals: create_version_intervals(""),
+        };
+
+        assert!(!target_bounds_arch.satisfied_by(&target));
+        assert!(!target_bounds_os.satisfied_by(&target));
     }
 
     #[test]

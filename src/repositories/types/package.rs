@@ -67,17 +67,21 @@ pub mod tests {
 
     use crate::{
         installer::types::{
-            package_name_tests::create_package_name, version_intervals_test::create_version_intervals, version_tests::create_version,
+            PackageId, package_id_tests::create_package_id, version_intervals_test::create_version_intervals, version_tests::create_version,
         },
         platforms::{OsVersion, TargetArchitecture},
     };
 
     use super::*;
 
-    /// A helper method to create a simple package meta test structure
-    fn create_package_meta(versions: Vec<Version>, supported_versions: HashMap<TargetBounds, VersionIntervals>) -> PackageMeta {
+    /// A helper method to create a simple package meta test structure.
+    pub fn create_package_meta(
+        package_id: PackageId,
+        versions: Vec<Version>,
+        supported_versions: HashMap<TargetBounds, VersionIntervals>,
+    ) -> PackageMeta {
         PackageMeta {
-            name: create_package_name("test"),
+            name: package_id.name,
             description: "-".to_string(),
             homepage: Some("-".to_string()),
             versions,
@@ -102,7 +106,8 @@ pub mod tests {
             (TargetBounds::from_str("mac").unwrap(), create_version_intervals("2-=4")),
             (TargetBounds::from_str("unix").unwrap(), create_version_intervals("1-3")),
         ]);
-        let package_meta = create_package_meta(versions, supported_versions);
+        let package_id = create_package_id("test@1");
+        let package_meta = create_package_meta(package_id, versions, supported_versions);
 
         let versions = package_meta.get_supported_versions(&target).unwrap();
         assert_eq!(versions, vec![&create_version("2"), &create_version("3"), &create_version("4")]);
@@ -119,7 +124,8 @@ pub mod tests {
 
         let versions = vec![create_version("1")];
         let supported_versions = HashMap::new();
-        let package_meta = create_package_meta(versions, supported_versions);
+        let package_id = create_package_id("test@1");
+        let package_meta = create_package_meta(package_id, versions, supported_versions);
         assert!(matches!(
             package_meta.get_supported_versions(&target),
             Err(RepositoryError::TargetError)
@@ -137,7 +143,8 @@ pub mod tests {
 
         let versions = vec![create_version("1")];
         let supported_versions = HashMap::from([(TargetBounds::from_str("mac").unwrap(), create_version_intervals("2-=4"))]);
-        let package_meta = create_package_meta(versions, supported_versions);
+        let package_id = create_package_id("test@1");
+        let package_meta = create_package_meta(package_id, versions, supported_versions);
 
         assert!(matches!(
             package_meta.get_supported_versions(&target),

@@ -190,7 +190,7 @@ impl OsVersion {
         }
 
         let distro = match distro {
-            Some(distro) => distro,
+            Some(distro) => distro.to_lowercase(),
             None => {
                 error!(msg: "Cannot read distro name");
                 return None;
@@ -214,7 +214,7 @@ impl OsVersion {
         debug!("Retrieved current distro {distro} with version {}", distro_version.style());
 
         Some(Self::Linux {
-            distro: distro.into(),
+            distro,
             distro_version,
             kernel_version,
         })
