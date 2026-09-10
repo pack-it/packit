@@ -17,7 +17,7 @@ pub enum LicenseError {
 
 /// Represents a license identifier.
 #[derive(Serialize, Debug, Clone)]
-pub struct LicenseIdentifier(String);
+pub struct LicenseIdentifier(pub String);
 
 impl<'de> Deserialize<'de> for LicenseIdentifier {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>

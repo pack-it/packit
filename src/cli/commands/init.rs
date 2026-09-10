@@ -25,7 +25,10 @@ use crate::{
         metadata::{LocalMetaHandler, LocalMetaPackageHandler, LocalMetadata},
         package_register::PackageRegister,
     },
-    repositories::{metadata::MetadataProvider, types::Licenses},
+    repositories::{
+        metadata::MetadataProvider,
+        types::{LicenseIdentifier, Licenses},
+    },
     utils::{
         constants::{DEFAULT_METADATA_REPOSITORY_PROVIDER, DEFAULT_METADATA_REPOSITORY_URL},
         packit_version::packit_version,
@@ -227,7 +230,7 @@ impl InitArgs {
 
         let local_meta = LocalMetadata {
             required_packit_version: None,
-            license: Licenses::Single("GPL-3.0-only".into()),
+            license: Licenses::Single(LicenseIdentifier("GPL-3.0-only".into())),
             dependencies: Vec::new(),
             test_requirements: Vec::new(),
             external_test_files: HashSet::new(),
