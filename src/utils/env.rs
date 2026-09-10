@@ -140,4 +140,59 @@ mod tests {
         );
         assert_eq!(env.stripped_vars, HashSet::from(["test2".to_string()]));
     }
+
+    #[test]
+    fn expand() {
+        let env_vars = HashMap::from([
+            ("test".to_string(), "some_value".to_string()),
+            ("test2".to_string(), "some_value2".to_string()),
+            ("test4".to_string(), "some_value4".to_string()),
+        ]);
+
+        let mut env = Environment {
+            env_vars: env_vars.clone(),
+            stripped_vars: HashSet::from(["test3".to_string()]),
+        };
+
+        let env_vars_other = HashMap::from([
+            ("test2".to_string(), "some_value2_other".to_string()),
+            ("test3".to_string(), "some_value3".to_string()),
+        ]);
+
+        let env_other = Environment {
+            env_vars: env_vars_other.clone(),
+            stripped_vars: HashSet::from(["test".to_string()]),
+        };
+
+        env.expand(env_other);
+
+        let expected_env_vars = HashMap::from([
+            ("test2".to_string(), "some_value2_other".to_string()),
+            ("test3".to_string(), "some_value3".to_string()),
+            ("test4".to_string(), "some_value4".to_string()),
+        ]);
+
+        assert_eq!(env.env_vars, expected_env_vars);
+        assert_eq!(env.stripped_vars, HashSet::from(["test".to_string()]));
+    }
+
+    #[test]
+    fn expand_empty_env() {
+        let env_vars = HashMap::from([("test".to_string(), "some_value".to_string())]);
+        let stripped_vars = HashSet::from(["test2".to_string()]);
+        let mut env = Environment {
+            env_vars: env_vars.clone(),
+            stripped_vars: stripped_vars.clone(),
+        };
+
+        let env_other = Environment {
+            env_vars: HashMap::new(),
+            stripped_vars: HashSet::new(),
+        };
+
+        env.expand(env_other);
+
+        assert_eq!(env.env_vars, env_vars);
+        assert_eq!(env.stripped_vars, stripped_vars);
+    }
 }
