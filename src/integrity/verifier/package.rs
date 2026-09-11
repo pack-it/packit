@@ -95,8 +95,7 @@ fn check_package_alterations(package_id: &PackageId, register: &PackageRegister,
         None => PrebuildsList::default_for_target(&Target::current()),
     };
 
-    let revision = package_version.revisions.len() as u64;
-    let prebuild_file_meta = match prebuild_provider.get_prebuild_meta(package_id, revision, &prebuild_id) {
+    let prebuild_file_meta = match prebuild_provider.get_prebuild_meta(package_id, package_version.revision, &prebuild_id) {
         Ok(prebuild_file_meta) => prebuild_file_meta,
         Err(e) => {
             warning!(

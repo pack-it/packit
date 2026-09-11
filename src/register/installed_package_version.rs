@@ -11,6 +11,7 @@ use crate::{config::Repository, installer::types::PackageId};
 #[derive(Serialize, Deserialize, Debug)]
 pub struct InstalledPackageVersion {
     pub package_id: PackageId,
+    pub revision: u64,
 
     #[serde(default = "Repository::default_repository_provider")]
     #[serde(skip_serializing_if = "is_repository_provider_default")]
@@ -32,9 +33,6 @@ pub struct InstalledPackageVersion {
     pub dependents: HashSet<PackageId>,
 
     pub install_path: PathBuf,
-
-    #[serde(default)]
-    pub revisions: Vec<String>,
 
     // The default on the `last_metadata_refresh` and `last_metadata_change` is required to ensure backwards compatibility
     #[serde(default)]

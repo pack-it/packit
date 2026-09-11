@@ -61,6 +61,9 @@ pub struct LocalMetadata {
     #[serde(serialize_with = "serialization::serialize_set_sorted")]
     pub conflicts_with: HashSet<PackageName>,
 
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub revisions: Vec<String>,
+
     pub prebuild: Option<LocalPrebuildMetadata>,
 }
 
@@ -199,7 +202,7 @@ impl<'a> LocalMetaPackageHandler<'a> {
 
     /// Refreshes the local metadata of the given package.
     /// Returns true if the metadata was changed, false otherwise.
-    pub fn refresh(&self, provider: &MetadataProvider) -> Result<bool> {
+    pub fn refresh(&self, provider: &MetadataProvider, current_revision: u64) -> Result<bool> {
         let metadata_dir = self.get_base_path();
 
         let package_meta = provider.read_package(&self.package_id.name)?;
@@ -207,6 +210,11 @@ impl<'a> LocalMetaPackageHandler<'a> {
         let target_bounds = package_version_meta.get_best_target(&Target::current())?;
         let target_meta = package_version_meta.get_target(&target_bounds)?;
         let prebuilds_list = provider.read_prebuilds_list(&self.package_id.name, &self.package_id.version)?;
+
+        // Check if current revision is the same as the revision of the metadata
+        if package_version_meta.get_revision_count() != current_revision {
+            return Err(LocalMetadataError::MetadataRevisionMismatch);
+        }
 
         let local_metadata = self.create_local_metadata(&package_meta, &package_version_meta, &target_bounds, prebuilds_list)?;
         let local_meta_str = toml::ser::to_string(&local_metadata)?;
@@ -276,6 +284,25 @@ impl<'a> LocalMetaPackageHandler<'a> {
         Ok(updated)
     }
 
+    /// Writes the given `LocalMetadata` for the package.
+    /// Note that this should normally not be used, it only exists for use in the init command.
+    pub fn write_raw_metadata(&self, metadata: LocalMetadata) -> Result<()> {
+        let metadata_dir = self.get_base_path();
+
+        // Create metadata dir if it does not exist
+        if !metadata_dir.exists() {
+            fs::create_dir_all(&metadata_dir).err_with_path("create dirs", &metadata_dir)?;
+        }
+
+        let metadata_file = metadata_dir.join(METADATA_FILENAME);
+        let local_meta_str = toml::ser::to_string(&metadata)?;
+
+        // Write metadata to file
+        fs::write(&metadata_file, local_meta_str).err_with_path("write", &metadata_file)?;
+
+        Ok(())
+    }
+
     /// Creates the local metadata from the given package, version and target metadata.
     /// Returns the created `LocalMetadata`.
     fn create_local_metadata(
@@ -322,6 +349,7 @@ impl<'a> LocalMetaPackageHandler<'a> {
             deprecation,
             skip_symlinking: target_meta.skip_symlinking.unwrap_or(package_version_meta.skip_symlinking),
             conflicts_with: package_meta.conflicts_with.clone(),
+            revisions: package_version_meta.revisions.clone(),
             prebuild,
         })
     }
