@@ -284,9 +284,14 @@ impl<'a> LocalMetaPackageHandler<'a> {
         Ok(updated)
     }
 
-    /// Writes the given `LocalMetadata` for the package.
-    /// Note that this should normally not be used, it only exists for use in the init command.
-    pub fn write_raw_metadata(&self, metadata: LocalMetadata) -> Result<()> {
+    /// Writes the given `LocalMetadata` for Packit.
+    /// Note that this only exists to initialize Packit metadata in the init command.
+    pub fn write_packit_metadata(&self, metadata: LocalMetadata) -> Result<()> {
+        // Return an error if the current package is not Packit
+        if self.package_id.name != PackageName::packit() {
+            return Err(LocalMetadataError::PackageIsNotPackit);
+        }
+
         let metadata_dir = self.get_base_path();
 
         // Create metadata dir if it does not exist

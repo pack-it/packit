@@ -228,9 +228,11 @@ impl InitArgs {
             false => self.revision_descriptions.clone(),
         };
 
+        let license = LicenseIdentifier::from_str("GPL-3.0-only").unwrap_or_exit(1);
+
         let local_meta = LocalMetadata {
             required_packit_version: None,
-            license: Licenses::Single(LicenseIdentifier("GPL-3.0-only".into())),
+            license: Licenses::Single(license),
             dependencies: Vec::new(),
             test_requirements: Vec::new(),
             external_test_files: HashSet::new(),
@@ -243,7 +245,7 @@ impl InitArgs {
         };
 
         local_meta_handler
-            .write_raw_metadata(local_meta)
+            .write_packit_metadata(local_meta)
             .unwrap_or_exit_msg("Packit cannot be initialized: error while saving fallback local metadata", 1);
     }
 }

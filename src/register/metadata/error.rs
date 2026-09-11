@@ -20,6 +20,9 @@ pub enum LocalMetadataError {
     #[error("The remote metadata revision does not match the revision of the installed package")]
     MetadataRevisionMismatch,
 
+    #[error("The current package is not Packit")]
+    PackageIsNotPackit,
+
     #[error("Cannot fetch package metadata from repository")]
     RepositoryError(#[from] RepositoryError),
 
