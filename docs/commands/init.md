@@ -16,7 +16,7 @@ This is a complete list of all flags that can be used with the `pit init` comman
 The [default prefix](../structure.md#prefix) can be overridden using the `--prefix` flag. The flag expects a directory path as its argument.
 
 ### `--revision <REVISION>`
-The revision of the installed Packit version that is being initialized.
+The revision number of the installed Packit version that is being initialized.
 
 ### `--revision-descriptions <REVISION-DESCRIPTION> ...`
 An optional list of revision descriptions to use as fallback when the local metadata cannot be constructed from remote metadata.
