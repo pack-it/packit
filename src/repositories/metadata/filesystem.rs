@@ -11,7 +11,7 @@ use crate::{
     installer::types::{PackageName, Version},
     repositories::{
         error::Result,
-        provider::MetadataProvider,
+        metadata::provider::MetadataProviderImpl,
         types::{IndexMeta, PackageMeta, PackageVersionMeta, PrebuildsList, RepositoryMeta},
     },
     utils::ioerror::IOResultExt,
@@ -24,7 +24,7 @@ pub struct FileSystemMetadataProvider {
     path: PathBuf,
 }
 
-impl MetadataProvider for FileSystemMetadataProvider {
+impl MetadataProviderImpl for FileSystemMetadataProvider {
     fn read_repository_metadata(&self) -> Result<RepositoryMeta> {
         let data = Self::read_file_string(&self.path.join("repository.toml"))?;
 

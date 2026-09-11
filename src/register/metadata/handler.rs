@@ -21,7 +21,7 @@ use crate::{
         package_register::PackageRegister,
     },
     repositories::{
-        provider::MetadataProvider,
+        metadata::MetadataProvider,
         types::{DeprecationInfo, Licenses, PackageMeta, PackageVersionMeta, PrebuildMeta, PrebuildsList, Requirement, TargetBounds},
     },
     utils::{ioerror::IOResultExt, serialization},
@@ -199,8 +199,7 @@ impl<'a> LocalMetaPackageHandler<'a> {
 
     /// Refreshes the local metadata of the given package.
     /// Returns true if the metadata was changed, false otherwise.
-    #[expect(clippy::borrowed_box)]
-    pub fn refresh(&self, provider: &Box<dyn MetadataProvider>) -> Result<bool> {
+    pub fn refresh(&self, provider: &MetadataProvider) -> Result<bool> {
         let metadata_dir = self.get_base_path();
 
         let package_meta = provider.read_package(&self.package_id.name)?;
@@ -330,8 +329,7 @@ impl<'a> LocalMetaPackageHandler<'a> {
     /// Requests a file from the given provider.
     /// If the file cannot be found, it returns an `LocalMetadataError::MetadataFileNotFound`, or None if the file is not required.
     /// Returns the bytes of the file if it can be found.
-    #[expect(clippy::borrowed_box)]
-    fn request_file(&self, provider: &Box<dyn MetadataProvider>, file_path: &str, required: bool) -> Result<Option<Bytes>> {
+    fn request_file(&self, provider: &MetadataProvider, file_path: &str, required: bool) -> Result<Option<Bytes>> {
         let Some(bytes) = provider.read_file_bytes(&self.package_id.name, file_path)? else {
             if !required {
                 return Ok(None);

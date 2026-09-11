@@ -8,7 +8,7 @@ use crate::{
     installer::{types::PackageId, unpack::ArchiveExtension},
     repositories::{
         error::{RepositoryError, Result},
-        provider::PrebuildProvider,
+        prebuilds::provider::PrebuildProviderImpl,
         types::PrebuildFileMeta,
     },
     utils::requests,
@@ -21,7 +21,7 @@ pub struct WebPrebuildProvider {
     url: Url,
 }
 
-impl PrebuildProvider for WebPrebuildProvider {
+impl PrebuildProviderImpl for WebPrebuildProvider {
     fn get_prebuild_meta(&self, package_id: &PackageId, revision: u64, prebuild_id: &str) -> Result<PrebuildFileMeta> {
         let (_, response) = self.read_file_path(package_id, revision, prebuild_id, "toml")?;
         let metadata_string = response.text()?;

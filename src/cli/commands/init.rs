@@ -18,7 +18,7 @@ use crate::{
     },
     platforms::{DEFAULT_CONFIG_DIR, DEFAULT_PREFIX, permissions},
     register::{installed_package_version::InstalledPackageVersion, metadata::LocalMetaHandler, package_register::PackageRegister},
-    repositories::provider,
+    repositories::metadata::MetadataProvider,
     utils::{
         constants::{DEFAULT_METADATA_REPOSITORY_PROVIDER, DEFAULT_METADATA_REPOSITORY_URL},
         packit_version::packit_version,
@@ -157,7 +157,7 @@ impl HandleCommand for InitArgs {
             &installed_package_version.metadata_repository_url,
             &installed_package_version.metadata_repository_provider,
         );
-        let Some(provider) = provider::create_metadata_provider(&repository) else {
+        let Some(provider) = MetadataProvider::create_from_repository(&repository) else {
             error!(msg: "Packit cannot be initialized: cannot fetch Packit metadata from repository");
             exit(1);
         };
