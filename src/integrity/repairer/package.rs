@@ -3,7 +3,7 @@ use std::{collections::HashSet, fs, path::Path, str::FromStr};
 
 use crate::{
     cli::display::{logging::warning, styled::Styled},
-    config::Config,
+    config::{Config, Repository},
     installer::{
         Installer, InstallerOptions, Symlinker,
         types::{Dependency, OptionalPackageId, PackageId, PackageName, Version},
@@ -17,10 +17,14 @@ use crate::{
         Target,
         symlink::{self, SymlinkError},
     },
-    register::package_register::PackageRegister,
+    register::{
+        metadata::{LocalMetaHandler, error::LocalMetadataError},
+        package_register::PackageRegister,
+    },
     repositories::{
         error::RepositoryError,
         manager::RepositoryManager,
+        metadata::MetadataProvider,
         types::{Checksum, PackageVersionMeta},
     },
     utils::ioerror::IOResultExt,
@@ -210,6 +214,45 @@ fn get_latest_satisfying_packages(package_version_meta: &PackageVersionMeta, sto
     }
 
     dependencies
+}
+
+/// Fixes missing local metadata of a package by trying to download it again.
+/// If downloading is not possible, tries to re-install the package.
+pub fn fix_missing_local_metadata(
+    missing: HashSet<PackageId>,
+    register: &mut PackageRegister,
+    config: &Config,
+    manager: &RepositoryManager,
+) -> Result<()> {
+    let local_meta_handler = LocalMetaHandler::new(&config.prefix_directory);
+    for package_id in missing {
+        let Some(package_version) = register.get_package_version_mut(&package_id) else {
+            warning!("Could not fix missing metadata {}", package_id.style());
+            continue;
+        };
+
+        // Create repository provider for package
+        let repository = Repository::new(
+            &package_version.metadata_repository_url,
+            &package_version.metadata_repository_provider,
+        );
+        let Some(provider) = MetadataProvider::create_from_repository(&repository) else {
+            warning!("Could not fix missing metadata {}, unable to create provider", package_id.style());
+            continue;
+        };
+
+        let package_handler = local_meta_handler.get_package(&package_id);
+        match package_handler.refresh(&provider) {
+            Ok(_) => continue,
+            Err(LocalMetadataError::RepositoryError(_)) => {
+                println!("Trying to re-install {}", package_id.style());
+                reinstall_package(&package_id, register, manager, config)?;
+            },
+            Err(e) => return Err(e.into()),
+        };
+    }
+
+    Ok(())
 }
 
 /// Fixes missing dependencies by adding them to the register.
