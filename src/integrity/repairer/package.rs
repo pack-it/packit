@@ -6,7 +6,7 @@ use crate::{
     config::{Config, Repository},
     installer::{
         Installer, InstallerOptions, Symlinker,
-        types::{Dependency, OptionalPackageId, PackageId, PackageName, Version},
+        types::{Dependency, PackageId, PackageName, Version},
     },
     integrity::{
         error::{Result, VerifierError},
@@ -433,13 +433,20 @@ fn reinstall_package(package_id: &PackageId, register: &mut PackageRegister, man
     };
     let dependents = package_version.dependents.clone();
 
+    // Check if the package is available in any repository
+    let optional_id = package_id.clone().into();
+    if let Err(e) = manager.read_package_and_version(&optional_id, &Target::current()) {
+        warning!("Skipping re-install of {}", package_id.style());
+        return Err(e.into());
+    }
+
     // Temporarily remove the package
     let installer_options = InstallerOptions::default().skip_symlinking(!package.symlinked).skip_active(true);
     let mut installer = Installer::new(config, register, manager, installer_options);
-    installer.uninstall(&OptionalPackageId::from(package_id.clone()))?;
+    installer.uninstall(&optional_id)?;
 
     // Re-install the package
-    installer.install(&OptionalPackageId::from(package_id.clone()))?;
+    installer.install(&optional_id)?;
 
     // Re-add package as dependent
     for dependent in &dependents {
