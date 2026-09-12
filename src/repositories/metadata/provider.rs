@@ -115,9 +115,9 @@ impl MetadataCache {
         Self {
             repository_metadata_cache: OnceCell::new(),
             index_metadata_cache: OnceCell::new(),
-            package_cache: Cache::new(100),
-            package_version_cache: Cache::new(100),
-            prebuilds_list_cache: Cache::new(100),
+            package_cache: Cache::new(128),
+            package_version_cache: Cache::new(256),
+            prebuilds_list_cache: Cache::new(128),
         }
     }
 
