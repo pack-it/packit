@@ -1391,6 +1391,7 @@ dependencies = [
  "libc",
  "lief",
  "moka",
+ "once_cell",
  "regex",
  "reqwest",
  "serde",

@@ -161,7 +161,7 @@ impl<'a> PortableRepoCreator<'a> {
     /// Returns `true` if a prebuild is available, false otherwise.
     fn is_prebuild_available(&self, repository_id: &str, package_id: &PackageId, revision: u64) -> Result<bool> {
         // Get id of the prebuild
-        let prebuilds_list = self.repository_manager.read_prebuilds_list(repository_id, &package_id.name, &package_id.version)?;
+        let prebuilds_list = self.repository_manager.read_prebuilds_list(repository_id, &package_id)?;
         let Some((prebuild_id, _)) = prebuilds_list.get_best_prebuild(&Target::current()) else {
             return Ok(false);
         };
@@ -263,7 +263,7 @@ impl<'a> PortableRepoCreator<'a> {
         self.write_metadata(version_meta, &targets_path, false)?;
 
         // Download prebuilds.toml
-        let prebuilds_list = self.repository_manager.read_prebuilds_list(repository_id, &package_id.name, &package_id.version)?;
+        let prebuilds_list = self.repository_manager.read_prebuilds_list(repository_id, &package_id)?;
         let prebuilds_path = package_path.join(package_id.version.to_string()).join("prebuilds.toml");
         self.write_metadata(prebuilds_list, &prebuilds_path, false)?;
 
@@ -307,7 +307,7 @@ impl<'a> PortableRepoCreator<'a> {
         fs::create_dir_all(&destination).err_with_path("create dirs", &destination)?;
 
         // Get id of the prebuild
-        let prebuilds_list = self.repository_manager.read_prebuilds_list(repository_id, &package_id.name, &package_id.version)?;
+        let prebuilds_list = self.repository_manager.read_prebuilds_list(repository_id, &package_id)?;
         let (prebuild_id, prebuild_meta) =
             prebuilds_list.get_best_prebuild(&Target::current()).ok_or(PortableRepoError::PrebuildNotFound {
                 package_id: package_id.clone(),
