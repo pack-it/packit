@@ -253,8 +253,10 @@ impl<'a> Installer<'a> {
         };
 
         // Refresh the local metadata for the new package
+        let current_revision = install_meta.version_metadata.get_revision_count();
+        let provider = self.repository_manager.get_metadata_provider(&install_meta.repository_id)?;
         let local_metadata = LocalMetaHandler::new(&self.config.prefix_directory).get_package(&package_id);
-        let updated_metadata = local_metadata.refresh(self.repository_manager.get_metadata_provider(&install_meta.repository_id)?)?;
+        let updated_metadata = local_metadata.refresh(provider, current_revision)?;
         installed_package_version.update_metadata_refresh(updated_metadata);
         self.register.save_to(&PackageRegister::get_path(&self.config.prefix_directory))?;
 

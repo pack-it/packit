@@ -34,6 +34,7 @@ pub use self::common::Sources;
 
 pub use self::index::IndexMeta;
 
+pub use self::license::LicenseIdentifier;
 pub use self::license::Licenses;
 
 pub use self::target_bounds::TargetAddition;

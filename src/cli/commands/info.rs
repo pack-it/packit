@@ -252,6 +252,6 @@ impl InfoArgs {
         standard_print::print_list_or_none(package_version.dependents.iter().map(|d| d.style()));
 
         print!("Revisions: ");
-        standard_print::print_list_or_none(package_version.revisions.iter());
+        standard_print::print_list_or_none(local_metadata.revisions.iter());
     }
 }

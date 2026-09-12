@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Package names are now always lowercase, the commands translate uppercase to lowercase.
 - The parsing for dependencies and targets bounds doesn't allow for `name@` anymore.
 - The `pit util meta-check` command now returns a different exit code, dependending on the most urgent issue type found.
+- The `pit init` command now allows you to specify the revision of the Packit install.
 
 ### Fixed
 - Fix patch apply directory meta check reporting wrong issues.
