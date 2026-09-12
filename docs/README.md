@@ -15,3 +15,4 @@ The docs folder contains all documentation of Packit.
 | [Build Environment](./build-env.md)               | Describes the environment that is used for building packages.              |
 | [Installation Process](./installation-process.md) | Describes the Packit installation and build process.                       |
 | [Register](./register.md)                         | Explains the `Register.toml` file and `metadata` directory.                |
+| [Security](./packit-security.md)                  | Explains the current security measures and future improvements.            |
