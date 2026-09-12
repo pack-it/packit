@@ -43,6 +43,7 @@ diffy = { version = "0.5.1", features = ["binary"] }
 contextdiff-parser = { git = "https://github.com/pack-it/contextdiff-parser.git", tag = "0.0.1" }
 console = "0.16.4"
 chrono = { version = "0.4.45", default-features = false, features = ["alloc", "now", "serde"] }
+moka = { version = "=0.12.16", features = ["sync"] }
 
 # macOS and Linux dependencies
 [target.'cfg(any(target_os = "macos", target_os = "linux"))'.dependencies]

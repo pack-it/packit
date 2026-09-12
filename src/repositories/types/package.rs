@@ -13,7 +13,7 @@ use crate::{
 };
 
 /// Represents the package metadata, containing package information.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PackageMeta {
     pub name: PackageName,
     pub description: String,

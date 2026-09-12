@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
+use std::sync::Arc;
+
 use colored::Colorize;
 use thiserror::Error;
 
@@ -10,7 +12,7 @@ use crate::{
 };
 
 /// The errors that occur when requesting metadata from a repository.
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone)]
 pub enum RepositoryError {
     #[error("Cannot find repository '{repository_id}'")]
     RepositoryNotFoundError {
@@ -58,7 +60,7 @@ pub enum RepositoryError {
     IOError(#[from] ioerror::IOError),
 
     #[error("Cannot request repository file from external repository")]
-    RequestError(#[from] reqwest::Error),
+    RequestError(Arc<reqwest::Error>),
 
     #[error("Cannot parse repository file")]
     ParseError(#[from] toml::de::Error),
@@ -71,6 +73,12 @@ pub enum RepositoryError {
 }
 
 pub(super) type Result<T> = std::result::Result<T, RepositoryError>;
+
+impl From<reqwest::Error> for RepositoryError {
+    fn from(value: reqwest::Error) -> Self {
+        Self::RequestError(Arc::new(value))
+    }
+}
 
 /// The reasons why a package cannot be found.
 #[derive(Error, Clone, Debug)]

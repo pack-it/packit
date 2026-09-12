@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 use thiserror::Error;
 
 /// Small `std::io::Error` wrapper with better messages
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone)]
 pub enum IOError {
     #[error(transparent)]
-    Standard(std::io::Error),
+    Standard(Arc<std::io::Error>),
 
     #[error("Failed to {operation}")]
     Operation {
         operation: String,
 
         #[source]
-        source: std::io::Error,
+        source: Arc<std::io::Error>,
     },
 
     #[error("Failed to {operation} '{}'", path.display())]
@@ -23,7 +23,7 @@ pub enum IOError {
         path: PathBuf,
 
         #[source]
-        source: std::io::Error,
+        source: Arc<std::io::Error>,
     },
 }
 
@@ -42,7 +42,7 @@ impl<T> IOResultExt<T> for std::io::Result<T> {
     fn err_std(self) -> Result<T, IOError> {
         match self {
             Ok(ok) => Ok(ok),
-            Err(e) => Err(IOError::Standard(e)),
+            Err(e) => Err(IOError::Standard(Arc::new(e))),
         }
     }
 
@@ -51,7 +51,7 @@ impl<T> IOResultExt<T> for std::io::Result<T> {
             Ok(ok) => Ok(ok),
             Err(e) => Err(IOError::Operation {
                 operation: operation.into(),
-                source: e,
+                source: Arc::new(e),
             }),
         }
     }
@@ -62,7 +62,7 @@ impl<T> IOResultExt<T> for std::io::Result<T> {
             Err(e) => Err(IOError::WithPath {
                 operation: operation.into(),
                 path: path.into(),
-                source: e,
+                source: Arc::new(e),
             }),
         }
     }
