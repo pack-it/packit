@@ -20,7 +20,7 @@ pub struct PrebuildFileMeta {
 }
 
 /// Represents the `prebuilds.toml` file, containing a list of all prebuilds that can be generated.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PrebuildsList {
     // A mapping from prebuild id to prebuild metadata
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
