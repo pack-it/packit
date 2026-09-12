@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Parsing for target additions, which doesn't allow for empty additions or additions with invalid characters.
 - License identifiers are now checked for invalid characters and being empty.
 - The `PACKIT_DISABLE_PROMPTS` environment variable, which triggers an error when Packit tries to prompt.
+- The `config reset` command, to reset the Packit configuration file to its default.
 
 ### Changes
 - The build tests are now turned off by default and can be turned on with `--execute-build-test` (`--skip-build-test` is removed).

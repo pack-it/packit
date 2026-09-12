@@ -54,3 +54,7 @@ Sets the prebuilds URL of a repository in the config. If no provider is given, t
 
 #### `pit config repositories disable-prebuilds <ID> <VALUE> [--remove-urls]`
 Enables or disables prebuild usage for a repository in the config. If the `--remove-urls` flag is given, the URLs are removed if `<VALUE>` is true.
+
+## Reset
+#### `pit config reset`
+Resets the `Config.toml` to its default configuration. Note that this action cannot be undone.
