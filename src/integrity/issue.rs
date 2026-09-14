@@ -46,6 +46,9 @@ pub enum Issue {
     /// A list of packages which are present in the package directory, but not in the `Register.toml`.
     InconsistentRegister(HashSet<PackageId>),
 
+    /// A list of packages which do not have local metadata.
+    MissingLocalMetadata(HashSet<PackageId>),
+
     /// A list of packages which are changed (when they shouldn't be).
     AlteredPackage(Vec<PackageId>),
 
@@ -198,6 +201,15 @@ impl Display for Issue {
                     writeln!(f, "  - {}", package.style())?;
                 }
             },
+            Issue::MissingLocalMetadata(package_ids) => {
+                writeln!(f, "Missing local metadata")?;
+                let issue_explanation = "The following packages do not have local metadata:";
+                writeln!(f, "{issue_explanation}")?;
+
+                for package in package_ids {
+                    writeln!(f, "  - {}", package.style())?;
+                }
+            },
             Issue::AlteredPackage(altered) => {
                 writeln!(f, "Altered packages")?;
                 let issue_explanation = "The following packages were found to be changed when they shouldn't be:";
@@ -262,6 +274,9 @@ impl Issue {
             },
             Issue::InconsistentRegister(_) => {
                 "To fix this issue we try to reconstruct the Register.toml with data still in the Packit directory"
+            },
+            Issue::MissingLocalMetadata(_) => {
+                "To fix this issue we try to download the metadata from the source metadata repository again, otherwise re-install the package"
             },
             Issue::FailedTest(_) | Issue::AlteredPackage(_) => "To fix this issue we try to re-install the package",
             Issue::MissingPackitGroup => "There is no automatic fix for this issue available yet",

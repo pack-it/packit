@@ -42,6 +42,7 @@ impl Repairer {
             Issue::BrokenTree(missing) => package::fix_broken_tree(missing, register, config, manager)?,
             Issue::InconsistentStorage(missing) => package::fix_inconsistent_storage(missing, register, config, manager)?,
             Issue::InconsistentRegister(missing) => package::fix_inconsistent_register(missing, register, config, manager)?,
+            Issue::MissingLocalMetadata(missing) => package::fix_missing_local_metadata(missing, register, config, manager)?,
             Issue::MissingDependencies(missing) => package::fix_missing_dependencies(missing, register, manager)?,
             Issue::InvalidDependencies(invalid) => package::fix_invalid_dependencies(invalid, register)?,
             Issue::MissingDependents(missing) => package::fix_missing_dependents(missing, register),

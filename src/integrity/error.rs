@@ -58,7 +58,7 @@ pub enum VerifierError {
     #[error("Could not check permissions")]
     PermissionError(#[from] PermissionError),
 
-    #[error("Could not use repository manager for check or fix")]
+    #[error("Could not use repositories for check or fix")]
     RepositoryError(#[from] RepositoryError),
 
     #[error("Cannot perform check, because of an error when executing a script")]

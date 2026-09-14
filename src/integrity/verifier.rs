@@ -92,6 +92,7 @@ impl Verifier {
             Check::InvalidFiles => general::check_invalid_files(packages, register, config)?,
             Check::RegisterConsistency => package::check_register_consistency(register, config)?,
             Check::StorageConsistency => package::check_storage_consistency(packages, config)?,
+            Check::LocalMetadataExistence => package::check_local_metadata_existence(packages, config)?,
             Check::DependencyTree => package::check_dependency_tree(packages, register),
             Check::Alterations => package::check_alterations(packages, register, config)?,
             Check::MissingDependencies => package::check_missing_dependencies(packages, register, config)?,

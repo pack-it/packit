@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Parsing for target additions, which doesn't allow for empty additions or additions with invalid characters.
 - License identifiers are now checked for invalid characters and being empty.
 - The `PACKIT_DISABLE_PROMPTS` environment variable, which triggers an error when Packit tries to prompt.
+- The `LocalMetadataExistence` verifier check.
 
 ### Changes
 - The build tests are now turned off by default and can be turned on with `--execute-build-test` (`--skip-build-test` is removed).
@@ -37,6 +38,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Fix the `include_license` field resolving symlinks, now they are not resolved anymore.
 - Fix errors in command not resulting in non-zero exit code.
 - Fix update functionality checking if dependency is still satisfied in a wrong way.
+- Fix the re-install fix in the repairer uninstalling a package when it cannot be installed.
 
 
 ## [v0.0.4](https://github.com/pack-it/packit/compare/0.0.3...0.0.4) - 2026-08-16

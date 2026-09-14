@@ -35,6 +35,7 @@ This is a list of checks which are currently implemented in the verifier. With a
 | InvalidFiles | General | Checks directories for invalid files (files which shouldn't be there).
 | StorageConsistency  | Package | Checks if packages in the register also exist in the package storage in the prefix directory.                                                                                                                            |
 | RegisterConsistency | Package | Checks if packages in storage also exist in the register. Note that this is package related, but cannot only check the specified packages, because packages are based on what's found in storage.                        |
+| LocalMetadataExistence | Package | Checks if packages have local metadata.                         |
 | DependencyTree      | Package | Checks if the dependency tree is broken based on the dependencies specified in the register.                                                                                                                             |
 | Alterations         | Package | Checks for alterations in packages using a checksum which is compared to the checksum from the pre-build.                                                                                                                |
 | MissingDependents   | Package | Checks for missing dependents of packages in the register.                                                                                                                                                               |

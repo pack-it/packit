@@ -167,6 +167,29 @@ pub fn check_register_consistency(register: &PackageRegister, config: &Config) -
     Ok(Some(Issue::InconsistentRegister(missing)))
 }
 
+/// Checks if the local metadata of the given packages exists.
+/// Returns a missing local metadata issue or `None` if local metadata exists for all given packages.
+pub fn check_local_metadata_existence(packages: &Vec<PackageId>, config: &Config) -> Result<Option<Issue>> {
+    let mut missing = HashSet::new();
+
+    let local_meta_handler = LocalMetaHandler::new(&config.prefix_directory);
+    for package_id in packages {
+        let package_handler = local_meta_handler.get_package(package_id);
+
+        match package_handler.read_metadata() {
+            Ok(_) => continue,
+            Err(LocalMetadataError::LocalMetadataFileNotFound { .. }) => missing.insert(package_id.clone()),
+            Err(e) => return Err(e.into()),
+        };
+    }
+
+    if missing.is_empty() {
+        return Ok(None);
+    }
+
+    Ok(Some(Issue::MissingLocalMetadata(missing)))
+}
+
 /// Checks for the given packages if the package active is valid.
 pub fn check_invalid_active(packages: &HashSet<PackageName>, register: &PackageRegister, config: &Config) -> Result<Option<Issue>> {
     let mut invalid_active = Vec::new();
