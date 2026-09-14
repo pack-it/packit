@@ -11,6 +11,9 @@ use crate::{config::Repository, installer::types::PackageId};
 #[derive(Serialize, Deserialize, Debug)]
 pub struct InstalledPackageVersion {
     pub package_id: PackageId,
+
+    // The default on `revision` is required to ensure backwards compatibility
+    #[serde(default)]
     pub revision: u64,
 
     #[serde(default = "Repository::default_repository_provider")]
