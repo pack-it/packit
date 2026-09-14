@@ -242,7 +242,7 @@ pub fn fix_missing_local_metadata(
         };
 
         let package_handler = local_meta_handler.get_package(&package_id);
-        match package_handler.refresh(&provider) {
+        match package_handler.refresh(&provider, package_version.revision) {
             Ok(_) => continue,
             Err(LocalMetadataError::RepositoryError(_)) => {
                 println!("Trying to re-install {}", package_id.style());
