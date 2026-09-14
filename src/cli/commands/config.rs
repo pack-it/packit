@@ -50,7 +50,11 @@ pub enum ConfigArgs {
     Repositories(RepositoriesArgs),
 
     /// Resets the `Config.toml` to its default configuration
-    Reset,
+    Reset {
+        /// Skips a confirmation prompt
+        #[arg(short, long)]
+        yes: bool,
+    },
 }
 
 /// Manages the repositories in the config.
@@ -162,7 +166,7 @@ impl HandleCommand for ConfigArgs {
             ConfigArgs::Repositories(RepositoriesArgs::DisablePrebuilds { id, value, remove_urls }) => {
                 self.handle_disable_prebuilds(config, id, *value, *remove_urls)
             },
-            ConfigArgs::Reset => self.handle_reset(config),
+            ConfigArgs::Reset { yes } => self.handle_reset(config, *yes),
         }
     }
 }
@@ -517,15 +521,17 @@ impl ConfigArgs {
     }
 
     /// Resets the `Config.toml` to its default configuration.
-    fn handle_reset(&self, config: EditableConfig) {
+    fn handle_reset(&self, config: EditableConfig, yes: bool) {
         println!("The following configuration will be removed:");
         self.handle_show(config);
         println!();
 
-        let question = "Resetting the configuration cannot be undone, are you sure you want to continue";
-        if ask_user(question, QuestionResponse::No).unwrap_or_exit(1).is_no_or_invalid() {
-            println!("Cancelled configuration reset");
-            return;
+        if !yes {
+            let question = "Resetting the configuration cannot be undone, are you sure you want to continue";
+            if ask_user(question, QuestionResponse::No).unwrap_or_exit(1).is_no_or_invalid() {
+                println!("Cancelled configuration reset");
+                return;
+            }
         }
 
         let new_config = EditableConfig::default();
