@@ -208,12 +208,12 @@ fn confirm_config_construction(default_config: &EditableConfig) -> Result<()> {
 }
 
 /// Gets the used repositories from the register metadata in order based on occurrence rate.
-fn get_used_repositories(register: &PackageRegister) -> Vec<Repository> {
+fn get_used_repositories(register: &PackageRegister) -> HashSet<Repository> {
     // Find used repositories in package metadata, and keep track of how many times they are used
     let mut seen_repositories = HashMap::new();
     for package in register.iterate_all() {
         let repository = Repository {
-            url: package.metadata_repository_url.clone(),
+            url: package.metadata_repository_url.trim_end_matches('/').to_string(),
             provider: package.metadata_repository_provider.clone(),
             prebuilds_url: package.prebuilds_repository_url.clone(),
             prebuilds_provider: package.prebuilds_repository_provider.clone(),
