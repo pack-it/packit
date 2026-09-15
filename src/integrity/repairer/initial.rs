@@ -48,6 +48,8 @@ pub fn fix_missing_config() -> Result<()> {
     confirm_config_construction(&default_config)
 }
 
+/// Fixes a broken `Config.toml`. For every field it first tries to recover it from the content still in the `Config.toml`.
+/// If that doesn't work, it will try to recover from known information. The default value is used if these methods both fail.
 pub fn fix_broken_config() -> Result<()> {
     let config_path = Config::get_default_path();
     let content = fs::read_to_string(&config_path).err_with_path("read", &config_path)?;
@@ -79,15 +81,19 @@ pub fn fix_broken_config() -> Result<()> {
             default_config.set_repositories_rank(repositories.keys().map(String::from).collect());
         }
 
+        default_config.remove_repository(DEFAULT_METADATA_REPOSITORY_NAME);
         for (id, repository) in repositories {
             default_config.set_repository(&id, repository);
         }
     } else if let Some(prefix_path) = prefix {
         // When reconstructing the repositories never use the found repository rank
         let repositories = get_config_repositories(&prefix_path)?;
-        default_config.set_repositories_rank(repositories.keys().map(String::from).collect());
-        for (id, repository) in repositories {
-            default_config.set_repository(&id, repository);
+        if !repositories.is_empty() {
+            default_config.remove_repository(DEFAULT_METADATA_REPOSITORY_NAME);
+            default_config.set_repositories_rank(repositories.keys().map(String::from).collect());
+            for (id, repository) in repositories {
+                default_config.set_repository(&id, repository);
+            }
         }
     }
 
@@ -105,6 +111,8 @@ pub fn fix_broken_config() -> Result<()> {
     confirm_config_construction(&default_config)
 }
 
+/// Gets the prefix from the given document. If the prefix cannot be found in the document. The function
+/// tries to get it with `get_config_prefix`. `None` is returned if both attempts fail.
 fn use_or_get_prefix(document: &DocumentMut) -> Result<Option<PathBuf>> {
     Ok(
         if let Some(prefix_path) = document.get("prefix_directory").and_then(|item| item.as_str()) {
@@ -117,6 +125,7 @@ fn use_or_get_prefix(document: &DocumentMut) -> Result<Option<PathBuf>> {
     )
 }
 
+/// Tries to get the repositories from the given document.
 fn get_repositories_from(document: &DocumentMut) -> Result<HashMap<String, Repository>> {
     let mut found_repositories = HashMap::new();
     let Some(repositories) = document.get("repositories").and_then(|item| item.as_table()) else {
@@ -155,6 +164,7 @@ fn get_config_prefix() -> Result<Option<PathBuf>> {
     }
 }
 
+/// Tries to get the repositories for the config, based on the repositories that are used to install packages.
 fn get_config_repositories(prefix_path: &Path) -> Result<HashMap<String, Repository>> {
     let mut found_repositories = HashMap::new();
     let register_dir = PackageRegister::get_path(prefix_path);
@@ -168,24 +178,24 @@ fn get_config_repositories(prefix_path: &Path) -> Result<HashMap<String, Reposit
     };
 
     let used_repositories = get_used_repositories(&register);
-    if !used_repositories.is_empty() {
-        for (i, repository) in used_repositories.into_iter().enumerate() {
-            // Create a unique name for each repository (we can't infer this from anything)
-            let name = format!("repository_{}", i);
-            found_repositories.insert(name, repository);
-        }
+    if used_repositories.is_empty() {
+        println!("Could not find used repositories, using the default repositories instead");
+        return Ok(found_repositories);
     }
 
-    // TODO put somewhere
-    //println!("Could not find used repositories, using the default repositories instead");
+    for (i, repository) in used_repositories.into_iter().enumerate() {
+        // Create a unique name for each repository (we can't infer this from anything)
+        let name = format!("repository_{}", i);
+        found_repositories.insert(name, repository);
+    }
 
     Ok(found_repositories)
 }
 
-/// Saves the reconstructed Config.toml to the default config path if the user confirms it.
+/// Saves the reconstructed `Config.toml` to the default config path if the user confirms it.
 fn confirm_config_construction(default_config: &EditableConfig) -> Result<()> {
     println!();
-    println!("Reconstructed Config.toml");
+    println!("Reconstructed Config.toml:");
     default_config.get_config().display();
     println!();
 
@@ -222,6 +232,8 @@ fn get_used_repositories(register: &PackageRegister) -> Vec<Repository> {
     repositories.into_iter().map(|(k, _)| k).collect()
 }
 
+/// Tries to get the repository from a given table. If a field is optional and its value cannot be
+/// found the default is used. If a required field cannot be found `None` is returned.
 fn get_repository(table: &Table) -> Option<Repository> {
     // Try to get all the fields, return early if the fields cannot be found and is not optional
     let url = table.get("url")?.as_str()?.to_string();
