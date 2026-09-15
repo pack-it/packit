@@ -56,10 +56,12 @@ pub fn fix_broken_config() -> Result<()> {
     let document: DocumentMut = repaired_content.parse()?;
     let mut default_config = EditableConfig::default();
 
-    // Get and set the prefix
+    // Get and set the prefix (only set the prefix if the prefix is not the default)
     let prefix = use_or_get_prefix(&document)?;
     if let Some(prefix) = &prefix {
-        default_config.set_prefix_directory(prefix.clone());
+        if prefix != DEFAULT_PREFIX {
+            default_config.set_prefix_directory(prefix.clone());
+        }
     }
 
     // Get and set the repository rank (can be overwritten if no repositories can be found in the `repaired_content`)
@@ -90,11 +92,14 @@ pub fn fix_broken_config() -> Result<()> {
     }
 
     // Get and set the multiuser value
-    if let Some(multiuser) = document.get("multiuser").and_then(|item| item.as_bool()) {
+    let multiuser = match document.get("multiuser").and_then(|item| item.as_bool()) {
+        Some(value) => value,
+        None => does_packit_group_exist()?,
+    };
+
+    // Only set the field if it's not the default
+    if multiuser {
         default_config.set_multiuser(multiuser);
-    } else {
-        // Set multi-user to true if the packit group exists
-        default_config.set_multiuser(does_packit_group_exist()?);
     }
 
     confirm_config_construction(&default_config)
@@ -121,7 +126,6 @@ fn get_repositories_from(document: &DocumentMut) -> Result<HashMap<String, Repos
     for (key, value) in repositories {
         let Some(value) = value.as_table() else { continue };
         let Some(repository) = get_repository(value) else { continue };
-        dbg!(&repository);
         found_repositories.insert(key.to_string(), repository);
     }
 
