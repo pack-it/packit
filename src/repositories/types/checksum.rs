@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize, de};
 use sha2::{Digest, Sha256};
 
 /// Represents a checksum, wraps around a byte array.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Checksum {
     pub sha256: [u8; 32],
 }

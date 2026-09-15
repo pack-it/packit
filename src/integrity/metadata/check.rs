@@ -158,7 +158,7 @@ impl MetaCheck {
         // Check if listed versions exist and do package version specific metadata checks
         for version in &package_meta.versions {
             let package_id = PackageId::new(package_name.clone(), version.clone());
-            let package_version = match self.provider.read_package_version(package_name, version) {
+            let package_version = match self.provider.read_package_version(&package_id) {
                 Ok(package_version) => package_version,
                 Err(e) => {
                     let description = format!("Package {} could not be parsed", package_id.style());

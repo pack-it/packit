@@ -350,7 +350,7 @@ impl<'a> Installer<'a> {
     /// Returns an `InstallerError::ChecksumError` if the pre-build checksum doesn't match.
     fn download_prebuild(&self, repository_id: &str, package: &PackageId, revision: u64, destination_dir: impl AsRef<Path>) -> Result<()> {
         // Get the id of the prebuild
-        let prebuilds_list = self.repository_manager.read_prebuilds_list(repository_id, &package.name, &package.version)?;
+        let prebuilds_list = self.repository_manager.read_prebuilds_list(repository_id, &package)?;
         let (prebuild_id, _) = prebuilds_list.get_best_prebuild(&Target::current()).ok_or(InstallerError::NoSupportedPrebuild {
             package_id: package.clone(),
         })?;

@@ -12,7 +12,7 @@ use crate::repositories::types::Checksum;
 
 /// Represents a script identifier, holding the scripts name and a bool which specifies
 /// if the script should be version specific.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(untagged)]
 pub enum Script {
     NameOnly(String),
@@ -24,7 +24,7 @@ pub enum Script {
 
 /// Represents a source, holding a URL and mirror URLs to the source code of a package.
 /// Also has a checksum to check the validity of the received source code.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Source {
     pub url: String,
 
@@ -48,7 +48,7 @@ pub struct Source {
 }
 
 /// Wrapper to differentiate between Single and Named sources in the metadata files.
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 #[serde(untagged)]
 pub enum Sources {
     Single(Source),
@@ -56,7 +56,7 @@ pub enum Sources {
 }
 
 /// Represents a patch to a source file, holding a URL, mirror URLs and a checksum to check validity.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Patch {
     pub url: String,
 

@@ -241,7 +241,7 @@ impl<'a> RepositoryManager<'a> {
                 },
             };
 
-            let package = match provider.read_package_version(&package_id.name, &package_id.version) {
+            let package = match provider.read_package_version(&package_id) {
                 Ok(package) => package,
                 Err(RepositoryError::ParseError(e)) => {
                     debug!(
@@ -284,7 +284,7 @@ impl<'a> RepositoryManager<'a> {
     /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     pub fn read_repo_package_version(&self, repository_id: &str, package_id: &PackageId) -> Result<PackageVersionMeta> {
         let provider = self.get_metadata_provider(repository_id)?;
-        let package = provider.read_package_version(&package_id.name, &package_id.version)?;
+        let package = provider.read_package_version(&package_id)?;
 
         // Check package version compatibility
         if let Some(reason) = self.check_package_version_compatibility(&package, &Target::current()) {
@@ -337,11 +337,11 @@ impl<'a> RepositoryManager<'a> {
     }
 
     /// Reads the list of prebuilds that can be generated for the given version of the package.
-    pub fn read_prebuilds_list(&self, repository_id: &str, package: &PackageName, version: &Version) -> Result<PrebuildsList> {
-        match self.get_metadata_provider(repository_id)?.read_prebuilds_list(package, version)? {
+    pub fn read_prebuilds_list(&self, repository_id: &str, package_id: &PackageId) -> Result<PrebuildsList> {
+        match self.get_metadata_provider(repository_id)?.read_prebuilds_list(package_id)? {
             Some(list) => Ok(list),
             None => {
-                let package_meta = self.read_repo_package(repository_id, package)?;
+                let package_meta = self.read_repo_package(repository_id, &package_id.name)?;
                 Ok(PrebuildsList::default(package_meta.supported_versions.keys()))
             },
         }
