@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use toml_edit::DocumentMut;
 
+/// Repairs the toml content by removing erroneous lines.
 fn repair_toml(content: &str) -> Option<String> {
     let mut lines: Vec<&str> = content.split('\n').collect();
 
@@ -78,5 +79,106 @@ fn filter_multiline_errors(line_errors: &mut Vec<usize>, lines: &Vec<&str>) {
             index = block_start + 1;
             block_start = index;
         }
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+
+    use super::*;
+
+    #[test]
+    fn empty() {
+        assert_eq!(repair_toml(""), Some("".to_string()));
+    }
+
+    #[test]
+    fn valid() {
+        assert_eq!(repair_toml("key = 1\nother = 2"), Some("key = 1\nother = 2".to_string()));
+    }
+
+    #[test]
+    fn valid_with_empty_line() {
+        assert_eq!(repair_toml("key = [1,\n\n2,\n3\n]"), Some("key = [1,\n\n2,\n3\n]".to_string()));
+    }
+
+    #[test]
+    fn invalid_before_valid() {
+        assert_eq!(
+            repair_toml("key2 = [\n1,,\n]\nkey = [1,\n2,\n3\n]"),
+            Some("key = [1,\n2,\n3\n]".to_string())
+        );
+    }
+
+    #[test]
+    fn invalid_with_gap() {
+        assert_eq!(repair_toml("key = [\nother = 1\n]"), Some("other = 1".to_string()));
+    }
+
+    #[test]
+    fn collect_emtpy() {
+        assert!(collect_error_lines(&vec![]).is_empty());
+    }
+
+    #[test]
+    fn collect_no_errors() {
+        assert!(collect_error_lines(&vec!["key = 1", "key = []"]).is_empty());
+    }
+
+    #[test]
+    fn collect_only_errors() {
+        let collected_errors = collect_error_lines(&vec!["key = ", "key = ["]);
+        assert!(collected_errors.len() == 2);
+        assert_eq!(collected_errors.get(0), Some(&0));
+        assert_eq!(collected_errors.get(1), Some(&1));
+    }
+
+    #[test]
+    fn collect_mixed() {
+        let collected_errors = collect_error_lines(&vec!["key = ", "key = 1", "key = ["]);
+        assert!(collected_errors.len() == 2);
+        assert_eq!(collected_errors.get(0), Some(&0));
+        assert_eq!(collected_errors.get(1), Some(&2));
+    }
+
+    #[test]
+    fn filter_empty() {
+        let lines = vec!["key = 1"];
+        let mut line_errors = vec![];
+        filter_multiline_errors(&mut line_errors, &lines);
+
+        assert_eq!(line_errors, vec![]);
+
+        let mut line_errors = vec![];
+        filter_multiline_errors(&mut line_errors, &vec![]);
+
+        assert_eq!(line_errors, vec![]);
+    }
+
+    #[test]
+    fn filter_no_multiline() {
+        let lines = vec!["key = ", "key = 1", "key = ["];
+        let mut line_errors = vec![0, 2];
+        filter_multiline_errors(&mut line_errors, &lines);
+
+        assert_eq!(line_errors, vec![0, 2]);
+    }
+
+    #[test]
+    fn filter_all_errors() {
+        let lines = vec!["key = [", "1", "]"];
+        let mut line_errors = vec![0, 1, 2];
+        filter_multiline_errors(&mut line_errors, &lines);
+
+        assert_eq!(line_errors, vec![]);
+    }
+
+    #[test]
+    fn filter_some_errors() {
+        let lines = vec!["key = [", "]", "other = 1", "x"];
+        let mut line_errors = vec![0, 1, 3];
+        filter_multiline_errors(&mut line_errors, &lines);
+
+        assert_eq!(line_errors, vec![3]);
     }
 }
