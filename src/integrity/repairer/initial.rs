@@ -73,9 +73,9 @@ fn set_config_repositories(prefix_path: &Path, default_config: &mut EditableConf
             }
 
             default_config.set_repositories_rank(new_rank);
-
-            return Ok(());
         }
+
+        return Ok(());
     }
 
     println!(
