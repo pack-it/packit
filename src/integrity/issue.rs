@@ -15,6 +15,9 @@ pub enum Issue {
     /// The Packit `Config.toml` is missing.
     MissingConfig,
 
+    /// The Packit `Config.toml` contains invalid syntax.
+    BrokenConfig,
+
     /// The Packit `Register.toml` is missing.
     MissingRegister,
 
@@ -85,7 +88,10 @@ impl Display for Issue {
                 }
             },
             Issue::MissingConfig => {
-                writeln!(f, "Missing Config.toml file")?;
+                writeln!(f, "Missing 'Config.toml' file")?;
+            },
+            Issue::BrokenConfig => {
+                writeln!(f, "Broken 'Config.toml' file")?;
             },
             Issue::MissingRegister => {
                 writeln!(f, "Missing Register.toml file")?;
@@ -252,7 +258,10 @@ impl Issue {
     pub fn get_fix_message(&self) -> &str {
         match &self {
             Issue::IncorrectPermissions(_) => "To fix this issue we set the permissions again",
-            Issue::MissingConfig => "To fix this issue we try to reconstruct the Config.toml with data still in the Packit directory",
+            Issue::MissingConfig => "To fix this issue we try to reconstruct the 'Config.toml' with data still in the Packit directory",
+            Issue::BrokenConfig => {
+                "To fix this issue we retrieve the valid toml fields and the broken fields are reconstructed with data still in the Packit directory"
+            },
             Issue::MissingRegister => "To fix this issue we try to reconstruct the Register.toml with data still in the Packit directory",
             Issue::StrayDirectories(_) => "To fix this issue we remove the stray directories",
             Issue::InvalidActive(_) => "To fix this issue we set the active version to the latest installed version",

@@ -2,7 +2,7 @@
 use toml_edit::DocumentMut;
 
 /// Repairs the toml content by removing erroneous lines.
-fn repair_toml(content: &str) -> Option<String> {
+pub fn repair_toml(content: &str) -> String {
     let mut lines: Vec<&str> = content.split('\n').collect();
 
     // Filter empty and white space lines
@@ -15,13 +15,13 @@ fn repair_toml(content: &str) -> Option<String> {
     filter_multiline_errors(&mut line_errors, &lines);
 
     if line_errors.is_empty() {
-        return Some(content.to_string());
+        return content.to_string();
     }
 
     let repaired_toml: Vec<&str> = lines.iter().enumerate().filter(|(i, _)| line_errors.iter().all(|x| *x != *i)).map(|v| *v.1).collect();
     let repaired_toml = repaired_toml.join("\n");
 
-    Some(repaired_toml)
+    repaired_toml
 }
 
 /// Collects all lines which have errors.
@@ -89,30 +89,27 @@ pub mod tests {
 
     #[test]
     fn empty() {
-        assert_eq!(repair_toml(""), Some("".to_string()));
+        assert_eq!(repair_toml(""), "");
     }
 
     #[test]
     fn valid() {
-        assert_eq!(repair_toml("key = 1\nother = 2"), Some("key = 1\nother = 2".to_string()));
+        assert_eq!(repair_toml("key = 1\nother = 2"), "key = 1\nother = 2");
     }
 
     #[test]
     fn valid_with_empty_line() {
-        assert_eq!(repair_toml("key = [1,\n\n2,\n3\n]"), Some("key = [1,\n\n2,\n3\n]".to_string()));
+        assert_eq!(repair_toml("key = [1,\n\n2,\n3\n]"), "key = [1,\n\n2,\n3\n]");
     }
 
     #[test]
     fn invalid_before_valid() {
-        assert_eq!(
-            repair_toml("key2 = [\n1,,\n]\nkey = [1,\n2,\n3\n]"),
-            Some("key = [1,\n2,\n3\n]".to_string())
-        );
+        assert_eq!(repair_toml("key2 = [\n1,,\n]\nkey = [1,\n2,\n3\n]"), "key = [1,\n2,\n3\n]");
     }
 
     #[test]
     fn invalid_with_gap() {
-        assert_eq!(repair_toml("key = [\nother = 1\n]"), Some("other = 1".to_string()));
+        assert_eq!(repair_toml("key = [\nother = 1\n]"), "other = 1");
     }
 
     #[test]

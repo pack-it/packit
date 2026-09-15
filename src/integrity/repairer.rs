@@ -24,6 +24,7 @@ impl Repairer {
     pub fn fix_initial_issues(&mut self, issue: Issue) -> Result<()> {
         match issue {
             Issue::MissingConfig => initial::fix_missing_config()?,
+            Issue::BrokenConfig => initial::fix_broken_config()?,
             Issue::IncorrectPermissions(directories) => initial::fix_unwritable_directories(directories)?,
             Issue::MissingRegister => initial::fix_missing_register()?,
 
