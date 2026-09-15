@@ -169,6 +169,7 @@ mod tests {
                 &Check::StrayDirectory,
                 &Check::StorageConsistency,
                 &Check::RegisterConsistency,
+                &Check::LocalMetadataExistence,
                 &Check::MissingDependencies,
                 &Check::InvalidDependencies,
                 &Check::MissingDependents,
