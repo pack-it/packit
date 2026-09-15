@@ -12,8 +12,8 @@ use crate::{config::Repository, installer::types::PackageId};
 pub struct InstalledPackageVersion {
     pub package_id: PackageId,
 
-    // The default on `revision` is required to ensure backwards compatibility
-    #[serde(default)]
+    #[serde(default = "default_revision")]
+    #[serde(skip_serializing_if = "is_default_revision")]
     pub revision: u64,
 
     #[serde(default = "Repository::default_repository_provider")]
@@ -47,6 +47,14 @@ pub struct InstalledPackageVersion {
 
 fn is_repository_provider_default(value: &String) -> bool {
     *value == Repository::default_repository_provider()
+}
+
+fn default_revision() -> u64 {
+    0
+}
+
+fn is_default_revision(val: &u64) -> bool {
+    *val == default_revision()
 }
 
 impl InstalledPackageVersion {
