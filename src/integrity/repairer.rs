@@ -25,8 +25,9 @@ impl Repairer {
         match issue {
             Issue::MissingConfig => initial::fix_missing_config()?,
             Issue::BrokenConfig => initial::fix_broken_config()?,
-            Issue::IncorrectPermissions(directories) => initial::fix_unwritable_directories(directories)?,
             Issue::MissingRegister => initial::fix_missing_register()?,
+            Issue::BrokenRegister => initial::fix_broken_register()?,
+            Issue::IncorrectPermissions(directories) => initial::fix_unwritable_directories(directories)?,
 
             _ => warning!("Fix not executed, because it is not an initial issue"),
         }

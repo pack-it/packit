@@ -3,6 +3,7 @@ use std::{
     collections::{HashMap, HashSet},
     fs,
     path::{Path, PathBuf},
+    str::FromStr,
 };
 
 use toml_edit::{DocumentMut, Table};
@@ -10,12 +11,15 @@ use toml_edit::{DocumentMut, Table};
 use crate::{
     cli::display::{QuestionResponse, ask_user, ask_user_input},
     config::{Config, EditableConfig, Repository},
+    installer::types::{PackageName, Version},
     integrity::{error::Result, repairer::package, toml_repairer, utils::get_storage_packages},
     platforms::{
         DEFAULT_PREFIX,
         permissions::{does_packit_group_exist, set_packit_permissions},
     },
-    register::package_register::PackageRegister,
+    register::{
+        installed_package::InstalledPackage, installed_package_version::InstalledPackageVersion, package_register::PackageRegister,
+    },
     repositories::manager::RepositoryManager,
     utils::{
         constants::{DEFAULT_METADATA_REPOSITORY_NAME, REGISTER_FILENAME},
@@ -53,7 +57,6 @@ pub fn fix_missing_config() -> Result<()> {
 pub fn fix_broken_config() -> Result<()> {
     let config_path = Config::get_default_path();
     let content = fs::read_to_string(&config_path).err_with_path("read", &config_path)?;
-
     let repaired_content = toml_repairer::repair_toml(&content);
     let document: DocumentMut = repaired_content.parse()?;
     let mut default_config = EditableConfig::default();
@@ -263,9 +266,63 @@ pub fn fix_missing_register() -> Result<()> {
     Ok(())
 }
 
+pub fn fix_broken_register() -> Result<()> {
+    let config = Config::from(&Config::get_default_path())?;
+    let register_path = PackageRegister::get_path(&config.prefix_directory);
+    let content = fs::read_to_string(&register_path).err_with_path("read", &register_path)?;
+    let repaired_content = toml_repairer::repair_toml(&content);
+    let document: DocumentMut = repaired_content.parse()?;
+
+    // Collect the fields that are still valid
+    let mut packages: HashMap<PackageName, InstalledPackage> = HashMap::new();
+    if let Some(package_table) = document.get("package").and_then(|item| item.as_table()) {
+        for (package_name, package_item) in package_table {
+            let Ok(package_name) = PackageName::from_str(package_name) else {
+                continue;
+            };
+
+            let Some(toml_package) = package_item.as_table() else {
+                continue;
+            };
+
+            // TODO: Convert from toml table instead of from string
+            let mut package: InstalledPackage = match toml::from_str(&package_item.to_string()) {
+                Ok(package) => package,
+                Err(_) => continue,
+            };
+
+            // Note that we iterate over all keys in the package not only the version keys
+            for (version, version_item) in toml_package {
+                let Ok(version) = Version::from_str(version) else {
+                    continue;
+                };
+
+                let package_version: InstalledPackageVersion = match toml::from_str(&version_item.to_string()) {
+                    Ok(version) => version,
+                    Err(_) => continue,
+                };
+
+                package.versions.insert(version, package_version);
+            }
+
+            // Only add the package if at least one version can be found
+            if !package.versions.is_empty() {
+                packages.insert(package_name, package);
+            }
+        }
+    }
+
+    // TODO: Get all the missing packages? This is also already done by another fix
+
+    let register = PackageRegister::new(packages);
+    register.save_to(&register_path)?;
+
+    Ok(())
+}
+
 /// Fix unwritable directories by setting the permissions again.
 pub fn fix_unwritable_directories(directories: HashSet<PathBuf>) -> Result<()> {
-    // Check for multiuser, promt the user if the config doesn't work
+    // Check for multiuser, prompt the user if the config doesn't work
     let multiuser = match Config::from(&Config::get_default_path()) {
         Ok(config) => config.multiuser,
         Err(_) => {
