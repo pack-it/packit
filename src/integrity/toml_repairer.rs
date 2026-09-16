@@ -19,9 +19,7 @@ pub fn repair_toml(content: &str) -> String {
     }
 
     let repaired_toml: Vec<&str> = lines.iter().enumerate().filter(|(i, _)| line_errors.iter().all(|x| *x != *i)).map(|v| *v.1).collect();
-    let repaired_toml = repaired_toml.join("\n");
-
-    repaired_toml
+    repaired_toml.join("\n")
 }
 
 /// Collects all lines which have errors.
@@ -43,6 +41,7 @@ fn collect_error_lines(lines: &Vec<&str>) -> Vec<usize> {
 /// If the first line cannot be valid when combined with other lines this line contains an actual error.
 /// We then continue this process with the next line. To make this more efficient we also check if there is a 'line-gap' between
 /// the current and previous error line. If this is the case we can reset early.
+#[expect(clippy::misrefactored_assign_op)]
 fn filter_multiline_errors(line_errors: &mut Vec<usize>, lines: &Vec<&str>) {
     let mut block = String::new();
     let mut block_start = 0;

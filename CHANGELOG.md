@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The `LocalMetadataExistence` verifier check.
 - The `config reset` command, to reset the Packit configuration file to its default.
 - Caching of the metadata from all requests to metadata repositories.
+- The verifier can now recover parts of syntactically wrong toml files, specifically the `Config.toml` and `Register.toml`.
 
 ### Changes
 - The build tests are now turned off by default and can be turned on with `--execute-build-test` (`--skip-build-test` is removed).

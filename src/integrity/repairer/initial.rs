@@ -117,15 +117,7 @@ pub fn fix_broken_config() -> Result<()> {
 /// Gets the prefix from the given document. If the prefix cannot be found in the document. The function
 /// tries to get it with `get_config_prefix`. `None` is returned if both attempts fail.
 fn use_or_get_prefix(document: &DocumentMut) -> Result<Option<PathBuf>> {
-    Ok(
-        if let Some(prefix_path) = document.get("prefix_directory").and_then(|item| item.as_str()) {
-            Some(PathBuf::from(prefix_path))
-        } else if let Some(prefix_path) = get_config_prefix()? {
-            Some(prefix_path)
-        } else {
-            None
-        },
-    )
+    Ok(document.get("prefix_directory").and_then(|item| item.as_str()).map(PathBuf::from).or(get_config_prefix()?))
 }
 
 /// Tries to get the repositories from the given document.
@@ -266,6 +258,8 @@ pub fn fix_missing_register() -> Result<()> {
     Ok(())
 }
 
+/// Fixes a broken register. It recovers the valid parts of the toml file. The broken part will then be missing.
+/// A later check for register consistency will catch this and fix it.
 pub fn fix_broken_register() -> Result<()> {
     let config = Config::from(&Config::get_default_path())?;
     let register_path = PackageRegister::get_path(&config.prefix_directory);
@@ -273,46 +267,47 @@ pub fn fix_broken_register() -> Result<()> {
     let repaired_content = toml_repairer::repair_toml(&content);
     let document: DocumentMut = repaired_content.parse()?;
 
+    // If nothing can be found reset the entire register toml file
+    let Some(package_table) = document.get("package").and_then(|item| item.as_table()) else {
+        PackageRegister::new_empty().save_to(&register_path)?;
+        return Ok(());
+    };
+
     // Collect the fields that are still valid
     let mut packages: HashMap<PackageName, InstalledPackage> = HashMap::new();
-    if let Some(package_table) = document.get("package").and_then(|item| item.as_table()) {
-        for (package_name, package_item) in package_table {
-            let Ok(package_name) = PackageName::from_str(package_name) else {
+    for (package_name, package_item) in package_table {
+        let Ok(package_name) = PackageName::from_str(package_name) else {
+            continue;
+        };
+
+        let mut package: InstalledPackage = match toml::from_str(&package_item.to_string()) {
+            Ok(package) => package,
+            Err(_) => continue,
+        };
+
+        let Some(toml_package) = package_item.as_table() else {
+            continue;
+        };
+
+        // Note that we iterate over all keys in the package not only the version keys
+        for (version, version_item) in toml_package {
+            let Ok(version) = Version::from_str(version) else {
                 continue;
             };
 
-            let Some(toml_package) = package_item.as_table() else {
-                continue;
-            };
-
-            // TODO: Convert from toml table instead of from string
-            let mut package: InstalledPackage = match toml::from_str(&package_item.to_string()) {
-                Ok(package) => package,
+            let package_version: InstalledPackageVersion = match toml::from_str(&version_item.to_string()) {
+                Ok(version) => version,
                 Err(_) => continue,
             };
 
-            // Note that we iterate over all keys in the package not only the version keys
-            for (version, version_item) in toml_package {
-                let Ok(version) = Version::from_str(version) else {
-                    continue;
-                };
+            package.versions.insert(version, package_version);
+        }
 
-                let package_version: InstalledPackageVersion = match toml::from_str(&version_item.to_string()) {
-                    Ok(version) => version,
-                    Err(_) => continue,
-                };
-
-                package.versions.insert(version, package_version);
-            }
-
-            // Only add the package if at least one version can be found
-            if !package.versions.is_empty() {
-                packages.insert(package_name, package);
-            }
+        // Only add the package if at least one version can be found
+        if !package.versions.is_empty() {
+            packages.insert(package_name, package);
         }
     }
-
-    // TODO: Get all the missing packages? This is also already done by another fix
 
     let register = PackageRegister::new(packages);
     register.save_to(&register_path)?;
