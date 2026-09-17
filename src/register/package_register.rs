@@ -36,7 +36,7 @@ pub struct PackageRegister {
 
 impl PackageRegister {
     /// Creates a new `PackageRegister` based on the given packages. Should normally never be used.
-    /// This is mainly used in the `Verifier` and init command. Under normal circumstances use `PackageRegister::from`.
+    /// This is mainly used in the `Verifier`. Under normal circumstances use `PackageRegister::from`.
     pub fn new(packages: HashMap<PackageName, InstalledPackage>) -> Self {
         Self { packages }
     }

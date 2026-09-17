@@ -114,10 +114,13 @@ pub fn fix_broken_config() -> Result<()> {
     confirm_config_construction(&default_config)
 }
 
-/// Gets the prefix from the given document. If the prefix cannot be found in the document. The function
-/// tries to get it with `get_config_prefix`. `None` is returned if both attempts fail.
+/// Gets the prefix from the given document. If the prefix cannot be found in the document, it tries to
+/// get it with `get_config_prefix`. `None` is returned if both attempts fail.
 fn use_or_get_prefix(document: &DocumentMut) -> Result<Option<PathBuf>> {
-    Ok(document.get("prefix_directory").and_then(|item| item.as_str()).map(PathBuf::from).or(get_config_prefix()?))
+    match document.get("prefix_directory").and_then(|item| item.as_str()) {
+        Some(prefix_path) => Ok(Some(PathBuf::from(prefix_path))),
+        None => get_config_prefix(),
+    }
 }
 
 /// Tries to get the repositories from the given document.
@@ -137,7 +140,7 @@ fn get_repositories_from(document: &DocumentMut) -> Result<HashMap<String, Repos
 }
 
 /// Tries to find the prefix directory. When found, the user is prompted to confirm. If it cannot be found
-/// de user is prompted to provide the prefix path. If the path cannot be found `None` is returned.
+/// the user is prompted to provide the prefix path. If the path cannot be found `None` is returned.
 fn get_config_prefix() -> Result<Option<PathBuf>> {
     // Figure out the prefix path
     let mut prefix_path = PathBuf::from(DEFAULT_PREFIX);
@@ -153,7 +156,7 @@ fn get_config_prefix() -> Result<Option<PathBuf>> {
         match ask_user_input(&question)? {
             Some(path) => prefix_path = PathBuf::from(path),
 
-            // Return None if no valid prefix path can be found (no possibility for reconstruction)
+            // Return `None` if no valid prefix path can be found (no possibility for reconstruction)
             None => return Ok(None),
         }
     }
@@ -165,7 +168,7 @@ fn get_config_repositories(prefix_path: &Path) -> Result<HashMap<String, Reposit
     let register_dir = PackageRegister::get_path(prefix_path);
     let Ok(register) = PackageRegister::from(&register_dir) else {
         println!(
-            "Could not use '{REGISTER_FILENAME}' to reconstruct repositories from '{}', using the default repositories instead",
+            "Could not use '{REGISTER_FILENAME}' to retrieve repositories from '{}', using the default repositories instead",
             prefix_path.display()
         );
 
@@ -230,7 +233,7 @@ fn get_used_repositories(register: &PackageRegister) -> HashSet<Repository> {
 /// Tries to get the repository from a given table. If a field is optional and its value cannot be
 /// found the default is used. If a required field cannot be found `None` is returned.
 fn get_repository(table: &Table) -> Option<Repository> {
-    // Try to get all the fields, return early if the fields cannot be found and is not optional
+    // Try to get all the fields, return early if a field cannot be found and is not optional
     let url = table.get("url")?.as_str()?.to_string();
     let provider = table.get("provider")?.as_str()?.to_string();
     let prebuilds_url = table.get("prebuilds_url").and_then(|item| item.as_str()).map(String::from);

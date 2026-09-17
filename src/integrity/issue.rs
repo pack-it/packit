@@ -260,12 +260,12 @@ impl Display for Issue {
 }
 
 impl Issue {
-    /// Gets a message which descripes the fix for each issue.
+    /// Gets a message which describes the fix for each issue.
     pub fn get_fix_message(&self) -> &str {
         match &self {
             Issue::IncorrectPermissions(_) => "To fix this issue we set the permissions again",
             Issue::MissingConfig => "To fix this issue we try to reconstruct the 'Config.toml' with data still in the Packit directory",
-            Issue::MissingRegister => "To fix this issue we try to reconstruct the `Register.toml` with data still in the Packit directory",
+            Issue::MissingRegister => "To fix this issue we try to reconstruct the 'Register.toml' with data still in the Packit directory",
             Issue::BrokenConfig | Issue::BrokenRegister => {
                 "To fix this issue we retrieve the valid toml fields and the broken fields are reconstructed with data still in the Packit directory"
             },

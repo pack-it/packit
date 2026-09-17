@@ -41,7 +41,6 @@ fn collect_error_lines(lines: &Vec<&str>) -> Vec<usize> {
 /// If the first line cannot be valid when combined with other lines this line contains an actual error.
 /// We then continue this process with the next line. To make this more efficient we also check if there is a 'line-gap' between
 /// the current and previous error line. If this is the case we can reset early.
-#[expect(clippy::misrefactored_assign_op)]
 fn filter_multiline_errors(line_errors: &mut Vec<usize>, lines: &Vec<&str>) {
     let mut block = String::new();
     let mut block_start = 0;
@@ -52,6 +51,10 @@ fn filter_multiline_errors(line_errors: &mut Vec<usize>, lines: &Vec<&str>) {
             continue;
         };
 
+        // If there is a 'gap' between blocks, meaning a line without an error interrupts the previous error and the current error,
+        // then we reset the block. We will start the same process again, but without the first line of the block.
+        // Trying all combinations of a block is necessary, because for example if all lines have errors and only line 1 has a real error
+        // then the later lines would be wrongly counted as errors.
         if !block.is_empty() && previous_index + 1 != *line_index {
             block = String::new();
             index = block_start + 1;
@@ -61,11 +64,16 @@ fn filter_multiline_errors(line_errors: &mut Vec<usize>, lines: &Vec<&str>) {
 
         previous_index = *line_index;
 
+        // Push the new line to the block and check if this block works
         block.push_str(line);
         block.push('\n');
+
+        // If the block works we remove it from the errors list. The index is lowered by the block size,
+        // because this is removed from the `line_errors`. The block will be reset.
         if block.parse::<DocumentMut>().is_ok() {
             line_errors.drain(block_start..index + 1);
-            index -= index - block_start;
+            let block_size = index - block_start;
+            index -= block_size;
             block = String::new();
             block_start = index;
         }
