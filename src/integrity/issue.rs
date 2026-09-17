@@ -12,11 +12,17 @@ pub enum Issue {
     /// The user cannot write to the prefix directory (or one of its sub directories).
     IncorrectPermissions(HashSet<PathBuf>),
 
-    /// The Packit `Config.toml` is missing.
+    /// The `Config.toml` is missing.
     MissingConfig,
 
-    /// The Packit `Register.toml` is missing.
+    /// The `Config.toml` contains invalid syntax.
+    BrokenConfig,
+
+    /// The `Register.toml` is missing.
     MissingRegister,
+
+    /// The `Register.toml` contains invalid syntax.
+    BrokenRegister,
 
     /// A list of parents and their missing dependencies `<parent> : <missing>`.
     BrokenTree(Vec<(PackageId, PackageId)>),
@@ -85,10 +91,16 @@ impl Display for Issue {
                 }
             },
             Issue::MissingConfig => {
-                writeln!(f, "Missing Config.toml file")?;
+                writeln!(f, "Missing 'Config.toml' file")?;
+            },
+            Issue::BrokenConfig => {
+                writeln!(f, "Broken 'Config.toml' file")?;
             },
             Issue::MissingRegister => {
                 writeln!(f, "Missing Register.toml file")?;
+            },
+            Issue::BrokenRegister => {
+                writeln!(f, "Broken 'Register.toml' file")?;
             },
             Issue::InvalidActive(invalid) => {
                 writeln!(f, "Invalid active version")?;
@@ -248,12 +260,15 @@ impl Display for Issue {
 }
 
 impl Issue {
-    /// Gets a message which descripes the fix for each issue.
+    /// Gets a message which describes the fix for each issue.
     pub fn get_fix_message(&self) -> &str {
         match &self {
             Issue::IncorrectPermissions(_) => "To fix this issue we set the permissions again",
-            Issue::MissingConfig => "To fix this issue we try to reconstruct the Config.toml with data still in the Packit directory",
-            Issue::MissingRegister => "To fix this issue we try to reconstruct the Register.toml with data still in the Packit directory",
+            Issue::MissingConfig => "To fix this issue we try to reconstruct the 'Config.toml' with data still in the Packit directory",
+            Issue::MissingRegister => "To fix this issue we try to reconstruct the 'Register.toml' with data still in the Packit directory",
+            Issue::BrokenConfig | Issue::BrokenRegister => {
+                "To fix this issue we retrieve the valid toml fields and the broken fields are reconstructed with data still in the Packit directory"
+            },
             Issue::StrayDirectories(_) => "To fix this issue we remove the stray directories",
             Issue::InvalidActive(_) => "To fix this issue we set the active version to the latest installed version",
             Issue::ForbiddenLink(_) => "To fix this issue we unlink the packages which have a forbidden link",

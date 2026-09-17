@@ -4,6 +4,7 @@ pub mod error;
 mod issue;
 pub mod metadata;
 mod repairer;
+mod toml_repairer;
 mod utils;
 mod verifier;
 

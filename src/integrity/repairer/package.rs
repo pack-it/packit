@@ -169,7 +169,7 @@ fn used_prebuild(
     package_version_meta: &PackageVersionMeta,
     install_path: &Path,
 ) -> Result<bool> {
-    let prebuilds_list = manager.read_prebuilds_list(repository_id, &package_id)?;
+    let prebuilds_list = manager.read_prebuilds_list(repository_id, package_id)?;
 
     let Some((prebuild_id, prebuild_meta)) = prebuilds_list.get_best_prebuild(&Target::current()) else {
         return Ok(false);

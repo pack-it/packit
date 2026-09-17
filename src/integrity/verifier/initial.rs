@@ -84,7 +84,7 @@ pub fn check_config_syntax() -> Result<Option<Issue>> {
 
     match Config::from(&Config::get_default_path()) {
         Ok(_) => Ok(None),
-        Err(_) => Ok(Some(Issue::MissingConfig)),
+        Err(_) => Ok(Some(Issue::BrokenConfig)),
     }
 }
 
@@ -113,6 +113,6 @@ pub fn check_register_syntax() -> Result<Option<Issue>> {
 
     match PackageRegister::from(register_directory) {
         Ok(_) => Ok(None),
-        Err(_) => Ok(Some(Issue::MissingRegister)),
+        Err(_) => Ok(Some(Issue::BrokenRegister)),
     }
 }

@@ -6,9 +6,9 @@ pub enum Check {
     // Initial checks (which verify methods that the verifier uses internally)
     Permissions,
     ConfigExistence,
-    ConfigSyntax, // TODO: Separate from ConfigExistence, because in the future we implement a different fix (reconstruct from Config.toml)
+    ConfigSyntax,
     RegisterExistence,
-    RegisterSyntax, // TODO: Separate from RegisterExistence, same reason as for ConfigSyntax
+    RegisterSyntax,
 
     // General checks
     StrayDirectory,

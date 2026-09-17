@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use thiserror::Error;
+use toml_edit::TomlError;
 
 use crate::{
     cli::display::error::DisplayError,
@@ -30,6 +31,9 @@ pub enum VerifierError {
 
     #[error("Cannot continue with checks, missing check implementation")]
     UnimplementedCheck,
+
+    #[error("Could parse toml")]
+    TomlError(#[from] TomlError),
 
     #[error("Could not display issues")]
     DisplayError(#[from] DisplayError),
