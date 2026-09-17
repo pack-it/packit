@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
+use std::collections::HashSet;
+
 use serde::{Deserialize, Serialize};
 
 use crate::{installer::types::Version, repositories::types::Licenses};
@@ -21,4 +23,8 @@ pub struct RepositoryMeta {
     /// Specifies a suggestion of a prebuild repository to use with this metadata repository.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prebuilds_provider: Option<String>,
+
+    /// A set of compatible repositories
+    #[serde(skip_serializing_if = "HashSet::is_empty", default)]
+    pub compatible_repositories: HashSet<String>,
 }

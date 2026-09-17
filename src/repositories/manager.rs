@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{collections::HashMap, io::Read};
+use std::{
+    collections::{HashMap, HashSet},
+    io::Read,
+};
 
 use bytes::Bytes;
 
@@ -26,7 +29,8 @@ use crate::{
 /// Manages all requests to the repositories.
 pub struct RepositoryManager<'a> {
     config: &'a Config,
-    unsupported_repositories: HashMap<String, RepositoryMeta>,
+    unsupported_repositories: HashSet<String>,
+    repositories: HashMap<String, RepositoryMeta>,
     metadata_providers: HashMap<String, MetadataProvider>,
     prebuild_providers: HashMap<String, PrebuildProvider>,
 }
@@ -34,7 +38,8 @@ pub struct RepositoryManager<'a> {
 impl<'a> RepositoryManager<'a> {
     /// Creates a new `RepositoryManager`.
     pub fn new(config: &'a Config) -> Self {
-        let mut unsupported_repositories = HashMap::new();
+        let mut unsupported_repositories = HashSet::new();
+        let mut repositories = HashMap::new();
         let mut metadata_providers = HashMap::new();
         let mut prebuild_providers = HashMap::new();
 
@@ -57,15 +62,16 @@ impl<'a> RepositoryManager<'a> {
                 },
             };
 
+            let required_packit_version = repository_meta.required_packit_version.clone();
+            repositories.insert(id.to_string(), repository_meta);
+
             // Check if the repository works for the current Packit version
-            let required_packit_version = &repository_meta.required_packit_version;
-            if *required_packit_version > current_packit_version() {
-                unsupported_repositories.insert(id.to_string(), repository_meta.clone());
+            if required_packit_version > current_packit_version() {
+                unsupported_repositories.insert(id.to_string());
                 warning!(
                     "Repository '{id}' requires Packit version {} or higher, ignoring repository...",
                     required_packit_version.style()
                 );
-                continue;
             }
 
             metadata_providers.insert(id.clone(), provider);
@@ -85,8 +91,32 @@ impl<'a> RepositoryManager<'a> {
             prebuild_providers.insert(id.clone(), prebuild_provider);
         }
 
+        // Check for repository conflicts
+        for (id, repository_meta) in &repositories {
+            for (inner_id, inner_repository_meta) in &repositories {
+                // Don't check compatibility between `id` and `inner_id`
+                // Continue if the `inner_id` is compatible with `id` (or the other way around)
+                if repository_meta.name == inner_repository_meta.name
+                    || repository_meta.compatible_repositories.contains(inner_id)
+                    || inner_repository_meta.compatible_repositories.contains(id)
+                {
+                    continue;
+                }
+
+                // Repositories with `id` and `inner_id` are not compatible, add them both to the unsupported set
+                // Only print the warning if both aren't in the unsupported set.
+                let inserted = unsupported_repositories.insert(id.to_string());
+                if unsupported_repositories.insert(inner_id.to_string()) || inserted {
+                    warning!("Repository '{id}' is incompatible with '{inner_id}'");
+                }
+
+                // Don't break, the other repositories also have to be checked
+            }
+        }
+
         Self {
             config,
+            repositories,
             unsupported_repositories,
             metadata_providers,
             prebuild_providers,
@@ -485,19 +515,24 @@ impl<'a> RepositoryManager<'a> {
     /// Iterates over the repositories rank. Filters the unsupported repositories from the list.
     /// Returns an iterator that only contains the ids of supported repositories.
     pub fn iter_supported_repositories_rank(&self) -> impl Iterator<Item = &String> {
-        self.config.repositories_rank.iter().filter(|x| !self.unsupported_repositories.contains_key(*x))
+        self.config.repositories_rank.iter().filter(|x| !self.unsupported_repositories.contains(*x))
     }
 
-    /// Gets a map of repository ids and metadata for all repositories that are not supported by this Packit version.
-    pub fn get_unsupported_repositories(&self) -> &HashMap<String, RepositoryMeta> {
-        &self.unsupported_repositories
+    /// Gets a specific unsupported repository with the given `repository_id`.
+    /// Returns `None` if the given repository is not unsupported or cannot be found.
+    pub fn get_unsupported_repository(&self, repository_id: &str) -> Option<&RepositoryMeta> {
+        if self.unsupported_repositories.contains(repository_id) {
+            return self.repositories.get(repository_id);
+        }
+
+        None
     }
 
     /// A helper method to get the metadata provider.
     /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     pub fn get_metadata_provider(&self, repository_id: &str) -> Result<&MetadataProvider> {
         // Check if repository is unsupported
-        if self.unsupported_repositories.contains_key(repository_id) {
+        if self.unsupported_repositories.contains(repository_id) {
             return Err(RepositoryError::RepositoryNotSupported {
                 repository_id: repository_id.into(),
             });
@@ -515,7 +550,7 @@ impl<'a> RepositoryManager<'a> {
     /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     fn get_prebuid_provider(&self, repository_id: &str) -> Result<&PrebuildProvider> {
         // Check if repository is unsupported
-        if self.unsupported_repositories.contains_key(repository_id) {
+        if self.unsupported_repositories.contains(repository_id) {
             return Err(RepositoryError::RepositoryNotSupported {
                 repository_id: repository_id.into(),
             });
