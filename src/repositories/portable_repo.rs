@@ -145,6 +145,7 @@ impl<'a> PortableRepoCreator<'a> {
             license: Licenses::Unknown,
             prebuilds_url: None,
             prebuilds_provider: None,
+            compatible_repositories: HashSet::new(),
         };
         self.write_metadata(repository_meta, &destination.join("repository.toml"), false)?;
 
