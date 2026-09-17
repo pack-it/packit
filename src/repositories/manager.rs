@@ -100,6 +100,8 @@ impl<'a> RepositoryManager<'a> {
                 if repository_meta.name == inner_repository_meta.name
                     || repository_meta.compatible_repositories.contains(&inner_repository_meta.name)
                     || inner_repository_meta.compatible_repositories.contains(&repository_meta.name)
+                    || config.repositories.get(id).is_some_and(|repo| repo.compatible_repositories.contains(inner_id))
+                    || config.repositories.get(inner_id).is_some_and(|repo| repo.compatible_repositories.contains(id))
                 {
                     continue;
                 }
