@@ -71,6 +71,7 @@ fn check_package_alterations(package_id: &PackageId, register: &PackageRegister,
         prebuilds_url: package_version.prebuilds_repository_url.clone(),
         prebuilds_provider: package_version.prebuilds_repository_provider.clone(),
         disable_prebuilds: false,
+        compatible_repositories: vec![],
     };
 
     let local_meta_handler = LocalMetaHandler::new(&config.prefix_directory).get_package(package_id);

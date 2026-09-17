@@ -216,6 +216,7 @@ fn get_used_repositories(register: &PackageRegister) -> HashSet<Repository> {
             prebuilds_url: package.prebuilds_repository_url.clone(),
             prebuilds_provider: package.prebuilds_repository_provider.clone(),
             disable_prebuilds: false,
+            compatible_repositories: vec![], // TODO: Figure out compatibility based on repo's used for installed packages
         };
 
         match seen_repositories.get_mut(&repository) {

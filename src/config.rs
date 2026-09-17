@@ -67,6 +67,10 @@ pub struct Repository {
     /// True to disable prebuild usage for the repository, false otherwise
     #[serde(default)]
     pub disable_prebuilds: bool,
+
+    /// A set of compatible repositories
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub compatible_repositories: Vec<String>,
 }
 
 impl Repository {
@@ -78,6 +82,7 @@ impl Repository {
             prebuilds_url: None,
             prebuilds_provider: None,
             disable_prebuilds: false,
+            compatible_repositories: vec![],
         }
     }
 
@@ -177,6 +182,7 @@ impl Default for EditableConfig {
             prebuilds_url: None,
             prebuilds_provider: None,
             disable_prebuilds: false,
+            compatible_repositories: vec![],
         };
 
         let config = Config {
