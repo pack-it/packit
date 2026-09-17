@@ -92,13 +92,14 @@ impl<'a> RepositoryManager<'a> {
         }
 
         // Check for repository conflicts
+        // TODO: Make more efficient
         for (id, repository_meta) in &repositories {
             for (inner_id, inner_repository_meta) in &repositories {
                 // Don't check compatibility between `id` and `inner_id`
                 // Continue if the `inner_id` is compatible with `id` (or the other way around)
                 if repository_meta.name == inner_repository_meta.name
-                    || repository_meta.compatible_repositories.contains(inner_id)
-                    || inner_repository_meta.compatible_repositories.contains(id)
+                    || repository_meta.compatible_repositories.contains(&inner_repository_meta.name)
+                    || inner_repository_meta.compatible_repositories.contains(&repository_meta.name)
                 {
                     continue;
                 }
@@ -110,7 +111,8 @@ impl<'a> RepositoryManager<'a> {
                     warning!("Repository '{id}' is incompatible with '{inner_id}'");
                 }
 
-                // Don't break, the other repositories also have to be checked
+                // The other repositories also have to be checked, but we can break, because they will be checked the other way around
+                break;
             }
         }
 
