@@ -63,10 +63,11 @@ pub enum InstallerError {
     },
 
     #[error(
-        "Repositories that are not configured anymore, but are still used for some installed packages conflict with current configured repositories:\n{conflicts_msg}"
+        "Repositories that are not configured anymore, but are still used for some installed packages conflict with current configured repositories:\n{}",
+        conflicts.iter().map(|(x, y)| format!(" - '{x}' incompatible with '{y}'\n")).collect::<Vec<_>>().concat()
     )]
     IncompatibleRepositories {
-        conflicts_msg: String,
+        conflicts: Vec<(String, String)>,
     },
 
     #[error("Canceled package installation: {reason}")]

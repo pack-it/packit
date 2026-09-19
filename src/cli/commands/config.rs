@@ -313,11 +313,8 @@ impl ConfigArgs {
 
         // Only run checks if unchecked is not enabled
         if !unchecked {
-            let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
-            let manager = RepositoryManager::new(&config);
             let repo_meta = self.check_metadata_repository_availability(&repository);
-            let is_repository_reachable =
-                repo_meta.as_ref().map(|x| self.check_metadata_repository_compatibility(&config, &manager, id, x)).unwrap_or(false);
+            let is_repository_reachable = repo_meta.as_ref().map(|x| self.check_metadata_repository_compatibility(id, x)).unwrap_or(false);
 
             // Check if the repository is reachable
             if !is_repository_reachable {
@@ -388,12 +385,9 @@ impl ConfigArgs {
 
         // Only run checks if unchecked is not enabled
         if !unchecked {
-            let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
-            let manager = RepositoryManager::new(&config);
             let repository = Repository::new(url, provider.as_ref().unwrap_or(&repository.provider));
             let repo_meta = self.check_metadata_repository_availability(&repository);
-            let is_repository_reachable =
-                repo_meta.map(|x| self.check_metadata_repository_compatibility(&config, &manager, id, &x)).unwrap_or(false);
+            let is_repository_reachable = repo_meta.map(|x| self.check_metadata_repository_compatibility(id, &x)).unwrap_or(false);
 
             // Check if the repository is reachable
             if !is_repository_reachable {
@@ -503,13 +497,10 @@ impl ConfigArgs {
     /// Check if the metadata repository is compatible with the current system and other repositories.
     /// Shows a message with the found issues.
     /// Returns true if the repository is compatible, false otherwise.
-    fn check_metadata_repository_compatibility(
-        &self,
-        config: &Config,
-        manager: &RepositoryManager,
-        id: &str,
-        repo_meta: &RepositoryMeta,
-    ) -> bool {
+    fn check_metadata_repository_compatibility(&self, id: &str, repo_meta: &RepositoryMeta) -> bool {
+        let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
+        let manager = RepositoryManager::new(&config);
+
         // Check if the repository is supported
         if repo_meta.required_packit_version > current_packit_version() {
             warning!(
@@ -522,7 +513,7 @@ impl ConfigArgs {
         }
 
         // Check for compatibility between existing repositories and the new repository
-        if let Some(conflict) = manager.check_new_repository_conflicts(config, id, repo_meta).unwrap_or_exit(1) {
+        if let Some(conflict) = manager.check_new_repository_conflicts(&config, id, repo_meta).unwrap_or_exit(1) {
             warning!("This repository '{}' conflicts with repository '{}'", repo_meta.name, conflict);
             return false;
         }

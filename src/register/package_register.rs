@@ -310,7 +310,7 @@ impl PackageRegister {
 
     /// Returns the set of all repositories names that were used for the installed packages.
     pub fn get_repository_names(&self) -> HashSet<String> {
-        self.packages.values().flat_map(|p| p.versions.values()).map(|v| v.metadata_repository_name.clone()).collect()
+        self.iterate_all().map(|v| v.metadata_repository_name.clone()).collect()
     }
 
     /// Returns an iterator, which iterates over all nested installed package version values.
