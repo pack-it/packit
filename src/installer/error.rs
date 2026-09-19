@@ -63,9 +63,11 @@ pub enum InstallerError {
     },
 
     #[error(
-        "Repositories that are not configured anymore, but are still used for some installed packages conflict with current configured repositories"
+        "Repositories that are not configured anymore, but are still used for some installed packages conflict with current configured repositories:\n{conflicts_msg}"
     )]
-    IncompatibleRepositories,
+    IncompatibleRepositories {
+        conflicts_msg: String,
+    },
 
     #[error("Canceled package installation: {reason}")]
     InstallationCanceled {

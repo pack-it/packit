@@ -373,8 +373,8 @@ impl<'a> RepositoryManager<'a> {
 
     /// Gets the given repositories that are unconfigured and conflict with configured repositories. Note that this function only checks
     /// compatibility from the side of the configured repositories.
-    pub fn repository_conflicts_with(&self, config: &Config, names: HashSet<String>) -> Result<HashSet<String>> {
-        let mut conflicting_repositories = HashSet::new();
+    pub fn repository_conflicts_with(&self, config: &Config, names: HashSet<String>) -> Result<Vec<(String, String)>> {
+        let mut conflicting_repositories = Vec::new();
 
         // Get all the names which aren't in the `Config.toml` anymore
         let repository_names = self.get_repository_names()?;
@@ -391,8 +391,7 @@ impl<'a> RepositoryManager<'a> {
                 let config_contains_name = config.repositories.get(id).is_some_and(|repo| repo.compatible_repositories.contains(name));
                 if !repository_meta.compatible_repositories.contains(name) && !config_contains_name {
                     // Only add the unconfigured repository as conflict
-                    // TODO: Maybe do both as tuple?
-                    conflicting_repositories.insert(name.to_string());
+                    conflicting_repositories.push((name.to_string(), repository_meta.name.clone()));
                 }
             }
         }
