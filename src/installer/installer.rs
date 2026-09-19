@@ -72,6 +72,13 @@ impl<'a> Installer<'a> {
             return Err(InstallerError::PermissionsError);
         }
 
+        // Make sure that repositories already used for installed packages which are not in the `Config.toml` anymore
+        // don't conflict with the current repository
+        let conflicts = self.repository_manager.repository_conflicts_with(self.config, self.register.get_repository_names())?;
+        if !conflicts.is_empty() {
+            return Err(InstallerError::IncompatibleRepositories { conflicts });
+        }
+
         // Read package and version metadata
         let (repository_id, package_metadata, version_metadata) =
             self.repository_manager.read_package_and_version(optional_id, &Target::current())?;
@@ -112,11 +119,17 @@ impl<'a> Installer<'a> {
         }
 
         // Get the metadata of the package for the current target
+        let Some(repository_name) = self.repository_manager.get_repository_name(&repository_id)? else {
+            return Err(InstallerError::UnreachableError {
+                msg: "Repository manager cannot find repository id, even though it was given".to_string(),
+            });
+        };
         let target_bounds = version_metadata.get_best_target(&Target::current())?;
         let root_meta = InstallMeta {
             package_metadata,
             version_metadata,
             repository_id,
+            repository_name,
             target_bounds,
         };
 
@@ -236,6 +249,7 @@ impl<'a> Installer<'a> {
             &install_meta.version_metadata,
             dependencies,
             source_repository,
+            install_meta.repository_name.clone(),
             &install_directory,
             false,
             false,

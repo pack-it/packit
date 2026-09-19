@@ -14,6 +14,7 @@ This file should be present in every Packit repository, it quickly describes wha
 | `required_packit_version` | The minimum required Packit version to use the repository.                    |
 | `prebuilds_url`           | Defines the URL of the suggested prebuilds repository for this repository.    |
 | `prebuilds_provider`      | Defines the provider of the suggested prebuilds repository, defaults to `fs`. |
+| `compatible_repositories` | A list of [compatible repository](#multiple-repositories) names. |
 
 ## `index.toml`
 This file should be present in every Packit repository, it describes which packages are available.
@@ -262,3 +263,9 @@ The environment of build scripts are managed more extensively to make builds mor
 Scripts have the ability to use file descriptor 3 to print verbose output, this output is only shown to the user when verbose mode is turned on. Scripts should only print absolutely necessary output to stdout and stderr, other output should be redirected to this verbose stream.
 
 Please note that on Windows `%PACKIT_OUTPUTS% >&3` is required to redirect output to this verbose stream, while just `>&3` is enough on Unix.
+
+## Multiple repositories
+As of the time of writing this there exists only one repository, the [core](https://github.com/pack-it/core) repository. However, Packit allows for multiple repositories to exist. This can be nice for several scenarios. It makes third party repositories possible which could contain more niche packages. It could also prove helpful for a deprecation model. Packit has a feature most other package managers don't have, it has multiple versions of packages. Eventually some of these package versions will be outdated and cannot be kept in the core repository forever. A separate repository with the deprecated packages would be a nice solution.
+
+## Conflicts
+Repositories can be incompatible with each other. If one repository builds a package one way and the other builds the same package differently this could break dependents of that package. Repositories are listed as incompatible by default. If either repository lists the other repository as compatible in the `repository.toml` they are considered compatible (so only one repository needs to specify this). The repository name is used to check for compatibility. It is possible that two repositories that are compatible are not listed as such. This is why users have the ability to specify compatibility between repositories themselves. Note that once a repository is made compatible it cannot be made incompatible afterwards. This could result in already installed packages suddenly being incompatible. 

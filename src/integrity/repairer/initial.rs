@@ -210,12 +210,16 @@ fn get_used_repositories(register: &PackageRegister) -> HashSet<Repository> {
     // Find used repositories in package metadata, and keep track of how many times they are used
     let mut seen_repositories = HashMap::new();
     for package in register.iterate_all() {
+        let compatible_repositories =
+            register.get_repository_names().into_iter().filter(|name| **name != package.metadata_repository_name).cloned().collect();
+
         let repository = Repository {
             url: package.metadata_repository_url.trim_end_matches('/').to_string(),
             provider: package.metadata_repository_provider.clone(),
             prebuilds_url: package.prebuilds_repository_url.clone(),
             prebuilds_provider: package.prebuilds_repository_provider.clone(),
             disable_prebuilds: false,
+            compatible_repositories,
         };
 
         match seen_repositories.get_mut(&repository) {
@@ -239,6 +243,11 @@ fn get_repository(table: &Table) -> Option<Repository> {
     let prebuilds_url = table.get("prebuilds_url").and_then(|item| item.as_str()).map(String::from);
     let prebuilds_provider = table.get("prebuilds_provider").and_then(|item| item.as_str()).map(String::from);
     let disable_prebuilds = table.get("disable_prebuilds").and_then(|item| item.as_bool()).unwrap_or(false);
+    let compatible_repositories: Vec<String> = table
+        .get("compatible_repositories")
+        .and_then(|item| item.as_array())
+        .map(|array| array.iter().filter_map(|item| item.as_str().map(String::from)).collect())
+        .unwrap_or_default();
 
     Some(Repository {
         url,
@@ -246,6 +255,7 @@ fn get_repository(table: &Table) -> Option<Repository> {
         prebuilds_url,
         prebuilds_provider,
         disable_prebuilds,
+        compatible_repositories,
     })
 }
 

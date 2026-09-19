@@ -20,6 +20,7 @@ pub struct InstalledPackageVersion {
     #[serde(skip_serializing_if = "is_repository_provider_default")]
     pub metadata_repository_provider: String,
     pub metadata_repository_url: String,
+    pub metadata_repository_name: String,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prebuilds_repository_url: Option<String>,

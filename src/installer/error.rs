@@ -62,6 +62,14 @@ pub enum InstallerError {
         dependency: PackageId,
     },
 
+    #[error(
+        "Repositories that are not configured anymore, but are still used for some installed packages conflict with current configured repositories:\n{}",
+        conflicts.iter().map(|(x, y)| format!(" - '{x}' incompatible with '{y}'\n")).collect::<Vec<_>>().concat()
+    )]
+    IncompatibleRepositories {
+        conflicts: Vec<(String, String)>,
+    },
+
     #[error("Canceled package installation: {reason}")]
     InstallationCanceled {
         reason: String,
