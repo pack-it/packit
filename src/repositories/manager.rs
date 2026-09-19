@@ -30,7 +30,6 @@ use crate::{
 pub struct RepositoryManager<'a> {
     config: &'a Config,
     unsupported_repositories: HashSet<String>,
-    repositories: HashMap<String, RepositoryMeta>,
     metadata_providers: HashMap<String, MetadataProvider>,
     prebuild_providers: HashMap<String, PrebuildProvider>,
 }
@@ -39,7 +38,6 @@ impl<'a> RepositoryManager<'a> {
     /// Creates a new `RepositoryManager`.
     pub fn new(config: &'a Config) -> Self {
         let mut unsupported_repositories = HashSet::new();
-        let mut repositories = HashMap::new();
         let mut metadata_providers = HashMap::new();
         let mut prebuild_providers = HashMap::new();
 
@@ -63,7 +61,6 @@ impl<'a> RepositoryManager<'a> {
             };
 
             let required_packit_version = repository_meta.required_packit_version.clone();
-            repositories.insert(id.to_string(), repository_meta);
 
             // Check if the repository works for the current Packit version
             if required_packit_version > current_packit_version() {
@@ -92,9 +89,10 @@ impl<'a> RepositoryManager<'a> {
         }
 
         // Check for repository conflicts
-        // TODO: Make more efficient
-        for (id, repository_meta) in &repositories {
-            for (inner_id, inner_repository_meta) in &repositories {
+        for (id, provider) in &metadata_providers {
+            let repository_meta = provider.read_repository_metadata().expect("Expected repository meta to exist");
+            for (inner_id, inner_provider) in &metadata_providers {
+                let inner_repository_meta = inner_provider.read_repository_metadata().expect("Expected repository meta to exist");
                 // Don't check compatibility between `id` and `inner_id`
                 // Continue if the `inner_id` is compatible with `id` (or the other way around)
                 if repository_meta.name == inner_repository_meta.name
@@ -110,7 +108,11 @@ impl<'a> RepositoryManager<'a> {
                 // Only print the warning if both aren't in the unsupported set.
                 let inserted = unsupported_repositories.insert(id.to_string());
                 if unsupported_repositories.insert(inner_id.to_string()) || inserted {
-                    warning!("Repository '{id}' is incompatible with '{inner_id}'");
+                    warning!(
+                        "Repository '{}' is incompatible with '{}'",
+                        repository_meta.name,
+                        inner_repository_meta.name
+                    );
                 }
 
                 // The other repositories also have to be checked, but we can break, because they will be checked the other way around
@@ -120,7 +122,6 @@ impl<'a> RepositoryManager<'a> {
 
         Self {
             config,
-            repositories,
             unsupported_repositories,
             metadata_providers,
             prebuild_providers,
@@ -372,23 +373,23 @@ impl<'a> RepositoryManager<'a> {
 
     /// Gets the given repositories that are unconfigured and conflict with configured repositories. Note that this function only checks
     /// compatibility from the side of the configured repositories.
-    pub fn repository_conflicts_with(&self, config: &Config, names: HashSet<String>) -> HashSet<String> {
+    pub fn repository_conflicts_with(&self, config: &Config, names: HashSet<String>) -> Result<HashSet<String>> {
         let mut conflicting_repositories = HashSet::new();
 
         // Get all the names which aren't in the `Config.toml` anymore
-        let filtered_names: HashSet<String> = names.into_iter().filter(|name| !self.get_repository_names().contains(name)).collect();
+        let repository_names = self.get_repository_names()?;
+        let filtered_names: HashSet<String> = names.into_iter().filter(|name| !repository_names.contains(name)).collect();
         if filtered_names.is_empty() {
-            return conflicting_repositories;
+            return Ok(conflicting_repositories);
         }
 
         // Unconfigured repositories can only be validated from one side (from the unconfigured repository side it conflicts by default)
         // Check for all repositories in the `Config.toml` if all unconfigured repositories are listed as compatible.
-        // Note that compatibility in the `Config.toml` cannot be checked here, only the it lists compatibility based on ids not
-        // repository names.
-        for (id, repository) in &self.repositories {
+        for (id, provider) in &self.metadata_providers {
+            let repository_meta = provider.read_repository_metadata()?;
             for name in &filtered_names {
                 let config_contains_name = config.repositories.get(id).is_some_and(|repo| repo.compatible_repositories.contains(name));
-                if !repository.compatible_repositories.contains(name) && !config_contains_name {
+                if !repository_meta.compatible_repositories.contains(name) && !config_contains_name {
                     // Only add the unconfigured repository as conflict
                     // TODO: Maybe do both as tuple?
                     conflicting_repositories.insert(name.to_string());
@@ -396,7 +397,7 @@ impl<'a> RepositoryManager<'a> {
             }
         }
 
-        conflicting_repositories
+        Ok(conflicting_repositories)
     }
 
     /// Reads the list of prebuilds that can be generated for the given version of the package.
@@ -553,23 +554,29 @@ impl<'a> RepositoryManager<'a> {
 
     /// Gets a specific unsupported repository with the given `repository_id`.
     /// Returns `None` if the given repository is not unsupported or cannot be found.
-    pub fn get_unsupported_repository(&self, repository_id: &str) -> Option<&RepositoryMeta> {
-        if self.unsupported_repositories.contains(repository_id) {
-            return self.repositories.get(repository_id);
+    pub fn get_unsupported_repository(&self, repository_id: &str) -> Result<Option<RepositoryMeta>> {
+        if !self.unsupported_repositories.contains(repository_id) {
+            return Ok(None);
         }
 
-        None
+        match self.metadata_providers.get(repository_id) {
+            Some(provider) => Ok(Some(provider.read_repository_metadata()?)),
+            None => Ok(None),
+        }
     }
 
     /// Gets the repository metadata name with the given `id`.
     /// Returns the repository name if the repository can be found, `None` otherwise.
-    pub fn get_repository_name(&self, id: &str) -> Option<String> {
-        self.repositories.get(id).and_then(|r| Some(r.name.clone()))
+    pub fn get_repository_name(&self, id: &str) -> Result<Option<String>> {
+        match self.metadata_providers.get(id) {
+            Some(provider) => Ok(Some(provider.read_repository_metadata()?.name)),
+            None => Ok(None),
+        }
     }
 
     /// Returns the names of all repositories listed in the `Config.toml`.
-    pub fn get_repository_names(&self) -> HashSet<&String> {
-        self.repositories.values().map(|r| &r.name).collect()
+    pub fn get_repository_names(&self) -> Result<HashSet<String>> {
+        self.metadata_providers.values().map(|p| p.read_repository_metadata().map(|meta| meta.name)).collect()
     }
 
     /// A helper method to get the metadata provider.
