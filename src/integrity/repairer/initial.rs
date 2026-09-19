@@ -240,6 +240,11 @@ fn get_repository(table: &Table) -> Option<Repository> {
     let prebuilds_url = table.get("prebuilds_url").and_then(|item| item.as_str()).map(String::from);
     let prebuilds_provider = table.get("prebuilds_provider").and_then(|item| item.as_str()).map(String::from);
     let disable_prebuilds = table.get("disable_prebuilds").and_then(|item| item.as_bool()).unwrap_or(false);
+    let compatible_repositories: Vec<String> = table
+        .get("compatible_repositories")
+        .and_then(|item| item.as_array())
+        .map(|array| array.iter().filter_map(|item| item.as_str().map(String::from)).collect())
+        .unwrap_or_default();
 
     Some(Repository {
         url,
@@ -247,6 +252,7 @@ fn get_repository(table: &Table) -> Option<Repository> {
         prebuilds_url,
         prebuilds_provider,
         disable_prebuilds,
+        compatible_repositories,
     })
 }
 

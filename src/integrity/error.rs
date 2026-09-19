@@ -35,6 +35,11 @@ pub enum VerifierError {
     #[error("Could parse toml")]
     TomlError(#[from] TomlError),
 
+    #[error("An unreachable state has been reached: {msg}")]
+    UnreachableError {
+        msg: String,
+    },
+
     #[error("Could not display issues")]
     DisplayError(#[from] DisplayError),
 

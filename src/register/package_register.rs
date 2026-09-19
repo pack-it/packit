@@ -109,6 +109,7 @@ impl PackageRegister {
         package_version: &PackageVersionMeta,
         dependency_ids: HashSet<PackageId>,
         source_repository: &Repository,
+        metadata_repository_name: String,
         install_path: &Path,
         symlinked: bool,
         active: bool,
@@ -127,6 +128,7 @@ impl PackageRegister {
             revision: package_version.revisions.len() as u64,
             metadata_repository_url: source_repository.url.clone(),
             metadata_repository_provider: source_repository.provider.clone(),
+            metadata_repository_name,
             prebuilds_repository_url,
             prebuilds_repository_provider,
             dependencies: dependency_ids,
@@ -312,6 +314,11 @@ impl PackageRegister {
         latest
     }
 
+    /// Returns the set of all repositories names that were used for the installed packages.
+    pub fn get_repository_names(&self) -> HashSet<String> {
+        self.packages.values().flat_map(|p| p.versions.values()).map(|v| v.metadata_repository_name.clone()).collect()
+    }
+
     /// Returns an iterator, which iterates over all nested installed package version values.
     pub fn iterate_all(&self) -> impl Iterator<Item = &InstalledPackageVersion> {
         self.packages.values().flat_map(|p| p.versions.values())
@@ -359,6 +366,7 @@ pub mod tests {
             revision: 0,
             metadata_repository_provider: "-".to_string(),
             metadata_repository_url: "-".to_string(),
+            metadata_repository_name: "-".to_string(),
             prebuilds_repository_url: None,
             prebuilds_repository_provider: None,
             dependencies,
@@ -511,6 +519,7 @@ pub mod tests {
             &package_version_meta,
             dependency_ids,
             &Repository::new("-", "-"),
+            "-".to_string(),
             &PathBuf::from("-"),
             false,
             false,

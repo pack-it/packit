@@ -62,6 +62,11 @@ pub enum InstallerError {
         dependency: PackageId,
     },
 
+    #[error(
+        "Repositories that are not configured anymore, but are still used for some installed packages conflict with current configured repositories"
+    )]
+    IncompatibleRepositories,
+
     #[error("Canceled package installation: {reason}")]
     InstallationCanceled {
         reason: String,

@@ -370,6 +370,35 @@ impl<'a> RepositoryManager<'a> {
         None
     }
 
+    /// Gets the given repositories that conflict with configured repositories. Note that this function only checks
+    /// compatibility from the side of the configured repositories. The given names are not necessarily expected to be configured.
+    pub fn repository_conflicts_with(&self, names: HashSet<String>) -> HashSet<String> {
+        let mut conflicting_repositories = HashSet::new();
+
+        // Get all the names which aren't in the `Config.toml` anymore
+        let filtered_names: HashSet<String> = names.into_iter().filter(|name| !self.get_repository_names().contains(name)).collect();
+        if filtered_names.is_empty() {
+            return conflicting_repositories;
+        }
+
+        // Unconfigured repositories can only be validated from one side (from the unconfigured repository side it conflicts by default)
+        // Check for all repositories in the `Config.toml` if all unconfigured repositories are listed as compatible.
+        // Note that compatibility in the `Config.toml` cannot be checked here, only the it lists compatibility based on ids not
+        // repository names.
+        // TODO: Maybe change config using repository ids?
+        for repository in self.repositories.values() {
+            for name in &filtered_names {
+                if !repository.compatible_repositories.contains(name) {
+                    // Only add the unconfigured repository as conflict
+                    // TODO: Maybe do both as tuple?
+                    conflicting_repositories.insert(name.to_string());
+                }
+            }
+        }
+
+        conflicting_repositories
+    }
+
     /// Reads the list of prebuilds that can be generated for the given version of the package.
     pub fn read_prebuilds_list(&self, repository_id: &str, package_id: &PackageId) -> Result<PrebuildsList> {
         match self.get_metadata_provider(repository_id)?.read_prebuilds_list(package_id)? {
@@ -530,6 +559,17 @@ impl<'a> RepositoryManager<'a> {
         }
 
         None
+    }
+
+    /// Gets the repository metadata name with the given `id`.
+    /// Returns the repository name if the repository can be found, `None` otherwise.
+    pub fn get_repository_name(&self, id: &str) -> Option<String> {
+        self.repositories.get(id).and_then(|r| Some(r.name.clone()))
+    }
+
+    /// Returns the names of all repositories listed in the `Config.toml`.
+    pub fn get_repository_names(&self) -> HashSet<&String> {
+        self.repositories.values().map(|r| &r.name).collect()
     }
 
     /// A helper method to get the metadata provider.

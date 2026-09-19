@@ -30,7 +30,7 @@ use crate::{
         types::{LicenseIdentifier, Licenses},
     },
     utils::{
-        constants::{DEFAULT_METADATA_REPOSITORY_PROVIDER, DEFAULT_METADATA_REPOSITORY_URL},
+        constants::{DEFAULT_METADATA_REPOSITORY_NAME, DEFAULT_METADATA_REPOSITORY_PROVIDER, DEFAULT_METADATA_REPOSITORY_URL},
         packit_version::packit_version,
         unwrap_or_exit::UnwrapOrExit,
     },
@@ -137,6 +137,7 @@ impl HandleCommand for InitArgs {
             revision: self.revision.unwrap_or(0),
             metadata_repository_provider: DEFAULT_METADATA_REPOSITORY_PROVIDER.into(),
             metadata_repository_url: DEFAULT_METADATA_REPOSITORY_URL.into(),
+            metadata_repository_name: DEFAULT_METADATA_REPOSITORY_NAME.into(),
             prebuilds_repository_url: None,
             prebuilds_repository_provider: None,
             dependencies: HashSet::new(),
