@@ -63,13 +63,14 @@ All available fields in the config are listed below.
 | `multiuser`         | True to run Packit in multiuser mode, false for single user mode. |
 
 ### Repositories
-| Field                 | Explanation                                                                             |
-| --------------------- | --------------------------------------------------------------------------------------- |
-| `url`                 | Defines the url of the repository.                                                      |
-| `provider`            | Defines the provider of the repository which can be `fs` or `web`, defaults to `web`.   |
-| `prebuilds_url`       | Defines the url of the prebuilds repository for this package repository.                |
-| `prebuilds_provider`  | Defines the provider of the prebuilds repository, defaults to `fs`.                     |
-| `disable_prebuilds`   | True to disable prebuild usage for the repository, false to use prebuild if available.  |
+| Field                       | Explanation                                                                             |
+| --------------------------- | --------------------------------------------------------------------------------------- |
+| `url`                       | Defines the url of the repository.                                                      |
+| `provider`                  | Defines the provider of the repository which can be `fs` or `web`, defaults to `web`.   |
+| `prebuilds_url`             | Defines the url of the prebuilds repository for this package repository.                |
+| `prebuilds_provider`        | Defines the provider of the prebuilds repository, defaults to `fs`.                     |
+| `disable_prebuilds`         | True to disable prebuild usage for the repository, false to use prebuild if available.  |
+| `compatible_repositories`   | A list of [compatible repository](./metadata.md#multiple-repositories) names.           |
 
 
 ### Example config
