@@ -60,7 +60,7 @@ impl<'a> RepositoryManager<'a> {
                 },
             };
 
-            let required_packit_version = repository_meta.required_packit_version.clone();
+            let required_packit_version = repository_meta.required_packit_version;
 
             // Check if the repository works for the current Packit version
             if required_packit_version > current_packit_version() {
@@ -93,7 +93,7 @@ impl<'a> RepositoryManager<'a> {
             let repository_meta = provider.read_repository_metadata().expect("Expected repository meta to exist");
             for (inner_id, inner_provider) in &metadata_providers {
                 let inner_repository_meta = inner_provider.read_repository_metadata().expect("Expected repository meta to exist");
-                // Don't check compatibility between `id` and `inner_id`
+                // Don't check compatibility between `id` and `inner_id` with equal repository names
                 // Continue if the `inner_id` is compatible with `id` (or the other way around)
                 if repository_meta.name == inner_repository_meta.name
                     || repository_meta.compatible_repositories.contains(&inner_repository_meta.name)
@@ -104,7 +104,7 @@ impl<'a> RepositoryManager<'a> {
                     continue;
                 }
 
-                // Repositories with `id` and `inner_id` are not compatible, add them both to the unsupported set
+                // Add both `id` and `inner_id` to the unsupported set, when they are incompatible.
                 // Only print the warning if both aren't in the unsupported set.
                 let inserted = unsupported_repositories.insert(id.to_string());
                 if unsupported_repositories.insert(inner_id.to_string()) || inserted {
@@ -371,8 +371,8 @@ impl<'a> RepositoryManager<'a> {
         None
     }
 
-    /// Gets the given repositories that are unconfigured and conflict with configured repositories. Note that this function only checks
-    /// compatibility from the side of the configured repositories.
+    /// Gets the given repositories that are unconfigured and conflict with configured repositories.
+    /// Note that this function only checks compatibility from the side of the configured repositories.
     pub fn repository_conflicts_with(&self, config: &Config, names: HashSet<String>) -> Result<Vec<(String, String)>> {
         let mut conflicting_repositories = Vec::new();
 
@@ -399,7 +399,7 @@ impl<'a> RepositoryManager<'a> {
         Ok(conflicting_repositories)
     }
 
-    /// Checks if a new repository would give conflicts. Returns true for conflicts, false otherwise.
+    /// Checks if a new repository would give conflicts. Returns the conflicting repository name if it exists, `None` otherwise.
     pub fn check_new_repository_conflicts(&self, config: &Config, new_id: &str, new_meta: &RepositoryMeta) -> Result<Option<String>> {
         for (id, provider) in &self.metadata_providers {
             let repository_meta = provider.read_repository_metadata()?;

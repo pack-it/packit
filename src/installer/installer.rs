@@ -74,11 +74,9 @@ impl<'a> Installer<'a> {
 
         // Make sure that repositories already used for installed packages which are not in the `Config.toml` anymore
         // don't conflict with the current repository
-        let conflict_repositories = self.repository_manager.repository_conflicts_with(self.config, self.register.get_repository_names())?;
-        if !conflict_repositories.is_empty() {
-            let message: Vec<String> = conflict_repositories.iter().map(|(x, y)| format!(" - '{x}' incompatible with '{y}'\n")).collect();
-            let conflicts_msg = message.concat();
-            return Err(InstallerError::IncompatibleRepositories { conflicts_msg });
+        let conflicts = self.repository_manager.repository_conflicts_with(self.config, self.register.get_repository_names())?;
+        if !conflicts.is_empty() {
+            return Err(InstallerError::IncompatibleRepositories { conflicts });
         }
 
         // Read package and version metadata
