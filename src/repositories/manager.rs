@@ -399,6 +399,22 @@ impl<'a> RepositoryManager<'a> {
         Ok(conflicting_repositories)
     }
 
+    /// Checks if a new repository would give conflicts. Returns true for conflicts, false otherwise.
+    pub fn check_new_repository_conflicts(&self, config: &Config, new_id: &str, new_meta: &RepositoryMeta) -> Result<Option<String>> {
+        for (id, provider) in &self.metadata_providers {
+            let repository_meta = provider.read_repository_metadata()?;
+            if !repository_meta.compatible_repositories.contains(&new_meta.name)
+                && !new_meta.compatible_repositories.contains(&repository_meta.name)
+                && !config.repositories.get(id).is_some_and(|repo| repo.compatible_repositories.contains(&new_meta.name))
+                && !config.repositories.get(new_id).is_some_and(|repo| repo.compatible_repositories.contains(&repository_meta.name))
+            {
+                return Ok(Some(repository_meta.name));
+            }
+        }
+
+        Ok(None)
+    }
+
     /// Reads the list of prebuilds that can be generated for the given version of the package.
     pub fn read_prebuilds_list(&self, repository_id: &str, package: &PackageName, version: &Version) -> Result<PrebuildsList> {
         match self.get_metadata_provider(repository_id)?.read_prebuilds_list(package, version)? {
