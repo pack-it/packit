@@ -95,12 +95,7 @@ impl<'a> RepositoryManager<'a> {
                 let inner_repository_meta = inner_provider.read_repository_metadata().expect("Expected repository meta to exist");
                 // Don't check compatibility between `id` and `inner_id` with equal repository names
                 // Continue if the `inner_id` is compatible with `id` (or the other way around)
-                if repository_meta.name == inner_repository_meta.name
-                    || repository_meta.compatible_repositories.contains(&inner_repository_meta.name)
-                    || inner_repository_meta.compatible_repositories.contains(&repository_meta.name)
-                    || config.repositories.get(id).is_some_and(|repo| repo.compatible_repositories.contains(&inner_repository_meta.name))
-                    || config.repositories.get(inner_id).is_some_and(|repo| repo.compatible_repositories.contains(&repository_meta.name))
-                {
+                if Self::is_repository_compatible(config, &repository_meta, &inner_repository_meta, id, inner_id) {
                     continue;
                 }
 
@@ -126,6 +121,55 @@ impl<'a> RepositoryManager<'a> {
             metadata_providers,
             prebuild_providers,
         }
+    }
+
+    /// Checks if two repositories are compatible with each other. Returns true if they are, false if not.
+    fn is_repository_compatible(config: &Config, repo_a: &RepositoryMeta, repo_b: &RepositoryMeta, id_a: &str, id_b: &str) -> bool {
+        repo_a.name == repo_b.name
+            || repo_a.compatible_repositories.contains(&repo_b.name)
+            || repo_b.compatible_repositories.contains(&repo_a.name)
+            || config.repositories.get(id_a).is_some_and(|repo| repo.compatible_repositories.contains(&repo_b.name))
+            || config.repositories.get(id_b).is_some_and(|repo| repo.compatible_repositories.contains(&repo_a.name))
+    }
+
+    /// Gets the given repositories that are unconfigured and conflict with configured repositories.
+    /// Note that this function only checks compatibility from the side of the configured repositories.
+    pub fn repository_conflicts_with<'b>(&self, config: &Config, names: impl Iterator<Item = &'b String>) -> Result<Vec<(String, String)>> {
+        let mut conflicting_repositories = Vec::new();
+
+        // Get all the names which aren't in the `Config.toml` anymore
+        let repository_names = self.get_repository_names()?;
+        let filtered_names: HashSet<&String> = names.filter(|name| !repository_names.contains(*name)).collect();
+        if filtered_names.is_empty() {
+            return Ok(conflicting_repositories);
+        }
+
+        // Unconfigured repositories can only be validated from one side (from the unconfigured repository side it conflicts by default)
+        // Check for all repositories in the `Config.toml` if all unconfigured repositories are listed as compatible.
+        for (id, provider) in &self.metadata_providers {
+            let repository_meta = provider.read_repository_metadata()?;
+            for name in &filtered_names {
+                let config_contains_name = config.repositories.get(id).is_some_and(|repo| repo.compatible_repositories.contains(name));
+                if !repository_meta.compatible_repositories.contains(*name) && !config_contains_name {
+                    // Only add the unconfigured repository as conflict
+                    conflicting_repositories.push((name.to_string(), repository_meta.name.clone()));
+                }
+            }
+        }
+
+        Ok(conflicting_repositories)
+    }
+
+    /// Checks if a new repository would give conflicts. Returns the conflicting repository name if it exists, `None` otherwise.
+    pub fn check_new_repository_conflicts(&self, config: &Config, new_id: &str, new_meta: &RepositoryMeta) -> Result<Option<String>> {
+        for (id, provider) in &self.metadata_providers {
+            let repository_meta = provider.read_repository_metadata()?;
+            if !Self::is_repository_compatible(config, &repository_meta, new_meta, id, new_id) {
+                return Ok(Some(repository_meta.name));
+            }
+        }
+
+        Ok(None)
     }
 
     /// Reads package and package version metadata of the given package. When only a package name is given the latest supported version is used.
@@ -369,50 +413,6 @@ impl<'a> RepositoryManager<'a> {
         }
 
         None
-    }
-
-    /// Gets the given repositories that are unconfigured and conflict with configured repositories.
-    /// Note that this function only checks compatibility from the side of the configured repositories.
-    pub fn repository_conflicts_with(&self, config: &Config, names: HashSet<String>) -> Result<Vec<(String, String)>> {
-        let mut conflicting_repositories = Vec::new();
-
-        // Get all the names which aren't in the `Config.toml` anymore
-        let repository_names = self.get_repository_names()?;
-        let filtered_names: HashSet<String> = names.into_iter().filter(|name| !repository_names.contains(name)).collect();
-        if filtered_names.is_empty() {
-            return Ok(conflicting_repositories);
-        }
-
-        // Unconfigured repositories can only be validated from one side (from the unconfigured repository side it conflicts by default)
-        // Check for all repositories in the `Config.toml` if all unconfigured repositories are listed as compatible.
-        for (id, provider) in &self.metadata_providers {
-            let repository_meta = provider.read_repository_metadata()?;
-            for name in &filtered_names {
-                let config_contains_name = config.repositories.get(id).is_some_and(|repo| repo.compatible_repositories.contains(name));
-                if !repository_meta.compatible_repositories.contains(name) && !config_contains_name {
-                    // Only add the unconfigured repository as conflict
-                    conflicting_repositories.push((name.to_string(), repository_meta.name.clone()));
-                }
-            }
-        }
-
-        Ok(conflicting_repositories)
-    }
-
-    /// Checks if a new repository would give conflicts. Returns the conflicting repository name if it exists, `None` otherwise.
-    pub fn check_new_repository_conflicts(&self, config: &Config, new_id: &str, new_meta: &RepositoryMeta) -> Result<Option<String>> {
-        for (id, provider) in &self.metadata_providers {
-            let repository_meta = provider.read_repository_metadata()?;
-            if !repository_meta.compatible_repositories.contains(&new_meta.name)
-                && !new_meta.compatible_repositories.contains(&repository_meta.name)
-                && !config.repositories.get(id).is_some_and(|repo| repo.compatible_repositories.contains(&new_meta.name))
-                && !config.repositories.get(new_id).is_some_and(|repo| repo.compatible_repositories.contains(&repository_meta.name))
-            {
-                return Ok(Some(repository_meta.name));
-            }
-        }
-
-        Ok(None)
     }
 
     /// Reads the list of prebuilds that can be generated for the given version of the package.
