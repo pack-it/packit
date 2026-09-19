@@ -134,12 +134,12 @@ impl<'a> RepositoryManager<'a> {
 
     /// Gets the given repositories that are unconfigured and conflict with configured repositories.
     /// Note that this function only checks compatibility from the side of the configured repositories.
-    pub fn repository_conflicts_with<'b>(&self, config: &Config, names: impl Iterator<Item = &'b String>) -> Result<Vec<(String, String)>> {
+    pub fn repository_conflicts_with(&self, config: &Config, names: HashSet<&String>) -> Result<Vec<(String, String)>> {
         let mut conflicting_repositories = Vec::new();
 
         // Get all the names which aren't in the `Config.toml` anymore
         let repository_names = self.get_repository_names()?;
-        let filtered_names: HashSet<&String> = names.filter(|name| !repository_names.contains(*name)).collect();
+        let filtered_names: HashSet<&String> = names.into_iter().filter(|name| !repository_names.contains(*name)).collect();
         if filtered_names.is_empty() {
             return Ok(conflicting_repositories);
         }
@@ -320,7 +320,7 @@ impl<'a> RepositoryManager<'a> {
                 },
             };
 
-            let package = match provider.read_package_version(&package_id) {
+            let package = match provider.read_package_version(package_id) {
                 Ok(package) => package,
                 Err(RepositoryError::ParseError(e)) => {
                     debug!(
@@ -363,7 +363,7 @@ impl<'a> RepositoryManager<'a> {
     /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     pub fn read_repo_package_version(&self, repository_id: &str, package_id: &PackageId) -> Result<PackageVersionMeta> {
         let provider = self.get_metadata_provider(repository_id)?;
-        let package = provider.read_package_version(&package_id)?;
+        let package = provider.read_package_version(package_id)?;
 
         // Check package version compatibility
         if let Some(reason) = self.check_package_version_compatibility(&package, &Target::current()) {

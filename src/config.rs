@@ -168,6 +168,7 @@ impl Config {
             pair_aligner.add("Prebuilds url", repo.prebuilds_url.display());
             pair_aligner.add("Prebuilds provider", repo.prebuilds_provider.display());
             pair_aligner.add("Prebuilds disabled", repo.disable_prebuilds);
+            pair_aligner.add("Compatible repositories", repo.compatible_repositories.join(", "));
             pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
         }
     }
@@ -301,6 +302,26 @@ impl EditableConfig {
             repository_table.remove("disable_prebuilds");
         }
 
+        // Set `compatible_repositories` if they exist
+        if !repository.compatible_repositories.is_empty() {
+            let compatible_repositories: Vec<String> = repository_table
+                .get("compatible_repositories")
+                .and_then(|item| item.as_array())
+                .map(|array| array.iter().filter_map(|item| item.as_str().map(String::from)).collect())
+                .unwrap_or_default();
+
+            if compatible_repositories != repository.compatible_repositories {
+                let mut new_value = toml_edit::Array::new();
+                for repo in &repository.compatible_repositories {
+                    new_value.push(repo);
+                }
+
+                repository_table.insert("compatible_repositories", new_value.into());
+            }
+        } else {
+            repository_table.remove("compatible_repositories");
+        }
+
         if !already_existed {
             self.document["repositories"][id] = new_value.into();
         }
@@ -344,6 +365,8 @@ impl EditableConfig {
                 value.as_array_mut().expect("Expected repositories_rank to be an array!").push(repository_id);
             },
         }
+
+        self.config.repositories_rank.push(repository_id.into());
     }
 
     /// Sets the prefix directory.

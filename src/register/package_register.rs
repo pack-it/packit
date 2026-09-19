@@ -314,9 +314,9 @@ impl PackageRegister {
         latest
     }
 
-    /// Returns an iterator, over all repository names that were used for the installed packages.
-    pub fn iterate_repository_names(&self) -> impl Iterator<Item = &String> {
-        self.iterate_all().map(|v| &v.metadata_repository_name)
+    /// Returns the set of all repository names that were used for the installed packages.
+    pub fn get_repository_names(&self) -> HashSet<&String> {
+        self.iterate_all().map(|v| &v.metadata_repository_name).collect()
     }
 
     /// Returns an iterator, which iterates over all nested installed package version values.

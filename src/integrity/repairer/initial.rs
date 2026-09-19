@@ -210,13 +210,16 @@ fn get_used_repositories(register: &PackageRegister) -> HashSet<Repository> {
     // Find used repositories in package metadata, and keep track of how many times they are used
     let mut seen_repositories = HashMap::new();
     for package in register.iterate_all() {
+        let compatible_repositories =
+            register.get_repository_names().into_iter().filter(|name| **name != package.metadata_repository_name).cloned().collect();
+
         let repository = Repository {
             url: package.metadata_repository_url.trim_end_matches('/').to_string(),
             provider: package.metadata_repository_provider.clone(),
             prebuilds_url: package.prebuilds_repository_url.clone(),
             prebuilds_provider: package.prebuilds_repository_provider.clone(),
             disable_prebuilds: false,
-            compatible_repositories: vec![], // TODO: Figure out compatibility based on repo's used for installed packages
+            compatible_repositories,
         };
 
         match seen_repositories.get_mut(&repository) {
