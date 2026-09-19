@@ -100,8 +100,8 @@ impl<'a> RepositoryManager<'a> {
                 if repository_meta.name == inner_repository_meta.name
                     || repository_meta.compatible_repositories.contains(&inner_repository_meta.name)
                     || inner_repository_meta.compatible_repositories.contains(&repository_meta.name)
-                    || config.repositories.get(id).is_some_and(|repo| repo.compatible_repositories.contains(inner_id))
-                    || config.repositories.get(inner_id).is_some_and(|repo| repo.compatible_repositories.contains(id))
+                    || config.repositories.get(id).is_some_and(|repo| repo.compatible_repositories.contains(&inner_repository_meta.name))
+                    || config.repositories.get(inner_id).is_some_and(|repo| repo.compatible_repositories.contains(&repository_meta.name))
                 {
                     continue;
                 }
@@ -370,9 +370,9 @@ impl<'a> RepositoryManager<'a> {
         None
     }
 
-    /// Gets the given repositories that conflict with configured repositories. Note that this function only checks
-    /// compatibility from the side of the configured repositories. The given names are not necessarily expected to be configured.
-    pub fn repository_conflicts_with(&self, names: HashSet<String>) -> HashSet<String> {
+    /// Gets the given repositories that are unconfigured and conflict with configured repositories. Note that this function only checks
+    /// compatibility from the side of the configured repositories.
+    pub fn repository_conflicts_with(&self, config: &Config, names: HashSet<String>) -> HashSet<String> {
         let mut conflicting_repositories = HashSet::new();
 
         // Get all the names which aren't in the `Config.toml` anymore
@@ -385,10 +385,10 @@ impl<'a> RepositoryManager<'a> {
         // Check for all repositories in the `Config.toml` if all unconfigured repositories are listed as compatible.
         // Note that compatibility in the `Config.toml` cannot be checked here, only the it lists compatibility based on ids not
         // repository names.
-        // TODO: Maybe change config using repository ids?
-        for repository in self.repositories.values() {
+        for (id, repository) in &self.repositories {
             for name in &filtered_names {
-                if !repository.compatible_repositories.contains(name) {
+                let config_contains_name = config.repositories.get(id).is_some_and(|repo| repo.compatible_repositories.contains(name));
+                if !repository.compatible_repositories.contains(name) && !config_contains_name {
                     // Only add the unconfigured repository as conflict
                     // TODO: Maybe do both as tuple?
                     conflicting_repositories.insert(name.to_string());
