@@ -29,6 +29,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The parsing for dependencies and targets bounds doesn't allow for `name@` anymore.
 - The `pit util meta-check` command now returns a different exit code, dependending on the most urgent issue type found.
 - The `pit init` command now allows you to specify the revision of the Packit install.
+- The package resolver now skips repository compatibility checks if the package is `packit`.
 
 ### Fixed
 - Fix patch apply directory meta check reporting wrong issues.

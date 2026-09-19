@@ -26,6 +26,11 @@ impl PackageName {
         self.0.chars().next().expect("Expected first char, based on regex")
     }
 
+    /// Checks if the given name is Packit itself.
+    pub fn is_packit(&self) -> bool {
+        *self == Self::packit()
+    }
+
     /// Gets the package name of Packit itself.
     pub fn packit() -> Self {
         Self("packit".to_string())
