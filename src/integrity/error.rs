@@ -31,6 +31,11 @@ pub enum VerifierError {
     #[error("Cannot continue with checks, missing check implementation")]
     UnimplementedCheck,
 
+    #[error("An unreachable state has been reached: {msg}")]
+    UnreachableError {
+        msg: String,
+    },
+
     #[error("Could not display issues")]
     DisplayError(#[from] DisplayError),
 

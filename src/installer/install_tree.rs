@@ -81,18 +81,25 @@ pub struct InstallMeta {
     pub package_metadata: PackageMeta,
     pub version_metadata: PackageVersionMeta,
     pub repository_id: String,
+    pub repository_name: String,
     pub target_bounds: TargetBounds,
 }
 
 impl InstallMeta {
     /// Creates a new `InstallMeta` struct.
-    fn new(package_metadata: PackageMeta, version_metadata: PackageVersionMeta, repository_id: String) -> Result<Self> {
+    fn new(
+        package_metadata: PackageMeta,
+        version_metadata: PackageVersionMeta,
+        repository_id: String,
+        repository_name: String,
+    ) -> Result<Self> {
         let target_bounds = version_metadata.get_best_target(&Target::current())?;
 
         Ok(Self {
             package_metadata,
             version_metadata,
             repository_id,
+            repository_name,
             target_bounds,
         })
     }
@@ -230,7 +237,14 @@ impl<'a> InstallTreeBuilder<'a> {
         let version_meta =
             self.repository_manager.read_latest_supported_dependency_version(&repository_id, &package_meta, dependency, &target)?;
         let dependency_id = PackageId::new(dependency.get_name().clone(), version_meta.version.clone());
-        let install_meta = InstallMeta::new(package_meta, version_meta, repository_id)?;
+
+        let Some(repository_name) = self.repository_manager.get_repository_name(&repository_id) else {
+            return Err(InstallerError::UnreachableError {
+                msg: "Repository manager cannot find repository id, even though it was given".to_string(),
+            });
+        };
+
+        let install_meta = InstallMeta::new(package_meta, version_meta, repository_id, repository_name)?;
 
         let label = match self.check_prebuild(&install_meta, &dependency_id, &label)? {
             Some(adjusted_label) => adjusted_label,
