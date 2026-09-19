@@ -145,7 +145,7 @@ pub fn fix_inconsistent_register(
         let missing_dependencies = dependencies.iter().filter(|d| register.get_package_version(d).is_none()).cloned().collect();
         fix_inconsistent_register(missing_dependencies, register, config, manager)?;
 
-        let Some(repository_name) = manager.get_repository_name(&repository_id) else {
+        let Some(repository_name) = manager.get_repository_name(&repository_id)? else {
             return Err(VerifierError::UnreachableError {
                 msg: "Repository manager cannot find repository id, even though it was given".to_string(),
             });

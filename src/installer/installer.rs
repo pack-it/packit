@@ -74,8 +74,8 @@ impl<'a> Installer<'a> {
 
         // Make sure that repositories already used for installed packages which are not in the `Config.toml` anymore
         // don't conflict with the current repository
-        let conflicting_repositories = self.repository_manager.repository_conflicts_with(self.config, self.register.get_repository_names());
-        if !conflicting_repositories.is_empty() {
+        let conflict_repositories = self.repository_manager.repository_conflicts_with(self.config, self.register.get_repository_names())?;
+        if !conflict_repositories.is_empty() {
             return Err(InstallerError::IncompatibleRepositories);
         }
 
@@ -119,7 +119,7 @@ impl<'a> Installer<'a> {
         }
 
         // Get the metadata of the package for the current target
-        let Some(repository_name) = self.repository_manager.get_repository_name(&repository_id) else {
+        let Some(repository_name) = self.repository_manager.get_repository_name(&repository_id)? else {
             return Err(InstallerError::UnreachableError {
                 msg: "Repository manager cannot find repository id, even though it was given".to_string(),
             });

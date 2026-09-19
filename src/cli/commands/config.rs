@@ -243,7 +243,7 @@ impl ConfigArgs {
             }
 
             // Check if the repository is unsupported
-            if let Some(metadata) = manager.get_unsupported_repository(repository_id) {
+            if let Some(metadata) = manager.get_unsupported_repository(repository_id).unwrap_or_exit(1) {
                 println!("{} ({repository_id}) {}", metadata.name.bold().blue(), "NOT SUPPORTED".bold().red());
                 println!("{}", metadata.description.italic().cyan());
                 let mut pair_aligner = PairAligner::new();

@@ -238,7 +238,7 @@ impl<'a> InstallTreeBuilder<'a> {
             self.repository_manager.read_latest_supported_dependency_version(&repository_id, &package_meta, dependency, &target)?;
         let dependency_id = PackageId::new(dependency.get_name().clone(), version_meta.version.clone());
 
-        let Some(repository_name) = self.repository_manager.get_repository_name(&repository_id) else {
+        let Some(repository_name) = self.repository_manager.get_repository_name(&repository_id)? else {
             return Err(InstallerError::UnreachableError {
                 msg: "Repository manager cannot find repository id, even though it was given".to_string(),
             });
