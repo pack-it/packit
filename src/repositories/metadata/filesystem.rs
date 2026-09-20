@@ -61,7 +61,7 @@ impl MetadataProviderImpl for FileSystemMetadataProvider {
     }
 
     fn read_file_bytes(&self, package: &PackageName, file_path: &str) -> Result<Option<Bytes>> {
-        let parent = self.path.join("packages").join(package.to_string());
+        let parent = self.path.join("packages").join(package);
         let complete_path = io::normalize_path(&parent.join(file_path));
         if !complete_path.starts_with(parent) {
             return Err(RepositoryError::EscapeDirectoryError(file_path.to_string()));
@@ -75,7 +75,7 @@ impl MetadataProviderImpl for FileSystemMetadataProvider {
     }
 
     fn read_file(&self, package: &PackageName, file_path: &str) -> Result<Option<String>> {
-        let parent = self.path.join("packages").join(package.to_string());
+        let parent = self.path.join("packages").join(package);
         let complete_path = io::normalize_path(&parent.join(file_path));
         if !complete_path.starts_with(parent) {
             return Err(RepositoryError::EscapeDirectoryError(file_path.to_string()));

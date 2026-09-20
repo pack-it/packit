@@ -87,6 +87,7 @@ impl WebMetadataProvider {
             return None;
         }
 
+        // Use `Url::parse` to normalize the url
         let url = match Url::parse(&repository.url) {
             Ok(url) => url.to_string(),
             Err(e) => {
