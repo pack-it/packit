@@ -10,6 +10,10 @@ const USER_AGENT: &str = concat!("Packit/", packit_version!());
 
 /// Checks if a path escapes the parent directory. Returns true if it does, false if not.
 pub fn path_escapes_dir(parent: &str, path: &str) -> bool {
+    // Remove prefix and suffix slashes
+    let parent = parent.trim_matches('/');
+    let path = path.trim_matches('/');
+
     let mut components = Vec::new();
     for component in path.split('/') {
         if component != ".." {
@@ -22,7 +26,7 @@ pub fn path_escapes_dir(parent: &str, path: &str) -> bool {
         }
     }
 
-    !components.join("/").starts_with(&parent)
+    !components.join("/").starts_with(parent)
 }
 
 /// Checks if a URL exists by sending a header request.
@@ -51,4 +55,58 @@ pub fn get<T: IntoUrl>(url: T) -> reqwest::Result<Response> {
 /// Builds a request client.
 fn build_client() -> reqwest::Result<Client> {
     reqwest::blocking::ClientBuilder::new().user_agent(USER_AGENT).build()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn no_escape() {
+        let parent = "/some/parent";
+        let path = "/some/parent/foo/child";
+        assert!(!path_escapes_dir(parent, path));
+        let path = "/some/parent/../parent/foo";
+        assert!(!path_escapes_dir(parent, path));
+        let path = "/some/parent";
+        assert!(!path_escapes_dir(parent, path));
+
+        // Also do some test with different slashes
+        let parent = "some/parent/";
+        let path = "/some/parent/child/..";
+        assert!(!path_escapes_dir(parent, path));
+        let path = "/some/other/../parent";
+        assert!(!path_escapes_dir(parent, path));
+    }
+
+    #[test]
+    fn escape() {
+        let parent = "/some/parent";
+        let path = "/some/parent/..";
+        assert!(path_escapes_dir(parent, path));
+        let path = "/some/other";
+        assert!(path_escapes_dir(parent, path));
+        let path = "/some/parent/foo/../../bar";
+        assert!(path_escapes_dir(parent, path));
+        let path = "/some/parent/../../..";
+        assert!(path_escapes_dir(parent, path));
+    }
+
+    #[test]
+    fn empty_parent_paths() {
+        let parent = "";
+        let path = "/some/random/path";
+        assert!(!path_escapes_dir(parent, path));
+        let parent = "/";
+        assert!(!path_escapes_dir(parent, path));
+    }
+
+    #[test]
+    fn empty_child_paths() {
+        let parent = "/some/parent";
+        let path = "";
+        assert!(path_escapes_dir(parent, path));
+        let path = "/";
+        assert!(path_escapes_dir(parent, path));
+    }
 }
