@@ -43,6 +43,15 @@ impl<T: Iterator<Item = impl Display>> DisplayJoined for T {
     }
 }
 
+/// Gets the joined string with the given separator or returns a styled `None` string if the given list is empty.
+pub fn get_joined_or_none(items: &Vec<String>, separator: &str) -> String {
+    if items.is_empty() {
+        return "None".dimmed().to_string();
+    }
+
+    items.join(separator)
+}
+
 /// Prints a list in the format defined in `print_list`.
 /// In case of an empty list "None" is printed.
 pub fn print_list_or_none<T>(mut items: impl Iterator<Item = T>)
