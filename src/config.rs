@@ -12,7 +12,11 @@ use thiserror::Error;
 use toml_edit::DocumentMut;
 
 use crate::{
-    cli::display::{aligned_print::PairAligner, logging::warning, standard_print::DisplayOption},
+    cli::display::{
+        aligned_print::PairAligner,
+        logging::warning,
+        standard_print::{self, DisplayOption},
+    },
     platforms::{DEFAULT_CONFIG_DIR, DEFAULT_PREFIX},
     repositories::metadata::DEFAULT_METADATA_PROVIDER_ID,
     utils::{
@@ -155,7 +159,10 @@ impl Config {
         let mut pair_aligner = PairAligner::new();
         pair_aligner.add("Prefix directory", self.prefix_directory.display());
         pair_aligner.add("Multiuser mode", self.multiuser);
-        pair_aligner.add("Repositories rank", self.repositories_rank.join(", "));
+        pair_aligner.add(
+            "Repositories rank",
+            standard_print::get_joined_or_none(&self.repositories_rank, ", "),
+        );
         pair_aligner.display("");
 
         for (name, repo) in &self.repositories {
@@ -168,7 +175,10 @@ impl Config {
             pair_aligner.add("Prebuilds url", repo.prebuilds_url.display());
             pair_aligner.add("Prebuilds provider", repo.prebuilds_provider.display());
             pair_aligner.add("Prebuilds disabled", repo.disable_prebuilds);
-            pair_aligner.add("Compatible repositories", repo.compatible_repositories.join(", "));
+            pair_aligner.add(
+                "Compatible repositories",
+                standard_print::get_joined_or_none(&repo.compatible_repositories, ", "),
+            );
             pair_aligner.display(PairAligner::VERTICAL_LINE_PREFIX);
         }
     }

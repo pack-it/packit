@@ -12,7 +12,7 @@ use crate::{
             aligned_print::PairAligner,
             ask_user,
             logging::{error, warning},
-            standard_print::DisplayOption,
+            standard_print::{self, DisplayOption},
             styled::Styled,
         },
     },
@@ -248,7 +248,7 @@ impl ConfigArgs {
                 println!("{}", metadata.description.italic().cyan());
                 let mut pair_aligner = PairAligner::new();
                 pair_aligner.add("License", &metadata.license);
-                pair_aligner.add("Maintainers", metadata.maintainers.join(", "));
+                pair_aligner.add("Maintainers", standard_print::get_joined_or_none(&metadata.maintainers, ", "));
                 pair_aligner.add("Repository provider", &repository.provider);
                 pair_aligner.add("Repository url", &repository.url);
                 pair_aligner.add("Required Packit Version", metadata.required_packit_version.style().red());
@@ -272,7 +272,7 @@ impl ConfigArgs {
             println!("{}", metadata.description.italic().cyan());
             let mut pair_aligner = PairAligner::new();
             pair_aligner.add("License", metadata.license);
-            pair_aligner.add("Maintainers", metadata.maintainers.join(", "));
+            pair_aligner.add("Maintainers", standard_print::get_joined_or_none(&metadata.maintainers, ", "));
             pair_aligner.add("Repository provider", &repository.provider);
             pair_aligner.add("Repository url", &repository.url);
             pair_aligner.add("Required Packit Version", metadata.required_packit_version.style());
