@@ -41,7 +41,7 @@ Build scripts run in an [environment](./build-env.md) that is lightly managed th
 
 Metadata repositories can contain test files, which are required for running package tests. After package installation they are stored on the users system as part of the local metadata. If a repository is compromised and contains malicious test files, these can end up on the users system.
 
-Multiple repositories are allowed in the [configuration](./structure.md#config). Packit has an extensive algorithm for deciding which repository should be used for the installation of a package. If the config contains a compromised repository, which has a malicious package with the same name of an important core package, this package could end up being chosen for installation on the system.
+Multiple repositories are allowed in the [configuration](./configuration.md). More about multiple repositories can be found [here](./metadata.md#multiple-repositories). Packit has an extensive algorithm for deciding which repository should be used for the installation of a package. If the config contains a compromised repository, which has a malicious package with the same name of an important core package, this package could end up being chosen for installation on the system.
 
 ## Future improvements
 This section lists all improvements that can be made to improve the security of Packit. Feel free to make notes about these improvements or help to get them into Packit.

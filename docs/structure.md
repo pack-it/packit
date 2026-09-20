@@ -12,7 +12,13 @@ This file explains the Packit structure.
 - [Package Data](#package-data)
 
 ## Prefix
-The Packit directory, which contains Packit data is called the [prefix](#prefix) directory. This directory contains the following files and directories:
+The Packit directory, which contains Packit data is called the [prefix](#prefix) directory. The default location of the prefix directory differs for each platform: <br>
+| Platform | Directory                 |
+| -------- | ------------------------- |
+| Unix     | `/opt/packit`             |
+| Windows  | `C:\Program Files\packit` |
+
+This prefix directory contains the following files and directories:
 - [Register.toml](#register)
 - [metadata](#local-metadata)
 - [packages](#packages)
@@ -20,12 +26,6 @@ The Packit directory, which contains Packit data is called the [prefix](#prefix)
 - [active](#active-packages)
 - [dependencies](#dependencies)
 - [etc](#package-data)
-
-The prefix directory of Packit contains all data of installed packages.<br>
-| Platform | Directory                 |
-| -------- | ------------------------- |
-| Unix     | `/opt/packit`             |
-| Windows  | `C:\Program Files\packit` |
 
 ## Register
 The `Register.toml` file is located inside the prefix and stores information about all installed packages. This file is managed by Packit and should not be changed directly. Find more information about this file [here](./register.md#register)

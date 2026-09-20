@@ -17,11 +17,11 @@ The `Config.toml` contains the Packit configuration, it can be edited manually o
 ## Available fields
 All available fields in the config are listed below. 
 
-| Field               | Explanation                                                                                                 |
-| ------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `prefix_directory`  | Defines the directory used for installing packages, see [File structure](#file-structure) for the defaults on each platform. |
-| `repositories_rank` | Defines the order of repositories to search for a package. |
-| `multiuser`         | True to run Packit in multiuser mode, false for single user mode. |
+| Field               | Explanation                                                                                                          |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `prefix_directory`  | Defines the directory used for installing packages, see [prefix](./structure.md#prefix) for the defaults on each platform. |
+| `repositories_rank` | Defines the order of repositories to search for a package.                                                           |
+| `multiuser`         | True to run Packit in multiuser mode, false for single user mode.                                                    |
 
 ### Repositories
 | Field                       | Explanation                                                                             |
