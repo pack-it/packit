@@ -64,7 +64,8 @@ pub fn fix_broken_config() -> Result<()> {
     // Get and set the prefix (only set the prefix if the prefix is not the default)
     let prefix = use_or_get_prefix(&document)?;
     if let Some(prefix) = &prefix {
-        if prefix != DEFAULT_PREFIX {
+        // MSRV: Remove PathBuf::from here when 1.91.0
+        if *prefix != PathBuf::from(DEFAULT_PREFIX) {
             default_config.set_prefix_directory(prefix.clone());
         }
     }
