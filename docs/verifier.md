@@ -1,6 +1,12 @@
 # Verifier
 
-## How to use
+This file explains how to use the verifier and documents the available checks.
+
+- [Usage](#usage)
+- [Checks and issues](#checks-and-issues)
+- [All checks](#all-checks)
+
+## Usage
 To use the verifier you can use `pit check`, this will return all the issues that the verifier can find.
 Important to note is the order of the issues. The most urgent issue will be listed first, meaning this issue 
 needs to be solved before the other issues. The following issues **or errors** can be a result of the first issue(s). When issues are critical, errors are even to be expected.
@@ -11,8 +17,8 @@ To fix the issues the `pit fix` command can be used or `pit fix <package-name>[@
 When packages are specified only those packages are checked when doing package related checks. Note that the initial checks and general (non-register package related checks) are still done as well. Also note that there is a small chance that a package specific check will miss an issue which indirectly causes problems for the specified package (for example if the issue has to do with a dependency of the specified package). **Thats why we recommend using the more general check command (especially when doing a fix).**
 <br>
 
-## Checks & Issues
-The verifier has a variaty of checks available. A check can have dependencies, which are checks which have to be done before it. 
+## Checks and issues
+The verifier has a variety of checks available. A check can have dependencies, which are checks which have to be done before it. 
 Each check returns an issue which is then passed along to the repairer.
 
 The following categories of checks exist:
@@ -20,7 +26,7 @@ The following categories of checks exist:
 - **General**: Checks Packit, but no critical features. 
 - **Package**: Does package related checks.
 
-## All Checks
+## All checks
 This is a list of checks which are currently implemented in the verifier. With a type and a short explanation for each check.
 
 | Check Type          | Type    | Short Explanation                                                                                                                                                                                                        |

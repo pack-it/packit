@@ -2,6 +2,14 @@
 
 The build environment tries to create an environment which is as 'clean' as possible. This will help with more stable and reproducible builds. This is done by stripping and adding some environment variables.
 
+- [Adjusted `PATH`](#adjusted-path)
+- [`PKG_CONFIG_PATH`](#pkg_config_path)
+- [`CMAKE_PREFIX_PATH`](#cmake_prefix_path)
+- [`ACLOCAL_PATH`](#aclocal_path)
+- [Requirement environment](#requirement-environment)
+    - [Windows MSVC](#windows-msvc)
+- [Extra environment variables](#extra-environment-variables)
+
 ## Adjusted `PATH`
 The build environment creates an adjusted `PATH`. The `PATH` will contain the bin directories of all (build) dependencies. If on Unix, it will also include the standard Unix system bin paths, which are:
 - `/usr/bin`

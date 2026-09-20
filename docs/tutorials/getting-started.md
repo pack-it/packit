@@ -4,6 +4,16 @@ This tutorial is meant to get you started with using Packit on your system. It l
 
 If you do not have Packit installed yet, please do so by running the install script as listed in the [README](https://github.com/pack-it/packit/blob/main/README.md#install).
 
+- [Installing a package](#installing-a-package)
+- [Uninstalling a package](#uninstalling-a-package)
+- [Updating a package](#updating-packages)
+- [Listing installed packages](#listing-installed-packages)
+- [Searching for a package](#searching-for-a-package)
+- [Changing active version or link state](#changing-active-version-or-link-state)
+- [Adding a new repository to your config](#adding-a-new-repository-to-your-config)
+- [Checking your installation](#checking-your-installation)
+- [Next steps](#next-steps)
+
 ## Installing a package
 
 To install a package, you can use the `pit install` command, see [install](../commands/install.md).

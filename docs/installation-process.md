@@ -2,6 +2,11 @@
 
 This file aims to explain the installation process as accurately as possible. It also includes the build process.
 
+- [Dependency Resolution](#dependency-resolution)
+- [After Installation](#after-installation)
+- [Building from Source](#building-from-source)
+- [Future Additions](#future-additions)
+
 ## Dependency resolution
 The first thing that happens when installing a package is the dependency resolution. Resolving a single dependency starts with choosing a repository to get the package metadata from. This order is defined with the [repository rank](./structure.md#config). Packit will get the package metadata from the first repository which contains the package. If the package cannot be found an error is returned. Then Packit chooses from the valid dependency versions. It will choose the latest satisfying version that is not deprecated. If all versions are deprecated it will choose the version that got deprecated the latest.
 
@@ -16,7 +21,7 @@ Once the dependency tree is decided it is shown to the user. The tree is color c
 
 This tree is then traversed bottom up, so dependencies are installed first.
 
-## After an installation
+## After installation
 After each package installation the permissions of the package files are set. Then the installation of that package is complete and it is added to the [Register.toml](./structure.md#registertoml). The post-install script is executed after this if it exists. Finally a Packit test script for that package is run to check if the installation was successful. The test script executes some basic functionality of the package.
 
 Once the entire installation is done the build dependencies are removed. It is possible to skip this with use of the [`--keep-build`](./commands/install.md#--keep-build) flag.
