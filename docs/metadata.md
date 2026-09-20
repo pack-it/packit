@@ -14,7 +14,9 @@ This file should be present in every Packit repository, it quickly describes wha
 | `required_packit_version` | The minimum required Packit version to use the repository.                    |
 | `prebuilds_url`           | Defines the URL of the suggested prebuilds repository for this repository.    |
 | `prebuilds_provider`      | Defines the provider of the suggested prebuilds repository, defaults to `fs`. |
-| `compatible_repositories` | A list of [compatible repository](#multiple-repositories) names. |
+| `compatible_repositories` | A list of [compatible repository](#multiple-repositories) names.              |
+
+Note that the `required_packit_version` in the `repository.toml` file is ignored for the `packit` package. This is needed to allow updating to a newer version of Packit when the core repository is bumped to a new metadata format. This does assume the `package.toml` and `targets.toml` files of the `packit` package use the `required_packit_version` field to describe their compatibility.
 
 ## `index.toml`
 This file should be present in every Packit repository, it describes which packages are available.

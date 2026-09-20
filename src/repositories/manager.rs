@@ -66,7 +66,7 @@ impl<'a> RepositoryManager<'a> {
             if required_packit_version > current_packit_version() {
                 unsupported_repositories.insert(id.to_string());
                 warning!(
-                    "Repository '{id}' requires Packit version {} or higher, ignoring repository...",
+                    "Repository '{id}' requires Packit version {} or higher",
                     required_packit_version.style()
                 );
             }
@@ -215,7 +215,13 @@ impl<'a> RepositoryManager<'a> {
     pub fn read_package(&self, package: &PackageName) -> Result<(String, PackageMeta)> {
         let mut not_found_reasons = HashMap::new();
 
-        for repository_id in self.iter_supported_repositories_rank() {
+        // If the package is Packit, add unsupported repositories to allow update exception
+        let extra_repos = match package.is_packit() {
+            true => self.get_unsupported_repositories_rank(),
+            false => Vec::new(),
+        };
+
+        for repository_id in self.iter_supported_repositories_rank().chain(extra_repos.into_iter()) {
             let provider = match self.metadata_providers.get(repository_id) {
                 Some(provider) => provider,
                 None => {
@@ -257,7 +263,7 @@ impl<'a> RepositoryManager<'a> {
     /// Also checks for package compatibility.
     /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     pub fn read_repo_package(&self, repository_id: &str, package: &PackageName) -> Result<PackageMeta> {
-        let package_meta = self.get_metadata_provider(repository_id)?.read_package(package)?;
+        let package_meta = self.get_metadata_provider_skip_supported(repository_id, package.is_packit())?.read_package(package)?;
 
         if let Some(reason) = self.check_package_compatibility(&package_meta) {
             return Err(RepositoryError::PackageNotFoundError {
@@ -311,7 +317,13 @@ impl<'a> RepositoryManager<'a> {
     fn read_package_version(&self, package_id: &PackageId, target: &Target) -> Result<(String, PackageVersionMeta)> {
         let mut not_found_reasons = HashMap::new();
 
-        for repository_id in self.iter_supported_repositories_rank() {
+        // If the package is Packit, add unsupported repositories to allow update exception
+        let extra_repos = match package_id.name.is_packit() {
+            true => self.get_unsupported_repositories_rank(),
+            false => Vec::new(),
+        };
+
+        for repository_id in self.iter_supported_repositories_rank().chain(extra_repos.into_iter()) {
             let provider = match self.metadata_providers.get(repository_id) {
                 Some(provider) => provider,
                 None => {
@@ -362,7 +374,7 @@ impl<'a> RepositoryManager<'a> {
     /// Also checks for package version compatibility. Note that this does not check for compatibility of the corresponding `PackageMeta`.
     /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     pub fn read_repo_package_version(&self, repository_id: &str, package_id: &PackageId) -> Result<PackageVersionMeta> {
-        let provider = self.get_metadata_provider(repository_id)?;
+        let provider = self.get_metadata_provider_skip_supported(repository_id, package_id.name.is_packit())?;
         let package = provider.read_package_version(package_id)?;
 
         // Check package version compatibility
@@ -417,7 +429,7 @@ impl<'a> RepositoryManager<'a> {
 
     /// Reads the list of prebuilds that can be generated for the given version of the package.
     pub fn read_prebuilds_list(&self, repository_id: &str, package_id: &PackageId) -> Result<PrebuildsList> {
-        match self.get_metadata_provider(repository_id)?.read_prebuilds_list(package_id)? {
+        match self.get_metadata_provider_skip_supported(repository_id, package_id.name.is_packit())?.read_prebuilds_list(package_id)? {
             Some(list) => Ok(list),
             None => {
                 let package_meta = self.read_repo_package(repository_id, &package_id.name)?;
@@ -429,14 +441,14 @@ impl<'a> RepositoryManager<'a> {
     /// Reads a file of the given package from the given repository.
     /// Returns the file as bytes.
     pub fn read_file_bytes(&self, repository_id: &str, package: &PackageName, file_path: &str) -> Result<Option<Bytes>> {
-        self.get_metadata_provider(repository_id)?.read_file_bytes(package, file_path)
+        self.get_metadata_provider_skip_supported(repository_id, package.is_packit())?.read_file_bytes(package, file_path)
     }
 
     /// Reads a file of the given package from the given repository.
     /// Returns the file as a string.
     /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     pub fn read_file(&self, repository_id: &str, package: &PackageName, file_path: &str) -> Result<Option<String>> {
-        self.get_metadata_provider(repository_id)?.read_file(package, file_path)
+        self.get_metadata_provider_skip_supported(repository_id, package.is_packit())?.read_file(package, file_path)
     }
 
     /// Retrieves the prebuild metadata for the given package version.
@@ -567,6 +579,11 @@ impl<'a> RepositoryManager<'a> {
         self.config.repositories_rank.iter().filter(|x| !self.unsupported_repositories.contains(*x))
     }
 
+    /// Gets the list of all unsupported repositories in the repositories rank.
+    fn get_unsupported_repositories_rank(&self) -> Vec<&String> {
+        self.config.repositories_rank.iter().filter(|x| self.unsupported_repositories.contains(*x)).collect()
+    }
+
     /// Gets a specific unsupported repository with the given `repository_id`.
     /// Returns `None` if the given repository is not unsupported or cannot be found.
     pub fn get_unsupported_repository(&self, repository_id: &str) -> Result<Option<RepositoryMeta>> {
@@ -597,8 +614,15 @@ impl<'a> RepositoryManager<'a> {
     /// A helper method to get the metadata provider.
     /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     pub fn get_metadata_provider(&self, repository_id: &str) -> Result<&MetadataProvider> {
+        self.get_metadata_provider_skip_supported(repository_id, false)
+    }
+
+    /// A helper method to get the metadata provider.
+    /// If `skip_supported` is true, the repository supported check is skipped.
+    /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
+    fn get_metadata_provider_skip_supported(&self, repository_id: &str, skip_supported: bool) -> Result<&MetadataProvider> {
         // Check if repository is unsupported
-        if self.unsupported_repositories.contains(repository_id) {
+        if !skip_supported && self.unsupported_repositories.contains(repository_id) {
             return Err(RepositoryError::RepositoryNotSupported {
                 repository_id: repository_id.into(),
             });
