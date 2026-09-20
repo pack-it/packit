@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use bytes::Bytes;
 use reqwest::{IntoUrl, StatusCode, blocking::Response};
+use url::Url;
 
 use crate::{
+    cli::display::logging::debug,
     config::Repository,
     installer::types::{PackageName, Version},
     repositories::{
@@ -85,9 +87,15 @@ impl WebMetadataProvider {
             return None;
         }
 
-        Some(Self {
-            url: repository.url.clone(),
-        })
+        let url = match Url::parse(&repository.url) {
+            Ok(url) => url.to_string(),
+            Err(e) => {
+                debug!("Invalid repository url\n{}", e.to_string());
+                return None;
+            },
+        };
+
+        Some(Self { url })
     }
 
     /// Requests metadata from the given url.
@@ -109,14 +117,13 @@ impl WebMetadataProvider {
     /// escapes the parent directory `RepositoryError::EscapeDirectoryError` is returned.
     /// If the response status is 404 `None` is returned.
     fn request_file(&self, package: &PackageName, file_path: &str) -> Result<Option<Response>> {
-        let parent = format!("packages/{package}");
-        let path = format!("{parent}/{file_path}");
-        if requests::path_escapes_dir(&parent, &path) {
+        let parent = format!("{}/packages/{package}", self.url);
+        let path = Url::parse(&format!("{parent}/{file_path}"))?.to_string();
+        if !path.starts_with(&parent) {
             return Err(RepositoryError::EscapeDirectoryError(file_path.to_string()));
         }
 
-        let complete_url = format!("{}{parent}/{file_path}", self.url);
-        let response = requests::get(complete_url)?;
+        let response = requests::get(path)?;
 
         if response.status() == StatusCode::NOT_FOUND {
             return Ok(None);
