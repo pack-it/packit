@@ -10,11 +10,11 @@ use crate::{
     config::Repository,
     installer::types::{PackageName, Version},
     repositories::{
-        error::Result,
+        error::{RepositoryError, Result},
         metadata::provider::MetadataProviderImpl,
         types::{IndexMeta, PackageMeta, PackageVersionMeta, PrebuildsList, RepositoryMeta},
     },
-    utils::ioerror::IOResultExt,
+    utils::{io, ioerror::IOResultExt},
 };
 
 pub const FILESYSTEM_METADATA_PROVIDER_ID: &str = "fs";
@@ -61,25 +61,31 @@ impl MetadataProviderImpl for FileSystemMetadataProvider {
     }
 
     fn read_file_bytes(&self, package: &PackageName, file_path: &str) -> Result<Option<Bytes>> {
-        let file_path = PathBuf::from(file_path);
-        let path = self.path.join("packages").join(package.to_string()).join(file_path);
+        let parent = self.path.join("packages").join(package.to_string());
+        let complete_path = io::normalize_path(&parent.join(file_path));
+        if !complete_path.starts_with(parent) {
+            return Err(RepositoryError::EscapeDirectoryError(file_path.to_string()));
+        }
 
-        if !fs::exists(&path).err_with_path("check existence of", &path)? {
+        if !fs::exists(&complete_path).err_with_path("check existence of", &complete_path)? {
             return Ok(None);
         }
 
-        Ok(Some(fs::read(&path).err_with_path("read", &path)?.into()))
+        Ok(Some(fs::read(&complete_path).err_with_path("read", &complete_path)?.into()))
     }
 
     fn read_file(&self, package: &PackageName, file_path: &str) -> Result<Option<String>> {
-        let file_path = PathBuf::from(file_path);
-        let path = self.path.join("packages").join(package.to_string()).join(file_path);
+        let parent = self.path.join("packages").join(package.to_string());
+        let complete_path = io::normalize_path(&parent.join(file_path));
+        if !complete_path.starts_with(parent) {
+            return Err(RepositoryError::EscapeDirectoryError(file_path.to_string()));
+        }
 
-        if !fs::exists(&path).err_with_path("check existence of", &path)? {
+        if !fs::exists(&complete_path).err_with_path("check existence of", &complete_path)? {
             return Ok(None);
         }
 
-        Ok(Some(Self::read_file_string(&path)?))
+        Ok(Some(Self::read_file_string(&complete_path)?))
     }
 }
 

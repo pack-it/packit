@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use bytes::Bytes;
-use reqwest::{IntoUrl, StatusCode};
+use reqwest::{IntoUrl, StatusCode, blocking::Response};
 
 use crate::{
     config::Repository,
@@ -61,31 +61,17 @@ impl MetadataProviderImpl for WebMetadataProvider {
     }
 
     fn read_file_bytes(&self, package: &PackageName, file_path: &str) -> Result<Option<Bytes>> {
-        let response = requests::get(format!("{}/packages/{package}/{file_path}", self.url))?;
-
-        if response.status() == StatusCode::NOT_FOUND {
+        let Some(response) = self.request_file(package, file_path)? else {
             return Ok(None);
-        }
-
-        // Return an error if something went wrong with the request (apart from not found error)
-        if !response.status().is_success() {
-            return Err(RepositoryError::UnsuccessfulRequest(response.status()));
-        }
+        };
 
         Ok(Some(response.bytes()?))
     }
 
     fn read_file(&self, package: &PackageName, file_path: &str) -> Result<Option<String>> {
-        let response = requests::get(format!("{}/packages/{package}/{file_path}", self.url))?;
-
-        if response.status() == StatusCode::NOT_FOUND {
+        let Some(response) = self.request_file(package, file_path)? else {
             return Ok(None);
-        }
-
-        // Return an error if something went wrong with the request (apart from not found error)
-        if !response.status().is_success() {
-            return Err(RepositoryError::UnsuccessfulRequest(response.status()));
-        }
+        };
 
         Ok(Some(response.text()?))
     }
@@ -116,5 +102,30 @@ impl WebMetadataProvider {
         }
 
         Ok(response.text()?)
+    }
+
+    /// Requests a file from the specified package. Returns a `Response` if the request was successful.
+    /// `RepositoryError::UnsuccessfulRequest` is returned in case of failure.
+    /// If the given `file_path` escapes the parent directory or if 404 is returned `None` is returned.
+    fn request_file(&self, package: &PackageName, file_path: &str) -> Result<Option<Response>> {
+        let parent = format!("packages/{package}");
+        let path = format!("{parent}/{file_path}");
+        if requests::path_escapes_dir(&parent, &path) {
+            return Err(RepositoryError::EscapeDirectoryError(file_path.to_string()));
+        }
+
+        let complete_url = format!("{}{parent}/{file_path}", self.url);
+        let response = requests::get(complete_url)?;
+
+        if response.status() == StatusCode::NOT_FOUND {
+            return Ok(None);
+        }
+
+        // Return an error if something went wrong with the request (apart from not found error)
+        if !response.status().is_success() {
+            return Err(RepositoryError::UnsuccessfulRequest(response.status()));
+        }
+
+        Ok(Some(response))
     }
 }

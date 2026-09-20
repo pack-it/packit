@@ -8,6 +8,23 @@ use crate::utils::packit_version::packit_version;
 
 const USER_AGENT: &str = concat!("Packit/", packit_version!());
 
+/// Checks if a path escapes the parent directory. Returns true if it does, false if not.
+pub fn path_escapes_dir(parent: &str, path: &str) -> bool {
+    let mut components = Vec::new();
+    for component in path.split('/') {
+        if component != ".." {
+            components.push(component);
+            continue;
+        }
+
+        if components.pop().is_none() {
+            return true;
+        }
+    }
+
+    !components.join("/").starts_with(&parent)
+}
+
 /// Checks if a URL exists by sending a header request.
 /// A `GET` method is used as a fallback in case of a head request being blocked.
 /// Returns true if the URL exists, false if not.
