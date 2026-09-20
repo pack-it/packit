@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Caching of the metadata from all requests to metadata repositories.
 - The verifier can now recover parts of syntactically wrong toml files, specifically the `Config.toml` and `Register.toml`.
 - Support for multiple repositories conflict checking, using the `compatible_repositories` field in the `Config.toml` and `repository.toml`.
+- The checks for paths defined in the metadata that escape their parent directory.
 
 ### Changes
 - The build tests are now turned off by default and can be turned on with `--execute-build-test` (`--skip-build-test` is removed).

@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use bytes::Bytes;
-use reqwest::{IntoUrl, StatusCode};
+use reqwest::{IntoUrl, StatusCode, blocking::Response};
+use url::Url;
 
 use crate::{
+    cli::display::logging::debug,
     config::Repository,
     installer::types::{PackageName, Version},
     repositories::{
@@ -61,31 +63,17 @@ impl MetadataProviderImpl for WebMetadataProvider {
     }
 
     fn read_file_bytes(&self, package: &PackageName, file_path: &str) -> Result<Option<Bytes>> {
-        let response = requests::get(format!("{}/packages/{package}/{file_path}", self.url))?;
-
-        if response.status() == StatusCode::NOT_FOUND {
+        let Some(response) = self.request_file(package, file_path)? else {
             return Ok(None);
-        }
-
-        // Return an error if something went wrong with the request (apart from not found error)
-        if !response.status().is_success() {
-            return Err(RepositoryError::UnsuccessfulRequest(response.status()));
-        }
+        };
 
         Ok(Some(response.bytes()?))
     }
 
     fn read_file(&self, package: &PackageName, file_path: &str) -> Result<Option<String>> {
-        let response = requests::get(format!("{}/packages/{package}/{file_path}", self.url))?;
-
-        if response.status() == StatusCode::NOT_FOUND {
+        let Some(response) = self.request_file(package, file_path)? else {
             return Ok(None);
-        }
-
-        // Return an error if something went wrong with the request (apart from not found error)
-        if !response.status().is_success() {
-            return Err(RepositoryError::UnsuccessfulRequest(response.status()));
-        }
+        };
 
         Ok(Some(response.text()?))
     }
@@ -99,9 +87,16 @@ impl WebMetadataProvider {
             return None;
         }
 
-        Some(Self {
-            url: repository.url.clone(),
-        })
+        // Use `Url::parse` to normalize the url
+        let url = match Url::parse(&repository.url) {
+            Ok(url) => url.to_string(),
+            Err(e) => {
+                debug!("Invalid repository url\n{}", e.to_string());
+                return None;
+            },
+        };
+
+        Some(Self { url })
     }
 
     /// Requests metadata from the given url.
@@ -116,5 +111,30 @@ impl WebMetadataProvider {
         }
 
         Ok(response.text()?)
+    }
+
+    /// Requests a file from the specified package. Returns a `Response` if the request was successful.
+    /// `RepositoryError::UnsuccessfulRequest` is returned in case of failure. If the given `file_path`
+    /// escapes the parent directory `RepositoryError::EscapeDirectoryError` is returned.
+    /// If the response status is 404 `None` is returned.
+    fn request_file(&self, package: &PackageName, file_path: &str) -> Result<Option<Response>> {
+        let parent = format!("{}/packages/{package}", self.url);
+        let path = Url::parse(&format!("{parent}/{file_path}"))?.to_string();
+        if !path.starts_with(&parent) {
+            return Err(RepositoryError::EscapeDirectoryError(file_path.to_string()));
+        }
+
+        let response = requests::get(path)?;
+
+        if response.status() == StatusCode::NOT_FOUND {
+            return Ok(None);
+        }
+
+        // Return an error if something went wrong with the request (apart from not found error)
+        if !response.status().is_success() {
+            return Err(RepositoryError::UnsuccessfulRequest(response.status()));
+        }
+
+        Ok(Some(response))
     }
 }

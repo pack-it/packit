@@ -56,11 +56,14 @@ pub enum RepositoryError {
     #[error("Request returned an unsuccessful status code '{0}'")]
     UnsuccessfulRequest(reqwest::StatusCode),
 
-    #[error("Error while interacting with filesystem")]
-    IOError(#[from] ioerror::IOError),
+    #[error("The path '{0}' escapes its parent directory")]
+    EscapeDirectoryError(String),
 
     #[error("Cannot request repository file from external repository")]
     RequestError(Arc<reqwest::Error>),
+
+    #[error("Error while interacting with filesystem")]
+    IOError(#[from] ioerror::IOError),
 
     #[error("Cannot parse repository file")]
     ParseError(#[from] toml::de::Error),
