@@ -98,7 +98,7 @@ impl FileSystemMetadataProvider {
         }
 
         Some(Self {
-            path: PathBuf::from(&repository.url),
+            path: io::normalize_path(&PathBuf::from(&repository.url)),
         })
     }
 

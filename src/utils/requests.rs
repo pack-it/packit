@@ -9,6 +9,7 @@ use crate::utils::packit_version::packit_version;
 const USER_AGENT: &str = concat!("Packit/", packit_version!());
 
 /// Checks if a path escapes the parent directory. Returns true if it does, false if not.
+/// Note that the parent path should be normalized.
 pub fn path_escapes_dir(parent: &str, path: &str) -> bool {
     // Remove prefix and suffix slashes
     let parent = parent.trim_matches('/');
@@ -16,6 +17,10 @@ pub fn path_escapes_dir(parent: &str, path: &str) -> bool {
 
     let mut components = Vec::new();
     for component in path.split('/') {
+        if component == "." && !components.is_empty() {
+            continue;
+        }
+
         if component != ".." {
             components.push(component);
             continue;
@@ -93,11 +98,37 @@ mod tests {
     }
 
     #[test]
+    fn no_escape_relative_path() {
+        let parent = "./some/parent";
+        let path = "./some/parent/foo/child";
+        assert!(!path_escapes_dir(parent, path));
+
+        let parent = "./some/parent";
+        let path = "./some/./././parent/foo/child";
+        assert!(!path_escapes_dir(parent, path));
+    }
+
+    #[test]
+    fn escape_relative_path() {
+        let parent = "./.";
+        let path = "././..";
+        assert!(path_escapes_dir(parent, path));
+
+        let parent = "./some/path";
+        let path = "./some/./../path";
+        assert!(path_escapes_dir(parent, path));
+    }
+
+    #[test]
     fn empty_parent_paths() {
         let parent = "";
         let path = "/some/random/path";
         assert!(!path_escapes_dir(parent, path));
         let parent = "/";
+        assert!(!path_escapes_dir(parent, path));
+        let path = "..";
+        assert!(path_escapes_dir(parent, path));
+        let path = ".";
         assert!(!path_escapes_dir(parent, path));
     }
 

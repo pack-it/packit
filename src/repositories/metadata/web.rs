@@ -105,8 +105,9 @@ impl WebMetadataProvider {
     }
 
     /// Requests a file from the specified package. Returns a `Response` if the request was successful.
-    /// `RepositoryError::UnsuccessfulRequest` is returned in case of failure.
-    /// If the given `file_path` escapes the parent directory or if 404 is returned `None` is returned.
+    /// `RepositoryError::UnsuccessfulRequest` is returned in case of failure. If the given `file_path`
+    /// escapes the parent directory `RepositoryError::EscapeDirectoryError` is returned.
+    /// If the response status is 404 `None` is returned.
     fn request_file(&self, package: &PackageName, file_path: &str) -> Result<Option<Response>> {
         let parent = format!("packages/{package}");
         let path = format!("{parent}/{file_path}");
