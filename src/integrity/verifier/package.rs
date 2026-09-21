@@ -75,14 +75,7 @@ fn check_package_alterations(package_id: &PackageId, register: &PackageRegister,
     };
 
     let local_meta_handler = LocalMetaHandler::new(&config.prefix_directory).get_package(package_id);
-    let local_metadata = match local_meta_handler.read_metadata() {
-        Ok(local_metadata) => local_metadata,
-        Err(e) => {
-            // TODO: remove early return when local metadata checks are implemented
-            debug!(err: e, "Cannot read local metadata, skipping check");
-            return Ok(false);
-        },
-    };
+    let local_metadata = local_meta_handler.read_metadata()?;
 
     // Create prebuild provider
     let Some(prebuild_provider) = PrebuildProvider::create_from_repository(&repository) else {
@@ -252,14 +245,7 @@ pub fn check_forbidden_link(packages: &Vec<PackageId>, register: &PackageRegiste
 fn check_forbidden_package_link(package_id: &PackageId, register: &PackageRegister, config: &Config) -> Result<Option<PackageName>> {
     // Read local metadata
     let local_meta_handler = LocalMetaHandler::new(&config.prefix_directory).get_package(package_id);
-    let local_metadata = match local_meta_handler.read_metadata() {
-        Ok(local_metadata) => local_metadata,
-        Err(e) => {
-            // TODO: remove early return when local metadata checks are implemented
-            debug!(err: e, "Cannot read local metadata, skipping check");
-            return Ok(None);
-        },
-    };
+    let local_metadata = local_meta_handler.read_metadata()?;
 
     // Return early if symlinking is allowed according to the metadata
     if !local_metadata.skip_symlinking {
@@ -451,14 +437,7 @@ fn missing_dependencies_impl(package: &InstalledPackageVersion, config: &Config)
 
     // Read local metadata
     let local_meta_handler = LocalMetaHandler::new(&config.prefix_directory).get_package(package_id);
-    let local_metadata = match local_meta_handler.read_metadata() {
-        Ok(local_metadata) => local_metadata,
-        Err(e) => {
-            // TODO: remove early return when local metadata checks are implemented
-            debug!(err: e, "Cannot read local metadata, skipping check");
-            return Ok(Vec::new());
-        },
-    };
+    let local_metadata = local_meta_handler.read_metadata()?;
 
     // Check if each dependency is satisfied
     for metadata_dependency in local_metadata.dependencies {
@@ -504,14 +483,7 @@ fn invalid_dependencies_impl(package: &InstalledPackageVersion, config: &Config)
 
     // Read local metadata
     let local_meta_handler = LocalMetaHandler::new(&config.prefix_directory).get_package(package_id);
-    let local_metadata = match local_meta_handler.read_metadata() {
-        Ok(local_metadata) => local_metadata,
-        Err(e) => {
-            // TODO: remove early return when local metadata checks are implemented
-            debug!(err: e, "Cannot read local metadata, skipping check");
-            return Ok(Vec::new());
-        },
-    };
+    let local_metadata = local_meta_handler.read_metadata()?;
 
     // Check if there is a package dependency which doesn't satisfy any of the metadata dependencies
     for dependency in &package.dependencies {
@@ -641,14 +613,7 @@ fn check_package_test(package_id: &PackageId, register: &PackageRegister, config
     let package_version = register.get_package_version(package_id).expect("Expected package to exist");
 
     let local_meta_handler = LocalMetaHandler::new(&config.prefix_directory).get_package(package_id);
-    let local_metadata = match local_meta_handler.read_metadata() {
-        Ok(local_metadata) => local_metadata,
-        Err(e) => {
-            // TODO: remove early return when local metadata checks are implemented
-            debug!(err: e, "Cannot read local metadata, skipping check");
-            return Ok(false);
-        },
-    };
+    let local_metadata = local_meta_handler.read_metadata()?;
 
     // Copy test script to tempfile if it exists
     let script_text = match local_meta_handler.read_test_script() {
