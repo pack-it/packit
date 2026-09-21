@@ -28,12 +28,10 @@ pub struct InstalledPackageVersion {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prebuilds_repository_provider: Option<String>,
 
-    #[serde(default)]
-    #[serde(skip_serializing_if = "HashSet::is_empty")]
+    #[serde(default, skip_serializing_if = "HashSet::is_empty")]
     pub dependencies: HashSet<PackageId>,
 
-    #[serde(default)]
-    #[serde(skip_serializing_if = "HashSet::is_empty")]
+    #[serde(default, skip_serializing_if = "HashSet::is_empty")]
     pub dependents: HashSet<PackageId>,
 
     pub install_path: PathBuf,

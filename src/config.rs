@@ -73,7 +73,7 @@ pub struct Repository {
     pub disable_prebuilds: bool,
 
     /// A set of compatible repositories
-    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub compatible_repositories: Vec<String>,
 }
 

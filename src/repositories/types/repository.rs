@@ -13,7 +13,7 @@ pub struct RepositoryMeta {
     pub maintainers: Vec<String>,
     pub required_packit_version: Version,
 
-    #[serde(skip_serializing_if = "Licenses::is_unknown", default)]
+    #[serde(default, skip_serializing_if = "Licenses::is_unknown")]
     pub license: Licenses,
 
     /// Specifies a suggestion of a prebuild repository to use with this metadata repository.
@@ -25,6 +25,6 @@ pub struct RepositoryMeta {
     pub prebuilds_provider: Option<String>,
 
     /// A set of compatible repositories
-    #[serde(skip_serializing_if = "HashSet::is_empty", default)]
+    #[serde(default, skip_serializing_if = "HashSet::is_empty")]
     pub compatible_repositories: HashSet<String>,
 }

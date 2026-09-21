@@ -43,7 +43,8 @@ pub struct Source {
     pub license_include: HashSet<String>,
     pub apply_patches_in: Option<String>,
 
-    #[serde(default, deserialize_with = "Source::deserialize_patches", skip_serializing_if = "HashMap::is_empty")]
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(deserialize_with = "Source::deserialize_patches")]
     pub patches: HashMap<u32, Patch>,
 }
 
