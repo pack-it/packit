@@ -51,7 +51,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rust_version: [1.88.0, stable]
+        rust_version: [stable]
         os: [ubuntu-latest]
 
     steps:
