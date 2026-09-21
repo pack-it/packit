@@ -18,7 +18,7 @@ pub enum PackageIdError {
 }
 
 /// Identifies a package with a name and version.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PackageId {
     pub name: PackageName,
     pub version: Version,

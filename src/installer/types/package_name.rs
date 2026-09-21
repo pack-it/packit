@@ -17,7 +17,7 @@ pub enum PackageNameError {
 }
 
 /// Represents the name of a package.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PackageName(String);
 
 impl PackageName {

@@ -4,7 +4,7 @@ use std::{path::PathBuf, sync::Arc};
 use thiserror::Error;
 
 /// Small `std::io::Error` wrapper with better messages
-#[derive(Error, Debug, Clone)]
+#[derive(Error, Clone, Debug)]
 pub enum IOError {
     #[error(transparent)]
     Standard(Arc<std::io::Error>),

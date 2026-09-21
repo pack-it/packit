@@ -16,7 +16,7 @@ use crate::{
 };
 
 /// Represents the package version metadata, containing dependencies and targets.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct PackageVersionMeta {
     pub version: Version,
     pub required_packit_version: Option<Version>,

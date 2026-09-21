@@ -38,7 +38,7 @@ pub enum TargetBoundsError {
 }
 
 /// Represents a target, a target can be a group (e.g. `Unix` for `MacOs` and `Linux`), an operating system or a specific architecture.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum TargetName {
     Architecture(TargetArchitecture),
     Os(Os),
@@ -104,7 +104,7 @@ impl TargetName {
 }
 
 /// Represents the name of an addition.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TargetAddition(String);
 
 impl FromStr for TargetAddition {
@@ -130,7 +130,7 @@ impl Display for TargetAddition {
 }
 
 /// Represents the bounds of a target. Specifying its name, optionally an addition (e.g. Linux distro) and possible versions.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TargetBounds {
     pub name: TargetName,
     pub addition: Option<TargetAddition>,

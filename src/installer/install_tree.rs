@@ -24,7 +24,7 @@ use crate::{
 };
 
 /// Represents the different types of installing a package.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum InstallType {
     Prebuild,
     Build,
@@ -33,7 +33,7 @@ pub enum InstallType {
 }
 
 /// Represents the label for the install tree.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct InstallLabel {
     install_type: InstallType,
     is_dependency: bool,

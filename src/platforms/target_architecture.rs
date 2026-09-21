@@ -4,7 +4,7 @@ use std::fmt::Display;
 use crate::platforms::Os;
 
 /// Represents all supported architectures, contains an `Unknown` type which could hold an unknown architecture as a string.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum TargetArchitecture {
     MacOsX86_64,
     MacOsAarch64,

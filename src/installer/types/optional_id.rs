@@ -4,7 +4,7 @@ use std::{fmt::Display, str::FromStr};
 use crate::installer::types::{PackageId, PackageName, Version, package_id::PackageIdError};
 
 /// An optional package id, which holds a package name and optionally a version.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct OptionalPackageId {
     pub name: PackageName,
     pub version: Option<Version>,

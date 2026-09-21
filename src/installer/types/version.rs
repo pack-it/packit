@@ -33,7 +33,7 @@ pub enum VersionError {
 }
 
 /// Represents a version.
-#[derive(Debug, Eq, Clone)]
+#[derive(Clone, Debug, Eq)]
 pub struct Version {
     numbers: Vec<VersionNumber>,
 }

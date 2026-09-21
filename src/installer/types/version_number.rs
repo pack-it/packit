@@ -4,7 +4,7 @@ use std::{cmp::Ordering, fmt::Display, hash::Hash, str::FromStr};
 use crate::installer::types::VersionError;
 
 /// Represents a single number in a `Version`.
-#[derive(Debug, Eq, Clone)]
+#[derive(Clone, Debug, Eq)]
 pub struct VersionNumber {
     original: String,
     number: u32,

@@ -12,7 +12,7 @@ use crate::{
 };
 
 /// The errors that occur when requesting metadata from a repository.
-#[derive(Error, Debug, Clone)]
+#[derive(Error, Clone, Debug)]
 pub enum RepositoryError {
     #[error("Cannot find repository '{repository_id}'")]
     RepositoryNotFoundError {

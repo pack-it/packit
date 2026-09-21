@@ -16,7 +16,7 @@ pub enum LicenseError {
 }
 
 /// Represents a license identifier.
-#[derive(Serialize, Debug, Clone)]
+#[derive(Serialize, Clone, Debug)]
 pub struct LicenseIdentifier(String);
 
 impl<'de> Deserialize<'de> for LicenseIdentifier {
@@ -57,7 +57,7 @@ impl PartialEq for LicenseIdentifier {
 
 /// Wrapper to differentiate between different License types in metadata files.
 #[cfg_attr(test, derive(PartialEq))]
-#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
 #[serde(untagged)]
 pub enum Licenses {
     #[default]

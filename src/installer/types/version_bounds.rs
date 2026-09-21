@@ -6,7 +6,7 @@ use serde::Deserialize;
 use crate::installer::types::{Version, VersionError};
 
 /// Holds different types of version bounds.
-#[derive(Debug, Clone, Hash, PartialEq, Eq, Deserialize)]
+#[derive(Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum VersionBounds {
     Range(Version, Version),
     IncludingRange(Version, Version),
