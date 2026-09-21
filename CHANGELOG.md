@@ -4,7 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
-## [Unreleased](https://github.com/pack-it/packit/compare/0.0.4...HEAD)
+## [Unreleased](https://github.com/pack-it/packit/compare/0.0.5...HEAD)
+
+
+## [v0.0.5](https://github.com/pack-it/packit/compare/0.0.4...0.0.5) - 2026-09-21
 
 ### Added
 - The integration tests to test Packit.

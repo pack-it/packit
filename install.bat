@@ -48,7 +48,7 @@ if exist "%CONFIG_DIR%" (
 exit /b %STATUS_CODE%
 :cleanup_end
 
-set "VERSION=0.0.4"
+set "VERSION=0.0.5"
 set "REVISION=0"
 
 echo Installing Packit %VERSION% (%REVISION%)
@@ -244,7 +244,7 @@ if not exist "%CONFIG_DIR%" (
 )
 
 echo Initializing Packit
-"%PREFIX_DIR%\packages\packit\%VERSION%\bin\packit.exe" init
+"%PREFIX_DIR%\packages\packit\%VERSION%\bin\packit.exe" init  --revision %REVISION%
 if ERRORLEVEL 1 goto cleanup
 echo Initializing Packit successful
 
