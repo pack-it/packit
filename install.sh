@@ -63,7 +63,7 @@ main() {
 trap cleanup INT TERM EXIT
 SHOULD_CLEANUP=1
 
-VERSION="0.0.4"
+VERSION="0.0.5"
 REVISION="0"
 CURRENT_OS="$(uname -s)"
 
@@ -229,7 +229,7 @@ sudo chmod -R 755 "$CONFIG_DIR"
 sudo chown -R $USERNAME "$CONFIG_DIR"
 
 echo "Initializing Packit"
-"$PREFIX_DIR/packages/packit/$VERSION/bin/packit" init
+"$PREFIX_DIR/packages/packit/$VERSION/bin/packit" init --revision $REVISION
 echo "Initializing Packit successful"
 
 # Make sure that pit works

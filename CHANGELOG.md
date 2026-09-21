@@ -4,7 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
-## [Unreleased](https://github.com/pack-it/packit/compare/0.0.4...HEAD)
+## [Unreleased](https://github.com/pack-it/packit/compare/0.0.5...HEAD)
+
+
+## [v0.0.5](https://github.com/pack-it/packit/compare/0.0.4...0.0.5) - 2026-09-21
 
 ### Added
 - The integration tests to test Packit.
@@ -13,7 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The `--exclude` flag for the `pit util package` command, to exclude certain packages when using the `--all` flag.
 - New and improved documentation.
 - The notice fields in the metadata to show a message before or after an installation.
-- The local metadata storage, which stores the metadata of installed packages.
+- The local metadata storage, which stores the metadata of installed packages. (BREAKING)
 - Parsing for target additions, which doesn't allow for empty additions or additions with invalid characters.
 - License identifiers are now checked for invalid characters and being empty.
 - The `PACKIT_DISABLE_PROMPTS` environment variable, which triggers an error when Packit tries to prompt.
@@ -21,13 +24,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The `config reset` command, to reset the Packit configuration file to its default.
 - Caching of the metadata from all requests to metadata repositories.
 - The verifier can now recover parts of syntactically wrong toml files, specifically the `Config.toml` and `Register.toml`.
-- Support for multiple repositories conflict checking, using the `compatible_repositories` field in the `Config.toml` and `repository.toml`.
+- Support for multiple repositories conflict checking, using the `compatible_repositories` field in the `Config.toml` and `repository.toml`. (BREAKING)
 - The checks for paths defined in the metadata that escape their parent directory.
 
 ### Changes
 - The build tests are now turned off by default and can be turned on with `--execute-build-test` (`--skip-build-test` is removed).
-- Package names are now always lowercase, the commands translate uppercase to lowercase.
-- The parsing for dependencies and targets bounds doesn't allow for `name@` anymore.
+- Package names are now always lowercase, the commands translate uppercase to lowercase. (BREAKING)
+- The parsing for dependencies and targets bounds doesn't allow for `name@` anymore. (BREAKING)
 - The `pit util meta-check` command now returns a different exit code, dependending on the most urgent issue type found.
 - The `pit init` command now allows you to specify the revision of the Packit install.
 - The package resolver now skips repository compatibility checks if the package is `packit`.

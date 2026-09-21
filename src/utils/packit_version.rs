@@ -13,7 +13,7 @@ pub(crate) use packit_version;
 
 macro_rules! packit_version_name {
     () => {
-        "The Build Commander"
+        "The Local Inspector"
     };
 }
 pub(crate) use packit_version_name;
