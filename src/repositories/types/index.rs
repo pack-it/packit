@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::installer::types::PackageName;
 
 /// An index of all supported packages in the repository.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct IndexMeta {
     pub supported_packages: HashSet<PackageName>,
 }

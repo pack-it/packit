@@ -4,7 +4,7 @@ use std::{fmt::Display, str::FromStr};
 use crate::installer::types::{PackageId, PackageName, Version, package_id::PackageIdError};
 
 /// An optional package id, which holds a package name and optionally a version.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct OptionalPackageId {
     pub name: PackageName,
     pub version: Option<Version>,
@@ -131,7 +131,9 @@ pub mod tests {
 
         assert_eq!(
             OptionalPackageId::from_str("3.4.1"),
-            Err(PackageIdError::PackageNameError(PackageNameError::InvalidPackageName))
+            Err(PackageIdError::PackageNameError(PackageNameError::InvalidPackageName(
+                "3.4.1".into()
+            )))
         );
     }
 
@@ -139,7 +141,7 @@ pub mod tests {
     fn from_str_empty_optional() {
         assert_eq!(
             OptionalPackageId::from_str(""),
-            Err(PackageIdError::PackageNameError(PackageNameError::InvalidPackageName))
+            Err(PackageIdError::PackageNameError(PackageNameError::InvalidPackageName("".into())))
         )
     }
 

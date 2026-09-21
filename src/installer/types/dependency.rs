@@ -15,7 +15,7 @@ pub enum DependencyError {
 
 /// Holds a dependency name and its allowed versions.
 #[cfg_attr(test, derive(PartialEq))]
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub struct Dependency {
     name: PackageName,
     version_intervals: VersionIntervals,

@@ -57,7 +57,7 @@ impl HandleCommand for LinkArgs {
 
         // Show warning if forced
         if self.force {
-            warning!("Forcing symlink can cause problems, please be carefull when using '--force'");
+            warning!("Forcing symlink can cause problems, please be careful when using '--force'");
         }
 
         // Get active package version

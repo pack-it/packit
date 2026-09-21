@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::collections::HashSet;
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Check {
     // Initial checks (which verify methods that the verifier uses internally)
     Permissions,
@@ -99,7 +99,7 @@ impl Check {
         }
     }
 
-    /// Gets all intial checks.
+    /// Gets all initial checks.
     pub const fn get_initial_checks<'a>() -> &'a [Self] {
         &[
             Self::Permissions,

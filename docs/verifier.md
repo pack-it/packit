@@ -29,27 +29,27 @@ The following categories of checks exist:
 ## All checks
 This is a list of checks which are currently implemented in the verifier. With a type and a short explanation for each check.
 
-| Check Type          | Type    | Short Explanation                                                                                                                                                                                                        |
-|---------------------|---------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Permissions         | Initial | Checks the permissions of the prefix directory and all its subdirectories.                                                                                                                                               |
-| ConfigExistence     | Initial | Checks if the `Config.toml` exists.                                                                                                                                                                                      |
-| ConfigSyntax        | Initial | Checks if the `Config.toml` can be parsed.                                                                                                                                                                               |
-| RegisterExistence   | Initial | Checks if the `Register.toml` exists.                                                                                                                                                                                    |
-| RegisterSyntax      | Initial | Checks if the `Register.toml` can be parsed.                                                                                                                                                                             |
-| StrayDirectory      | General | Checks for directories which shouldn't be in the `prefix/packages` directory. This will be any directory which is empty or doesn't have the `<package-name>/<version>` structure.                                        |
-| PackitGroup         | General | Checks if the packit group exists if multiuser is enabled in the `Config.toml`.                                                                                                                                          |
-| InvalidFiles | General | Checks directories for invalid files (files which shouldn't be there).
-| StorageConsistency  | Package | Checks if packages in the register also exist in the package storage in the prefix directory.                                                                                                                            |
-| RegisterConsistency | Package | Checks if packages in storage also exist in the register. Note that this is package related, but cannot only check the specified packages, because packages are based on what's found in storage.                        |
-| LocalMetadataExistence | Package | Checks if packages have local metadata.                         |
-| DependencyTree      | Package | Checks if the dependency tree is broken based on the dependencies specified in the register.                                                                                                                             |
-| Alterations         | Package | Checks for alterations in packages using a checksum which is compared to the checksum from the pre-build.                                                                                                                |
-| MissingDependents   | Package | Checks for missing dependents of packages in the register.                                                                                                                                                               |
-| InvalidDependents   | Package | Checks for invalid dependents of a package in the register. Where an invalid dependent is a package which doesn't exist or a package which doesn't have the given package as a dependency.                               |
-| InvalidActive       | Package | Checks if a package active version is invalid. It's invalid if: the link (destination) doesn't exist, if the package version doesn't exist or if the version specified in the register doesn't match the linked version. |
-| ForbiddenLink       | Package | Checks packages with a forbidden link. Where a forbidden link is a package which is symlinked while it shouldn't be according to the repository metadata.                                                                |
-| MissingLink         | Package | Checks if symlinks are missing for packages.                                                                                                                                                                             |
-| MissingDependencies | Package | Checks for missing dependencies in packages. A dependency is missing if one of the dependencies specified in the repository metadata is not satisfied by the dependencies from the register.                             |
-| InvalidDependencies | Package | Checks for invalid dependencies in packages. A dependency from the register is invalid if it doesn't satisfy any of the dependencies specified in the repository metadata.                                               |
-| MissingDependencySymlinks | Package | Checks for missing or incorrect symlinks in the dependencies directory of a certain package. In this case incorrect means that the symlink points to the wrong destination.
-| Test                | Package | Checks if the test from the repository metadata for a package works. Check is skipped when the `test_requirements` are not satisfied.                                                                                    |
+| Check Type                | Type    | Short Explanation                                                               |
+| ------------------------- | ------- | ------------------------------------------------------------------------------- |
+| Permissions               | Initial | Checks the permissions of the prefix directory and all its subdirectories.      |
+| ConfigExistence           | Initial | Checks if the `Config.toml` exists.                                             |
+| ConfigSyntax              | Initial | Checks if the `Config.toml` can be parsed.                                      |
+| RegisterExistence         | Initial | Checks if the `Register.toml` exists.                                           |
+| RegisterSyntax            | Initial | Checks if the `Register.toml` can be parsed.                                    |
+| StrayDirectory            | General | Checks for directories which shouldn't be in the `prefix/packages` directory. This will be any directory which is empty or doesn't have the `<package-name>/<version>` structure. |
+| PackitGroup               | General | Checks if the packit group exists if multiuser is enabled in the `Config.toml`. |
+| InvalidFiles              | General | Checks directories for invalid files (files which shouldn't be there).          |
+| StorageConsistency        | Package | Checks if packages in the register also exist in the package storage in the prefix directory. |
+| RegisterConsistency       | Package | Checks if packages in storage also exist in the register. Note that this is package related, but cannot only check the specified packages, because packages are based on what's found in storage. |
+| LocalMetadataExistence    | Package | Checks if packages have local metadata.                                         |
+| DependencyTree            | Package | Checks if the dependency tree is broken based on the dependencies specified in the register. |
+| Alterations               | Package | Checks for alterations in packages using a checksum which is compared to the checksum from the pre-build. |
+| MissingDependents         | Package | Checks for missing dependents of packages in the register.                      |
+| InvalidDependents         | Package | Checks for invalid dependents of a package in the register. Where an invalid dependent is a package which doesn't exist or a package which doesn't have the given package as a dependency. |
+| InvalidActive             | Package | Checks if a package active version is invalid. It's invalid if: the link (destination) doesn't exist, if the package version doesn't exist or if the version specified in the register doesn't match the linked version. |
+| ForbiddenLink             | Package | Checks packages with a forbidden link. Where a forbidden link is a package which is symlinked while it shouldn't be according to the repository metadata. |
+| MissingLink               | Package | Checks if symlinks are missing for packages.                                    |
+| MissingDependencies       | Package | Checks for missing dependencies in packages. A dependency is missing if one of the dependencies specified in the repository metadata is not satisfied by the dependencies from the register. |
+| InvalidDependencies       | Package | Checks for invalid dependencies in packages. A dependency from the register is invalid if it doesn't satisfy any of the dependencies specified in the repository metadata. |
+| MissingDependencySymlinks | Package | Checks for missing or incorrect symlinks in the dependencies directory of a certain package. In this case incorrect means that the symlink points to the wrong destination. |
+| Test                      | Package | Checks if the test from the repository metadata for a package works. Check is skipped when the `test_requirements` are not satisfied. |

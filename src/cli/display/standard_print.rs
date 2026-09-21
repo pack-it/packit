@@ -44,7 +44,7 @@ impl<T: Iterator<Item = impl Display>> DisplayJoined for T {
 }
 
 /// Gets the joined string with the given separator or returns a styled `None` string if the given list is empty.
-pub fn get_joined_or_none(items: &Vec<String>, separator: &str) -> String {
+pub fn get_joined_or_none(items: &[String], separator: &str) -> String {
     if items.is_empty() {
         return "None".dimmed().to_string();
     }

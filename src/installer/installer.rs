@@ -261,7 +261,7 @@ impl<'a> Installer<'a> {
             Some(installed_package_version) => installed_package_version,
             None => {
                 return Err(InstallerError::UnreachableError {
-                    msg: "Package version cannot be found eventhough it was inserted right before".to_string(),
+                    msg: "Package version cannot be found even though it was inserted right before".to_string(),
                 });
             },
         };
@@ -322,16 +322,17 @@ impl<'a> Installer<'a> {
             self.options.verbose,
         );
 
+        let message = format!("Executing preinstall of {}", package_id.style());
+
         // Only show a spinner when not verbose
         if self.options.verbose {
-            println!("Executing preinstall script of {}", package_id.style());
+            println!("{message}");
             scripts::run_pre_script(&script_data, install_directory)?;
             return Ok(());
         }
 
         // Run script with spinner shown
-        let spinner_message = format!("Executing preinstall of {}", package_id.style());
-        let spinner = Spinner::new(spinner_message);
+        let spinner = Spinner::new(message);
         spinner.show();
         scripts::run_pre_script(&script_data, install_directory)?;
         spinner.finish();
@@ -364,7 +365,7 @@ impl<'a> Installer<'a> {
     /// Returns an `InstallerError::ChecksumError` if the pre-build checksum doesn't match.
     fn download_prebuild(&self, repository_id: &str, package: &PackageId, revision: u64, destination_dir: impl AsRef<Path>) -> Result<()> {
         // Get the id of the prebuild
-        let prebuilds_list = self.repository_manager.read_prebuilds_list(repository_id, &package)?;
+        let prebuilds_list = self.repository_manager.read_prebuilds_list(repository_id, package)?;
         let (prebuild_id, _) = prebuilds_list.get_best_prebuild(&Target::current()).ok_or(InstallerError::NoSupportedPrebuild {
             package_id: package.clone(),
         })?;
@@ -424,16 +425,17 @@ impl<'a> Installer<'a> {
             self.options.verbose,
         );
 
+        let message = format!("Executing postinstall of {}", package_id.style());
+
         // Only show a spinner when not verbose
         if self.options.verbose {
-            println!("Executing postinstall script of {}", package_id.style());
+            println!("{message}");
             scripts::run_post_script(&script_data)?;
             return Ok(());
         }
 
         // Run script with spinner shown
-        let spinner_message = format!("Executing postinstall of {}", package_id.style());
-        let spinner = Spinner::new(spinner_message);
+        let spinner = Spinner::new(message);
         spinner.show();
         scripts::run_post_script(&script_data)?;
         spinner.finish();
@@ -501,7 +503,7 @@ impl<'a> Installer<'a> {
             }
         }
 
-        // If package is installed succesfully, set it to active
+        // If package is installed successfully, set it to active
         if should_set_active {
             Symlinker::new(self.config).set_active(self.register, package_id, should_symlink)?;
         }
@@ -556,14 +558,14 @@ impl<'a> Installer<'a> {
         }
 
         // Only create a spinner when not verbose
+        let message = format!("Testing {}", package_id.style());
         let spinner = match self.options.verbose {
             true => {
-                println!("Testing {}", package_id.style());
+                println!("{message}");
                 None
             },
             false => {
-                let spinner_message = format!("Testing {}", package_id.style());
-                let spinner = Spinner::new(spinner_message);
+                let spinner = Spinner::new(message);
                 spinner.show();
                 Some(spinner)
             },
@@ -673,7 +675,7 @@ impl<'a> Installer<'a> {
             Some(package) => package,
             None => {
                 return Err(InstallerError::UnreachableError {
-                    msg: "Package cannot be found eventhough it was found before".to_string(),
+                    msg: "Package cannot be found even though it was found before".to_string(),
                 });
             },
         };
@@ -683,7 +685,7 @@ impl<'a> Installer<'a> {
             Some(installed_package_version) => installed_package_version,
             None => {
                 return Err(InstallerError::UnreachableError {
-                    msg: "Package version cannot be found eventhough it was found before".to_string(),
+                    msg: "Package version cannot be found even though it was found before".to_string(),
                 });
             },
         };
@@ -764,7 +766,7 @@ impl<'a> Installer<'a> {
         let active_path = self.config.prefix_directory.join("active").join(package_name);
         match active_path.exists() {
             true => symlink::remove_symlink(&active_path)?,
-            false => warning!("Active symlink did not exist, was the package even installed succesfully?"),
+            false => warning!("Active symlink did not exist, was the package even installed successfully?"),
         }
 
         // Check if package was symlinked
@@ -836,16 +838,17 @@ impl<'a> Installer<'a> {
             self.options.verbose,
         );
 
+        let message = format!("Executing uninstall script of {}", package_id.style());
+
         // Only show spinner when not verbose
         if self.options.verbose {
-            println!("Executing uninstall script of {}", package_id.style());
+            println!("{message}");
             scripts::run_uninstall_script(&script_data)?;
             return Ok(());
         }
 
         // Run script with spinner shown
-        let spinner_message = format!("Executing uninstall script of {}", package_id.style());
-        let spinner = Spinner::new(spinner_message);
+        let spinner = Spinner::new(message);
         spinner.show();
         scripts::run_uninstall_script(&script_data)?;
         spinner.finish();
@@ -883,11 +886,11 @@ impl<'a> Installer<'a> {
         let mut unsatisfied_dependents = HashSet::new();
         for dependent in &old_package.dependents {
             // Retrieve local metadata of dependent
-            let local_meta_handler = LocalMetaHandler::new(&self.config.prefix_directory).get_package(&dependent);
+            let local_meta_handler = LocalMetaHandler::new(&self.config.prefix_directory).get_package(dependent);
             let local_metadata = local_meta_handler.read_metadata()?;
             let Some(dependency) = local_metadata.dependencies.iter().find(|x| *x.get_name() == old_package.package_id.name) else {
                 warning!(
-                    "Dependent {} is not a dependent of {} eventhough it should be",
+                    "Dependent {} is not a dependent of {} even though it should be",
                     dependent.style(),
                     old_package.package_id.style()
                 );
@@ -934,7 +937,7 @@ impl<'a> Installer<'a> {
             symlinker.set_active(self.register, &new_package_id, package.symlinked)?;
         }
 
-        print!("The new package version {} has been succesfully installed", new_version.style());
+        print!("The new package version {} has been successfully installed", new_version.style());
 
         // Only uninstall the package if the old package no longer has dependents
         let old_package = self.register.get_package_version_mut(&old_package_id).expect("Expected old package to still exist");

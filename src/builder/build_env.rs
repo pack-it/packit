@@ -97,7 +97,7 @@ impl<'a> TryInto<Environment> for BuildEnv<'a> {
         #[cfg(target_os = "macos")]
         {
             env.insert_var("PERL", "/usr/bin/perl");
-            env.insert_var("ZERO_AR_DATE", "1"); // Ensure no arbritary timestamps are in builds
+            env.insert_var("ZERO_AR_DATE", "1"); // Ensure no arbitrary timestamps are in builds
 
             // TODO: add xcode paths
         }

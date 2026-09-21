@@ -85,7 +85,7 @@ pub enum IssueType {
     // Cannot continue with checks
     Fatal,
 
-    // The metadata contains information which breaks certain logic, but continueing is possible
+    // The metadata contains information which breaks certain logic, but continuing is possible
     Breaking,
 
     // The metadata is correct and functions, however it's unconventional (although maybe unavoidable)

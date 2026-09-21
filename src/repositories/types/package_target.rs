@@ -9,7 +9,7 @@ use crate::{
 };
 
 /// Represents the package target data, containing the download url and installer type.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct PackageTarget {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub dependencies: Vec<Dependency>,

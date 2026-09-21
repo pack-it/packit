@@ -174,7 +174,7 @@ impl<'a> RepositoryManager<'a> {
 
     /// Reads package and package version metadata of the given package. When only a package name is given the latest supported version is used.
     /// Returns the repository id, package metadata and package version metadata.
-    /// Returns a `PackageNotFoundError` if the package canot be found.
+    /// Returns a `PackageNotFoundError` if the package cannot be found.
     pub fn read_package_and_version(
         &self,
         package: &OptionalPackageId,
@@ -221,7 +221,7 @@ impl<'a> RepositoryManager<'a> {
             false => Vec::new(),
         };
 
-        for repository_id in self.iter_supported_repositories_rank().chain(extra_repos.into_iter()) {
+        for repository_id in self.iter_supported_repositories_rank().chain(extra_repos) {
             let provider = match self.metadata_providers.get(repository_id) {
                 Some(provider) => provider,
                 None => {
@@ -323,7 +323,7 @@ impl<'a> RepositoryManager<'a> {
             false => Vec::new(),
         };
 
-        for repository_id in self.iter_supported_repositories_rank().chain(extra_repos.into_iter()) {
+        for repository_id in self.iter_supported_repositories_rank().chain(extra_repos) {
             let provider = match self.metadata_providers.get(repository_id) {
                 Some(provider) => provider,
                 None => {

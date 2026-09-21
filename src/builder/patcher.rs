@@ -181,7 +181,7 @@ impl<'a> BinaryPatcher<'a> {
                 command = command.stdout(Stdio::inherit()).stderr(Stdio::inherit());
             }
 
-            // Return error if codesign did not exit succesfully
+            // Return error if codesign did not exit successfully
             match command.status() {
                 Ok(status) if !status.success() => {
                     let message = match status.code() {

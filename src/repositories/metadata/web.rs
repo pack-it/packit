@@ -100,7 +100,7 @@ impl WebMetadataProvider {
     }
 
     /// Requests metadata from the given url.
-    /// Returns an `Err(RepositoryError::UnsuccessfulRequest)` if the reponse is not a success.
+    /// Returns an `Err(RepositoryError::UnsuccessfulRequest)` if the response is not a success.
     /// Returns the metadata as String.
     fn request_metadata<T: IntoUrl>(&self, url: T) -> Result<String> {
         let response = requests::get(url)?;

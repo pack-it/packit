@@ -206,10 +206,10 @@ impl<'a> LocalMetaPackageHandler<'a> {
         let metadata_dir = self.get_base_path();
 
         let package_meta = provider.read_package(&self.package_id.name)?;
-        let package_version_meta = provider.read_package_version(&self.package_id)?;
+        let package_version_meta = provider.read_package_version(self.package_id)?;
         let target_bounds = package_version_meta.get_best_target(&Target::current())?;
         let target_meta = package_version_meta.get_target(&target_bounds)?;
-        let prebuilds_list = provider.read_prebuilds_list(&self.package_id)?;
+        let prebuilds_list = provider.read_prebuilds_list(self.package_id)?;
 
         // Check if current revision is the same as the revision of the metadata
         if package_version_meta.get_revision_count() != current_revision {

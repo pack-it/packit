@@ -152,7 +152,7 @@ pub fn is_writable(path: &Path) -> Result<bool> {
         );
 
         match result {
-            Ok(_) => warning!("Unexpected succes on first call"),
+            Ok(_) => warning!("Unexpected success on first call"),
             Err(e) if e.code() == ERROR_INSUFFICIENT_BUFFER.to_hresult() => {},
             Err(e) => return Err(PlatformError::WindowsAPIError(e))?,
         }
@@ -367,7 +367,7 @@ fn get_user_sid() -> Result<Sid> {
         // Get the size of the token information for the buffer
         let mut sid_size: u32 = 0;
         match GetTokenInformation(token, TokenUser, None, 0, &mut sid_size) {
-            Ok(_) => warning!("Unexpected succes on first call"),
+            Ok(_) => warning!("Unexpected success on first call"),
             Err(e) if e.code() == ERROR_INSUFFICIENT_BUFFER.to_hresult() => {},
             Err(e) => return Err(PlatformError::WindowsAPIError(e))?,
         }
@@ -413,7 +413,7 @@ fn get_group_sid() -> Result<Sid> {
 
         // Ignore buffer size errors, only return other errors
         match result {
-            Ok(_) => warning!("Unexpected succes on first call"),
+            Ok(_) => warning!("Unexpected success on first call"),
             Err(e) if e.code() == ERROR_INSUFFICIENT_BUFFER.to_hresult() => {},
             Err(e) => return Err(PlatformError::WindowsAPIError(e))?,
         }

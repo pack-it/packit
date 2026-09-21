@@ -28,12 +28,10 @@ pub struct InstalledPackageVersion {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prebuilds_repository_provider: Option<String>,
 
-    #[serde(default)]
-    #[serde(skip_serializing_if = "HashSet::is_empty")]
+    #[serde(default, skip_serializing_if = "HashSet::is_empty")]
     pub dependencies: HashSet<PackageId>,
 
-    #[serde(default)]
-    #[serde(skip_serializing_if = "HashSet::is_empty")]
+    #[serde(default, skip_serializing_if = "HashSet::is_empty")]
     pub dependents: HashSet<PackageId>,
 
     pub install_path: PathBuf,
@@ -59,7 +57,7 @@ fn is_default_revision(val: &u64) -> bool {
 }
 
 impl InstalledPackageVersion {
-    // Updates the `last_metadata_refresh` and the `last_metadata_change` based on the `updated` paramter.
+    // Updates the `last_metadata_refresh` and the `last_metadata_change` based on the `updated` parameter.
     pub fn update_metadata_refresh(&mut self, updated_metadata: bool) {
         let now = Utc::now();
 

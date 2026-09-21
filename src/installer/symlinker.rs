@@ -44,7 +44,7 @@ impl<'a> Symlinker<'a> {
         Ok(())
     }
 
-    /// Sets a package to active and creates the appropiate symlinks for it, based on the `should_symlink` parameter.
+    /// Sets a package to active and creates the appropriate symlinks for it, based on the `should_symlink` parameter.
     /// Could return an `InstallerError::PackageNotFound`, a `RegisterError` or an IO error.
     pub fn set_active(&self, register: &mut PackageRegister, package_id: &PackageId, should_symlink: bool) -> Result<()> {
         // Get package to set to active

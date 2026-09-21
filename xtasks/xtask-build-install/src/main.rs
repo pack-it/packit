@@ -88,7 +88,7 @@ fn run_build() {
     }
 }
 
-/// Copies the `packit` binary to the destinationa and creates the `pit` symlink.
+/// Copies the `packit` binary to the destinations and creates the `pit` symlink.
 fn copy_binary_to_destination(destination: &Path) {
     // Create destination bin directory
     let bin_directory = destination.join("bin");

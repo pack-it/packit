@@ -18,7 +18,7 @@ pub enum PackageIdError {
 }
 
 /// Identifies a package with a name and version.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PackageId {
     pub name: PackageName,
     pub version: Version,
@@ -117,7 +117,7 @@ pub mod tests {
     fn from_str_no_name() {
         assert_eq!(
             PackageId::from_str("@3.4.1"),
-            Err(PackageIdError::PackageNameError(PackageNameError::InvalidPackageName))
+            Err(PackageIdError::PackageNameError(PackageNameError::InvalidPackageName("".into())))
         );
     }
 

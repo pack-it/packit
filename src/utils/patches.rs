@@ -211,7 +211,7 @@ fn resolve_paths<'a>(source: &'a Path, destination: &'a Path) -> (&'a Path, &'a 
             && source_file == destination_file
         {
             debug!("Detected non-existing source file, but destination with same filename exists, using destination as source");
-            debug!("Non-existant source file: {}", source.display());
+            debug!("Non-existent source file: {}", source.display());
 
             // If the source does not exist, but the destination does and the file names are the same,
             // assume the source and destination are the same file.
