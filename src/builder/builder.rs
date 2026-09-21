@@ -623,6 +623,32 @@ pub mod tests {
     }
 
     #[test]
+    fn include_license_duplicates() {
+        let build_dir = tempdir().unwrap();
+        let build_dir = build_dir.path();
+        let destination = tempdir().unwrap();
+        let destination = destination.path();
+        File::create(&build_dir.join("foo")).unwrap();
+
+        let source = &create_source(Vec::new(), Vec::from(["foo".to_string(), "foo".to_string()]));
+        copy_license_files(build_dir, destination, source).unwrap();
+        assert!(destination.join("foo").exists());
+    }
+
+    #[test]
+    fn exclude_license_duplicates() {
+        let build_dir = tempdir().unwrap();
+        let build_dir = build_dir.path();
+        let destination = tempdir().unwrap();
+        let destination = destination.path();
+        File::create(&build_dir.join("license")).unwrap();
+
+        let source = &create_source(Vec::from(["license".to_string(), "license".to_string()]), Vec::new());
+        copy_license_files(build_dir, destination, source).unwrap();
+        assert!(!destination.join("license").exists());
+    }
+
+    #[test]
     fn include_exclude_all_licenses() {
         let build_dir = tempdir().unwrap();
         let build_dir = build_dir.path();

@@ -326,7 +326,7 @@ impl<'a> Installer<'a> {
 
         // Only show a spinner when not verbose
         if self.options.verbose {
-            println!("{}", message);
+            println!("{message}");
             scripts::run_pre_script(&script_data, install_directory)?;
             return Ok(());
         }
@@ -429,7 +429,7 @@ impl<'a> Installer<'a> {
 
         // Only show a spinner when not verbose
         if self.options.verbose {
-            println!("{}", message);
+            println!("{message}");
             scripts::run_post_script(&script_data)?;
             return Ok(());
         }
@@ -561,7 +561,7 @@ impl<'a> Installer<'a> {
         let message = format!("Testing {}", package_id.style());
         let spinner = match self.options.verbose {
             true => {
-                println!("{}", message);
+                println!("{message}");
                 None
             },
             false => {
@@ -842,7 +842,7 @@ impl<'a> Installer<'a> {
 
         // Only show spinner when not verbose
         if self.options.verbose {
-            println!("{}", message);
+            println!("{message}");
             scripts::run_uninstall_script(&script_data)?;
             return Ok(());
         }
