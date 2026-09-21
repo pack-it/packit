@@ -22,8 +22,8 @@ pub enum VersionError {
     #[error("Version number contains a character which is not a digit or a dot")]
     IllegalCharacterError,
 
-    #[error("Invalid version interval, an interval must be ordered and not overlapping")]
-    InvalidInterval,
+    #[error("Invalid version interval '{0}', an interval must be ordered and not overlapping")]
+    InvalidInterval(String),
 
     #[error("Multiple leading, trailing or consecutive dots are not allowed in version number")]
     DotsError,

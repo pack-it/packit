@@ -24,14 +24,14 @@ pub enum TargetBoundsError {
     #[error("Version bounds are not allowed for this target name")]
     VersionBoundsNotAllowed,
 
-    #[error("Target name is invalid")]
-    InvalidTargetName,
+    #[error("Target name '{0}' is invalid")]
+    InvalidTargetName(String),
 
     #[error("Expected version intervals, because '@' was used")]
     ExpectedVersionIntervals,
 
-    #[error("Addition name cannot be empty and can only contain characters: 'a-z', '0-9', '-' and '_'")]
-    InvalidAdditionName,
+    #[error("Invalid addition name '{0}', cannot be empty and can only contain characters: 'a-z', '0-9', '-' and '_'")]
+    InvalidAdditionName(String),
 
     #[error("Cannot parse version number")]
     VersionError(#[from] VersionError),
@@ -67,7 +67,7 @@ impl FromStr for TargetName {
             return Ok(Self::Architecture(architecture));
         }
 
-        Err(TargetBoundsError::InvalidTargetName)
+        Err(TargetBoundsError::InvalidTargetName(string.into()))
     }
 }
 
@@ -114,7 +114,7 @@ impl FromStr for TargetAddition {
     /// Could return a `TargetBoundsError::InvalidAdditionName` error.
     fn from_str(string: &str) -> Result<Self, Self::Err> {
         if !ADDITION_NAME_REGEX.is_match(string) {
-            return Err(TargetBoundsError::InvalidAdditionName);
+            return Err(TargetBoundsError::InvalidAdditionName(string.into()));
         }
 
         Ok(Self(string.to_string()))
@@ -376,18 +376,24 @@ pub mod tests {
 
     #[test]
     fn from_str_empty_name() {
-        assert_eq!(TargetBounds::from_str("@1.1.1"), Err(TargetBoundsError::InvalidTargetName));
-        assert_eq!(TargetBounds::from_str(""), Err(TargetBoundsError::InvalidTargetName));
+        assert_eq!(
+            TargetBounds::from_str("@1.1.1"),
+            Err(TargetBoundsError::InvalidTargetName("".into()))
+        );
+        assert_eq!(TargetBounds::from_str(""), Err(TargetBoundsError::InvalidTargetName("".into())));
     }
 
     #[test]
     fn from_str_invalid_addition() {
-        assert_eq!(TargetBounds::from_str("linux:@1.1.1"), Err(TargetBoundsError::InvalidAdditionName));
+        assert_eq!(
+            TargetBounds::from_str("linux:@1.1.1"),
+            Err(TargetBoundsError::InvalidAdditionName("".into()))
+        );
         let illegal_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ ./\\!@#$%^&*():;'\"<>[]{}?|~`±§=+\u{1234}";
         for name in illegal_chars.chars() {
             assert_eq!(
                 TargetAddition::from_str(&name.to_string()),
-                Err(TargetBoundsError::InvalidAdditionName),
+                Err(TargetBoundsError::InvalidAdditionName(name.into())),
                 "expected {name:?} to be invalid"
             );
         }

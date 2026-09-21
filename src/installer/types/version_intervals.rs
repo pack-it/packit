@@ -37,15 +37,15 @@ impl FromStr for VersionIntervals {
 
     /// Parses a string into `VersionIntervals`.
     /// Could return a `VersionError` error.
-    fn from_str(intervals: &str) -> Result<Self, Self::Err> {
+    fn from_str(intervals_str: &str) -> Result<Self, Self::Err> {
         // Check for empty input
-        if intervals.is_empty() {
+        if intervals_str.is_empty() {
             return Ok(Self {
                 version_bounds: Vec::new(),
             });
         }
 
-        let intervals = intervals.split('|');
+        let intervals = intervals_str.split('|');
         let mut version_bounds = Vec::new();
 
         for interval in intervals {
@@ -54,7 +54,7 @@ impl FromStr for VersionIntervals {
 
         // Check for invalid intervals
         if !Self::bounds_valid(&version_bounds) {
-            return Err(VersionError::InvalidInterval);
+            return Err(VersionError::InvalidInterval(intervals_str.into()));
         }
 
         Ok(Self { version_bounds })
@@ -193,7 +193,7 @@ pub mod tests {
         let intervals = ["3|3", "5-10|7-11", "<6.5|>=6.4", "<6.6|6.9|6.8-7.10|>8", ">4|5", "4|3"];
         for interval in intervals {
             let parsed_interval = VersionIntervals::from_str(interval);
-            assert_eq!(parsed_interval, Err(VersionError::InvalidInterval));
+            assert_eq!(parsed_interval, Err(VersionError::InvalidInterval(interval.into())));
         }
     }
 

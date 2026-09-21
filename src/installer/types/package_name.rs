@@ -12,8 +12,8 @@ static PACKAGE_NAME_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(VALID_P
 #[cfg_attr(test, derive(PartialEq))]
 #[derive(Error, Debug)]
 pub enum PackageNameError {
-    #[error("Package name cannot be empty and can only contain characters: 'a-z', '0-9', '-' and '_'")]
-    InvalidPackageName,
+    #[error("Invalid package name '{0}', cannot be empty and can only contain characters: 'a-z', '0-9', '-' and '_'")]
+    InvalidPackageName(String),
 }
 
 /// Represents the name of a package.
@@ -75,7 +75,7 @@ impl FromStr for PackageName {
     /// Could return a `PackageNameError::InvalidPackageName` error.
     fn from_str(string: &str) -> Result<Self, Self::Err> {
         if !PACKAGE_NAME_REGEX.is_match(string) {
-            return Err(PackageNameError::InvalidPackageName);
+            return Err(PackageNameError::InvalidPackageName(string.into()));
         }
 
         Ok(Self(string.to_string()))
@@ -117,7 +117,7 @@ pub mod tests {
 
     #[test]
     fn from_str_no_input() {
-        assert_eq!(PackageName::from_str(""), Err(PackageNameError::InvalidPackageName));
+        assert_eq!(PackageName::from_str(""), Err(PackageNameError::InvalidPackageName("".into())));
     }
 
     #[test]
@@ -126,7 +126,7 @@ pub mod tests {
         for name in illegal_chars.chars() {
             assert_eq!(
                 PackageName::from_str(&name.to_string()),
-                Err(PackageNameError::InvalidPackageName),
+                Err(PackageNameError::InvalidPackageName(name.into())),
                 "expected {name:?} to be invalid"
             );
         }
