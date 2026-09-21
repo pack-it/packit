@@ -65,6 +65,7 @@ pub fn fix_broken_config() -> Result<()> {
     let prefix = use_or_get_prefix(&document)?;
     if let Some(prefix) = &prefix {
         // MSRV: Remove PathBuf::from here when 1.91.0
+        #[expect(clippy::cmp_owned)]
         if *prefix != PathBuf::from(DEFAULT_PREFIX) {
             default_config.set_prefix_directory(prefix.clone());
         }

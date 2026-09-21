@@ -126,7 +126,7 @@ impl MetadataCache {
     where
         F: FnOnce() -> Result<RepositoryMeta>,
     {
-        self.repository_metadata_cache.get_or_try_init(init).map(Clone::clone)
+        self.repository_metadata_cache.get_or_try_init(init).cloned()
     }
 
     /// Gets the `IndexMeta` from the cache, or initializes it using the init function.
@@ -134,7 +134,7 @@ impl MetadataCache {
     where
         F: FnOnce() -> Result<IndexMeta>,
     {
-        self.index_metadata_cache.get_or_try_init(init).map(Clone::clone)
+        self.index_metadata_cache.get_or_try_init(init).cloned()
     }
 
     /// Gets the `PackageMeta` from the cache, or initializes it using the init function.

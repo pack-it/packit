@@ -1,9 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{
-    collections::{HashMap, HashSet},
-    fmt::Display,
-    ops::Not,
-};
+use std::{collections::HashMap, fmt::Display, ops::Not};
 
 use chrono::{Duration, Utc};
 use serde::{Deserialize, Deserializer, Serialize, de};
@@ -36,11 +32,11 @@ pub struct Source {
     #[serde(default, skip_serializing_if = "<&bool>::not")]
     pub skip_unpack: bool,
 
-    #[serde(default, skip_serializing_if = "HashSet::is_empty")]
-    pub license_exclude: HashSet<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub license_exclude: Vec<String>,
 
-    #[serde(default, skip_serializing_if = "HashSet::is_empty")]
-    pub license_include: HashSet<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub license_include: Vec<String>,
     pub apply_patches_in: Option<String>,
 
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]

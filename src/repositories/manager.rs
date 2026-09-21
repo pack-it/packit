@@ -221,7 +221,7 @@ impl<'a> RepositoryManager<'a> {
             false => Vec::new(),
         };
 
-        for repository_id in self.iter_supported_repositories_rank().chain(extra_repos.into_iter()) {
+        for repository_id in self.iter_supported_repositories_rank().chain(extra_repos) {
             let provider = match self.metadata_providers.get(repository_id) {
                 Some(provider) => provider,
                 None => {
@@ -323,7 +323,7 @@ impl<'a> RepositoryManager<'a> {
             false => Vec::new(),
         };
 
-        for repository_id in self.iter_supported_repositories_rank().chain(extra_repos.into_iter()) {
+        for repository_id in self.iter_supported_repositories_rank().chain(extra_repos) {
             let provider = match self.metadata_providers.get(repository_id) {
                 Some(provider) => provider,
                 None => {

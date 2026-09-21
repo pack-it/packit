@@ -523,10 +523,7 @@ fn find_inner_build_dir(build_directory: PathBuf) -> Result<PathBuf> {
 #[cfg(test)]
 pub mod tests {
 
-    use std::{
-        collections::{HashMap, HashSet},
-        fs::File,
-    };
+    use std::{collections::HashMap, fs::File};
 
     use tempfile::tempdir;
 
@@ -535,7 +532,7 @@ pub mod tests {
     use super::*;
 
     /// A helper script which creates a test source struct.
-    fn create_source(license_exclude: HashSet<String>, license_include: HashSet<String>) -> Source {
+    fn create_source(license_exclude: Vec<String>, license_include: Vec<String>) -> Source {
         Source {
             url: "-".to_string(),
             mirrors: vec![],
@@ -559,7 +556,7 @@ pub mod tests {
         File::create(&build_dir.join("COPYING")).unwrap();
 
         // This also tests if the destination is created if it doesn't exist yet
-        let source = &create_source(HashSet::new(), HashSet::new());
+        let source = &create_source(Vec::new(), Vec::new());
         copy_license_files(build_dir, &destination, source).unwrap();
         assert!(destination.join("License").exists());
         assert!(destination.join("COPYING").exists());
@@ -575,7 +572,7 @@ pub mod tests {
         fs::create_dir(&build_dir.join("foo")).unwrap();
         File::create(&build_dir.join("foo").join("COPYING")).unwrap();
 
-        let source = &create_source(HashSet::new(), HashSet::new());
+        let source = &create_source(Vec::new(), Vec::new());
         copy_license_files(build_dir, destination, source).unwrap();
         assert!(destination.join("License").exists());
         assert!(!destination.join("COPYING").exists());
@@ -591,7 +588,7 @@ pub mod tests {
         File::create(&build_dir.join("License")).unwrap();
         File::create(&build_dir.join("COPYING")).unwrap();
 
-        let source = &create_source(HashSet::from(["License".to_string()]), HashSet::new());
+        let source = &create_source(Vec::from(["License".to_string()]), Vec::new());
         copy_license_files(build_dir, destination, source).unwrap();
         assert!(!destination.join("License").exists());
         assert!(destination.join("COPYING").exists());
@@ -606,7 +603,7 @@ pub mod tests {
         File::create(&build_dir.join("License")).unwrap();
         File::create(&build_dir.join("COPYING")).unwrap();
 
-        let source = &create_source(HashSet::from(["*".to_string()]), HashSet::new());
+        let source = &create_source(Vec::from(["*".to_string()]), Vec::new());
         copy_license_files(build_dir, destination, source).unwrap();
         assert!(!destination.join("License").exists());
         assert!(!destination.join("COPYING").exists());
@@ -620,7 +617,7 @@ pub mod tests {
         let destination = destination.path();
         File::create(&build_dir.join("foo")).unwrap();
 
-        let source = &create_source(HashSet::from(["foo".to_string()]), HashSet::from(["foo".to_string()]));
+        let source = &create_source(Vec::from(["foo".to_string()]), Vec::from(["foo".to_string()]));
         copy_license_files(build_dir, destination, source).unwrap();
         assert!(destination.join("foo").exists());
     }
@@ -634,7 +631,7 @@ pub mod tests {
         File::create(&build_dir.join("license")).unwrap();
         File::create(&build_dir.join("foo")).unwrap();
 
-        let source = &create_source(HashSet::from(["*".to_string()]), HashSet::from(["foo".to_string()]));
+        let source = &create_source(Vec::from(["*".to_string()]), Vec::from(["foo".to_string()]));
         copy_license_files(build_dir, destination, source).unwrap();
         assert!(!destination.join("license").exists());
         assert!(destination.join("foo").exists());
@@ -650,7 +647,7 @@ pub mod tests {
         fs::create_dir_all(&long_path).unwrap();
         File::create(&long_path.join("license")).unwrap();
 
-        let source = &create_source(HashSet::new(), HashSet::new());
+        let source = &create_source(Vec::new(), Vec::new());
         copy_license_files(build_dir, destination, source).unwrap();
         assert!(!destination.join("license").exists());
     }
@@ -661,7 +658,7 @@ pub mod tests {
         let build_dir = build_dir.path();
         let destination = tempdir().unwrap();
         let destination = destination.path();
-        let source = &create_source(HashSet::new(), HashSet::new());
+        let source = &create_source(Vec::new(), Vec::new());
         assert!(copy_license_files(build_dir, destination, source).is_ok());
         assert!(fs::read_dir(&destination).unwrap().next().is_none());
     }
@@ -676,10 +673,7 @@ pub mod tests {
         File::create(&build_dir.join("license")).unwrap();
 
         // Test license which is not a license name and a capitalized license file (matching with lowercase file)
-        let source = &create_source(
-            HashSet::new(),
-            HashSet::from(["non-license-name".to_string(), "license".to_string()]),
-        );
+        let source = &create_source(Vec::new(), Vec::from(["non-license-name".to_string(), "license".to_string()]));
         copy_include_license_files(build_dir, destination, source).unwrap();
         assert!(destination.join("non-license-name").exists());
         assert!(destination.join("license").exists());
@@ -691,7 +685,7 @@ pub mod tests {
         let build_dir = build_dir.path();
         let destination = tempdir().unwrap();
         let destination = destination.path();
-        let source = &create_source(HashSet::new(), HashSet::from(["foo".to_string()]));
+        let source = &create_source(Vec::new(), Vec::from(["foo".to_string()]));
         copy_include_license_files(build_dir, destination, source).unwrap();
         assert!(!destination.join("foo").exists());
     }
@@ -705,7 +699,7 @@ pub mod tests {
         File::create(&build_dir.join("foo")).unwrap();
 
         // Test if the function creates the destination directory
-        let source = &create_source(HashSet::new(), HashSet::from(["foo".to_string()]));
+        let source = &create_source(Vec::new(), Vec::from(["foo".to_string()]));
         copy_include_license_files(build_dir, &destination, source).unwrap();
         assert!(destination.join("foo").exists());
     }
@@ -720,7 +714,7 @@ pub mod tests {
         File::create(&build_dir.join("original")).unwrap();
         create_symlink(&build_dir.join("original"), &build_dir.join("link")).unwrap();
 
-        let source = &create_source(HashSet::new(), HashSet::from(["foo".to_string(), "link".to_string()]));
+        let source = &create_source(Vec::new(), Vec::from(["foo".to_string(), "link".to_string()]));
         copy_include_license_files(build_dir, destination, source).unwrap();
         assert!(!destination.join("foo").exists());
         assert!(!destination.join("link").exists());
