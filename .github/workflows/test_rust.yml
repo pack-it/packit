@@ -36,10 +36,12 @@ jobs:
 
       - name: Create Linux configuration directory
         if: runner.os == 'Linux'
-        run: sudo mkdir /etc/packit
+        run: sudo mkdir /etc/packit && sudo chown -R $UID /etc/packit
       - name: Create macOS configuration directory
         if: runner.os == 'macOS'
-        run: sudo mkdir "/Library/Application Support/packit"
+        run: |
+          sudo mkdir "/Library/Application Support/packit" && sudo chown -R $UID "/Library/Application Support/packit"
+          sudo mkdir "/opt/packit" && sudo chown -R $UID "/opt/packit"
 
       - name: Run integration tests
         run: cargo xtest
