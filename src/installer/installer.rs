@@ -322,16 +322,17 @@ impl<'a> Installer<'a> {
             self.options.verbose,
         );
 
+        let message = format!("Executing preinstall of {}", package_id.style());
+
         // Only show a spinner when not verbose
         if self.options.verbose {
-            println!("Executing preinstall script of {}", package_id.style());
+            println!("{}", message);
             scripts::run_pre_script(&script_data, install_directory)?;
             return Ok(());
         }
 
         // Run script with spinner shown
-        let spinner_message = format!("Executing preinstall of {}", package_id.style());
-        let spinner = Spinner::new(spinner_message);
+        let spinner = Spinner::new(message);
         spinner.show();
         scripts::run_pre_script(&script_data, install_directory)?;
         spinner.finish();
@@ -424,16 +425,17 @@ impl<'a> Installer<'a> {
             self.options.verbose,
         );
 
+        let message = format!("Executing postinstall of {}", package_id.style());
+
         // Only show a spinner when not verbose
         if self.options.verbose {
-            println!("Executing postinstall script of {}", package_id.style());
+            println!("{}", message);
             scripts::run_post_script(&script_data)?;
             return Ok(());
         }
 
         // Run script with spinner shown
-        let spinner_message = format!("Executing postinstall of {}", package_id.style());
-        let spinner = Spinner::new(spinner_message);
+        let spinner = Spinner::new(message);
         spinner.show();
         scripts::run_post_script(&script_data)?;
         spinner.finish();
@@ -556,14 +558,14 @@ impl<'a> Installer<'a> {
         }
 
         // Only create a spinner when not verbose
+        let message = format!("Testing {}", package_id.style());
         let spinner = match self.options.verbose {
             true => {
-                println!("Testing {}", package_id.style());
+                println!("{}", message);
                 None
             },
             false => {
-                let spinner_message = format!("Testing {}", package_id.style());
-                let spinner = Spinner::new(spinner_message);
+                let spinner = Spinner::new(message);
                 spinner.show();
                 Some(spinner)
             },
@@ -836,16 +838,17 @@ impl<'a> Installer<'a> {
             self.options.verbose,
         );
 
+        let message = format!("Executing uninstall script of {}", package_id.style());
+
         // Only show spinner when not verbose
         if self.options.verbose {
-            println!("Executing uninstall script of {}", package_id.style());
+            println!("{}", message);
             scripts::run_uninstall_script(&script_data)?;
             return Ok(());
         }
 
         // Run script with spinner shown
-        let spinner_message = format!("Executing uninstall script of {}", package_id.style());
-        let spinner = Spinner::new(spinner_message);
+        let spinner = Spinner::new(message);
         spinner.show();
         scripts::run_uninstall_script(&script_data)?;
         spinner.finish();
