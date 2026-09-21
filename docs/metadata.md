@@ -2,6 +2,33 @@
 
 This file explains the Packit metadata repository structure and shows some examples where necessary. Not everything has an example, a simple example package which covers the basics is: [libssh2](https://github.com/pack-it/core/tree/main/packages/libssh2). For something more elaborate look at: [xz](https://github.com/pack-it/core/tree/main/packages/xz).
 
+- [`repository.toml`](#repositorytoml)
+- [`index.toml`](#indextoml)
+- [`packages`](#packages)
+- [`package.toml`](#packagetoml)
+- [`targets.toml`](#targetstoml)
+    - [Global fields](#global-fields)
+    - [Sources](#sources)
+        - [Example](#example)
+    - [Patches](#patches)
+        - [Example](#example-1)
+    - [Deprecation](#deprecation)
+    - [Target fields](#target-fields)
+    - [Available requirements](#available-requirements)
+- [`prebuilds.toml`](#prebuildstoml)
+    - [Prebuild fields](#prebuild-fields)
+- [Target bounds](#target-bounds)
+    - [Target names](#target-names)
+    - [Target additions](#target-additions)
+    - [Target version bounds](#target-version-bounds)
+- [Version bounds](#version-bounds)
+- [Licenses](#licenses)
+- [Scripts](#scripts)
+    - [Script environment](#script-environment)
+- [Multiple repositories](#multiple-repositories)
+    - [Conflicts](#conflicts)
+    - [Transitivity](#transitivity)
+
 ## `repository.toml`
 This file should be present in every Packit repository, it quickly describes what the repository is for.
 
@@ -180,7 +207,7 @@ Packit selects the most specific matching target bound according to the followin
 - OS name with addition and version bounds
 - Target architecture with addition and version bounds
 
-### Target names 
+### Target names
 | Name                | Supported values            |
 | ------------------- | --------------------------- |
 | OS group            | `unix`                      |
@@ -269,5 +296,10 @@ Please note that on Windows `%PACKIT_OUTPUTS% >&3` is required to redirect outpu
 ## Multiple repositories
 As of the time of writing this there exists only one repository, the [core](https://github.com/pack-it/core) repository. However, Packit allows for multiple repositories to exist. This can be nice for several scenarios. It makes third party repositories possible which could contain more niche packages. It could also prove helpful for a deprecation model. Packit has a feature most other package managers don't have, it has multiple versions of packages. Eventually some of these package versions will be outdated and cannot be kept in the core repository forever. A separate repository with the deprecated packages would be a nice solution.
 
-## Conflicts
-Repositories can be incompatible with each other. If one repository builds a package one way and the other builds the same package differently this could break dependents of that package. Repositories are listed as incompatible by default. If either repository lists the other repository as compatible in the `repository.toml` they are considered compatible (so only one repository needs to specify this). The repository name is used to check for compatibility. It is possible that two repositories that are compatible are not listed as such. This is why users have the ability to specify compatibility between repositories themselves. Note that once a repository is made compatible it cannot be made incompatible afterwards. This could result in already installed packages suddenly being incompatible. 
+### Conflicts
+Repositories can be incompatible with each other. If one repository builds a package one way and the other builds the same package differently this could break dependents of that package. Repositories are listed as incompatible by default. If either repository lists the other repository as compatible in the `repository.toml` they are considered compatible (so only one repository needs to specify this). The repository name is used to check for compatibility. It is possible that two repositories that are compatible are not listed as such. This is why users have the ability to specify compatibility between repositories themselves. Note that once a repository is made compatible it cannot be made incompatible afterwards. This could result in already installed packages suddenly being incompatible.
+
+### Transitivity
+Important to note is that repository compatibility is NOT a transitive property. Meaning that if repository A is compatible with repository B and repository B is compatible with repository C. Then repository A is NOT necessarily compatible with repository C. 
+
+Consider the following example. Repository A has packages X and Y. Repository B has packages Y and Z. Repository C has packages W and X. Package Y from repositories A and B are implemented so that they are compatible. So A and B are compatible with each other. B and C don't have any overlapping packages, so these are also compatible with each other. However package X is not implemented in a compatible way by either repository, so A and C are incompatible.

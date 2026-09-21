@@ -4,7 +4,17 @@ This tutorial is meant to get you started with using Packit on your system. It l
 
 If you do not have Packit installed yet, please do so by running the install script as listed in the [README](https://github.com/pack-it/packit/blob/main/README.md#install).
 
-## Installing a package
+- [Installing packages](#installing-packages)
+- [Uninstalling packages](#uninstalling-packages)
+- [Updating packages](#updating-packages)
+- [Listing installed packages](#listing-installed-packages)
+- [Searching packages](#searching-packages)
+- [Changing active version or link state](#changing-active-version-or-link-state)
+- [Adding a new repository to your config](#adding-a-new-repository-to-your-config)
+- [Checking your installation](#checking-your-installation)
+- [Next steps](#next-steps)
+
+## Installing packages
 
 To install a package, you can use the `pit install` command, see [install](../commands/install.md).
 
@@ -20,7 +30,7 @@ You can also install a specific version:
 pit install htop@3.4.1
 ```
 
-## Uninstalling a package
+## Uninstalling packages
 
 To uninstall a package, you can use the `pit uninstall` command, see [uninstall](../commands/uninstall.md).
 
@@ -73,7 +83,7 @@ This shows generic information about the package `htop`. You can also see inform
 pit info htop@3.4.1
 ```
 
-## Searching for a package
+## Searching packages
 
 To search for information about a package, use the `pit search` command, see [search](../commands/search.md).
 This command will look for the package in all configured repositories.

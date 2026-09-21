@@ -2,13 +2,16 @@
 
 Packit has both unit and integration tests. These tests are separated, because the integration tests require setup and clean up functionality.
 
-### Unit tests
+- [Unit tests](#unit-tests)
+- [Integration tests](#integration-tests)
+
+## Unit tests
 Run the following command to run the unit tests:
 ```
 cargo test
 ```
 
-### Integration tests
+## Integration tests
 Cargo test doesn't have support for a general setup or clean up before and after the integration tests. That's why Packit uses an xtask `xtask-test-runner` which wraps around the `cargo test` command. 
 The arguments to `xtest` are passed along to `cargo test`, so test flags can still be used.
 Run the following command to run the integration tests:

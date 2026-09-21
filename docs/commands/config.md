@@ -3,7 +3,7 @@
 The `config` command starts with:<br>
 `pit config`
 
-It has multiple sub-commands, which are explained below. If you want to learn more about the configuration structure, take a look at the [config](../structure.md#config).
+It has multiple sub-commands, which are explained below. If you want to learn more about the configuration structure, take a look at the [config](../configuration.md).
 
 ## Show
 #### `pit config show`
@@ -20,7 +20,7 @@ Learn more about the [prefix](../structure.md#prefix).
 Sets the multiuser setting to true or false. This is currently not supported when packages are already installed, so this must be done directly after installing Packit.
 
 ## Repositories
-This sub-command is for configuring repositories. Learn more about [repositories here](../structure.md#repositories).
+This sub-command is for configuring repositories. Learn more about [repositories here](../configuration.md#repositories).
 
 #### `pit config repositories list`
 Lists all configured repositories.

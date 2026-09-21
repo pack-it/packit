@@ -92,7 +92,7 @@ The `Config.toml` contains the Packit configuration, it can be edited manually o
 
 The `Config.toml` contains options such as the Packit prefix directory, multiuser mode, repository definitions and repository search order.
 
-For a complete overview of all available configuration fields, their defaults, and an example configuration, see the [Config documentation](./docs/structure.md#config).
+For a complete overview of all available configuration fields, their defaults, and an example configuration, see the [Config documentation](./docs/configuration.md).
 
 ## File structure
 You might be interested in where all your packages are installed to. Almost everything is stored in the Packit prefix directory. Of course this directory and structure differs a bit for each platform. Luckily Packit manages this for you!
@@ -102,7 +102,7 @@ You might be interested in where all your packages are installed to. Almost ever
 | Unix     | `/opt/packit`             |
 | Windows  | `C:\Program Files\packit` |
 
-For a complete overview of all files and their content, see the [file structure documentation](./docs/structure.md#file-structure).
+For a complete overview of all files and their content, see the [file structure documentation](./docs/structure.md).
 
 ## License
 The Packit repository is licensed under the GNU General Public License v3.0. See [LICENSE](LICENSE) for the full license.

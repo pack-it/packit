@@ -8,7 +8,16 @@ This security model assumes that repositories and their maintainers are trusted.
 
 If you found a vulnerability in Packit, please do not report it publicly. See the [Security Policy](https://github.com/pack-it/.github/blob/main/SECURITY.md) for more instructions about reporting a vulnerability.
 
-## Packit Permissions
+- [Packit permissions](#packit-permissions)
+- [Metadata safety](#metadata-safety)
+- [Future improvements](#future-improvements)
+    - [Denying sudo permissions](#denying-sudo-permissions)
+    - [Script sandboxing](#script-sandboxing)
+    - [Repository trust](#repository-trust)
+    - [Repository signing](#repository-signing)
+    - [Automatic vulnerability detection](#automatic-vulnerability-detection)
+
+## Packit permissions
 Packit uses a very Unix like approach to permissions, but ensures the same model also works on Windows.
 
 The permission model consists of a single user and multi-user mode. Single user modes means that a single user is owner of all installation files of Packit, only this user is then able to change the files. This means only this single user can install or uninstall packages. Other users are able to read the files and thus use the packages.
@@ -28,11 +37,11 @@ Important security measures for the metadata include:
 
 Packit relies on [scripts](./metadata.md#scripts) that describe specific build and test logic for each package. These scripts are executed with the same privileges as the user executing Packit. This requires extra caution when the user has root privileges, since the scripts then also run with root privileges. The uninstall and test scripts are stored on the users system as part of the local metadata, for later use by Packit. The other scripts are not stored and only used during installation.
 
-Build scripts run in an environment that is lightly managed through environment variables, this helps with reproducibility of the source. Packit aims to make builds as reproducible as possible, to facilitate better integrity checking on builds.
+Build scripts run in an [environment](./build-env.md) that is lightly managed through environment variables, this helps with reproducibility of the source. Packit aims to make builds as reproducible as possible, to facilitate better integrity checking on builds.
 
 Metadata repositories can contain test files, which are required for running package tests. After package installation they are stored on the users system as part of the local metadata. If a repository is compromised and contains malicious test files, these can end up on the users system.
 
-Multiple repositories are allowed in the [configuration](./structure.md#config). Packit has an extensive algorithm for deciding which repository should be used for the installation of a package. If the config contains a compromised repository, which has a malicious package with the same name of an important core package, this package could end up being chosen for installation on the system.
+Multiple repositories are allowed in the [configuration](./configuration.md). More about multiple repositories can be found [here](./metadata.md#multiple-repositories). Packit has an extensive algorithm for deciding which repository should be used for the installation of a package. If the config contains a compromised repository, which has a malicious package with the same name of an important core package, this package could end up being chosen for installation on the system.
 
 ## Future improvements
 This section lists all improvements that can be made to improve the security of Packit. Feel free to make notes about these improvements or help to get them into Packit.
