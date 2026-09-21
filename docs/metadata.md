@@ -27,6 +27,7 @@ This file explains the Packit metadata repository structure and shows some examp
     - [Script environment](#script-environment)
 - [Multiple repositories](#multiple-repositories)
     - [Conflicts](#conflicts)
+    - [Transitivity](#transitivity)
 
 ## `repository.toml`
 This file should be present in every Packit repository, it quickly describes what the repository is for.

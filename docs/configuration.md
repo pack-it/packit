@@ -4,10 +4,10 @@ This file explains how to configure Packit with the `Config.toml`.
 
 - [Location](#location)
 - [Available fields](#available-fields)
-- [Repositories](#repositories)
+    - [Repositories](#repositories)
 
 ## Location
-The `Config.toml` contains the Packit configuration, it can be edited manually or with the [`pit config`](./commands/config.md) command. Its location differs for each platform:
+The `Config.toml` contains the Packit configuration, it can be edited manually or with the [`pit config`](./commands/config.md) command. We recommend to use the `config` command, because it does extra checks, avoiding invalid configurations. Its location differs for each platform:
 | Platform | Location                              |
 | ---------| ------------------------------------- |
 | Linux    | `/etc/packit`                         |
