@@ -294,7 +294,7 @@ impl PackageRegister {
         false
     }
 
-    /// Gets the latest installed package which statisfies the given dependency.
+    /// Gets the latest installed package which satisfies the given dependency.
     pub fn get_latest_satisfying_package(&self, dependency: &Dependency) -> Option<&InstalledPackageVersion> {
         let mut latest: Option<&InstalledPackageVersion> = None;
 
@@ -526,7 +526,7 @@ pub mod tests {
             false,
         );
 
-        // Test if the package has succesfully been added
+        // Test if the package has successfully been added
         assert_eq!(
             register.get_package_version(&package_id),
             Some(&create_package_version(
@@ -579,7 +579,7 @@ pub mod tests {
     fn remove_package_version_one_of_two() {
         let mut register = create_register();
 
-        // Check if the package version was succesfully removed
+        // Check if the package version was successfully removed
         let package_f5 = create_package_id("f@5");
         register.remove_package_version(&package_f5);
         assert!(register.get_package_version(&package_f5).is_none());

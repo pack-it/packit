@@ -33,11 +33,11 @@ impl HandleCommand for CheckArgs {
                 Ok(Some(issue)) => print!("{issue}"),
                 Ok(_) => {},
                 Err(e) if verifier.issues_found() > 0 => {
-                    debug!(err: e, "An error occured when issues were already found, skipping remaining checks");
+                    debug!(err: e, "An error occurred when issues were already found, skipping remaining checks");
                     return;
                 },
                 Err(e) => {
-                    error!(e, "An error occured while doing the initial verifier checks");
+                    error!(e, "An error occurred while doing the initial verifier checks");
                     exit(1);
                 },
             }
@@ -67,11 +67,11 @@ impl HandleCommand for CheckArgs {
                 Ok(Some(issue)) => print!("{issue}"),
                 Ok(_) => {},
                 Err(e) if verifier.issues_found() > 0 => {
-                    debug!(err: e, "An error occured when issues were already found, skipping remaining checks");
+                    debug!(err: e, "An error occurred when issues were already found, skipping remaining checks");
                     return;
                 },
                 Err(e) => {
-                    error!(e, "An error occured while doing the verifier checks");
+                    error!(e, "An error occurred while doing the verifier checks");
                     exit(1);
                 },
             }

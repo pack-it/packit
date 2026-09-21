@@ -481,7 +481,7 @@ impl MetaCheck {
 
     /// Checks a specific target.
     fn check_target(&mut self, bounds: &TargetBounds, target: &PackageTarget, sources: &Sources, package_id: &PackageId) {
-        // Check if externel test files exist
+        // Check if external test files exist
         for file in &target.external_test_files {
             if !matches!(self.provider.read_file_bytes(&package_id.name, file), Ok(Some(_))) {
                 self.issues.push(MetaIssue::default(format!(
@@ -497,7 +497,7 @@ impl MetaCheck {
             None if matches!(sources, Sources::Single(..)) => return,
             None => {
                 self.issues.push(MetaIssue::default(format!(
-                    "No source reference found in {} for target '{bounds}', eventhough sources are target specific",
+                    "No source reference found in {} for target '{bounds}', even though sources are target specific",
                     package_id.style()
                 )));
 
@@ -508,7 +508,7 @@ impl MetaCheck {
         // Check if the source references in the target are required and can be found
         match &sources {
             Sources::Single(_) => self.issues.push(MetaIssue::default(format!(
-                "Found source reference '{source_reference}' in {} for target '{bounds}', eventhough none was required",
+                "Found source reference '{source_reference}' in {} for target '{bounds}', even though none was required",
                 package_id.style()
             ))),
             Sources::Named(sources) if !sources.contains_key(source_reference) => self.issues.push(MetaIssue::default(format!(

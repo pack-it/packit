@@ -261,7 +261,7 @@ impl<'a> Installer<'a> {
             Some(installed_package_version) => installed_package_version,
             None => {
                 return Err(InstallerError::UnreachableError {
-                    msg: "Package version cannot be found eventhough it was inserted right before".to_string(),
+                    msg: "Package version cannot be found even though it was inserted right before".to_string(),
                 });
             },
         };
@@ -503,7 +503,7 @@ impl<'a> Installer<'a> {
             }
         }
 
-        // If package is installed succesfully, set it to active
+        // If package is installed successfully, set it to active
         if should_set_active {
             Symlinker::new(self.config).set_active(self.register, package_id, should_symlink)?;
         }
@@ -675,7 +675,7 @@ impl<'a> Installer<'a> {
             Some(package) => package,
             None => {
                 return Err(InstallerError::UnreachableError {
-                    msg: "Package cannot be found eventhough it was found before".to_string(),
+                    msg: "Package cannot be found even though it was found before".to_string(),
                 });
             },
         };
@@ -685,7 +685,7 @@ impl<'a> Installer<'a> {
             Some(installed_package_version) => installed_package_version,
             None => {
                 return Err(InstallerError::UnreachableError {
-                    msg: "Package version cannot be found eventhough it was found before".to_string(),
+                    msg: "Package version cannot be found even though it was found before".to_string(),
                 });
             },
         };
@@ -766,7 +766,7 @@ impl<'a> Installer<'a> {
         let active_path = self.config.prefix_directory.join("active").join(package_name);
         match active_path.exists() {
             true => symlink::remove_symlink(&active_path)?,
-            false => warning!("Active symlink did not exist, was the package even installed succesfully?"),
+            false => warning!("Active symlink did not exist, was the package even installed successfully?"),
         }
 
         // Check if package was symlinked
@@ -890,7 +890,7 @@ impl<'a> Installer<'a> {
             let local_metadata = local_meta_handler.read_metadata()?;
             let Some(dependency) = local_metadata.dependencies.iter().find(|x| *x.get_name() == old_package.package_id.name) else {
                 warning!(
-                    "Dependent {} is not a dependent of {} eventhough it should be",
+                    "Dependent {} is not a dependent of {} even though it should be",
                     dependent.style(),
                     old_package.package_id.style()
                 );
@@ -937,7 +937,7 @@ impl<'a> Installer<'a> {
             symlinker.set_active(self.register, &new_package_id, package.symlinked)?;
         }
 
-        print!("The new package version {} has been succesfully installed", new_version.style());
+        print!("The new package version {} has been successfully installed", new_version.style());
 
         // Only uninstall the package if the old package no longer has dependents
         let old_package = self.register.get_package_version_mut(&old_package_id).expect("Expected old package to still exist");

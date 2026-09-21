@@ -57,7 +57,7 @@ fn is_default_revision(val: &u64) -> bool {
 }
 
 impl InstalledPackageVersion {
-    // Updates the `last_metadata_refresh` and the `last_metadata_change` based on the `updated` paramter.
+    // Updates the `last_metadata_refresh` and the `last_metadata_change` based on the `updated` parameter.
     pub fn update_metadata_refresh(&mut self, updated_metadata: bool) {
         let now = Utc::now();
 

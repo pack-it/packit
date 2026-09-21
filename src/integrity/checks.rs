@@ -99,7 +99,7 @@ impl Check {
         }
     }
 
-    /// Gets all intial checks.
+    /// Gets all initial checks.
     pub const fn get_initial_checks<'a>() -> &'a [Self] {
         &[
             Self::Permissions,

@@ -197,7 +197,7 @@ impl ConfigArgs {
 
         config.save_to(&Config::get_default_path()).unwrap_or_exit_msg("Cannot save config file", 1);
 
-        let styled_message = format!("Succesfully changed the prefix directory to '{}'!", new_prefix.display()).bold().green();
+        let styled_message = format!("successfully changed the prefix directory to '{}'!", new_prefix.display()).bold().green();
         println!("{styled_message}");
     }
 
@@ -228,7 +228,7 @@ impl ConfigArgs {
             false => "off!",
         };
 
-        let styled_message = format!("Succesfully changed the multiuser setting to {}", multiuser_state).bold().green();
+        let styled_message = format!("successfully changed the multiuser setting to {}", multiuser_state).bold().green();
         println!("{styled_message}")
     }
 
@@ -301,7 +301,7 @@ impl ConfigArgs {
 
         config.save_to(&Config::get_default_path()).unwrap_or_exit_msg("Cannot save config file", 1);
 
-        let styled_message = format!("Succesfully set the repository rank to '{}'!", new_rank.join(", ")).bold().green();
+        let styled_message = format!("successfully set the repository rank to '{}'!", new_rank.join(", ")).bold().green();
         println!("{styled_message}");
     }
 
@@ -357,7 +357,7 @@ impl ConfigArgs {
 
         config.save_to(&Config::get_default_path()).unwrap_or_exit_msg("Cannot save config file", 1);
 
-        let styled_message = format!("Succesfully added repository '{id}' to the config!").bold().green();
+        let styled_message = format!("successfully added repository '{id}' to the config!").bold().green();
         println!("{styled_message}");
     }
 
@@ -379,7 +379,7 @@ impl ConfigArgs {
 
         config.save_to(&Config::get_default_path()).unwrap_or_exit_msg("Cannot save config file", 1);
 
-        let styled_message = format!("Succesfully removed repository '{id}' from the config!").bold().green();
+        let styled_message = format!("successfully removed repository '{id}' from the config!").bold().green();
         println!("{styled_message}");
     }
 
@@ -421,7 +421,7 @@ impl ConfigArgs {
 
         config.save_to(&Config::get_default_path()).unwrap_or_exit_msg("Cannot save config file", 1);
 
-        let styled_message = format!("Succesfully set repository url for '{id}' to '{url}'!").bold().green();
+        let styled_message = format!("successfully set repository url for '{id}' to '{url}'!").bold().green();
         println!("{styled_message}");
     }
 
@@ -451,7 +451,7 @@ impl ConfigArgs {
 
         config.save_to(&Config::get_default_path()).unwrap_or_exit_msg("Cannot save config file", 1);
 
-        let styled_message = format!("Succesfully set prebuilds repository for '{id}' to '{prebuilds_url}'!").bold().green();
+        let styled_message = format!("successfully set prebuilds repository for '{id}' to '{prebuilds_url}'!").bold().green();
         println!("{styled_message}");
     }
 
@@ -476,7 +476,7 @@ impl ConfigArgs {
         config.save_to(&Config::get_default_path()).unwrap_or_exit_msg("Cannot save config file", 1);
 
         let status = if value { "disabled" } else { "enabled" };
-        let styled_message = format!("Succesfully {status} prebuilds for '{id}'!").bold().green();
+        let styled_message = format!("successfully {status} prebuilds for '{id}'!").bold().green();
         println!("{styled_message}");
     }
 

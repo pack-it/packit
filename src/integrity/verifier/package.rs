@@ -327,7 +327,7 @@ fn check_symlinks(directory: &Path, symlink_directory: &Path) -> Result<bool> {
             continue;
         }
 
-        // Read the sylink metadata to check if the symlink exists
+        // Read the symlink metadata to check if the symlink exists
         if fs::symlink_metadata(symlink_directory.join(file.file_name())).is_err() {
             return Ok(true);
         }
@@ -548,7 +548,7 @@ fn check_missing_package_dir_dependencies(
     Ok(missing)
 }
 
-/// Checks the completeness of the depedency trees from the given packages.
+/// Checks the completeness of the dependency trees from the given packages.
 /// Returns an `Issue::BrokenTree` or `None` if there are no packages missing from the dependency trees.
 pub fn check_dependency_tree(packages: &Vec<PackageId>, register: &PackageRegister) -> Option<Issue> {
     let mut missing = Vec::new();

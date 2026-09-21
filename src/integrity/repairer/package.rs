@@ -84,7 +84,7 @@ pub fn fix_inconsistent_storage(
         let (symlinked, active) = match register.get_package(&missing_package.name) {
             Some(package) => (package.symlinked, package.active_version == missing_package.version),
             None => {
-                warning!("Inconsistent package cannot be found in Register.toml anymore, eventhough it was found before");
+                warning!("Inconsistent package cannot be found in Register.toml anymore, even though it was found before");
                 (false, false)
             },
         };
@@ -136,7 +136,7 @@ pub fn fix_inconsistent_register(
         let symlinked = fs::symlink_metadata(bin_directory.join(&package_id.name)).is_ok();
 
         // Get information with the manager
-        // Note that this information is valid, but necessarily the same as before the issue arised
+        // Note that this information is valid, but not necessarily the same as before the issue arose
         let package_meta = manager.read_repo_package(&repository_id, &package_id.name)?;
         let dependencies = get_latest_satisfying_packages(&package_version_meta, &storage_packages);
         let source_repository = config.repositories.get(&repository_id).expect("Expected repository in config");
