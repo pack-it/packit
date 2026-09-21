@@ -33,6 +33,14 @@ jobs:
         run: cargo build --verbose
       - name: Run tests
         run: cargo test --verbose
+
+      - name: Create Linux configuration directory
+        if: runner.os == 'Linux'
+        run: sudo mkdir /etc/packit
+      - name: Create macOS configuration directory
+        if: runner.os == 'macOS'
+        run: sudo mkdir "/Library/Application Support/packit"
+
       - name: Run integration tests
         run: cargo xtest
 
