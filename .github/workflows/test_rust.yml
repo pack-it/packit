@@ -1,0 +1,71 @@
+name: Test Rust
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Test build ${{ matrix.rust_version }} - ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        rust_version: [1.88.0, stable]
+        os: [ubuntu-26.04, ubuntu-26.04-arm, windows-latest, windows-11-arm, macos-26-intel, macos-26]
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust_version }}
+
+      - name: Build
+        run: cargo build --verbose
+      - name: Run tests
+        run: cargo test --verbose
+
+      - name: Create Linux configuration directory
+        if: runner.os == 'Linux'
+        run: sudo mkdir /etc/packit && sudo chown -R $UID /etc/packit
+      - name: Create macOS configuration directory
+        if: runner.os == 'macOS'
+        run: |
+          sudo mkdir "/Library/Application Support/packit" && sudo chown -R $UID "/Library/Application Support/packit"
+          sudo mkdir "/opt/packit" && sudo chown -R $UID "/opt/packit"
+
+      - name: Run integration tests
+        run: cargo xtest
+
+  lints:
+    name: Run lints ${{ matrix.rust_version }} - ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        rust_version: [stable]
+        os: [ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust_version }}
+          components: rustfmt, clippy
+
+      - name: Check clippy
+        run: cargo clippy -- -D warnings
+      - name: Check formatting
+        run: cargo fmt --all -- --check
