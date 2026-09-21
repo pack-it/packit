@@ -13,6 +13,6 @@ pub const CONFIG_FILENAME: &str = "TestConfig.toml";
 #[cfg(not(feature = "integration-tests"))]
 pub const CONFIG_FILENAME: &str = "Config.toml";
 
-pub const DEFAULT_METADATA_REPOSITORY_NAME: &str = "core";
+pub const DEFAULT_METADATA_REPOSITORY_NAME: &str = "packit-core";
 pub const DEFAULT_METADATA_REPOSITORY_URL: &str = "https://raw.githubusercontent.com/pack-it/core/main/";
 pub const DEFAULT_METADATA_REPOSITORY_PROVIDER: &str = WEB_METADATA_PROVIDER_ID;
