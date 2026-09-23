@@ -233,15 +233,15 @@ pub fn fix_missing_local_metadata(
 ) -> Result<()> {
     let local_meta_handler = LocalMetaHandler::new(&config.prefix_directory);
     for package_id in missing {
-        let Some(package_version) = register.get_package_version_mut(&package_id) else {
+        let Some(installed_package_version) = register.get_package_version_mut(&package_id) else {
             warning!("Could not fix missing metadata {}", package_id.style());
             continue;
         };
 
         // Create repository provider for package
         let repository = Repository::new(
-            &package_version.metadata_repository_url,
-            &package_version.metadata_repository_provider,
+            &installed_package_version.metadata_repository_url,
+            &installed_package_version.metadata_repository_provider,
         );
         let Some(provider) = MetadataProvider::create_from_repository(&repository) else {
             warning!("Could not fix missing metadata {}, unable to create provider", package_id.style());
@@ -249,8 +249,11 @@ pub fn fix_missing_local_metadata(
         };
 
         let package_handler = local_meta_handler.get_package(&package_id);
-        match package_handler.refresh(&provider, package_version.revision) {
-            Ok(_) => continue,
+        match package_handler.refresh(&provider, installed_package_version.revision) {
+            Ok(updated_metadata) => {
+                installed_package_version.update_metadata_refresh(updated_metadata);
+                continue;
+            },
             Err(LocalMetadataError::RepositoryError(_)) => {
                 println!("Trying to re-install {}", package_id.style());
                 reinstall_package(&package_id, register, manager, config)?;
