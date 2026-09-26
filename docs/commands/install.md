@@ -1,7 +1,7 @@
 # Install
 
 The `install` command has the following command line syntax:<br>
-`pit install <PACKAGE-NAME>[@<VERSION>] ... [--build] [--build-all] [--keep-build] [--skip-symlinking] [--skip-active] [--verbose | -v] [--skip-test] [--skip-build-test] [--pause-build]`
+`pit install <PACKAGE-NAME>[@<VERSION>] ... [--build] [--build-all] [--keep-build] [--skip-symlinking] [--skip-active] [--verbose | -v] [--skip-test] [--execute-build-test] [--pause-build]`
 
 ## Basic install
 The `install` command installs a package, using the following syntax:<br>
@@ -44,10 +44,10 @@ The `--verbose` flag or `-v` for short can be used to enable verbose output.
 ### `--skip-test`
 When installing packages, Packit executes a [Packit test](../metadata.md#scripts) afterwards to test if the package was successfully installed. To skip this, the `--skip-test` flag can be used.
 
-Note that this is different from `--skip-build-test`.
+Note that this is different from `--execute-build-test`.
 
-### `--skip-build-test`
-When building a package from source, the package's build tests are executed if they exist. To skip these, `--skip-build-test` can be used. This flag is ignored if the package is not built from source.
+### `--execute-build-test`
+The `--execute-build-test` flag can be used to execute the package's build tests. The build tests are not executed by default. This flag is ignored if the package is not built from source.
 
 Note that this is different from `--skip-test`.
 
