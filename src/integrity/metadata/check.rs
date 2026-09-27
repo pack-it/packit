@@ -79,6 +79,7 @@ impl MetaCheck {
         // Check if the package required Packit version is lower than the repository required Packit version
         if let Some(required_version) = &package_meta.required_packit_version
             && repository_meta.required_packit_version >= *required_version
+            && *package_name != PackageName::packit()
         {
             self.issues.push(MetaIssue::default(format!(
                 "The required Packit version for {} is lower than or equal to repository '{}' required Packit version",
@@ -171,6 +172,7 @@ impl MetaCheck {
             // Check if the package version required Packit version is lower than the repository required Packit version
             if let Some(required_version) = &package_version.required_packit_version
                 && repository_meta.required_packit_version >= *required_version
+                && *package_name != PackageName::packit()
             {
                 self.issues.push(MetaIssue::default(format!(
                     "The required Packit version for {} is lower than or equal to the required version in repository '{}'",
