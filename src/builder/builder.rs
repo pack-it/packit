@@ -292,7 +292,7 @@ impl<'a> Builder<'a> {
 fn retrieve_source(source: &Source, package_name: &PackageName) -> Result<Bytes> {
     // Retrieves the source bytes from the path if it's not a url
     if !source.url.starts_with("http://") && !source.url.starts_with("https://") {
-        return retrieve_file(package_name, &source.url, &source.mirrors, &source.checksum);
+        return retrieve_file(package_name, &source.url, &source.checksum);
     }
 
     let retrieve_message = format!("Retrieving {} from '{}'", package_name.style(), source.url.cyan());
@@ -368,22 +368,13 @@ where
 }
 
 /// Retrieves a file from the path, or one of the mirrors. Checks against a checksum to make sure the bytes are correct.
-fn retrieve_file(package_name: &PackageName, path: &str, mirrors: &[String], checksum: &Checksum) -> Result<Bytes> {
+fn retrieve_file(package_name: &PackageName, path: &str, checksum: &Checksum) -> Result<Bytes> {
     // Create spinner
     let spinner_message = format!("Retrieving {} from '{}'", package_name.style(), path.cyan());
-    let mut spinner = Spinner::new(spinner_message);
+    let spinner = Spinner::new(spinner_message);
     spinner.show();
 
-    let mut bytes = fs::read(path).err_with_path("read", path).map(Bytes::from);
-
-    while bytes.is_err()
-        && let Some(mirror) = mirrors.iter().next()
-    {
-        spinner.adjust_message(format!("Retrieving {} from alternative '{}'", package_name.style(), mirror.cyan()));
-        bytes = fs::read(mirror).err_with_path("read", mirror).map(Bytes::from);
-    }
-
-    let bytes = bytes?;
+    let bytes = fs::read(path).err_with_path("read", path).map(Bytes::from)?;
 
     // Calculate the checksum
     let calculated_checksum = Checksum::from_bytes(&bytes);
