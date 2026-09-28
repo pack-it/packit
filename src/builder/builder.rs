@@ -143,8 +143,15 @@ impl<'a> Builder<'a> {
             let extention = ArchiveExtension::from_path(&source.url);
             unpack(package_name, extention, bytes, &build_directory, true)?;
         } else {
-            let url = Url::parse(&source.url)?; // TODO
-            let file_name = url.path_segments().and_then(|mut x| x.next_back()).ok_or(BuilderError::EmptyUrlPath)?;
+            // If the url is not a url assume that it's a path
+            let file_name = match source.url.starts_with("http://") || source.url.starts_with("https://") {
+                true => {
+                    let url = Url::parse(&source.url)?;
+                    &url.path_segments().and_then(|mut x| x.next_back()).ok_or(BuilderError::EmptyUrlPath)?.to_owned()
+                },
+                false => &source.url,
+            };
+
             let file_path = build_directory.path().join(file_name);
             fs::write(&file_path, bytes).err_with_path("write", file_path)?;
         }
