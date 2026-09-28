@@ -23,7 +23,7 @@ use crate::{
     installer::{
         install_tree::InstallMeta,
         scripts::{self, ScriptData},
-        types::{PackageId, PackageName},
+        types::PackageId,
         unpack::{ArchiveExtension, unpack},
     },
     register::package_register::PackageRegister,
@@ -81,6 +81,7 @@ impl<'a> Builder<'a> {
     pub fn build(&self, install_meta: &InstallMeta, destination_dir: impl AsRef<Path>) -> Result<()> {
         let package_name = &install_meta.package_metadata.name;
         let version = &install_meta.version_metadata.version;
+        let package_id = PackageId::new(package_name.clone(), version.clone());
         let target = install_meta.version_metadata.get_target(&install_meta.target_bounds)?;
 
         let mut installed_dependencies = Vec::new();
@@ -132,7 +133,7 @@ impl<'a> Builder<'a> {
         debug!("Source size: {}", source.size);
 
         // Download the build files
-        let bytes = retrieve_source(source, package_name)?;
+        let bytes = self.download_source(source, &install_meta.repository_id, &package_id)?;
 
         // Create temp directory to build in
         let build_directory = TempDir::new().err_operation("create temp dir")?;
@@ -165,8 +166,6 @@ impl<'a> Builder<'a> {
         if let Some(apply_in) = &source.apply_patches_in {
             apply_directory = apply_directory.join(PathBuf::from(apply_in));
         }
-
-        let package_id = PackageId::new(package_name.clone(), version.clone());
 
         // Apply patches
         for (id, patch) in source.get_sorted_patches() {
@@ -286,32 +285,67 @@ impl<'a> Builder<'a> {
 
         Ok(file)
     }
-}
 
-/// Retrieves the source file of the package. Shows the download progress in a `ProgressBar` or a spinner if the source is a path.
-fn retrieve_source(source: &Source, package_name: &PackageName) -> Result<Bytes> {
-    // Retrieves the source bytes from the path if it's not a url
-    if !source.url.starts_with("http://") && !source.url.starts_with("https://") {
-        return retrieve_file(package_name, &source.url, &source.checksum);
+    /// Downloads the source file of the package. Shows the download progress in a `ProgressBar` or a spinner if the source is a path.
+    fn download_source(&self, source: &Source, repository_id: &str, package_id: &PackageId) -> Result<Bytes> {
+        // Retrieves the source bytes from the path if it's not a url
+        if !source.url.starts_with("http://") && !source.url.starts_with("https://") {
+            return self.download_repository_source_file(repository_id, package_id, &source.url, &source.checksum);
+        }
+
+        let retrieve_message = format!("Retrieving {} from '{}'", package_id.style(), source.url.cyan());
+        let full_message = format!("{retrieve_message}\nDownloading {}", package_id.style());
+        let mut progressbar = ProgressBar::new(source.size.0.into(), full_message);
+
+        let callback = |(alternative, progress): (Option<&str>, Option<usize>)| {
+            if let Some(alternative) = alternative {
+                let retrieve_message = format!("Retrieving {} from alternative '{}'", package_id.style(), alternative.cyan());
+                progressbar.adjust_prefix(format!("{retrieve_message}\nDownloading {}", package_id.style()));
+            }
+
+            if let Some(progress) = progress {
+                progressbar.set_position(progress as u64);
+            }
+        };
+
+        let size = source.size.0 as usize;
+        download_file(&source.url, &source.mirrors, &source.checksum, callback, Some(size))
     }
 
-    let retrieve_message = format!("Retrieving {} from '{}'", package_name.style(), source.url.cyan());
-    let full_message = format!("{retrieve_message}\nDownloading {}", package_name.style());
-    let mut progressbar = ProgressBar::new(source.size.0.into(), full_message);
+    /// Retrieves a file from the repository source. Checks against a checksum to make sure the bytes are correct.
+    fn download_repository_source_file(
+        &self,
+        repository_id: &str,
+        package_id: &PackageId,
+        path: &str,
+        checksum: &Checksum,
+    ) -> Result<Bytes> {
+        // Create spinner
+        let spinner_message = format!(
+            "Retrieving source files of {} from repository '{repository_id}'",
+            package_id.style()
+        );
+        let spinner = Spinner::new(spinner_message);
+        spinner.show();
 
-    let callback = |(alternative, progress): (Option<&str>, Option<usize>)| {
-        if let Some(alternative) = alternative {
-            let retrieve_message = format!("Retrieving {} from alternative '{}'", package_name.style(), alternative.cyan());
-            progressbar.adjust_prefix(format!("{retrieve_message}\nDownloading {}", package_name.style()));
+        // Get patch file from the repository itself
+        let bytes = self
+            .repository_manager
+            .read_source_file(repository_id, package_id, path)?
+            .ok_or(BuilderError::RepositoryPatchNotFound)?;
+
+        // Calculate the checksum
+        let calculated_checksum = Checksum::from_bytes(&bytes);
+
+        // Check equality of checksum
+        if *checksum != calculated_checksum {
+            return Err(BuilderError::ChecksumError);
         }
 
-        if let Some(progress) = progress {
-            progressbar.set_position(progress as u64);
-        }
-    };
+        spinner.finish();
 
-    let size = source.size.0 as usize;
-    download_file(&source.url, &source.mirrors, &source.checksum, callback, Some(size))
+        Ok(bytes)
+    }
 }
 
 /// Downloads a file from the url, or one of the mirrors. Checks against a checksum and returns progress with a callback.
@@ -334,7 +368,6 @@ where
         && let Some(mirror) = mirrors.next()
     {
         // Call callback with new download url
-        // TODO: Can accept size?
         callback((Some(mirror), None));
 
         // Get response from alternative mirror
@@ -363,28 +396,6 @@ where
     if *checksum != calculated_checksum {
         return Err(BuilderError::ChecksumError);
     }
-
-    Ok(bytes)
-}
-
-/// Retrieves a file from the path, or one of the mirrors. Checks against a checksum to make sure the bytes are correct.
-fn retrieve_file(package_name: &PackageName, path: &str, checksum: &Checksum) -> Result<Bytes> {
-    // Create spinner
-    let spinner_message = format!("Retrieving {} from '{}'", package_name.style(), path.cyan());
-    let spinner = Spinner::new(spinner_message);
-    spinner.show();
-
-    let bytes = fs::read(path).err_with_path("read", path).map(Bytes::from)?;
-
-    // Calculate the checksum
-    let calculated_checksum = Checksum::from_bytes(&bytes);
-
-    // Check equality of checksum
-    if *checksum != calculated_checksum {
-        return Err(BuilderError::ChecksumError);
-    }
-
-    spinner.finish();
 
     Ok(bytes)
 }

@@ -32,6 +32,8 @@ pub trait MetadataProviderImpl {
     fn read_file_bytes(&self, package: &PackageName, file_path: &str) -> Result<Option<Bytes>>;
 
     fn read_file(&self, package: &PackageName, file_path: &str) -> Result<Option<String>>;
+
+    fn read_source_file(&self, package: &PackageName, version: &Version, file_path: &str) -> Result<Option<Bytes>>;
 }
 
 /// Generic metadata repository provider, managing the reading of metadata from a repository.
@@ -92,6 +94,11 @@ impl MetadataProvider {
     /// Reads the requested file from the repository.
     pub fn read_file(&self, package: &PackageName, file_path: &str) -> Result<Option<String>> {
         self.inner.read_file(package, file_path)
+    }
+
+    /// Reads the requested file from the repository sources directory.
+    pub fn read_source_file(&self, package_id: &PackageId, file_path: &str) -> Result<Option<Bytes>> {
+        self.inner.read_source_file(&package_id.name, &package_id.version, file_path)
     }
 }
 
