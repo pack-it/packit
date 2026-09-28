@@ -38,6 +38,11 @@ pub enum RepositoryError {
         revision: u64,
     },
 
+    #[error("Cannot find repository source file at '{file}'")]
+    SourceFileNotFound {
+        file: String,
+    },
+
     #[error("Package metadata is not valid: {0}")]
     ValidationError(String),
 

@@ -96,7 +96,9 @@ impl MetadataProviderImpl for FileSystemMetadataProvider {
         }
 
         if !fs::exists(&complete_path).err_with_path("check existence of", &complete_path)? {
-            return Ok(None);
+            return Err(RepositoryError::SourceFileNotFound {
+                file: file_path.to_string(),
+            });
         }
 
         Ok(Some(fs::read(&complete_path).err_with_path("read", &complete_path)?.into()))
