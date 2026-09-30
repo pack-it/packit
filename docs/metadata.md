@@ -10,6 +10,7 @@ This file explains the Packit metadata repository structure and shows some examp
     - [Global fields](#global-fields)
     - [Sources](#sources)
         - [Example](#example)
+        - [Sources directory](#sources-directory)
     - [Patches](#patches)
         - [Example](#example-1)
     - [Deprecation](#deprecation)
@@ -95,7 +96,7 @@ The targets.toml file can contain one or more sources, specified in the followin
 
 | Field              | Explanation                                                                                                  |
 | ------------------ | ------------------------------------------------------------------------------------------------------------ |
-| `url`              | Defines the URL of the archive containing the source code of the package.                                    |
+| `url`              | Defines the URL of the archive containing the source code of the package. Can also contain the path of a file in the `sources` directory in the repository. |
 | `checksum`         | Defines the sha256 checksum of the source archive.                                                           |
 | `size`             | Defines the size of the source archive in bytes.                                                             |
 | `mirrors`          | Defines a list of mirrors which could be used to download the source code if the original URL is unavailable.|
@@ -118,6 +119,9 @@ url = "https://some-package/windows-version/4.3.tar.gz"
 checksum = "8719374f5a0e8089cd8bf3960d46c6b236d45217509cd07cc6931b41f91b55af"
 size = 89825
 ```
+
+#### Sources directory
+As of Packit version 0.0.6 metadata repositories can contain source files inside of the `sources` directory. This feature is meant to support for offline integration tests and might also proof helpful for repository setups in air-gapped systems. It is not meant as a place to distribute packages.
 
 ### Patches
 The `patches` field in a source is specified in the following format. Patches are indexed with a number, so the first patch is specified by key `patches.0`.
@@ -292,9 +296,6 @@ The environment of build scripts are managed more extensively to make builds mor
 Scripts have the ability to use file descriptor 3 to print verbose output, this output is only shown to the user when verbose mode is turned on. Scripts should only print absolutely necessary output to stdout and stderr, other output should be redirected to this verbose stream.
 
 Please note that on Windows `%PACKIT_OUTPUTS% >&3` is required to redirect output to this verbose stream, while just `>&3` is enough on Unix.
-
-## Sources
-As of Packit version 0.0.6 metadata repositories can contain source files in side of the `sources` directory. This feature is meant to support for offline integration tests and might also proof helpful for repository setups in air-gapped systems. It is not meant as a place to distribute packages.
 
 ## Multiple repositories
 As of the time of writing this there exists only one repository, the [core](https://github.com/pack-it/core) repository. However, Packit allows for multiple repositories to exist. This can be nice for several scenarios. It makes third party repositories possible which could contain more niche packages. It could also prove helpful for a deprecation model. Packit has a feature most other package managers don't have, it has multiple versions of packages. Eventually some of these package versions will be outdated and cannot be kept in the core repository forever. A separate repository with the deprecated packages would be a nice solution.

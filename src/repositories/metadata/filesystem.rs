@@ -102,7 +102,7 @@ impl MetadataProviderImpl for FileSystemMetadataProvider {
             });
         }
 
-        Ok(Box::new(File::open(&complete_path).err_with_path("read", &complete_path)?))
+        Ok(Box::new(File::open(&complete_path).err_with_path("open", &complete_path)?))
     }
 }
 

@@ -1,8 +1,7 @@
-use std::io::Read;
-
 // SPDX-License-Identifier: GPL-3.0-only
 use bytes::Bytes;
 use reqwest::{IntoUrl, StatusCode, blocking::Response};
+use std::io::Read;
 use url::Url;
 
 use crate::{

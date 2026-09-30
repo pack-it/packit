@@ -147,7 +147,7 @@ impl<'a> Builder<'a> {
             let file_name = match source.url.starts_with("http://") || source.url.starts_with("https://") {
                 true => {
                     let url = Url::parse(&source.url)?;
-                    &url.path_segments().and_then(|mut x| x.next_back()).unwrap_or_default().to_owned()
+                    &url.path_segments().and_then(|mut x| x.next_back()).unwrap_or("source_file").to_owned()
                 },
                 false => &source.url,
             };
