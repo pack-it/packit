@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::sync::Arc;
+use std::{io::Read, sync::Arc};
 
 use bytes::Bytes;
 use moka::sync::Cache;
@@ -33,7 +33,7 @@ pub trait MetadataProviderImpl {
 
     fn read_file(&self, package: &PackageName, file_path: &str) -> Result<Option<String>>;
 
-    fn read_source_file(&self, package: &PackageName, version: &Version, file_path: &str) -> Result<Bytes>;
+    fn read_source_file(&self, package: &PackageName, version: &Version, file_path: &str) -> Result<Box<dyn Read>>;
 }
 
 /// Generic metadata repository provider, managing the reading of metadata from a repository.
@@ -97,7 +97,7 @@ impl MetadataProvider {
     }
 
     /// Reads the requested file from the repository sources directory.
-    pub fn read_source_file(&self, package_id: &PackageId, file_path: &str) -> Result<Bytes> {
+    pub fn read_source_file(&self, package_id: &PackageId, file_path: &str) -> Result<Box<dyn Read>> {
         self.inner.read_source_file(&package_id.name, &package_id.version, file_path)
     }
 }

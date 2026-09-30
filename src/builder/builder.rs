@@ -295,11 +295,6 @@ impl<'a> Builder<'a> {
 
     /// Downloads the source file of the package. Shows the download progress in a `ProgressBar` or a spinner if the source is a path.
     fn download_source(&self, source: &Source, repository_id: &str, package_id: &PackageId) -> Result<Bytes> {
-        // Retrieves the source bytes from the path if it's not a url
-        if !source.url.starts_with("http://") && !source.url.starts_with("https://") {
-            return self.download_repository_source_file(repository_id, package_id, &source.url, &source.checksum);
-        }
-
         let retrieve_message = format!("Retrieving {} from '{}'", package_id.style(), source.url.cyan());
         let full_message = format!("{retrieve_message}\nDownloading {}", package_id.style());
         let mut progressbar = ProgressBar::new(source.size.0.into(), full_message);
@@ -316,27 +311,31 @@ impl<'a> Builder<'a> {
         };
 
         let size = source.size.0 as usize;
+
+        // Retrieves the source bytes from the path if it's not a url
+        if !source.url.starts_with("http://") && !source.url.starts_with("https://") {
+            return self.download_repository_source_file(repository_id, package_id, &source.url, callback, &source.checksum, size);
+        }
+
         download_file(&source.url, &source.mirrors, &source.checksum, callback, Some(size))
     }
 
     /// Downloads a file from the repository source. Checks against a checksum to make sure the bytes are correct.
-    fn download_repository_source_file(
+    fn download_repository_source_file<F>(
         &self,
         repository_id: &str,
         package_id: &PackageId,
         path: &str,
+        mut callback: F,
         checksum: &Checksum,
-    ) -> Result<Bytes> {
-        // Create spinner
-        let spinner_message = format!(
-            "Retrieving source files of {} from repository '{repository_id}'",
-            package_id.style()
-        );
-        let spinner = Spinner::new(spinner_message);
-        spinner.show();
-
+        size: usize,
+    ) -> Result<Bytes>
+    where
+        F: FnMut((Option<&str>, Option<usize>)),
+    {
         // Get source file from the repository itself
         let bytes = self.repository_manager.read_source_file(repository_id, package_id, path)?;
+        let bytes = bytes.read_progress(Some(size), |x| callback((None, Some(x)))).err_operation("read source bytes")?;
 
         // Calculate the checksum
         let calculated_checksum = Checksum::from_bytes(&bytes);
@@ -345,8 +344,6 @@ impl<'a> Builder<'a> {
         if *checksum != calculated_checksum {
             return Err(BuilderError::ChecksumError);
         }
-
-        spinner.finish();
 
         Ok(bytes)
     }

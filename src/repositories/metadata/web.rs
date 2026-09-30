@@ -1,3 +1,5 @@
+use std::io::Read;
+
 // SPDX-License-Identifier: GPL-3.0-only
 use bytes::Bytes;
 use reqwest::{IntoUrl, StatusCode, blocking::Response};
@@ -80,7 +82,7 @@ impl MetadataProviderImpl for WebMetadataProvider {
         Ok(Some(response.text()?))
     }
 
-    fn read_source_file(&self, package: &PackageName, version: &Version, file_path: &str) -> Result<Bytes> {
+    fn read_source_file(&self, package: &PackageName, version: &Version, file_path: &str) -> Result<Box<dyn Read>> {
         let parent = format!("{}/sources/{package}/{version}", self.url);
         let Some(response) = self.request_file(parent, file_path)? else {
             return Err(RepositoryError::SourceFileNotFound {
@@ -88,7 +90,7 @@ impl MetadataProviderImpl for WebMetadataProvider {
             });
         };
 
-        Ok(response.bytes()?)
+        Ok(Box::new(response))
     }
 }
 
