@@ -88,7 +88,7 @@ impl MetadataProviderImpl for FileSystemMetadataProvider {
         Ok(Some(Self::read_file_string(&complete_path)?))
     }
 
-    fn read_source_file(&self, package: &PackageName, version: &Version, file_path: &str) -> Result<Option<Bytes>> {
+    fn read_source_file(&self, package: &PackageName, version: &Version, file_path: &str) -> Result<Bytes> {
         let parent = self.path.join("sources").join(package).join(version.to_string());
         let complete_path = io::normalize_path(&parent.join(file_path));
         if !complete_path.starts_with(parent) {
@@ -101,7 +101,7 @@ impl MetadataProviderImpl for FileSystemMetadataProvider {
             });
         }
 
-        Ok(Some(fs::read(&complete_path).err_with_path("read", &complete_path)?.into()))
+        Ok(fs::read(&complete_path).err_with_path("read", &complete_path)?.into())
     }
 }
 

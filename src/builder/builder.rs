@@ -147,7 +147,7 @@ impl<'a> Builder<'a> {
             let file_name = match source.url.starts_with("http://") || source.url.starts_with("https://") {
                 true => {
                     let url = Url::parse(&source.url)?;
-                    &url.path_segments().and_then(|mut x| x.next_back()).ok_or(BuilderError::EmptyUrlPath)?.to_owned()
+                    &url.path_segments().and_then(|mut x| x.next_back()).unwrap_or_default().to_owned()
                 },
                 false => &source.url,
             };
@@ -268,12 +268,12 @@ impl<'a> Builder<'a> {
             return Ok(bytes);
         }
 
-        // Create spinner
-        let spinner_message = format!("Retrieving patch {id} of {} from repository '{repository_id}'", package_id.style());
+        // Create download spinner
+        let spinner_message = format!("Downloading patch {id} of {} from repository '{repository_id}'", package_id.style());
         let spinner = Spinner::new(spinner_message);
         spinner.show();
 
-        // Get patch file from the repository itself
+        // Download patch file from the repository itself
         let file = self
             .repository_manager
             .read_file_bytes(repository_id, &package_id.name, &patch.url)?
@@ -287,7 +287,7 @@ impl<'a> Builder<'a> {
             return Err(BuilderError::ChecksumError);
         }
 
-        // Finish spinner
+        // Finish download spinner
         spinner.finish();
 
         Ok(file)
@@ -319,7 +319,7 @@ impl<'a> Builder<'a> {
         download_file(&source.url, &source.mirrors, &source.checksum, callback, Some(size))
     }
 
-    /// Retrieves a file from the repository source. Checks against a checksum to make sure the bytes are correct.
+    /// Downloads a file from the repository source. Checks against a checksum to make sure the bytes are correct.
     fn download_repository_source_file(
         &self,
         repository_id: &str,
@@ -335,11 +335,8 @@ impl<'a> Builder<'a> {
         let spinner = Spinner::new(spinner_message);
         spinner.show();
 
-        // Get patch file from the repository itself
-        let bytes = self
-            .repository_manager
-            .read_source_file(repository_id, package_id, path)?
-            .ok_or(BuilderError::RepositoryPatchNotFound)?;
+        // Get source file from the repository itself
+        let bytes = self.repository_manager.read_source_file(repository_id, package_id, path)?;
 
         // Calculate the checksum
         let calculated_checksum = Checksum::from_bytes(&bytes);

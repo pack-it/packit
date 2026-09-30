@@ -80,15 +80,15 @@ impl MetadataProviderImpl for WebMetadataProvider {
         Ok(Some(response.text()?))
     }
 
-    fn read_source_file(&self, package: &PackageName, version: &Version, file_path: &str) -> Result<Option<Bytes>> {
-        let parent = format!("{}/packages/{package}/{version}", self.url);
+    fn read_source_file(&self, package: &PackageName, version: &Version, file_path: &str) -> Result<Bytes> {
+        let parent = format!("{}/sources/{package}/{version}", self.url);
         let Some(response) = self.request_file(parent, file_path)? else {
             return Err(RepositoryError::SourceFileNotFound {
                 file: file_path.to_string(),
             });
         };
 
-        Ok(Some(response.bytes()?))
+        Ok(response.bytes()?)
     }
 }
 
