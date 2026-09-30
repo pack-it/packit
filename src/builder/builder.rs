@@ -23,7 +23,7 @@ use crate::{
     installer::{
         install_tree::InstallMeta,
         scripts::{self, ScriptData},
-        types::{PackageId, PackageName},
+        types::PackageId,
         unpack::{ArchiveExtension, unpack},
     },
     register::package_register::PackageRegister,
@@ -81,6 +81,7 @@ impl<'a> Builder<'a> {
     pub fn build(&self, install_meta: &InstallMeta, destination_dir: impl AsRef<Path>) -> Result<()> {
         let package_name = &install_meta.package_metadata.name;
         let version = &install_meta.version_metadata.version;
+        let package_id = PackageId::new(package_name.clone(), version.clone());
         let target = install_meta.version_metadata.get_target(&install_meta.target_bounds)?;
 
         let mut installed_dependencies = Vec::new();
@@ -132,7 +133,7 @@ impl<'a> Builder<'a> {
         debug!("Source size: {}", source.size);
 
         // Download the build files
-        let bytes = download_source(source, package_name)?;
+        let bytes = self.download_source(source, &install_meta.repository_id, &package_id)?;
 
         // Create temp directory to build in
         let build_directory = TempDir::new().err_operation("create temp dir")?;
@@ -142,8 +143,15 @@ impl<'a> Builder<'a> {
             let extention = ArchiveExtension::from_path(&source.url);
             unpack(package_name, extention, bytes, &build_directory, true)?;
         } else {
-            let url = Url::parse(&source.url)?;
-            let file_name = url.path_segments().and_then(|mut x| x.next_back()).ok_or(BuilderError::EmptyUrlPath)?;
+            // If the url is not a url assume that it's a path
+            let file_name = match source.url.starts_with("http://") || source.url.starts_with("https://") {
+                true => {
+                    let url = Url::parse(&source.url)?;
+                    &url.path_segments().and_then(|mut x| x.next_back()).unwrap_or("source_file").to_owned()
+                },
+                false => &source.url,
+            };
+
             let file_path = build_directory.path().join(file_name);
             fs::write(&file_path, bytes).err_with_path("write", file_path)?;
         }
@@ -165,8 +173,6 @@ impl<'a> Builder<'a> {
         if let Some(apply_in) = &source.apply_patches_in {
             apply_directory = apply_directory.join(PathBuf::from(apply_in));
         }
-
-        let package_id = PackageId::new(package_name.clone(), version.clone());
 
         // Apply patches
         for (id, patch) in source.get_sorted_patches() {
@@ -286,27 +292,59 @@ impl<'a> Builder<'a> {
 
         Ok(file)
     }
-}
 
-/// Downloads the source file of the package. Shows the download progress in a `ProgressBar`.
-fn download_source(source: &Source, package_name: &PackageName) -> Result<Bytes> {
-    let retrieve_message = format!("Retrieving {} from '{}'", package_name.style(), source.url.cyan());
-    let full_message = format!("{retrieve_message}\nDownloading {}", package_name.style());
-    let mut progressbar = ProgressBar::new(source.size.0.into(), full_message);
+    /// Downloads the source file of the package. Shows the download progress in a `ProgressBar` or a spinner if the source is a path.
+    fn download_source(&self, source: &Source, repository_id: &str, package_id: &PackageId) -> Result<Bytes> {
+        let retrieve_message = format!("Retrieving {} from '{}'", package_id.style(), source.url.cyan());
+        let full_message = format!("{retrieve_message}\nDownloading {}", package_id.style());
+        let mut progressbar = ProgressBar::new(source.size.0.into(), full_message);
 
-    let callback = |(alternative, progress): (Option<&str>, Option<usize>)| {
-        if let Some(alternative) = alternative {
-            let retrieve_message = format!("Retrieving {} from alternative '{}'", package_name.style(), alternative.cyan());
-            progressbar.adjust_prefix(format!("{retrieve_message}\nDownloading {}", package_name.style()));
+        let callback = |(alternative, progress): (Option<&str>, Option<usize>)| {
+            if let Some(alternative) = alternative {
+                let retrieve_message = format!("Retrieving {} from alternative '{}'", package_id.style(), alternative.cyan());
+                progressbar.adjust_prefix(format!("{retrieve_message}\nDownloading {}", package_id.style()));
+            }
+
+            if let Some(progress) = progress {
+                progressbar.set_position(progress as u64);
+            }
+        };
+
+        let size = source.size.0 as usize;
+
+        // Retrieves the source bytes from the path if it's not a url
+        if !source.url.starts_with("http://") && !source.url.starts_with("https://") {
+            return self.download_repository_source_file(repository_id, package_id, callback, source);
         }
 
-        if let Some(progress) = progress {
-            progressbar.set_position(progress as u64);
-        }
-    };
+        download_file(&source.url, &source.mirrors, &source.checksum, callback, Some(size))
+    }
 
-    let size = source.size.0 as usize;
-    download_file(&source.url, &source.mirrors, &source.checksum, callback, Some(size))
+    /// Downloads a file from the repository source. Checks against a checksum to make sure the bytes are correct.
+    fn download_repository_source_file<F>(
+        &self,
+        repository_id: &str,
+        package_id: &PackageId,
+        mut callback: F,
+        source: &Source,
+    ) -> Result<Bytes>
+    where
+        F: FnMut((Option<&str>, Option<usize>)),
+    {
+        // Get source file from the repository itself
+        let bytes = self.repository_manager.read_source_file(repository_id, package_id, &source.url)?;
+        let bytes = bytes.read_progress(Some(source.size.0 as usize), |x| callback((None, Some(x)))).err_operation("read source bytes")?;
+
+        // Calculate the checksum
+        let calculated_checksum = Checksum::from_bytes(&bytes);
+
+        // Check equality of checksum
+        if source.checksum != calculated_checksum {
+            return Err(BuilderError::ChecksumError);
+        }
+
+        Ok(bytes)
+    }
 }
 
 /// Downloads a file from the url, or one of the mirrors. Checks against a checksum and returns progress with a callback.
@@ -316,7 +354,6 @@ where
     F: FnMut((Option<&str>, Option<usize>)),
 {
     // Try to download from the main url
-    let mut mirrors = mirrors.iter();
     let mut response = requests::get(url).map_err(BuilderError::RequestError);
     if let Ok(status_response) = &response
         && !status_response.status().is_success()
@@ -325,6 +362,7 @@ where
     }
 
     // Loop through mirrors for alternatives in case of error
+    let mut mirrors = mirrors.iter();
     while response.is_err()
         && let Some(mirror) = mirrors.next()
     {
@@ -341,6 +379,7 @@ where
             response = Err(BuilderError::RequestUnsuccessful(status_response.status()));
         }
     }
+
     let response = response?;
 
     // Get the bytes from the response

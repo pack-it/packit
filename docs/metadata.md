@@ -10,6 +10,7 @@ This file explains the Packit metadata repository structure and shows some examp
     - [Global fields](#global-fields)
     - [Sources](#sources)
         - [Example](#example)
+        - [Sources directory](#sources-directory)
     - [Patches](#patches)
         - [Example](#example-1)
     - [Deprecation](#deprecation)
@@ -95,7 +96,7 @@ The targets.toml file can contain one or more sources, specified in the followin
 
 | Field              | Explanation                                                                                                  |
 | ------------------ | ------------------------------------------------------------------------------------------------------------ |
-| `url`              | Defines the URL of the archive containing the source code of the package.                                    |
+| `url`              | Defines the URL of the archive containing the source code of the package. Can also contain the path of a file in the `sources` directory in the repository. |
 | `checksum`         | Defines the sha256 checksum of the source archive.                                                           |
 | `size`             | Defines the size of the source archive in bytes.                                                             |
 | `mirrors`          | Defines a list of mirrors which could be used to download the source code if the original URL is unavailable.|
@@ -118,6 +119,9 @@ url = "https://some-package/windows-version/4.3.tar.gz"
 checksum = "8719374f5a0e8089cd8bf3960d46c6b236d45217509cd07cc6931b41f91b55af"
 size = 89825
 ```
+
+#### Sources directory
+As of Packit version 0.0.6 metadata repositories can contain source files inside of the `sources` directory. This feature is meant to support for offline integration tests and might also proof helpful for repository setups in air-gapped systems. It is not meant as a place to distribute packages.
 
 ### Patches
 The `patches` field in a source is specified in the following format. Patches are indexed with a number, so the first patch is specified by key `patches.0`.

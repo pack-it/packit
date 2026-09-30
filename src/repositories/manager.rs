@@ -440,6 +440,7 @@ impl<'a> RepositoryManager<'a> {
 
     /// Reads a file of the given package from the given repository.
     /// Returns the file as bytes.
+    /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     pub fn read_file_bytes(&self, repository_id: &str, package: &PackageName, file_path: &str) -> Result<Option<Bytes>> {
         self.get_metadata_provider_skip_supported(repository_id, package.is_packit())?.read_file_bytes(package, file_path)
     }
@@ -449,6 +450,14 @@ impl<'a> RepositoryManager<'a> {
     /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
     pub fn read_file(&self, repository_id: &str, package: &PackageName, file_path: &str) -> Result<Option<String>> {
         self.get_metadata_provider_skip_supported(repository_id, package.is_packit())?.read_file(package, file_path)
+    }
+
+    /// Reads the source file of the given package id from the given repository.
+    /// Returns an object which implements the `Read` trait.
+    /// Returns a `RepositoryNotFoundError` if no repository with the given `repository_id` can be found.
+    pub fn read_source_file(&self, repository_id: &str, package_id: &PackageId, file_path: &str) -> Result<Box<dyn Read>> {
+        self.get_metadata_provider_skip_supported(repository_id, package_id.name.is_packit())?
+            .read_source_file(package_id, file_path)
     }
 
     /// Retrieves the prebuild metadata for the given package version.

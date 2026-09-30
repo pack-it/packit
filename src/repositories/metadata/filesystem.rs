@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::{
-    fs,
+    fs::{self, File},
+    io::Read,
     path::{Path, PathBuf},
 };
 
@@ -86,6 +87,22 @@ impl MetadataProviderImpl for FileSystemMetadataProvider {
         }
 
         Ok(Some(Self::read_file_string(&complete_path)?))
+    }
+
+    fn read_source_file(&self, package: &PackageName, version: &Version, file_path: &str) -> Result<Box<dyn Read>> {
+        let parent = self.path.join("sources").join(package).join(version.to_string());
+        let complete_path = io::normalize_path(&parent.join(file_path));
+        if !complete_path.starts_with(parent) {
+            return Err(RepositoryError::EscapeDirectoryError(file_path.to_string()));
+        }
+
+        if !fs::exists(&complete_path).err_with_path("check existence of", &complete_path)? {
+            return Err(RepositoryError::SourceFileNotFound {
+                file: file_path.to_string(),
+            });
+        }
+
+        Ok(Box::new(File::open(&complete_path).err_with_path("open", &complete_path)?))
     }
 }
 

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use bytes::Bytes;
 use reqwest::{IntoUrl, StatusCode, blocking::Response};
+use std::io::Read;
 use url::Url;
 
 use crate::{
@@ -63,7 +64,8 @@ impl MetadataProviderImpl for WebMetadataProvider {
     }
 
     fn read_file_bytes(&self, package: &PackageName, file_path: &str) -> Result<Option<Bytes>> {
-        let Some(response) = self.request_file(package, file_path)? else {
+        let parent = format!("{}/packages/{package}", self.url);
+        let Some(response) = self.request_file(parent, file_path)? else {
             return Ok(None);
         };
 
@@ -71,11 +73,23 @@ impl MetadataProviderImpl for WebMetadataProvider {
     }
 
     fn read_file(&self, package: &PackageName, file_path: &str) -> Result<Option<String>> {
-        let Some(response) = self.request_file(package, file_path)? else {
+        let parent = format!("{}/packages/{package}", self.url);
+        let Some(response) = self.request_file(parent, file_path)? else {
             return Ok(None);
         };
 
         Ok(Some(response.text()?))
+    }
+
+    fn read_source_file(&self, package: &PackageName, version: &Version, file_path: &str) -> Result<Box<dyn Read>> {
+        let parent = format!("{}/sources/{package}/{version}", self.url);
+        let Some(response) = self.request_file(parent, file_path)? else {
+            return Err(RepositoryError::SourceFileNotFound {
+                file: file_path.to_string(),
+            });
+        };
+
+        Ok(Box::new(response))
     }
 }
 
@@ -115,10 +129,9 @@ impl WebMetadataProvider {
 
     /// Requests a file from the specified package. Returns a `Response` if the request was successful.
     /// `RepositoryError::UnsuccessfulRequest` is returned in case of failure. If the given `file_path`
-    /// escapes the parent directory `RepositoryError::EscapeDirectoryError` is returned.
+    /// escapes the given parent directory `RepositoryError::EscapeDirectoryError` is returned.
     /// If the response status is 404 `None` is returned.
-    fn request_file(&self, package: &PackageName, file_path: &str) -> Result<Option<Response>> {
-        let parent = format!("{}/packages/{package}", self.url);
+    fn request_file(&self, parent: String, file_path: &str) -> Result<Option<Response>> {
         let path = Url::parse(&format!("{parent}/{file_path}"))?.to_string();
         if !path.starts_with(&parent) {
             return Err(RepositoryError::EscapeDirectoryError(file_path.to_string()));

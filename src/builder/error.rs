@@ -30,9 +30,6 @@ pub enum BuilderError {
     #[error("Checksum does not match")]
     ChecksumError,
 
-    #[error("The source url has an empty path")]
-    EmptyUrlPath,
-
     #[error("The required patch was not found in the repository")]
     RepositoryPatchNotFound,
 
