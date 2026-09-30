@@ -293,6 +293,9 @@ Scripts have the ability to use file descriptor 3 to print verbose output, this 
 
 Please note that on Windows `%PACKIT_OUTPUTS% >&3` is required to redirect output to this verbose stream, while just `>&3` is enough on Unix.
 
+## Sources
+As of Packit version 0.0.6 metadata repositories can contain source files in side of the `sources` directory. This feature is meant to support for offline integration tests and might also proof helpful for repository setups in air-gapped systems. It is not meant as a place to distribute packages.
+
 ## Multiple repositories
 As of the time of writing this there exists only one repository, the [core](https://github.com/pack-it/core) repository. However, Packit allows for multiple repositories to exist. This can be nice for several scenarios. It makes third party repositories possible which could contain more niche packages. It could also prove helpful for a deprecation model. Packit has a feature most other package managers don't have, it has multiple versions of packages. Eventually some of these package versions will be outdated and cannot be kept in the core repository forever. A separate repository with the deprecated packages would be a nice solution.
 

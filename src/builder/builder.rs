@@ -314,7 +314,7 @@ impl<'a> Builder<'a> {
 
         // Retrieves the source bytes from the path if it's not a url
         if !source.url.starts_with("http://") && !source.url.starts_with("https://") {
-            return self.download_repository_source_file(repository_id, package_id, &source.url, callback, &source.checksum, size);
+            return self.download_repository_source_file(repository_id, package_id, callback, source);
         }
 
         download_file(&source.url, &source.mirrors, &source.checksum, callback, Some(size))
@@ -325,23 +325,21 @@ impl<'a> Builder<'a> {
         &self,
         repository_id: &str,
         package_id: &PackageId,
-        path: &str,
         mut callback: F,
-        checksum: &Checksum,
-        size: usize,
+        source: &Source,
     ) -> Result<Bytes>
     where
         F: FnMut((Option<&str>, Option<usize>)),
     {
         // Get source file from the repository itself
-        let bytes = self.repository_manager.read_source_file(repository_id, package_id, path)?;
-        let bytes = bytes.read_progress(Some(size), |x| callback((None, Some(x)))).err_operation("read source bytes")?;
+        let bytes = self.repository_manager.read_source_file(repository_id, package_id, &source.url)?;
+        let bytes = bytes.read_progress(Some(source.size.0 as usize), |x| callback((None, Some(x)))).err_operation("read source bytes")?;
 
         // Calculate the checksum
         let calculated_checksum = Checksum::from_bytes(&bytes);
 
         // Check equality of checksum
-        if *checksum != calculated_checksum {
+        if source.checksum != calculated_checksum {
             return Err(BuilderError::ChecksumError);
         }
 

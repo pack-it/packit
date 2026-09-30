@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased](https://github.com/pack-it/packit/compare/0.0.5...HEAD)
 
+### Added
+- The metadata repositories can now contain source files.
+
 ### Fixed
 - Fix `LocalMetadataExistence` verifier fix not updating the last refresh and update state in the register.
 
