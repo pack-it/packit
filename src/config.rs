@@ -17,7 +17,7 @@ use crate::{
         logging::warning,
         standard_print::{self, DisplayOption},
     },
-    platforms::{DEFAULT_CONFIG_DIR, DEFAULT_PREFIX},
+    platforms::{DEFAULT_PREFIX, get_default_config_dir},
     repositories::metadata::DEFAULT_METADATA_PROVIDER_ID,
     utils::{
         constants::{
@@ -143,7 +143,7 @@ impl Config {
 
     /// Gets the default path of the Packit config file.
     pub fn get_default_path() -> PathBuf {
-        Path::new(DEFAULT_CONFIG_DIR).join(CONFIG_FILENAME)
+        Path::new(get_default_config_dir()).join(CONFIG_FILENAME)
     }
 
     fn default_prefix_directory() -> PathBuf {

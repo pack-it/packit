@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use crate::packit;
+use crate::{common::environment::Environment, packit};
 
 #[test]
 fn version() {
+    let environment = Environment::init();
     packit!("--version").assert().success();
+    environment.clean();
 }
 
 #[test]
