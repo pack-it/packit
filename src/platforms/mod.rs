@@ -7,8 +7,8 @@ mod target;
 mod target_architecture;
 pub mod tool_detection;
 
-pub use defaults::DEFAULT_CONFIG_DIR;
 pub use defaults::DEFAULT_PREFIX;
+pub use defaults::get_default_config_dir;
 
 pub use os::Os;
 pub use os::OsVersion;

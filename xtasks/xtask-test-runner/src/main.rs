@@ -150,7 +150,7 @@ fn setup() -> Cleanup {
     Cleanup { existing_config, prefix }
 }
 
-/// Creates the default test config.
+/// Creates the default test config at the given path.
 fn create_default_test_config(config_dir: &PathBuf) {
     let Some(parent) = config_dir.parent() else {
         eprintln!("Couldn't get config directory parent");
@@ -164,14 +164,14 @@ fn create_default_test_config(config_dir: &PathBuf) {
     }
 
     if let Err(e) = File::create(config_dir) {
-        eprintln!("Failed to create 'TestConfig.toml' at '{}'", config_dir.display());
+        eprintln!("Failed to create 'Config.toml' at '{}'", config_dir.display());
         eprintln!("Error: {e}");
         exit(1);
     }
 
     let mut config = Map::new();
     config.insert("repositories_rank".into(), Value::Array(vec!["test".into()]));
-    config.insert("prefix_directory".into(), DEFAULT_PREFIX.into());
+    config.insert("prefix_directory".into(), DEFAULT_PREFIX.into()); // TODO this should be temp dir prefix
 
     let mut repositories = Map::new();
     let mut test_repository = Map::new();

@@ -19,7 +19,7 @@ use crate::{
         Symlinker,
         types::{PackageId, PackageName, Version},
     },
-    platforms::{DEFAULT_CONFIG_DIR, DEFAULT_PREFIX, permissions},
+    platforms::{DEFAULT_PREFIX, get_default_config_dir, permissions},
     register::{
         installed_package_version::InstalledPackageVersion,
         metadata::{LocalMetaHandler, LocalMetaPackageHandler, LocalMetadata},
@@ -68,15 +68,16 @@ impl HandleCommand for InitArgs {
         }
 
         // Check if config directory exists
-        let config_dir = Path::new(DEFAULT_CONFIG_DIR);
+        let default_config_dir = get_default_config_dir();
+        let config_dir = Path::new(default_config_dir);
         if !config_dir.exists() {
-            error!(msg: "Packit cannot be initialized: the config directory at '{DEFAULT_CONFIG_DIR}' does not exist yet, please create it first");
+            error!(msg: "Packit cannot be initialized: the config directory at '{default_config_dir}' does not exist yet, please create it first");
             exit(1);
         }
 
         // Check if config directory is writable
         if !permissions::is_writable(config_dir).unwrap_or_exit_msg("Unable to check if config directory is writable", 1) {
-            error!(msg: "Packit cannot be initialized: the config directory at '{DEFAULT_CONFIG_DIR}' is not writable, please set the correct permissions");
+            error!(msg: "Packit cannot be initialized: the config directory at '{default_config_dir}' is not writable, please set the correct permissions");
             exit(1);
         }
 
