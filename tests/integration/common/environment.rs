@@ -2,6 +2,7 @@ use std::{
     fs::{self, File},
     path::PathBuf,
     process::exit,
+    str::FromStr,
 };
 use toml::{Value, map::Map};
 
@@ -19,7 +20,7 @@ pub const DEFAULT_CONFIG_DIR: &str = "C:\\Program Files\\packit";
 
 /// Contains the test information about the test environment and how to clean it up.
 pub struct Environment {
-    _temp_directory: TempDir,
+    pub _temp_directory: TempDir, // Never used, but kept to keep the temporary directory in scope, so it doesn't get removed
     test_directory: PathBuf,
 }
 
@@ -46,18 +47,19 @@ impl Environment {
         let mut provider = String::from("web");
 
         // Check if `TestConfig.toml` exists in the default config directory
-        let test_config_dir = self.test_directory.join("TestConfig.toml");
+        let test_config_dir = PathBuf::from_str(DEFAULT_CONFIG_DIR).expect("Expected valid default").join("TestConfig.toml");
         if let Ok(true) = fs::exists(&test_config_dir) {
             println!("Using TestConfig.toml");
 
-            // TODO: Adjust to use config structure with repositories
             let config_table = self.get_config_table(&test_config_dir);
             if let Some(config_url) = config_table.get("url") {
-                url = config_url.to_string();
+                url = config_url.to_string().trim_matches('"').to_string();
+                dbg!(&url);
             }
 
             if let Some(config_provider) = config_table.get("provider") {
-                provider = config_provider.to_string();
+                provider = config_provider.to_string().trim_matches('"').to_string();
+                dbg!(&provider);
             }
         }
 
@@ -135,6 +137,9 @@ impl Environment {
                 exit(1);
             },
         };
+
+        dbg!("Final test config:");
+        dbg!(&toml_string);
 
         if let Err(e) = std::fs::write(&config_dir, &toml_string) {
             eprintln!("Failed to write the following to '{}':\n{toml_string}\n", config_dir.display());

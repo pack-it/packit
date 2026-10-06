@@ -10,8 +10,10 @@ fn version() {
 
 #[test]
 fn info_requirements() {
+    let environment = Environment::init();
+
     // Install simple package for test
-    _ = packit!("install", "simple@0.0.1", "--build").ok();
+    _ = packit!("install", "simple@0.0.1", "--build").assert().success();
 
     packit!("info", "--tree").assert().failure();
     packit!("info", "--active").assert().failure();
@@ -25,6 +27,5 @@ fn info_requirements() {
     packit!("info", "simple", "--active").assert().success();
     packit!("info", "simple", "--tree", "--active").assert().success();
 
-    // Cleanup simple package after test
-    _ = packit!("uninstall", "simple").ok();
+    environment.clean();
 }
