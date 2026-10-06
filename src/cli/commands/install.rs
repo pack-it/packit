@@ -16,7 +16,7 @@ use crate::{
     },
     config::Config,
     installer::{InstallType, Installer, InstallerOptions, types::OptionalPackageId},
-    platforms::Target,
+    platforms::{Target, get_default_config_dir},
     register::package_register::PackageRegister,
     repositories::{error::RepositoryError, manager::RepositoryManager},
     utils::unwrap_or_exit::UnwrapOrExit,
