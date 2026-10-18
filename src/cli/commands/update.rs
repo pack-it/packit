@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use clap::Args;
 use colored::Colorize;
-use std::process::exit;
+use std::{path::PathBuf, process::exit};
 
 use crate::{
     cli::{
@@ -15,6 +15,7 @@ use crate::{
         parameter_checks,
     },
     config::{Config, Repository},
+    history::history::{HistoryCommand, HistoryManager},
     installer::{
         Installer, InstallerOptions,
         types::{OptionalPackageId, PackageName, Version},
@@ -65,6 +66,13 @@ pub struct UpdateArgs {
 
 impl HandleCommand for UpdateArgs {
     fn handle(&self) {
+        let directory = PathBuf::from("/opt/packit/history/history.txt");
+        let args: Vec<String> = std::env::args().collect();
+        let command_string = args.join(" ");
+        let history_command = HistoryCommand::new(command_string);
+        let mut history = HistoryManager::new(directory, 1024, history_command, true);
+        history.store_command();
+
         let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
         let manager = RepositoryManager::new(&config);
         let register_dir = PackageRegister::get_path(&config.prefix_directory);
@@ -77,7 +85,7 @@ impl HandleCommand for UpdateArgs {
         }
 
         let options = InstallerOptions::default();
-        let installer = Installer::new(&config, &mut register, &manager, options);
+        let installer = Installer::new(&config, &mut register, &manager, Some(&mut history), options);
 
         // If `--all` is specified use all the updatable packages
         let optional_ids = match self.all {
@@ -128,7 +136,7 @@ impl HandleCommand for UpdateArgs {
             }
 
             let options = InstallerOptions::default();
-            let mut installer = Installer::new(&config, &mut register, &manager, options);
+            let mut installer = Installer::new(&config, &mut register, &manager, Some(&mut history), options);
 
             // Do the update, and in case of an error throw the error, but continue
             let new_package_id = match installer.update(optional_id, new_version) {

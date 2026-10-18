@@ -14,6 +14,7 @@ use crate::{
         styled::{MapStyled, Styled},
     },
     config::Config,
+    history::history::{Action, ActionType, HistoryManager},
     installer::{
         InstallLabel,
         error::{InstallerError, Result},
@@ -42,6 +43,7 @@ pub struct Installer<'a> {
     config: &'a Config,
     register: &'a mut PackageRegister,
     repository_manager: &'a RepositoryManager<'a>,
+    history_manager: Option<&'a mut HistoryManager>,
     options: InstallerOptions,
 }
 
@@ -51,12 +53,14 @@ impl<'a> Installer<'a> {
         config: &'a Config,
         register: &'a mut PackageRegister,
         repository_manager: &'a RepositoryManager,
+        history_manager: Option<&'a mut HistoryManager>,
         options: InstallerOptions,
     ) -> Self {
         Self {
             config,
             register,
             repository_manager,
+            history_manager,
             options,
         }
     }
@@ -276,6 +280,12 @@ impl<'a> Installer<'a> {
 
         self.execute_postinstall(&package_id, install_meta, &install_directory, &script_args)?;
 
+        if let Some(history_manager) = &mut self.history_manager {
+            let action_type = ActionType::Install(package_id.clone());
+            let action = Action::new(action_type);
+            history_manager.store_action(action);
+        }
+
         self.determine_active(install_meta, &package_id, target_meta)?;
 
         // Only run the test if the skip test option is false
@@ -464,48 +474,65 @@ impl<'a> Installer<'a> {
             }
         }
 
+        let Some(installed_package) = self.register.get_package(&package_id.name) else {
+            return Ok(());
+        };
+
         let mut should_set_active = true;
 
         // Check if we have a previous active install
-        if let Some(installed_package) = self.register.get_package(&package_id.name) {
-            if installed_package.versions.len() > 1 {
-                // Skip if skip active is specified in the install options
-                if self.options.skip_active {
-                    should_set_active = false;
-                }
+        if installed_package.versions.len() > 1 {
+            // Skip if skip active is specified in the install options
+            if self.options.skip_active {
+                should_set_active = false;
+            }
 
-                // Prompt user if the installed version is newer than the version currently installing
-                if should_set_active && installed_package.active_version > install_meta.version_metadata.version {
-                    let question = format!(
-                        "A newer version ({}) of this package is currently active, do you want to change the active version to the older version ({})?",
-                        installed_package.active_version.style(),
-                        install_meta.version_metadata.version.style()
-                    );
-                    should_set_active = ask_user(&question, QuestionResponse::No)?.is_yes();
-                }
+            // Prompt user if the installed version is newer than the version currently installing
+            if should_set_active && installed_package.active_version > install_meta.version_metadata.version {
+                let question = format!(
+                    "A newer version ({}) of this package is currently active, do you want to change the active version to the older version ({})?",
+                    installed_package.active_version.style(),
+                    install_meta.version_metadata.version.style()
+                );
+                should_set_active = ask_user(&question, QuestionResponse::No)?.is_yes();
+            }
 
-                // Prompt user if the installed version is not symlinked and we're not skipping symlinking
-                if should_set_active && !installed_package.symlinked && should_symlink {
-                    let question = format!(
-                        "The current active version of {} ({}) is not symlinked, do you want to proceed with symlinking the newly installed version",
-                        package_id.name.style(),
-                        installed_package.active_version.style()
-                    );
-                    should_symlink = ask_user(&question, QuestionResponse::No)?.is_yes();
-                }
+            // Prompt user if the installed version is not symlinked and we're not skipping symlinking
+            if should_set_active && !installed_package.symlinked && should_symlink {
+                let question = format!(
+                    "The current active version of {} ({}) is not symlinked, do you want to proceed with symlinking the newly installed version",
+                    package_id.name.style(),
+                    installed_package.active_version.style()
+                );
+                should_symlink = ask_user(&question, QuestionResponse::No)?.is_yes();
+            }
 
-                // Show warning if the not symlinking but package was previously symlinked
-                if should_set_active && installed_package.symlinked && !should_symlink {
-                    warning!(
-                        "The new active package version will not be symlinked, while the previously active version was symlinked. The package will not be automatically findable by your system anymore"
-                    );
-                }
+            // Show warning if the not symlinking but package was previously symlinked
+            if should_set_active && installed_package.symlinked && !should_symlink {
+                warning!(
+                    "The new active package version will not be symlinked, while the previously active version was symlinked. The package will not be automatically findable by your system anymore"
+                );
             }
         }
 
+        let current_active = installed_package.active_version.clone();
+
         // If package is installed successfully, set it to active
+        // TODO: Only do this when current active is different then package id version (be careful for symlinking which might need to happen)
         if should_set_active {
             Symlinker::new(self.config).set_active(self.register, package_id, should_symlink)?;
+
+            if let Some(history_manager) = &mut self.history_manager {
+                // Store set active action
+                let action_type = ActionType::Switch {
+                    name: package_id.name.clone(),
+                    old_version: current_active,
+                    new_version: package_id.version.clone(),
+                };
+
+                let action = Action::new(action_type);
+                history_manager.store_action(action);
+            }
         }
 
         Ok(())

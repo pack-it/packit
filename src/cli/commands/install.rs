@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use clap::Args;
 use colored::Colorize;
-use std::process::exit;
+use std::{path::PathBuf, process::exit};
 
 use crate::{
     cli::{
@@ -15,6 +15,7 @@ use crate::{
         parameter_checks,
     },
     config::Config,
+    history::history::{HistoryCommand, HistoryManager},
     installer::{InstallType, Installer, InstallerOptions, types::OptionalPackageId},
     platforms::Target,
     register::package_register::PackageRegister,
@@ -70,6 +71,13 @@ pub struct InstallArgs {
 
 impl HandleCommand for InstallArgs {
     fn handle(&self) {
+        let directory = PathBuf::from("/opt/packit/history/history.txt");
+        let args: Vec<String> = std::env::args().collect();
+        let command_string = args.join(" ");
+        let history_command = HistoryCommand::new(command_string);
+        let mut history = HistoryManager::new(directory, 1024, history_command, true);
+        history.store_command();
+
         // Check for duplicates, because installing twice will result in a confusing error
         let duplicates = parameter_checks::get_duplicates(&self.packages);
         if !duplicates.is_empty() {
@@ -101,7 +109,7 @@ impl HandleCommand for InstallArgs {
             deprecation::show_package_version_warnings(&package_version, &optional_id.name);
         }
 
-        // Determine the install type. Note that clap already check if build and build-all are both set (which should not be possible).
+        // Determine the install type. Note that clap already checks if build and build-all are both set (which should not be possible).
         let install_type = if self.build {
             InstallType::Build
         } else if self.build_all {
@@ -123,7 +131,7 @@ impl HandleCommand for InstallArgs {
             .execute_build_test(self.execute_build_test)
             .skip_test(self.skip_test)
             .pause_build(self.pause_build);
-        let mut installer = Installer::new(&config, &mut register, &manager, installer_options);
+        let mut installer = Installer::new(&config, &mut register, &manager, Some(&mut history), installer_options);
 
         // Install all packages
         let mut found_error = false;

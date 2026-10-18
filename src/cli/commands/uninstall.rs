@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use clap::Args;
 use colored::Colorize;
-use std::{collections::VecDeque, process::exit};
+use std::{collections::VecDeque, path::PathBuf, process::exit};
 
 use crate::{
     cli::{
@@ -10,6 +10,7 @@ use crate::{
         parameter_checks,
     },
     config::Config,
+    history::history::{HistoryCommand, HistoryManager},
     installer::{
         Installer, InstallerOptions,
         types::{OptionalPackageId, PackageId},
@@ -31,6 +32,13 @@ pub struct UninstallArgs {
 
 impl HandleCommand for UninstallArgs {
     fn handle(&self) {
+        let directory = PathBuf::from("/opt/packit/history/history.txt");
+        let args: Vec<String> = std::env::args().collect();
+        let command_string = args.join(" ");
+        let history_command = HistoryCommand::new(command_string);
+        let mut history = HistoryManager::new(directory, 1024, history_command, true);
+        history.store_command();
+
         // Check for duplicates, because uninstalling twice will result in a confusing error
         let duplicates = parameter_checks::get_duplicates(&self.packages);
         if !duplicates.is_empty() {
@@ -47,7 +55,7 @@ impl HandleCommand for UninstallArgs {
         // Determine the order in which to uninstall the given packages
         let uninstall_order = self.get_uninstall_order(&register);
 
-        let mut installer = Installer::new(&config, &mut register, &manager, InstallerOptions::default());
+        let mut installer = Installer::new(&config, &mut register, &manager, Some(&mut history), InstallerOptions::default());
 
         // Uninstall all specified packages
         let mut found_error = false;

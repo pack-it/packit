@@ -43,7 +43,7 @@ pub fn fix_broken_tree(
             None => {
                 // Install the package
                 let installer_options = InstallerOptions::default().skip_symlinking(true);
-                let mut installer = Installer::new(config, register, manager, installer_options);
+                let mut installer = Installer::new(config, register, manager, None, installer_options);
                 installer.install(&missing_package.clone().into())?;
 
                 // Assume installation worked
@@ -93,7 +93,7 @@ pub fn fix_inconsistent_storage(
         register.remove_package_version(&missing_package);
 
         let installer_options = InstallerOptions::default().skip_symlinking(!symlinked).skip_active(!active);
-        let mut installer = Installer::new(config, register, manager, installer_options);
+        let mut installer = Installer::new(config, register, manager, None, installer_options);
 
         installer.install(&missing_package.into())?;
     }
@@ -452,7 +452,7 @@ fn reinstall_package(package_id: &PackageId, register: &mut PackageRegister, man
 
     // Temporarily remove the package
     let installer_options = InstallerOptions::default().skip_symlinking(!package.symlinked).skip_active(true);
-    let mut installer = Installer::new(config, register, manager, installer_options);
+    let mut installer = Installer::new(config, register, manager, None, installer_options);
     installer.uninstall(&optional_id)?;
 
     // Re-install the package

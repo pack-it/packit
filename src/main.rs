@@ -7,6 +7,7 @@
 mod builder;
 mod cli;
 mod config;
+mod history;
 mod installer;
 mod integrity;
 mod packager;
