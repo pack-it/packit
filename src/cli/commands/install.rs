@@ -71,12 +71,12 @@ pub struct InstallArgs {
 
 impl HandleCommand for InstallArgs {
     fn handle(&self) {
-        let directory = PathBuf::from("/opt/packit/history/history.txt");
+        let directory = PathBuf::from("/opt/packit/history");
         let args: Vec<String> = std::env::args().collect();
         let command_string = args.join(" ");
         let history_command = HistoryCommand::new(command_string);
-        let mut history = HistoryManager::new(directory, 1024, history_command, true);
-        history.store_command();
+        let mut history = HistoryManager::new(directory, history_command, true).unwrap_or_exit(1);
+        history.store_command().unwrap_or_exit(1);
 
         // Check for duplicates, because installing twice will result in a confusing error
         let duplicates = parameter_checks::get_duplicates(&self.packages);

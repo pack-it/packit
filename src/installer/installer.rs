@@ -283,7 +283,7 @@ impl<'a> Installer<'a> {
         if let Some(history_manager) = &mut self.history_manager {
             let action_type = ActionType::Install(package_id.clone());
             let action = Action::new(action_type);
-            history_manager.store_action(action);
+            history_manager.store_action(action)?;
         }
 
         self.determine_active(install_meta, &package_id, target_meta)?;
@@ -531,7 +531,7 @@ impl<'a> Installer<'a> {
                 };
 
                 let action = Action::new(action_type);
-                history_manager.store_action(action);
+                history_manager.store_action(action)?;
             }
         }
 

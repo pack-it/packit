@@ -5,6 +5,7 @@ use thiserror::Error;
 use crate::{
     builder::error::BuilderError,
     cli::display::{error::DisplayError, styled::Styled},
+    history::history::HistoryError,
     installer::{
         scripts::ScriptError,
         types::{PackageId, PackageIdError, PackageName, Version},
@@ -81,6 +82,9 @@ pub enum InstallerError {
     },
 
     // Wrapped custom errors
+    #[error("Cannot store action in history")]
+    HistoryError(#[from] HistoryError),
+
     #[error("Cannot fetch package metadata from repository")]
     RepositoryError(#[from] RepositoryError),
 
