@@ -139,6 +139,10 @@ impl HistoryManager {
         self.write_history(&self.command.to_string())
     }
 
+    pub fn end_command(&mut self) -> Result<()> {
+        self.write_history(&format!("COMMAND END"))
+    }
+
     pub fn store_action(&mut self, action: Action) -> Result<()> {
         // Store the action in the history file
         self.write_history(&action.to_string())?;
