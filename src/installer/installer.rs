@@ -474,6 +474,7 @@ impl<'a> Installer<'a> {
             }
         }
 
+        // The package should be installed at this point, if it's not it cannot be set as active version
         let Some(installed_package) = self.register.get_package(&package_id.name) else {
             return Ok(());
         };
@@ -516,22 +517,34 @@ impl<'a> Installer<'a> {
         }
 
         let current_active = installed_package.active_version.clone();
+        let currently_linked = installed_package.symlinked;
 
         // If package is installed successfully, set it to active
-        // TODO: Only do this when current active is different then package id version (be careful for symlinking which might need to happen)
         if should_set_active {
             Symlinker::new(self.config).set_active(self.register, package_id, should_symlink)?;
 
             if let Some(history_manager) = &mut self.history_manager {
-                // Store set active action
-                let action_type = ActionType::Switch {
-                    name: package_id.name.clone(),
-                    old_version: current_active,
-                    new_version: package_id.version.clone(),
-                };
+                if current_active != package_id.version {
+                    // Store set active action
+                    let action_type = ActionType::Switch {
+                        name: package_id.name.clone(),
+                        old_version: current_active,
+                        new_version: package_id.version.clone(),
+                    };
 
-                let action = Action::new(action_type);
-                history_manager.store_action(action)?;
+                    let action = Action::new(action_type);
+                    history_manager.store_action(action)?;
+                }
+
+                if currently_linked != should_symlink {
+                    let action_type = match should_symlink {
+                        true => ActionType::Link(package_id.name.clone()),
+                        false => ActionType::Unlink(package_id.name.clone()),
+                    };
+
+                    let action = Action::new(action_type);
+                    history_manager.store_action(action)?;
+                }
             }
         }
 
