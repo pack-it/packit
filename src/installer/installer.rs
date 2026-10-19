@@ -474,7 +474,7 @@ impl<'a> Installer<'a> {
             }
         }
 
-        // The package should be installed at this point, if it's not it cannot be set as active version
+        // The package should be installed at this point, if it's not it cannot be set as active
         let Some(installed_package) = self.register.get_package(&package_id.name) else {
             return Ok(());
         };
@@ -519,33 +519,41 @@ impl<'a> Installer<'a> {
         let current_active = installed_package.active_version.clone();
         let currently_linked = installed_package.symlinked;
 
-        // If package is installed successfully, set it to active
-        if should_set_active {
-            Symlinker::new(self.config).set_active(self.register, package_id, should_symlink)?;
+        // Return early if the package should not be set as active
+        if !should_set_active {
+            return Ok(());
+        }
 
-            if let Some(history_manager) = &mut self.history_manager {
-                if current_active != package_id.version {
-                    // Store set active action
-                    let action_type = ActionType::Switch {
-                        name: package_id.name.clone(),
-                        old_version: current_active,
-                        new_version: package_id.version.clone(),
-                    };
+        Symlinker::new(self.config).set_active(self.register, package_id, should_symlink)?;
 
-                    let action = Action::new(action_type);
-                    history_manager.store_action(action)?;
-                }
+        // Return early if the history doesn't exist
+        let Some(history_manager) = &mut self.history_manager else {
+            return Ok(());
+        };
 
-                if currently_linked != should_symlink {
-                    let action_type = match should_symlink {
-                        true => ActionType::Link(package_id.name.clone()),
-                        false => ActionType::Unlink(package_id.name.clone()),
-                    };
+        // Store a switch action if the new active version is different then the old active
+        if current_active != package_id.version {
+            // Store set active action
+            let action_type = ActionType::Switch {
+                name: package_id.name.clone(),
+                old_version: current_active,
+                new_version: package_id.version.clone(),
+            };
 
-                    let action = Action::new(action_type);
-                    history_manager.store_action(action)?;
-                }
-            }
+            let action = Action::new(action_type);
+            history_manager.store_action(action)?;
+        }
+
+        // Store a(n) (un)link action if the link status is different then before
+        // Note that this is done so we could revert this action if necessary
+        if currently_linked != should_symlink {
+            let action_type = match should_symlink {
+                true => ActionType::Link(package_id.name.clone()),
+                false => ActionType::Unlink(package_id.name.clone()),
+            };
+
+            let action = Action::new(action_type);
+            history_manager.store_action(action)?;
         }
 
         Ok(())
