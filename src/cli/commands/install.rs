@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use clap::Args;
 use colored::Colorize;
-use std::{path::PathBuf, process::exit};
+use std::process::exit;
 
 use crate::{
     cli::{
@@ -15,12 +15,12 @@ use crate::{
         parameter_checks,
     },
     config::Config,
-    history::history::{HistoryCommand, HistoryManager},
+    history::history::HistoryManager,
     installer::{InstallType, Installer, InstallerOptions, types::OptionalPackageId},
     platforms::Target,
     register::package_register::PackageRegister,
     repositories::{error::RepositoryError, manager::RepositoryManager},
-    utils::unwrap_or_exit::UnwrapOrExit,
+    utils::{constants::HISTORY_DIRECTORY_NAME, unwrap_or_exit::UnwrapOrExit},
 };
 
 /// Installs the specified packages, if a version is given that version will be installed,
@@ -71,12 +71,9 @@ pub struct InstallArgs {
 
 impl HandleCommand for InstallArgs {
     fn handle(&self) {
-        let directory = PathBuf::from("/opt/packit/history");
-        let args: Vec<String> = std::env::args().collect();
-        let command_string = args.join(" ");
-        let history_command = HistoryCommand::new(command_string);
-        let mut history = HistoryManager::new(directory, history_command, true).unwrap_or_exit(1);
-        history.store_command().unwrap_or_exit(1);
+        let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
+        let history_directory = config.prefix_directory.join(HISTORY_DIRECTORY_NAME);
+        let mut history_manager = HistoryManager::start_command(history_directory, true).unwrap_or_exit(1);
 
         // Check for duplicates, because installing twice will result in a confusing error
         let duplicates = parameter_checks::get_duplicates(&self.packages);
@@ -86,7 +83,6 @@ impl HandleCommand for InstallArgs {
             exit(1);
         }
 
-        let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
         let manager = RepositoryManager::new(&config);
         let register_dir = PackageRegister::get_path(&config.prefix_directory);
         let mut register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
@@ -131,7 +127,7 @@ impl HandleCommand for InstallArgs {
             .execute_build_test(self.execute_build_test)
             .skip_test(self.skip_test)
             .pause_build(self.pause_build);
-        let mut installer = Installer::new(&config, &mut register, &manager, Some(&mut history), installer_options);
+        let mut installer = Installer::new(&config, &mut register, &manager, Some(&mut history_manager), installer_options);
 
         // Install all packages
         let mut found_error = false;
@@ -156,6 +152,6 @@ impl HandleCommand for InstallArgs {
             exit(1);
         }
 
-        history.end_command().unwrap_or_exit(1);
+        history_manager.end_command().unwrap_or_exit(1);
     }
 }

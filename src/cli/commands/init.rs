@@ -15,7 +15,7 @@ use crate::{
         display::logging::{error, warning},
     },
     config::{Config, EditableConfig, Repository},
-    history::history::{Action, ActionType, HistoryCommand, HistoryManager},
+    history::history::{Action, ActionType, HistoryManager},
     installer::{
         Symlinker,
         types::{PackageId, PackageName, Version},
@@ -31,7 +31,9 @@ use crate::{
         types::{LicenseIdentifier, Licenses},
     },
     utils::{
-        constants::{DEFAULT_METADATA_REPOSITORY_NAME, DEFAULT_METADATA_REPOSITORY_PROVIDER, DEFAULT_METADATA_REPOSITORY_URL},
+        constants::{
+            DEFAULT_METADATA_REPOSITORY_NAME, DEFAULT_METADATA_REPOSITORY_PROVIDER, DEFAULT_METADATA_REPOSITORY_URL, HISTORY_DIRECTORY_NAME,
+        },
         packit_version::packit_version,
         unwrap_or_exit::UnwrapOrExit,
     },
@@ -61,13 +63,6 @@ const PACKIT_BINARY_NAME: &str = "packit.exe";
 
 impl HandleCommand for InitArgs {
     fn handle(&self) {
-        let directory = PathBuf::from("/opt/packit/history");
-        let args: Vec<String> = std::env::args().collect();
-        let command_string = args.join(" ");
-        let history_command = HistoryCommand::new(command_string);
-        let mut history = HistoryManager::new(directory, history_command, true).unwrap_or_exit(1);
-        history.store_command().unwrap_or_exit(1);
-
         // Check if enough fallback revision descriptions are given (if they are given)
         // Note that this does not require descriptions. If no revisions are given, a fallback value is used.
         if !self.revision_descriptions.is_empty() && self.revision_descriptions.len() as u64 != self.revision.unwrap_or(0) {
@@ -134,6 +129,10 @@ impl HandleCommand for InitArgs {
             .save_to(&Config::get_default_path())
             .unwrap_or_exit_msg("Packit cannot be initialized: error while saving config", 1);
 
+        // Create the history file
+        let history_directory = prefix_directory.join(HISTORY_DIRECTORY_NAME);
+        let mut history_manager = HistoryManager::start_command(history_directory, true).unwrap_or_exit(1);
+
         // Create register containing packit
         let mut register = PackageRegister::new_empty();
         let package_name = PackageName::from_str("packit").expect("Expected 'packit' to be a valid package name");
@@ -178,7 +177,7 @@ impl HandleCommand for InitArgs {
 
         let action_type = ActionType::Link(package_id.name.clone());
         let action = Action::new(action_type);
-        history.store_action(action).unwrap_or_exit(1);
+        history_manager.store_action(action).unwrap_or_exit(1);
 
         // Set correct permissions to all files in the prefix
         permissions::set_packit_permissions(&prefix_directory, default_config.get_config().multiuser, true).unwrap_or_exit_msg(
@@ -201,7 +200,7 @@ impl HandleCommand for InitArgs {
             .save_to(&PackageRegister::get_path(&prefix_directory))
             .unwrap_or_exit_msg("Packit cannot be initialized: error while saving register", 1);
 
-        history.end_command().unwrap_or_exit(1);
+        history_manager.end_command().unwrap_or_exit(1);
     }
 }
 

@@ -2,7 +2,10 @@
 use crate::{
     cli::display::logging::{debug, warning},
     installer::types::{PackageId, PackageName, Version},
-    utils::ioerror::{self, IOResultExt},
+    utils::{
+        constants::HISTORY_DIRECTORY_NAME,
+        ioerror::{self, IOResultExt},
+    },
 };
 use chrono::Utc;
 use std::{
@@ -64,13 +67,21 @@ pub enum ActionType {
 }
 
 impl HistoryManager {
-    pub fn new(directory: PathBuf, command: HistoryCommand, should_store: bool) -> Result<Self> {
-        Ok(Self {
+    pub fn start_command(directory: PathBuf, should_store: bool) -> Result<Self> {
+        // Get the command as a string
+        let args: Vec<String> = std::env::args().collect();
+        let command_string = args.join(" ");
+        let command = HistoryCommand::new(command_string);
+
+        let mut manager = Self {
             directory,
             file: None,
             command,
             should_store,
-        })
+        };
+
+        manager.store_command()?;
+        Ok(manager)
     }
 
     fn find_current_file(&self) -> Result<Option<(Metadata, u32)>> {
@@ -99,7 +110,7 @@ impl HistoryManager {
             };
 
             // Check the history file prefix
-            if prefix != "history" {
+            if prefix != HISTORY_DIRECTORY_NAME {
                 warning!("File with incorrect name '{file_name}' in Packit history directory");
                 continue;
             }

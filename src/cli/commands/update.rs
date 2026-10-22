@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use clap::Args;
 use colored::Colorize;
-use std::{path::PathBuf, process::exit};
+use std::process::exit;
 
 use crate::{
     cli::{
@@ -15,7 +15,7 @@ use crate::{
         parameter_checks,
     },
     config::{Config, Repository},
-    history::history::{Action, ActionType, HistoryCommand, HistoryManager},
+    history::history::{Action, ActionType, HistoryManager},
     installer::{
         Installer, InstallerOptions,
         types::{OptionalPackageId, PackageName, Version},
@@ -26,7 +26,7 @@ use crate::{
         package_register::PackageRegister,
     },
     repositories::{manager::RepositoryManager, metadata::MetadataProvider},
-    utils::unwrap_or_exit::UnwrapOrExit,
+    utils::{constants::HISTORY_DIRECTORY_NAME, unwrap_or_exit::UnwrapOrExit},
 };
 
 /// Updates the specified package to the new version, or the latest version if no new version is specified.
@@ -66,26 +66,21 @@ pub struct UpdateArgs {
 
 impl HandleCommand for UpdateArgs {
     fn handle(&self) {
-        let directory = PathBuf::from("/opt/packit/history");
-        let args: Vec<String> = std::env::args().collect();
-        let command_string = args.join(" ");
-        let history_command = HistoryCommand::new(command_string);
-        let mut history = HistoryManager::new(directory, history_command, true).unwrap_or_exit(1);
-        history.store_command().unwrap_or_exit(1);
-
         let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
         let manager = RepositoryManager::new(&config);
         let register_dir = PackageRegister::get_path(&config.prefix_directory);
         let mut register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
+        let history_directory = config.prefix_directory.join(HISTORY_DIRECTORY_NAME);
+        let mut history_manager = HistoryManager::start_command(history_directory, true).unwrap_or_exit(1);
 
         // If refresh only is specified, only refresh the specified packages
         if self.refresh_only {
-            self.refresh_metadata(&mut register, &config, &mut history);
+            self.refresh_metadata(&mut register, &config, &mut history_manager);
             return;
         }
 
         let options = InstallerOptions::default();
-        let installer = Installer::new(&config, &mut register, &manager, Some(&mut history), options);
+        let installer = Installer::new(&config, &mut register, &manager, Some(&mut history_manager), options);
 
         // If `--all` is specified use all the updatable packages
         let optional_ids = match self.all {
@@ -136,7 +131,7 @@ impl HandleCommand for UpdateArgs {
             }
 
             let options = InstallerOptions::default();
-            let mut installer = Installer::new(&config, &mut register, &manager, Some(&mut history), options);
+            let mut installer = Installer::new(&config, &mut register, &manager, Some(&mut history_manager), options);
 
             // Do the update, and in case of an error throw the error, but continue
             let new_package_id = match installer.update(optional_id, new_version) {
@@ -162,7 +157,7 @@ impl HandleCommand for UpdateArgs {
 
         // Refresh metadata of all given packages
         if !self.skip_refresh {
-            self.refresh_metadata(&mut register, &config, &mut history);
+            self.refresh_metadata(&mut register, &config, &mut history_manager);
         }
 
         // If one of the updates resulted in an error, exit with a non-zero status code
@@ -170,7 +165,7 @@ impl HandleCommand for UpdateArgs {
             exit(1);
         }
 
-        history.end_command().unwrap_or_exit(1);
+        history_manager.end_command().unwrap_or_exit(1);
     }
 }
 
