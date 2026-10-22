@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::process::exit;
+use std::{path::PathBuf, process::exit};
 
 use clap::Args;
 use colored::Colorize;
@@ -14,6 +14,7 @@ use crate::{
         },
     },
     config::Config,
+    history::history::{Action, ActionType, HistoryCommand, HistoryManager},
     installer::{
         Symlinker,
         types::{PackageId, PackageName},
@@ -39,6 +40,13 @@ pub struct LinkArgs {
 
 impl HandleCommand for LinkArgs {
     fn handle(&self) {
+        let directory = PathBuf::from("/opt/packit/history");
+        let args: Vec<String> = std::env::args().collect();
+        let command_string = args.join(" ");
+        let history_command = HistoryCommand::new(command_string);
+        let mut history = HistoryManager::new(directory, history_command, true).unwrap_or_exit(1);
+        history.store_command().unwrap_or_exit(1);
+
         let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
         let register_path = PackageRegister::get_path(&config.prefix_directory);
         let mut register = PackageRegister::from(&register_path).unwrap_or_exit(1);
@@ -78,6 +86,10 @@ impl HandleCommand for LinkArgs {
             .create_symlinks(&package_version.install_path, self.overwrite)
             .unwrap_or_exit_msg("Unable to link package", 1);
 
+        let action_type = ActionType::Link(self.package_name.clone());
+        let action = Action::new(action_type);
+        history.store_action(action).unwrap_or_exit(1);
+
         let package = register
             .get_package_mut(&self.package_name)
             .unwrap_or_exit_msg("Unable to update symlinked status after creating symlinks", 1);
@@ -86,6 +98,8 @@ impl HandleCommand for LinkArgs {
 
         // Save package register
         register.save_to(&register_path).unwrap_or_exit(1);
+
+        history.end_command().unwrap_or_exit(1);
 
         let styled_message = format!("Successfully linked {}", self.package_name.style()).bold().green();
         println!("{styled_message}");

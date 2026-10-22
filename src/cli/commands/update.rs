@@ -15,7 +15,7 @@ use crate::{
         parameter_checks,
     },
     config::{Config, Repository},
-    history::history::{HistoryCommand, HistoryManager},
+    history::history::{Action, ActionType, HistoryCommand, HistoryManager},
     installer::{
         Installer, InstallerOptions,
         types::{OptionalPackageId, PackageName, Version},
@@ -80,7 +80,7 @@ impl HandleCommand for UpdateArgs {
 
         // If refresh only is specified, only refresh the specified packages
         if self.refresh_only {
-            self.refresh_metadata(&mut register, &config);
+            self.refresh_metadata(&mut register, &config, &mut history);
             return;
         }
 
@@ -162,7 +162,7 @@ impl HandleCommand for UpdateArgs {
 
         // Refresh metadata of all given packages
         if !self.skip_refresh {
-            self.refresh_metadata(&mut register, &config);
+            self.refresh_metadata(&mut register, &config, &mut history);
         }
 
         // If one of the updates resulted in an error, exit with a non-zero status code
@@ -210,7 +210,7 @@ impl UpdateArgs {
     }
 
     /// Refreshes the metadata for the packages given in the command.
-    fn refresh_metadata(&self, register: &mut PackageRegister, config: &Config) {
+    fn refresh_metadata(&self, register: &mut PackageRegister, config: &Config, history: &mut HistoryManager) {
         // If `--all` is specified use all installed packages
         let packages = match self.all {
             // Only filter exclude packages when all is specified
@@ -270,6 +270,10 @@ impl UpdateArgs {
             if updated_metadata {
                 println!("Updated local metadata of {}", package_id.style());
             }
+
+            let action_type = ActionType::Refresh(package_id.clone());
+            let action = Action::new(action_type);
+            history.store_action(action).unwrap_or_exit(1);
         }
 
         // If one of the refreshes resulted in an error, exit with a non-zero status code

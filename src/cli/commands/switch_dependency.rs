@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::process::exit;
+use std::{path::PathBuf, process::exit};
 
 use clap::Args;
 use colored::Colorize;
@@ -10,6 +10,7 @@ use crate::{
         display::{logging::error, not_found, styled::Styled},
     },
     config::Config,
+    history::history::{Action, ActionType, HistoryCommand, HistoryManager},
     installer::{
         Symlinker,
         types::{PackageId, PackageName, Version},
@@ -33,6 +34,13 @@ pub struct SwitchDependencyArgs {
 
 impl HandleCommand for SwitchDependencyArgs {
     fn handle(&self) {
+        let directory = PathBuf::from("/opt/packit/history");
+        let args: Vec<String> = std::env::args().collect();
+        let command_string = args.join(" ");
+        let history_command = HistoryCommand::new(command_string);
+        let mut history = HistoryManager::new(directory, history_command, true).unwrap_or_exit(1);
+        history.store_command().unwrap_or_exit(1);
+
         let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
         let register_path = PackageRegister::get_path(&config.prefix_directory);
         let mut register = PackageRegister::from(&register_path).unwrap_or_exit(1);
@@ -98,8 +106,19 @@ impl HandleCommand for SwitchDependencyArgs {
             exit(1);
         }
 
+        let action_type = ActionType::SwitchDependency {
+            dependent: self.package.clone(),
+            dependency: self.dependency_name.clone(),
+            old_version: current_version.version.clone(),
+            new_version: self.dependency_version.clone(),
+        };
+        let action = Action::new(action_type);
+        history.store_action(action).unwrap_or_exit(1);
+
         // Save package register
         register.save_to(&register_path).unwrap_or_exit(1);
+
+        history.end_command().unwrap_or_exit(1);
 
         let styled_message = format!(
             "Successfully switched dependency {} of {} to {}",

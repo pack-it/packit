@@ -696,6 +696,15 @@ impl<'a> Installer<'a> {
             None => self.uninstall_all(&optional_id.name)?,
         };
 
+        if let Some(history_manager) = &mut self.history_manager {
+            // TODO: Maybe support this in bulk, to avoid multiple file separate file writes
+            for package_id in &uninstalled {
+                let action_type = ActionType::Uninstall(package_id.clone());
+                let action = Action::new(action_type);
+                history_manager.store_action(action)?;
+            }
+        }
+
         Ok(uninstalled)
     }
 

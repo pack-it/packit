@@ -47,11 +47,6 @@ pub struct Action {
 pub enum ActionType {
     Install(PackageId),
     Uninstall(PackageId),
-    Update {
-        name: PackageName,
-        old_version: Version,
-        new_version: Version,
-    },
     Link(PackageName),
     Unlink(PackageName),
     Switch {
@@ -65,7 +60,7 @@ pub enum ActionType {
         old_version: Version,
         new_version: Version,
     },
-    Refresh(PackageId), // TODO: Maybe optional id?
+    Refresh(PackageId),
 }
 
 impl HistoryManager {
@@ -223,12 +218,7 @@ impl Display for ActionType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self {
             ActionType::Install(package_id) => write!(f, "INSTALL {package_id}"),
-            ActionType::Uninstall(package_id) => write!(f, "UNINSTALL {package_id}"),
-            ActionType::Update {
-                name,
-                old_version,
-                new_version,
-            } => write!(f, "UPDATE {name} {old_version} {new_version}"),
+            ActionType::Uninstall(optional_id) => write!(f, "UNINSTALL {optional_id}"),
             ActionType::Link(package_name) => write!(f, "LINK {package_name}"),
             ActionType::Unlink(package_name) => write!(f, "UNLINK {package_name}"),
             ActionType::Switch {

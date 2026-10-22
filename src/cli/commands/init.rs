@@ -15,6 +15,7 @@ use crate::{
         display::logging::{error, warning},
     },
     config::{Config, EditableConfig, Repository},
+    history::history::{Action, ActionType, HistoryCommand, HistoryManager},
     installer::{
         Symlinker,
         types::{PackageId, PackageName, Version},
@@ -60,6 +61,13 @@ const PACKIT_BINARY_NAME: &str = "packit.exe";
 
 impl HandleCommand for InitArgs {
     fn handle(&self) {
+        let directory = PathBuf::from("/opt/packit/history");
+        let args: Vec<String> = std::env::args().collect();
+        let command_string = args.join(" ");
+        let history_command = HistoryCommand::new(command_string);
+        let mut history = HistoryManager::new(directory, history_command, true).unwrap_or_exit(1);
+        history.store_command().unwrap_or_exit(1);
+
         // Check if enough fallback revision descriptions are given (if they are given)
         // Note that this does not require descriptions. If no revisions are given, a fallback value is used.
         if !self.revision_descriptions.is_empty() && self.revision_descriptions.len() as u64 != self.revision.unwrap_or(0) {
@@ -166,6 +174,12 @@ impl HandleCommand for InitArgs {
             .set_active(&mut register, &package_id, true)
             .unwrap_or_exit_msg("Packit cannot be initialized: error while creating symlinks", 1);
 
+        // TODO: Active version history?
+
+        let action_type = ActionType::Link(package_id.name.clone());
+        let action = Action::new(action_type);
+        history.store_action(action).unwrap_or_exit(1);
+
         // Set correct permissions to all files in the prefix
         permissions::set_packit_permissions(&prefix_directory, default_config.get_config().multiuser, true).unwrap_or_exit_msg(
             "Packit cannot be initialized: error while setting permissions of files in the prefix",
@@ -186,6 +200,8 @@ impl HandleCommand for InitArgs {
         register
             .save_to(&PackageRegister::get_path(&prefix_directory))
             .unwrap_or_exit_msg("Packit cannot be initialized: error while saving register", 1);
+
+        history.end_command().unwrap_or_exit(1);
     }
 }
 

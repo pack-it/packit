@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use clap::Args;
 use colored::Colorize;
-use std::process::exit;
+use std::{path::PathBuf, process::exit};
 
 use crate::{
     cli::{
@@ -13,6 +13,7 @@ use crate::{
         },
     },
     config::Config,
+    history::history::{Action, ActionType, HistoryCommand, HistoryManager},
     installer::{
         Symlinker,
         types::{PackageName, Version},
@@ -37,6 +38,13 @@ pub struct SwitchArgs {
 
 impl HandleCommand for SwitchArgs {
     fn handle(&self) {
+        let directory = PathBuf::from("/opt/packit/history");
+        let args: Vec<String> = std::env::args().collect();
+        let command_string = args.join(" ");
+        let history_command = HistoryCommand::new(command_string);
+        let mut history = HistoryManager::new(directory, history_command, true).unwrap_or_exit(1);
+        history.store_command().unwrap_or_exit(1);
+
         let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
         let register_path = PackageRegister::get_path(&config.prefix_directory);
         let mut register = PackageRegister::from(&register_path).unwrap_or_exit(1);
@@ -48,7 +56,8 @@ impl HandleCommand for SwitchArgs {
         };
 
         // Check if the package version is already active
-        if package.active_version == self.package_version {
+        let current_active = package.active_version.clone();
+        if &current_active == &self.package_version {
             println!("This version is already the active version");
             return;
         }
@@ -72,6 +81,7 @@ impl HandleCommand for SwitchArgs {
         }
 
         let package_id = package_version.package_id.clone();
+        let package_symlinked = package.symlinked;
         let should_symlink = !self.skip_symlinking && package.symlinked;
 
         // Set package version to active
@@ -79,8 +89,28 @@ impl HandleCommand for SwitchArgs {
             .set_active(&mut register, &package_id, should_symlink)
             .unwrap_or_exit_msg("Cannot switch active package", 1);
 
+        let action_type = ActionType::Switch {
+            name: self.package_name.clone(),
+            old_version: current_active,
+            new_version: self.package_version.clone(),
+        };
+        let action = Action::new(action_type);
+        history.store_action(action).unwrap_or_exit(1);
+
+        if self.skip_symlinking == package_symlinked {
+            let action_type = match self.skip_symlinking {
+                false => ActionType::Link(package_id.name.clone()),
+                true => ActionType::Unlink(package_id.name.clone()),
+            };
+
+            let action = Action::new(action_type);
+            history.store_action(action).unwrap_or_exit(1);
+        }
+
         // Save package register
         register.save_to(&register_path).unwrap_or_exit(1);
+
+        history.end_command().unwrap_or_exit(1);
 
         let styled_message = format!(
             "Successfully switched {} active version to {}",
