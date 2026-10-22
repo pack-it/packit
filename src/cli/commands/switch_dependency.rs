@@ -114,8 +114,6 @@ impl HandleCommand for SwitchDependencyArgs {
         // Save package register
         register.save_to(&register_path).unwrap_or_exit(1);
 
-        history_manager.end_command().unwrap_or_exit(1);
-
         let styled_message = format!(
             "Successfully switched dependency {} of {} to {}",
             self.dependency_name.style(),

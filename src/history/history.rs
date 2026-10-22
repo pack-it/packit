@@ -5,6 +5,7 @@ use crate::{
     utils::{
         constants::HISTORY_DIRECTORY_NAME,
         ioerror::{self, IOResultExt},
+        unwrap_or_exit::UnwrapOrExit,
     },
 };
 use chrono::Utc;
@@ -145,7 +146,7 @@ impl HistoryManager {
         self.write_history(&self.command.to_string())
     }
 
-    pub fn end_command(&mut self) -> Result<()> {
+    fn end_command(&mut self) -> Result<()> {
         self.write_history(&format!("COMMAND END"))
     }
 
@@ -245,5 +246,11 @@ impl Display for ActionType {
             } => write!(f, "SWITCH-DEPENDENCY {dependent} {dependency} {old_version} {new_version}"),
             ActionType::Refresh(package_id) => write!(f, "REFRESH {package_id}"),
         }
+    }
+}
+
+impl Drop for HistoryManager {
+    fn drop(&mut self) {
+        self.end_command().unwrap_or_exit(1);
     }
 }

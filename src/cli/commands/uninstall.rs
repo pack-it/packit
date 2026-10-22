@@ -83,8 +83,6 @@ impl HandleCommand for UninstallArgs {
         if found_error {
             exit(1);
         }
-
-        history_manager.end_command().unwrap_or_exit(1);
     }
 }
 

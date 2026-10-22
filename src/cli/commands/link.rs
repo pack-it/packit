@@ -94,8 +94,6 @@ impl HandleCommand for LinkArgs {
         // Save package register
         register.save_to(&register_path).unwrap_or_exit(1);
 
-        history_manager.end_command().unwrap_or_exit(1);
-
         let styled_message = format!("Successfully linked {}", self.package_name.style()).bold().green();
         println!("{styled_message}");
     }

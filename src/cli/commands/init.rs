@@ -199,8 +199,6 @@ impl HandleCommand for InitArgs {
         register
             .save_to(&PackageRegister::get_path(&prefix_directory))
             .unwrap_or_exit_msg("Packit cannot be initialized: error while saving register", 1);
-
-        history_manager.end_command().unwrap_or_exit(1);
     }
 }
 
