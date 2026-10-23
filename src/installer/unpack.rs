@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use bytes::Bytes;
 use flate2::read::GzDecoder;
+use lzma_rust2::XzReader;
 use std::{io::Cursor, path::Path};
 use tar::Archive;
 use thiserror::Error;
-use xz2::read::XzDecoder;
 use zip::ZipArchive;
 
 use crate::{
@@ -93,7 +93,7 @@ fn unpack_gz<P: AsRef<Path>>(reader: ReaderWithProgress<Cursor<Bytes>>, destinat
 /// Unpacks xz archives into the provided destination directory.
 /// Could return an IO error.
 fn unpack_xz<P: AsRef<Path>>(reader: ReaderWithProgress<Cursor<Bytes>>, destination_directory: P, keep_timestamp: bool) -> Result<()> {
-    let tar = XzDecoder::new(reader);
+    let tar = XzReader::new(reader, false);
     let mut archive = Archive::new(tar);
     archive.set_preserve_mtime(keep_timestamp);
     archive.unpack(&destination_directory).err_with_path("unpack xz to", destination_directory.as_ref())?;
