@@ -2,7 +2,7 @@
 use colored::Colorize;
 
 use crate::{
-    cli::display::logging::warning,
+    cli::display::{logging::warning, styled::Styled},
     installer::types::PackageName,
     repositories::types::{Date, PackageMeta, PackageVersionMeta},
 };
@@ -21,8 +21,8 @@ pub fn show_package_warnings(package: &PackageMeta) {
 
     let deprecated_from = &deprecation.deprecated_from;
     match *deprecated_from <= Date::now() {
-        true => warning!("Package {} is deprecated since {}{reason}", package.name, deprecated_from),
-        false => warning!("Package {} will be deprecated at {}{reason}", package.name, deprecated_from),
+        true => warning!("{} is deprecated since {}{reason}", package.name.style(), deprecated_from),
+        false => warning!("{} will be deprecated at {}{reason}", package.name.style(), deprecated_from),
     }
 }
 
@@ -41,7 +41,7 @@ pub fn show_package_version_warnings(package_version: &PackageVersionMeta, packa
     let styled_package = format!("{package_name}@{}", package_version.version).bold().blue();
     let deprecated_from = &deprecation.deprecated_from;
     match *deprecated_from <= Date::now() {
-        true => warning!("Package version {styled_package} is deprecated since {}{reason}", deprecated_from),
-        false => warning!("Package version {styled_package} will be deprecated at {}{reason}", deprecated_from),
+        true => warning!("{styled_package} is deprecated since {}{reason}", deprecated_from),
+        false => warning!("{styled_package} will be deprecated at {}{reason}", deprecated_from),
     }
 }
