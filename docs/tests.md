@@ -12,15 +12,13 @@ cargo test
 ```
 
 ## Integration tests
-Cargo test doesn't have support for a general setup or clean up before and after the integration tests. That's why Packit uses an xtask `xtask-test-runner` which wraps around the `cargo test` command. 
-The arguments to `xtest` are passed along to `cargo test`, so test flags can still be used.
-Run the following command to run the integration tests:
+Packits integration tests make use of `integration-tests` feature flag, to manage the integration test environment. The following shortcut can be used:
 ```
 cargo xtest
 ```
 
-For the setup this wrapper first checks for the `TestConfig.toml`, which is located next to the `Config.toml`. The `TestConfig.toml` is used if it exists, otherwise a default test config is created. The default test config uses `<prefix>/test` as the prefix directory, where `<prefix>` is the 'normal' prefix directory. Lastly the test prefix is created, containing an empty `Register.toml`.
+Each integration test creates a new test environment. The (temporary) test directory is passed to packit with the `--config-path` flag. When the test is done the test directory will get out of scope and be dropped, which will trigger the cleanup function.
 
->Note that the setup fails if the test prefix already exists, because this could mean that the 'normal' prefix was used instead.
+To use a custom config the `TestConfig.toml` can be used. If this file is present in the prefix directory it will be used for the `url` and `provider` type. Other fields are ignored.
 
-After the setup is done, the test can be ran. A cleanup function removes everything which didn't exist before the test execution. So if the `TestConfig.toml` already existed it will not be deleted.
+The environment supports parallel testing.
