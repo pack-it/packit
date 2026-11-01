@@ -15,6 +15,9 @@ mod unlink;
 mod update;
 mod util;
 
+#[cfg(feature = "integration-tests")]
+use std::sync::OnceLock;
+
 use std::process::exit;
 
 use clap::{Parser, Subcommand, builder::Styles};
@@ -33,6 +36,9 @@ use crate::{
     utils::packit_version::{packit_version, packit_version_name},
 };
 
+#[cfg(feature = "integration-tests")]
+pub static TEST_CONFIG_PATH: OnceLock<String> = OnceLock::new();
+
 /// Represents the CLI interface with clap.
 #[derive(Parser, Debug)]
 #[command(name = "Packit", version, about)]
@@ -41,6 +47,10 @@ use crate::{
 pub struct Cli {
     #[command(subcommand)]
     command: Commands,
+
+    #[cfg(feature = "integration-tests")]
+    #[arg(long)]
+    config_path: String,
 }
 
 #[derive(Subcommand, Debug)]
@@ -109,7 +119,7 @@ impl Cli {
         }
 
         // Parse command
-        match Cli::try_parse() {
+        let cli = match Cli::try_parse() {
             Ok(cli) => cli,
             Err(e) => {
                 let styles = Styles::default();
@@ -127,7 +137,13 @@ impl Cli {
 
                 exit(e.exit_code())
             },
-        }
+        };
+
+        // Set the `TEST_CONFIG_PATH` when doing integration tests
+        #[cfg(feature = "integration-tests")]
+        TEST_CONFIG_PATH.set(cli.config_path.clone()).expect("Expected single initialization");
+
+        cli
     }
 
     /// Reads and handles the command.
