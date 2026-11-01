@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 - Fix `LocalMetadataExistence` verifier fix not updating the last refresh and update state in the register.
+- Fix OS version detection not extracting the Linux kernel version correctly.
 
 
 ## [v0.0.5](https://github.com/pack-it/packit/compare/0.0.4...0.0.5) - 2026-09-21
