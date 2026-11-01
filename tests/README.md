@@ -13,3 +13,5 @@ Run the following command to run the integration tests:
 ```
 cargo xtest
 ```
+
+Find out more about the test environment [here](../docs/tests.md).
