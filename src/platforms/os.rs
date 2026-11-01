@@ -145,7 +145,7 @@ impl OsVersion {
         };
         let kernel_version_str = match kernel_version_str.split_once("+") {
             Some((version, _)) => version,
-            None => &kernel_version_str,
+            None => kernel_version_str,
         };
 
         let kernel_version = match Version::from_str(kernel_version_str.trim()) {
