@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 - The metadata repositories can now contain source files.
 - Support for unpacking bzip2 file formats.
+- The `msvc` requirement now supports specifiying version bounds using `msvc@<version-bounds>`.
 
 ### Changes
 - The test environment now uses a fresh environment for each test and can be used in parallel.

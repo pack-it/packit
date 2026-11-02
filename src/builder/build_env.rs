@@ -230,7 +230,7 @@ impl<'a> BuildEnv<'a> {
 
         for requirement in requirements {
             match requirement {
-                Requirement::Msvc => {
+                Requirement::Msvc { .. } => {
                     // Detect MSVC toolchain
                     let Some(msvc) = tool_detection::detect_msvc()? else {
                         return Err(BuildEnvError::ToolNotFound("msvc".into()));
