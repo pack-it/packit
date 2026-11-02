@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changes
 - The test environment now uses a fresh environment for each test and can be used in parallel.
+- Test scripts now also use a managed environment like the build environment.
 
 ### Fixed
 - Fix `LocalMetadataExistence` verifier fix not updating the last refresh and update state in the register.
