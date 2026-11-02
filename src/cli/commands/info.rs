@@ -2,7 +2,7 @@
 use crate::{
     cli::display::{standard_print::DisplayJoined, styled::MapStyled},
     installer::types::PackageName,
-    platforms::{DEFAULT_CONFIG_DIR, OsVersion, Target},
+    platforms::{OsVersion, Target, get_default_config_dir},
     register::metadata::LocalMetaHandler,
     repositories::manager::RepositoryManager,
     utils::packit_version::{current_packit_version, packit_version_name},
@@ -142,7 +142,7 @@ impl InfoArgs {
         println!("{}", packit_version_name!().italic().cyan());
 
         let mut pair_aligner = PairAligner::new();
-        pair_aligner.add("Config directory", DEFAULT_CONFIG_DIR);
+        pair_aligner.add("Config directory", get_default_config_dir());
         pair_aligner.add("Prefix directory", config.prefix_directory.display());
         pair_aligner.add("Multiuser mode", config.multiuser);
         pair_aligner.add("Installed packages", register.iterate_all().count());

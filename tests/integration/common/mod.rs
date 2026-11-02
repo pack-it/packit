@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
+pub mod environment;
+
 #[macro_export]
 macro_rules! packit {
-    () => {
-        assert_cmd::Command::cargo_bin("packit").unwrap()
+    ($env:expr) => {
+        assert_cmd::Command::cargo_bin("packit").unwrap().arg("--config-path").arg(&$env.test_directory)
     };
-    ($($args:tt)*) => {
-        assert_cmd::Command::cargo_bin("packit").unwrap().args([$($args)*])
+    ($env:expr, $($args:tt)*) => {
+        assert_cmd::Command::cargo_bin("packit").unwrap().arg("--config-path").arg(&$env.test_directory).args([$($args)*])
     };
 }

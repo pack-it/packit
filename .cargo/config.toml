@@ -1,4 +1,4 @@
 [alias]
 build-install = "run --package xtask-build-install --"
 package-build = "run --package xtask-package-build --"
-xtest = "run --package xtask-test-runner --"
+xtest = "test --features integration-tests"

@@ -9,6 +9,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 - The metadata repositories can now contain source files.
 
+### Changes
+- The test environment now uses a fresh environment for each test and can be used in parallel.
+
 ### Fixed
 - Fix `LocalMetadataExistence` verifier fix not updating the last refresh and update state in the register.
 - Fix OS version detection not extracting the Linux kernel version correctly.
