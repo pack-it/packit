@@ -1,17 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-};
-
-use thiserror::Error;
+use std::collections::HashMap;
 
 use crate::{
-    cli::display::logging::warning,
-    platforms::{
-        Target,
-        tool_detection::{self, error::ToolDetectionError},
-    },
+    installer::{ScriptEnv, ScriptEnvError},
     register::installed_package_version::InstalledPackageVersion,
     repositories::types::Requirement,
     utils::env::Environment,
@@ -37,23 +28,7 @@ const PATH_SEPARATOR: &str = ":";
 #[cfg(target_os = "windows")]
 const PATH_SEPARATOR: &str = ";";
 
-/// The errors that occur during creating the build environment.
-#[derive(Error, Debug)]
-pub enum BuildEnvError {
-    #[error("Cannot add {} to build env {variable}: cannot convert PathBuf to string", path.display())]
-    PathBufConversion {
-        path: PathBuf,
-        variable: String,
-    },
-
-    #[error("Cannot find tool {0} on the system")]
-    ToolNotFound(String),
-
-    #[error("Error while detecting tool on the system")]
-    ToolDetectionError(#[from] ToolDetectionError),
-}
-
-pub type Result<T> = core::result::Result<T, BuildEnvError>;
+pub type Result<T> = core::result::Result<T, ScriptEnvError>;
 
 /// Holds all the data necessary to build a normalized build environment.
 pub struct BuildEnv<'a> {
@@ -63,16 +38,16 @@ pub struct BuildEnv<'a> {
 }
 
 impl<'a> TryInto<Environment> for BuildEnv<'a> {
-    type Error = BuildEnvError;
+    type Error = ScriptEnvError;
 
     /// Converts the `BuildEnv` struct into a normalized `Environment` struct.
     fn try_into(self) -> Result<Environment> {
-        let mut env = Environment::new();
+        let mut env: Environment =
+            ScriptEnv::new_with_extra_paths(self.create_extra_paths()?, self.dependencies, self.build_requirements).try_into()?;
 
         // TODO: maybe also sandbox TMPDIR variable
         // TODO: maybe use active version path instead of real version path for all dependencies
         env.insert_vars(HashMap::from([
-            ("PATH", self.create_path()?),
             ("PKG_CONFIG_PATH", self.create_pkg_config_path()?),
             ("PKG_CONFIG_LIBDIR", "".into()),
             ("CMAKE_PREFIX_PATH", self.create_cmake_prefix_path()?),
@@ -87,11 +62,8 @@ impl<'a> TryInto<Environment> for BuildEnv<'a> {
 
         // Add M4 variable if m4 is a build dependency
         if let Some(m4) = self.build_dependencies.iter().find(|x| *x.package_id.name == "m4") {
-            env.insert_var("M4", path_to_string(&m4.install_path.join("bin").join("m4"), "M4")?);
+            env.insert_var("M4", ScriptEnv::path_to_string(&m4.install_path.join("bin").join("m4"), "M4")?);
         }
-
-        // Add requirement specific vars to the build env
-        env.expand(Self::create_requirement_environment(self.build_requirements)?);
 
         // Add macos specific environment variables
         #[cfg(target_os = "macos")]
@@ -120,16 +92,16 @@ impl<'a> BuildEnv<'a> {
         }
     }
 
-    /// Creates the `PATH` for the `Environment`. The path will include the bin directories
-    /// of all (build) dependencies and standard Unix system bin paths (if on Unix).
-    fn create_path(&self) -> Result<String> {
+    /// Creates the extra `PATH` entries for the `Environment`. The path will include
+    /// the bin directories of all build dependencies. It relies on a base `PATH`
+    /// provided by `ScriptEnv`.
+    fn create_extra_paths(&self) -> Result<Vec<String>> {
         let mut parts = Vec::new();
 
         //TODO: add compiler wrappers to path
 
-        // Add all dependencies to PATH
-        let dependencies = self.dependencies.iter().chain(self.build_dependencies.iter());
-        for dependency in dependencies {
+        // Add all build dependencies to PATH
+        for dependency in &self.build_dependencies {
             let bin_path = dependency.install_path.join("bin");
 
             // Skip adding if the bin dir does not exist
@@ -137,32 +109,10 @@ impl<'a> BuildEnv<'a> {
                 continue;
             }
 
-            parts.push(path_to_string(&bin_path, "PATH")?);
+            parts.push(ScriptEnv::path_to_string(&bin_path, "PATH")?);
         }
 
-        // Add standard Unix system bin paths to PATH
-        #[cfg(any(target_os = "macos", target_os = "linux"))]
-        {
-            parts.append(&mut vec!["/usr/bin", "/bin", "/usr/sbin", "/sbin"].into_iter().map(String::from).collect());
-        }
-
-        // Add standard Windows system bin paths to PATH
-        #[cfg(target_os = "windows")]
-        {
-            parts.append(
-                &mut vec![
-                    "C:\\Windows",
-                    "C:\\Windows\\system32",
-                    "C:\\Windows\\System32\\Wbem",
-                    "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\",
-                ]
-                .into_iter()
-                .map(String::from)
-                .collect(),
-            );
-        }
-
-        Ok(parts.join(PATH_SEPARATOR))
+        Ok(parts)
     }
 
     /// Creates the `PKG_CONFIG_PATH` to pkgconfig inside of the lib and share directories of the dependencies.
@@ -177,12 +127,12 @@ impl<'a> BuildEnv<'a> {
 
             // Add lib dir to PKG_CONFIG_PATH if it exists and is a directory
             if lib_path.is_dir() {
-                parts.push(path_to_string(&lib_path, "PKG_CONFIG_PATH")?);
+                parts.push(ScriptEnv::path_to_string(&lib_path, "PKG_CONFIG_PATH")?);
             }
 
             // Add share dir to PKG_CONFIG_PATH if it exists and is a directory
             if share_path.is_dir() {
-                parts.push(path_to_string(&share_path, "PKG_CONFIG_PATH")?);
+                parts.push(ScriptEnv::path_to_string(&share_path, "PKG_CONFIG_PATH")?);
             }
         }
 
@@ -201,7 +151,7 @@ impl<'a> BuildEnv<'a> {
 
         // Add dependencies to CMAKE_PREFIX_PATH
         for dependency in self.dependencies {
-            parts.push(path_to_string(&dependency.install_path, "CMAKE_PREFIX_PATH")?);
+            parts.push(ScriptEnv::path_to_string(&dependency.install_path, "CMAKE_PREFIX_PATH")?);
         }
 
         Ok(parts.join(PATH_SEPARATOR))
@@ -217,54 +167,10 @@ impl<'a> BuildEnv<'a> {
 
             // Adding the share dir if it exists
             if share_path.exists() {
-                parts.push(path_to_string(&share_path, "ACLOCAL_PATH")?);
+                parts.push(ScriptEnv::path_to_string(&share_path, "ACLOCAL_PATH")?);
             }
         }
 
         Ok(parts.join(PATH_SEPARATOR))
-    }
-
-    /// Creates an environment from the given requirements.
-    pub fn create_requirement_environment(requirements: &Vec<Requirement>) -> Result<Environment> {
-        let mut environment = Environment::new();
-
-        for requirement in requirements {
-            match requirement {
-                Requirement::Msvc { .. } => {
-                    // Detect MSVC toolchain
-                    let Some(msvc) = tool_detection::detect_msvc()? else {
-                        return Err(BuildEnvError::ToolNotFound("msvc".into()));
-                    };
-
-                    // Get arch, skip requirement if arch is `None`.
-                    let Some(arch) = msvc.get_vcvarsall_arch(&Target::current()) else {
-                        warning!("Tried to load MSVC for an unsupported target, skipping adding to env");
-                        continue;
-                    };
-
-                    // Add requirement specific environment vars to result
-                    environment.insert_vars(HashMap::from([
-                        ("PACKIT_VS_PATH", path_to_string(msvc.get_vs_path(), "PACKIT_VS_PATH")?),
-                        ("PACKIT_VCVARSALL", path_to_string(&msvc.get_vcvarsall_path(), "PACKIT_VCVARSALL")?),
-                        ("PACKIT_VCVARSALL_ARCH", arch.into()),
-                        ("PACKIT_MSVC_VERSION", msvc.get_version().to_string()),
-                    ]));
-                },
-            }
-        }
-
-        Ok(environment)
-    }
-}
-
-/// Converts a `PathBuf` to a string.
-/// Returns a `BuildEnvError::PathBufConversion` if the path cannot be converted.
-fn path_to_string(path: &Path, env_var: &str) -> Result<String> {
-    match path.to_str() {
-        Some(string) => Ok(string.into()),
-        None => Err(BuildEnvError::PathBufConversion {
-            path: path.to_path_buf(),
-            variable: env_var.into(),
-        }),
     }
 }

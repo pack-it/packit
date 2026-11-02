@@ -8,11 +8,15 @@ use crate::{
     },
     config::{Config, Repository},
     installer::{
-        self,
+        self, ScriptEnv, ScriptEnvError,
         scripts::{self, ScriptData, ScriptError},
         types::{Dependency, PackageId, PackageName},
     },
-    integrity::{Issue, error::Result, utils::get_storage_packages},
+    integrity::{
+        Issue,
+        error::{Result, VerifierError},
+        utils::get_storage_packages,
+    },
     packager,
     platforms::Target,
     register::{
@@ -633,6 +637,17 @@ fn check_package_test(package_id: &PackageId, register: &PackageRegister, config
         false,
     );
 
+    // Get installed dependencies
+    let mut installed_dependencies = Vec::new();
+    for dependency in &package_version.dependencies {
+        let Some(installed_package_version) = register.get_package_version(&dependency) else {
+            return Err(VerifierError::UnreachableError {
+                msg: "Package version cannot be found even though it was inserted right before".to_string(),
+            });
+        };
+        installed_dependencies.push(installed_package_version);
+    }
+
     // Get the external test files
     let mut read_files = Vec::new();
     for file in &local_metadata.external_test_files {
@@ -641,9 +656,10 @@ fn check_package_test(package_id: &PackageId, register: &PackageRegister, config
     }
 
     // Run the test script and only return true if the test itself failed
-    match scripts::run_test_script(&script_data, &read_files, &local_metadata.test_requirements) {
+    let script_env = ScriptEnv::new(&installed_dependencies, &local_metadata.test_requirements);
+    match scripts::run_test_script(&script_data, &read_files, script_env) {
         Ok(_) => Ok(false),
-        Err(ScriptError::RequirementNotSatisfied(requirement)) => {
+        Err(ScriptError::ScriptEnvError(ScriptEnvError::RequirementNotSatisfied(requirement))) => {
             warning!(
                 "Skipping {} test, because requirement '{requirement}' is not satisfied.\n{}",
                 package_id.style(),
