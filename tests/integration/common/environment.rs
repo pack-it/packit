@@ -43,16 +43,17 @@ impl Environment {
         environment
     }
 
-    pub fn setup(&self) {
+    /// Does the setup of the test environment using the created temporary directory.
+    fn setup(&self) {
         let mut url = String::from("https://raw.githubusercontent.com/pack-it/test-repository/main/");
         let mut provider = String::from("web");
 
         // Check if `TestConfig.toml` exists in the default config directory
-        let test_config_dir = PathBuf::from_str(DEFAULT_CONFIG_DIR).expect("Expected valid default").join("TestConfig.toml");
-        if let Ok(true) = fs::exists(&test_config_dir) {
+        let test_config_file = PathBuf::from_str(DEFAULT_CONFIG_DIR).expect("Expected valid default").join("TestConfig.toml");
+        if let Ok(true) = fs::exists(&test_config_file) {
             println!("Using TestConfig.toml");
 
-            let config_table = self.get_config_table(&test_config_dir);
+            let config_table = self.get_config_table(&test_config_file);
             if let Some(config_url) = config_table.get("url") {
                 url = config_url.to_string().trim_matches('"').to_string();
             }
@@ -70,11 +71,6 @@ impl Environment {
             eprintln!("Failed to create test 'Register.toml' at '{}'", register_file.display());
             eprintln!("Error: {e}");
             exit(1);
-        }
-
-        // Set the `PACKIT_CONFIG_DIR` environment variable
-        unsafe {
-            std::env::set_var("PACKIT_CONFIG_DIR", self.test_directory.clone());
         }
     }
 
@@ -117,7 +113,10 @@ impl Environment {
 
         let mut config = Map::new();
         config.insert("repositories_rank".into(), Value::Array(vec!["test".into()]));
-        config.insert("prefix_directory".into(), self.test_directory.display().to_string().into());
+        config.insert(
+            "prefix_directory".into(),
+            self.test_directory.to_str().expect("Expected valid unicode").into(),
+        );
 
         let mut repositories = Map::new();
         let mut test_repository = Map::new();
