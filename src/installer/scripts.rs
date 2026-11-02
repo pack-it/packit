@@ -14,11 +14,14 @@ use tempfile::{NamedTempFile, TempDir};
 use thiserror::Error;
 
 use crate::{
-    builder::{BuildEnv, BuildEnvError},
+    builder::BuildEnv,
     config::Config,
-    installer::types::{PackageId, PackageName},
+    installer::{
+        ScriptEnv, ScriptEnvError,
+        types::{PackageId, PackageName},
+    },
     platforms::{Os, TargetArchitecture, tool_detection::error::ToolDetectionError},
-    repositories::{error::RepositoryError, manager::RepositoryManager, types::Requirement},
+    repositories::{error::RepositoryError, manager::RepositoryManager},
     utils::{
         env::Environment,
         ioerror::{self, IOResultExt},
@@ -33,9 +36,6 @@ use std::os::{fd::IntoRawFd, unix::process::CommandExt};
 pub enum ScriptError {
     #[error("Cannot parse PathBuf to string")]
     InvalidPathString,
-
-    #[error("Requirement {0} is not satisfied")]
-    RequirementNotSatisfied(Requirement),
 
     #[error("Cannot find script '{0}'")]
     ScriptNotFound(String),
@@ -61,8 +61,8 @@ pub enum ScriptError {
     #[error("Cannot fetch script from repository")]
     FetchScriptError(#[from] RepositoryError),
 
-    #[error("Cannot create build environment")]
-    BuildEnvError(#[from] BuildEnvError),
+    #[error("Cannot create script environment")]
+    ScriptEnvError(#[from] ScriptEnvError),
 
     #[error("Error while detecting tool on the system")]
     ToolDetectionError(#[from] ToolDetectionError),
@@ -154,13 +154,9 @@ pub fn run_post_script(script_data: &ScriptData) -> Result<()> {
 /// Runs the given test script, in a newly created temp directory.
 /// It also writes the specified external test files to the temp directory.
 /// Note that the script should be a `.sh` script on Linux and macOS and a `.bat` on Windows.
-pub fn run_test_script(script_data: &ScriptData, external_files: &Vec<(&String, Bytes)>, requirements: &Vec<Requirement>) -> Result<()> {
+pub fn run_test_script(script_data: &ScriptData, external_files: &Vec<(&String, Bytes)>, script_env: ScriptEnv) -> Result<()> {
     // Check if all test requirements are satisfied
-    for requirement in requirements {
-        if !requirement.is_satisfied()? {
-            return Err(ScriptError::RequirementNotSatisfied(requirement.clone()));
-        }
-    }
+    script_env.check_requirements_satisfied()?;
 
     let temp_dir = TempDir::new().map_err(ScriptError::TempCreationError)?;
 
@@ -169,10 +165,7 @@ pub fn run_test_script(script_data: &ScriptData, external_files: &Vec<(&String, 
         fs::write(temp_dir.path().join(file_name), file_content).map_err(ScriptError::SaveError)?;
     }
 
-    // Create environment containing the requirements
-    let env = BuildEnv::create_requirement_environment(requirements)?;
-
-    run_script(script_data, &temp_dir, env, true)
+    run_script(script_data, &temp_dir, script_env.try_into()?, true)
 }
 
 /// Runs the given uninstall script, in the package install directory.

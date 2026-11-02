@@ -15,7 +15,7 @@ use crate::{
     },
     config::Config,
     installer::{
-        InstallLabel,
+        InstallLabel, ScriptEnv, ScriptEnvError,
         error::{InstallerError, Result},
         install_tree::{InstallMeta, InstallTree, InstallTreeBuilder, InstallType},
         options::InstallerOptions,
@@ -247,7 +247,7 @@ impl<'a> Installer<'a> {
         self.register.add_package(
             &install_meta.package_metadata,
             &install_meta.version_metadata,
-            dependencies,
+            dependencies.clone(),
             source_repository,
             install_meta.repository_name.clone(),
             &install_directory,
@@ -280,7 +280,24 @@ impl<'a> Installer<'a> {
 
         // Only run the test if the skip test option is false
         if !self.options.skip_test {
-            self.execute_test(&package_id, install_meta, &install_directory, &script_args, target_meta)?;
+            let mut installed_dependencies = Vec::new();
+            for dependency in &dependencies {
+                let Some(installed_package_version) = self.register.get_package_version(dependency) else {
+                    return Err(InstallerError::UnreachableError {
+                        msg: "Package version cannot be found even though it was inserted right before".to_string(),
+                    });
+                };
+                installed_dependencies.push(installed_package_version);
+            }
+
+            self.execute_test(
+                &package_id,
+                install_meta,
+                &install_directory,
+                &script_args,
+                target_meta,
+                installed_dependencies,
+            )?;
         }
 
         if let Some(notice) = &version_meta.postinstall_notice {
@@ -519,6 +536,7 @@ impl<'a> Installer<'a> {
         install_directory: &Path,
         script_args: &HashMap<&str, &str>,
         target: &PackageTarget,
+        dependencies: Vec<&InstalledPackageVersion>,
     ) -> Result<()> {
         // Download and run test script if it exists
         let script_path = install_meta.version_metadata.get_test_script_path(&install_meta.target_bounds)?;
@@ -572,9 +590,10 @@ impl<'a> Installer<'a> {
         };
 
         // Run script
-        match scripts::run_test_script(&script_data, &read_files, &target.test_requirements) {
+        let script_env = ScriptEnv::new(&dependencies, &target.test_requirements);
+        match scripts::run_test_script(&script_data, &read_files, script_env) {
             Ok(_) => (),
-            Err(ScriptError::RequirementNotSatisfied(requirement)) => {
+            Err(ScriptError::ScriptEnvError(ScriptEnvError::RequirementNotSatisfied(requirement))) => {
                 warning!(
                     "Skipping test, because requirement '{requirement}' is not satisfied.\n{}",
                     requirement.get_not_satisfied_message()
