@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use bytes::Bytes;
+use bzip2::read::BzDecoder;
 use flate2::read::GzDecoder;
 use lzma_rust2::XzReader;
 use std::{io::Cursor, path::Path};
@@ -37,6 +38,7 @@ pub enum ArchiveExtension {
     GZ,
     ZIP,
     XZ,
+    BZ2,
     Unknown,
 }
 
@@ -51,6 +53,7 @@ impl ArchiveExtension {
             ".gz" | ".tgz" => Self::GZ,
             ".zip" => Self::ZIP,
             ".xz" => Self::XZ,
+            ".bz2" => Self::BZ2,
             _ => Self::Unknown,
         }
     }
@@ -75,6 +78,7 @@ pub fn unpack<P: AsRef<Path>>(
         ArchiveExtension::GZ => unpack_gz(reader, destination_directory, keep_timestamp),
         ArchiveExtension::XZ => unpack_xz(reader, destination_directory, keep_timestamp),
         ArchiveExtension::ZIP => unpack_zip(reader, destination_directory),
+        ArchiveExtension::BZ2 => unpack_bzip2(reader, destination_directory, keep_timestamp),
         _ => Err(UnpackError::ExtensionNotSupported),
     }
 }
@@ -106,6 +110,17 @@ fn unpack_xz<P: AsRef<Path>>(reader: ReaderWithProgress<Cursor<Bytes>>, destinat
 fn unpack_zip<P: AsRef<Path>>(reader: ReaderWithProgress<Cursor<Bytes>>, destination_directory: P) -> Result<()> {
     let mut archive = ZipArchive::new(reader)?;
     archive.extract(destination_directory)?;
+
+    Ok(())
+}
+
+/// Unpacks bzip2 archives into the provided destination directory.
+/// Could return an IO error.
+fn unpack_bzip2<P: AsRef<Path>>(reader: ReaderWithProgress<Cursor<Bytes>>, destination_directory: P, keep_timestamp: bool) -> Result<()> {
+    let tar = BzDecoder::new(reader);
+    let mut archive = Archive::new(tar);
+    archive.set_preserve_mtime(keep_timestamp);
+    archive.unpack(&destination_directory).err_with_path("unpack bzip2 to", destination_directory.as_ref())?;
 
     Ok(())
 }
