@@ -282,7 +282,7 @@ impl<'a> Installer<'a> {
         if !self.options.skip_test {
             let mut installed_dependencies = Vec::new();
             for dependency in &dependencies {
-                let Some(installed_package_version) = self.register.get_package_version(&dependency) else {
+                let Some(installed_package_version) = self.register.get_package_version(dependency) else {
                     return Err(InstallerError::UnreachableError {
                         msg: "Package version cannot be found even though it was inserted right before".to_string(),
                     });

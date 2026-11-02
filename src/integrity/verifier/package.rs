@@ -640,7 +640,7 @@ fn check_package_test(package_id: &PackageId, register: &PackageRegister, config
     // Get installed dependencies
     let mut installed_dependencies = Vec::new();
     for dependency in &package_version.dependencies {
-        let Some(installed_package_version) = register.get_package_version(&dependency) else {
+        let Some(installed_package_version) = register.get_package_version(dependency) else {
             return Err(VerifierError::UnreachableError {
                 msg: "Package version cannot be found even though it was inserted right before".to_string(),
             });
