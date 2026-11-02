@@ -182,9 +182,9 @@ Targets are specified as `[targets.<bounds>]`, where bounds specify the supporte
 ### Available requirements
 All available requirements for use with the `build_requirements` and `test_requirements` fields. Requirements are things that need to be available on the system before building or testing, they need to be installed by the user manually.
 
-| Field  | Explanation                                                                                                   |
-| ------ | ------------------------------------------------------------------------------------------------------------- |
-| `msvc` | The Microsoft Visual C++ toolchain, automatically adds `PACKIT_VS_PATH`, `PACKIT_VCVARSALL`, `PACKIT_VCVARSALL_ARCH` and `PACKIT_MSVC_VERSION` to the build environment. Find out more [here](./build-env.md#windows-msvc) (Windows only) |
+| Field                   | Explanation                                                                                |
+| ----------------------- | ------------------------------------------------------------------------------------------ |
+| `msvc@<version-bounds>` | The Microsoft Visual C++ toolchain, automatically adds `PACKIT_VS_PATH`, `PACKIT_VCVARSALL`, `PACKIT_VCVARSALL_ARCH` and `PACKIT_MSVC_VERSION` to the build environment. Find out more [here](./build-env.md#windows-msvc) (Windows only) |
 
 ## `prebuilds.toml`
 The package version directory can contain an optional `prebuilds.toml` file. This file describes which prebuilds can be generated for the package version. If the file is not available, a default list of prebuilds is assumed, consisting of a prebuild for each target architecture that is supported by the package.
