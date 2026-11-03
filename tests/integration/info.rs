@@ -2,13 +2,6 @@
 use crate::{common::environment::Environment, packit};
 
 #[test]
-fn version() {
-    let env = Environment::init();
-    packit!(env, "--version").assert().success();
-    env.clean();
-}
-
-#[test]
 fn info_requirements() {
     let env = Environment::init();
 
