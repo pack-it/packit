@@ -74,7 +74,7 @@ echo "Current OS: $CURRENT_OS"
 if [ $CURRENT_OS = "Darwin" ]; then
     CURRENT_OS_NAME="apple-darwin"
 elif [ $CURRENT_OS = "Linux" ]; then
-    if echo "$(ldd --version)" | grep -q "musl"; then
+    if echo "$(ldd 2>&1)" | grep -q "musl"; then
         CURRENT_OS_NAME="unknown-linux-musl"
     elif echo "$(ldd --version)" | grep -q "GLIBC"; then
         CURRENT_OS_NAME="unknown-linux-gnu"
