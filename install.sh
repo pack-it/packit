@@ -1,6 +1,18 @@
 #!/bin/sh
 set -eu
 
+# Wrapper function to call sudo-like tools
+sudo() {
+    if command -v sudo >/dev/null 2>&1; then
+        sudo "$@"
+    elif command -v doas >/dev/null 2>&1; then
+        doas "$@"
+    else
+        echo "Cannot find sudo or doas, stopping install"
+        exit 1
+    fi
+}
+
 # Gets user input and uses /dev/tty when stdin is not available.
 get_answer() {
     if [ -t 0 ]; then
