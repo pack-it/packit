@@ -11,6 +11,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Support for unpacking bzip2 file formats.
 - The `msvc` requirement now supports specifiying version bounds using `msvc@<version-bounds>`.
 - Add support for path inputs in the `checksum` command.
+- Support for running Packit on arm64 musl linux (aarch64-unknown-linux-musl).
+- Support for `doas` in install.sh
 
 ### Changes
 - The test environment now uses a fresh environment for each test and can be used in parallel.
