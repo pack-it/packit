@@ -25,7 +25,7 @@ The `--exclude` flag specifies packages to exclude when using the `--all` flag. 
 The `checksum` command has the following syntax:<br>
 `pit util checksum <URL>`
 
-The command calculates the checksum of the file at the given URL. It also shows the size of the downloaded file in bytes.
+The command calculates the checksum of the file at the given URL or system path. It also shows the size of the downloaded file in bytes.
 
 ## Portable repository
 The `portable-repo` command has the following syntax:<br>
