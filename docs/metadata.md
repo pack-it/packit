@@ -216,7 +216,7 @@ Packit selects the most specific matching target bound according to the followin
 | ------------------- | --------------------------- |
 | OS group            | `unix`                      |
 | OS name             | `macos`, `linux`, `windows` |
-| Target architecture | `x86_64-apple-darwin`, `aarch64-apple-darwin`, `aarch64-unknown-linux-gnu`, `x86_64-unknown-linux-gnu`, `x86_64-unknown-linux-musl`, `x86_64-pc-windows-msvc`, `aarch64-pc-windows-msvc` |
+| Target architecture | `x86_64-apple-darwin`, `aarch64-apple-darwin`, `aarch64-unknown-linux-gnu`, `aarch64-unknown-linux-musl`, `x86_64-unknown-linux-gnu`, `x86_64-unknown-linux-musl`, `x86_64-pc-windows-msvc`, `aarch64-pc-windows-msvc` |
 
 ### Target additions
 Currently additions are only supported for the `linux` target name and for the target architectures which reference a linux OS. The addition specifies a Linux distro, for example `debian` or `arch`.
