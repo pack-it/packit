@@ -9,6 +9,7 @@ pub enum TargetArchitecture {
     MacOsX86_64,
     MacOsAarch64,
     LinuxAarch64Gnu,
+    LinuxAarch64Musl,
     LinuxX86_64Gnu,
     LinuxX86_64Musl,
     WindowsX86_64Msvc,
@@ -23,6 +24,7 @@ impl Display for TargetArchitecture {
             Self::MacOsX86_64 => "x86_64-apple-darwin",
             Self::MacOsAarch64 => "aarch64-apple-darwin",
             Self::LinuxAarch64Gnu => "aarch64-unknown-linux-gnu",
+            Self::LinuxAarch64Musl => "aarch64-unknown-linux-musl",
             Self::LinuxX86_64Gnu => "x86_64-unknown-linux-gnu",
             Self::LinuxX86_64Musl => "x86_64-unknown-linux-musl",
             Self::WindowsX86_64Msvc => "x86_64-pc-windows-msvc",
@@ -42,6 +44,7 @@ impl TargetArchitecture {
             Self::MacOsX86_64,
             Self::MacOsAarch64,
             Self::LinuxAarch64Gnu,
+            Self::LinuxAarch64Musl,
             Self::LinuxX86_64Gnu,
             Self::LinuxX86_64Musl,
             Self::WindowsX86_64Msvc,
@@ -59,6 +62,9 @@ impl TargetArchitecture {
 
         #[cfg(all(target_os = "linux", target_arch = "aarch64", target_env = "gnu"))]
         return Self::LinuxAarch64Gnu;
+
+        #[cfg(all(target_os = "linux", target_arch = "aarch64", target_env = "musl"))]
+        return Self::LinuxAarch64Musl;
 
         #[cfg(all(target_os = "linux", target_arch = "x86_64", target_env = "gnu"))]
         return Self::LinuxX86_64Gnu;
@@ -88,7 +94,7 @@ impl TargetArchitecture {
     pub fn get_os(&self) -> Os {
         match self {
             Self::MacOsX86_64 | Self::MacOsAarch64 => Os::MacOs,
-            Self::LinuxAarch64Gnu | Self::LinuxX86_64Gnu | Self::LinuxX86_64Musl => Os::Linux,
+            Self::LinuxAarch64Gnu | Self::LinuxAarch64Musl | Self::LinuxX86_64Gnu | Self::LinuxX86_64Musl => Os::Linux,
             Self::WindowsX86_64Msvc | Self::WindowsAarch64Msvc => Os::Windows,
             Self::Unknown(_) => Os::Unknown,
         }
@@ -106,6 +112,7 @@ impl TargetArchitecture {
             "x86_64-apple-darwin" => Self::MacOsX86_64,
             "aarch64-apple-darwin" => Self::MacOsAarch64,
             "aarch64-unknown-linux-gnu" => Self::LinuxAarch64Gnu,
+            "aarch64-unknown-linux-musl" => Self::LinuxAarch64Musl,
             "x86_64-unknown-linux-gnu" => Self::LinuxX86_64Gnu,
             "x86_64-unknown-linux-musl" => Self::LinuxX86_64Musl,
             "x86_64-pc-windows-msvc" => Self::WindowsX86_64Msvc,
