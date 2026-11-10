@@ -123,11 +123,14 @@ impl<'a> BinaryPatcher<'a> {
     }
 
     /// Patches the given `MachO` binary.
-    fn patch_macho(&self, mut binary: macho::FatBinary, path: &Path, package: &PackageId) -> Result<()> {
+    fn patch_macho(&self, binary: macho::FatBinary, path: &Path, package: &PackageId) -> Result<()> {
         let mut changed = false;
 
+        let mut name_tool_command = Command::new("install_name_tool");
+        let mut name_tool_command = name_tool_command.arg(path);
+
         for binary in binary.iter() {
-            for mut library in binary.libraries() {
+            for library in binary.libraries() {
                 let library_path = PathBuf::from(library.name());
 
                 // Check if library lives in the prefix directory
@@ -135,7 +138,7 @@ impl<'a> BinaryPatcher<'a> {
                 if library_path.starts_with(&prefix) {
                     debug!("Found Packit dependency: {}", library_path.display());
 
-                    let library_path = match library_path.strip_prefix(&prefix) {
+                    let stripped_library_path = match library_path.strip_prefix(&prefix) {
                         Ok(path) => path,
                         Err(_) => {
                             debug!("Cannot remove prefix from dependency path");
@@ -143,7 +146,7 @@ impl<'a> BinaryPatcher<'a> {
                         },
                     };
 
-                    let parts: Vec<_> = library_path.components().collect();
+                    let parts: Vec<_> = stripped_library_path.components().collect();
                     if parts.len() < 2 {
                         debug!("Linked dependency path is too short");
                         continue;
@@ -161,7 +164,8 @@ impl<'a> BinaryPatcher<'a> {
                     let new_suffix: PathBuf = parts.iter().skip(2).collect();
                     let new_path = new_prefix.join(new_suffix);
 
-                    library.set_name(new_path.to_str().ok_or(BinaryPatcherError::OsStringConversionError)?);
+                    // library.set_name(new_path.to_str().ok_or(BinaryPatcherError::OsStringConversionError)?);
+                    name_tool_command = name_tool_command.args(["-change", &library_path.display().to_string(), &new_path.display().to_string()]);
 
                     changed = true;
                 }
@@ -171,7 +175,26 @@ impl<'a> BinaryPatcher<'a> {
         if changed {
             debug!("Changed binary '{}', writing changes", path.display());
 
-            binary.write(path);
+            // binary.write(path);
+            match name_tool_command.status() {
+                Ok(status) if !status.success() => {
+                    let message = match status.code() {
+                        Some(code) => format!("install_name_tool exited with status code {code}"),
+                        None => "install_name_tool exited without a status code".to_string(),
+                    };
+                    return Err(BinaryPatcherError::CannotReSign {
+                        path: path.to_path_buf(),
+                        error: std::io::Error::other(message),
+                    });
+                },
+                Ok(_) => (),
+                Err(error) => {
+                    return Err(BinaryPatcherError::CannotReSign {
+                        path: path.to_path_buf(),
+                        error,
+                    });
+                },
+            };
 
             // Sign binary
             let path_str = path.to_str().ok_or(BinaryPatcherError::OsStringConversionError)?;
