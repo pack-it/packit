@@ -589,8 +589,11 @@ impl<'a> Installer<'a> {
             },
         };
 
+        // Build environment
+        let path = ScriptEnv::path_to_string(&install_directory.join("bin"), "PATH").map_err(ScriptError::from)?;
+        let script_env = ScriptEnv::new_with_extra_paths(vec![path], &dependencies, &target.test_requirements);
+ 
         // Run script
-        let script_env = ScriptEnv::new(&dependencies, &target.test_requirements);
         match scripts::run_test_script(&script_data, &read_files, script_env) {
             Ok(_) => (),
             Err(ScriptError::ScriptEnvError(ScriptEnvError::RequirementNotSatisfied(requirement))) => {
