@@ -54,7 +54,8 @@ impl FromStr for Requirement {
 impl Display for Requirement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Requirement::Msvc { version_intervals } => write!(f, "msvc@{version_intervals}"),
+            Requirement::Msvc { version_intervals } if !version_intervals.is_empty() => write!(f, "msvc@{version_intervals}"),
+            Requirement::Msvc { .. } => write!(f, "msvc"),
         }
     }
 }
