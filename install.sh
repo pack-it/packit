@@ -2,7 +2,7 @@
 set -eu
 
 # Wrapper function to call sudo-like tools
-sudo() {
+run_sudo() {
     if command -v sudo >/dev/null 2>&1; then
         sudo "$@"
     elif command -v doas >/dev/null 2>&1; then
@@ -60,12 +60,12 @@ cleanup() {
 
     # Remove the prefix directory if `PREFIX_DIR` is set and it exists
     if [ -n "${PREFIX_DIR-}" ] && [ -d "$PREFIX_DIR" ]; then
-        sudo rm -r "$PREFIX_DIR"
+        run_sudo rm -r "$PREFIX_DIR"
     fi
     
     # Remove the config directory if `CONFIG_DIR` is set and it exists
     if [ -n "${CONFIG_DIR-}" ] && [ -d "$CONFIG_DIR" ]; then
-        sudo rm -r "$CONFIG_DIR"
+        run_sudo rm -r "$CONFIG_DIR"
     fi
 }
 
@@ -136,7 +136,7 @@ if ! ask "Y" "The Packit install script requires root to modify '$PREFIX_DIR' an
 fi
 
 # Execute sudo without doing anything
-sudo true
+run_sudo true
 
 # Exit early with code 0 if there already is a version of Packit installed
 # Note that we can't rely on the `packit init` command, because we don't know if it fails because of an already existing config file
@@ -154,9 +154,9 @@ fi
 USERNAME=$(whoami)
 
 # Go into the prefix directory
-sudo mkdir -p "$PREFIX_DIR/packages/packit/"
-sudo chmod -R 755 "$PREFIX_DIR"
-sudo chown -R $USERNAME "$PREFIX_DIR"
+run_sudo mkdir -p "$PREFIX_DIR/packages/packit/"
+run_sudo chmod -R 755 "$PREFIX_DIR"
+run_sudo chown -R $USERNAME "$PREFIX_DIR"
 cd "$PREFIX_DIR/packages/packit/"
 
 # Install Packit to the prefix directory
@@ -242,9 +242,9 @@ else
     echo "Building Packit from source successful"
 fi
 
-sudo mkdir -p "$CONFIG_DIR"
-sudo chmod -R 755 "$CONFIG_DIR"
-sudo chown -R $USERNAME "$CONFIG_DIR"
+run_sudo mkdir -p "$CONFIG_DIR"
+run_sudo chmod -R 755 "$CONFIG_DIR"
+run_sudo chown -R $USERNAME "$CONFIG_DIR"
 
 echo "Initializing Packit"
 "$PREFIX_DIR/packages/packit/$VERSION/bin/packit" init --revision $REVISION
