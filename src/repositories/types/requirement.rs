@@ -10,6 +10,7 @@ use crate::{
 };
 
 /// Errors that occur when parsing requirements.
+#[cfg_attr(test, derive(PartialEq))]
 #[derive(Error, Debug)]
 pub enum RequirementError {
     #[error("Requirement '{0}' is unknown")]
@@ -23,6 +24,7 @@ pub enum RequirementError {
 }
 
 /// Represents requirements of a build or test process of a package.
+#[cfg_attr(test, derive(PartialEq))]
 #[derive(Clone, Debug)]
 pub enum Requirement {
     Msvc {
@@ -102,5 +104,44 @@ impl Requirement {
                 "The required Microsoft Visual C++ cannot be found, please install it from the Microsoft website first"
             },
         }
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use std::str::FromStr;
+
+    use super::*;
+
+    #[test]
+    pub fn msvc_from_str() {
+        let requirement = Requirement::from_str("msvc");
+        let version_intervals = VersionIntervals::from_str("").expect("Expected correct version intervals");
+        assert_eq!(requirement, Ok(Requirement::Msvc { version_intervals }));
+
+        let requirement = Requirement::from_str("msvc@3.4.1");
+        let version_intervals = VersionIntervals::from_str("3.4.1").expect("Expected correct version intervals");
+        assert_eq!(requirement, Ok(Requirement::Msvc { version_intervals }));
+
+        let requirement = Requirement::from_str("msvc@");
+        assert_eq!(requirement, Err(RequirementError::ExpectedVersion));
+
+        let requirement = Requirement::from_str("msvcsjbkhdfg");
+        assert_eq!(requirement, Err(RequirementError::InvalidRequirement("msvcsjbkhdfg".to_string())));
+    }
+
+    #[test]
+    pub fn format() {
+        let version_intervals = VersionIntervals::from_str("").expect("Expected correct version intervals");
+        let requirement = Requirement::Msvc { version_intervals };
+        assert_eq!(requirement.to_string(), "msvc");
+
+        let version_intervals = VersionIntervals::from_str("3.4.1").expect("Expected correct version intervals");
+        let requirement = Requirement::Msvc { version_intervals };
+        assert_eq!(requirement.to_string(), "msvc@3.4.1");
+
+        let version_intervals = VersionIntervals::from_str("3.4.0-3.4.1").expect("Expected correct version intervals");
+        let requirement = Requirement::Msvc { version_intervals };
+        assert_eq!(requirement.to_string(), "msvc@3.4.0-3.4.1");
     }
 }
