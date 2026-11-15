@@ -131,6 +131,7 @@ pub fn check_storage_consistency(packages: &Vec<PackageId>, config: &Config) -> 
 
 /// Checks if a specific package exists in storage. Note that it doesn't check if the package also exists in the register.
 /// Returns false if the package can not be found in the storage, true if it can be found.
+#[allow(clippy::needless_bool)]
 fn package_storage_is_consistent(package_id: &PackageId, config: &Config) -> Result<bool> {
     let installed_directory = config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
 
