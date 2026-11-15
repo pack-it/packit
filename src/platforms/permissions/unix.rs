@@ -27,6 +27,7 @@ pub enum PlatformError {
 }
 
 /// Checks if a directory is writeable. Returns true if it is, false otherwise.
+#[allow(clippy::needless_bool)]
 pub(super) fn is_writable(path: &Path) -> Result<bool> {
     let metadata = fs::metadata(path).err_with_path("read metadata of", path)?;
     let mode = metadata.mode();
