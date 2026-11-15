@@ -495,7 +495,7 @@ fn copy_license_files(build_directory: &Path, destination_dir: &Path, source: &S
             let destination = io::normalize_path(&destination);
 
             // Check if path escapes build directory
-            if !destination.starts_with(&build_directory) {
+            if !destination.starts_with(build_directory) {
                 debug!("License file is a symlink to a file outside of the build directory, skipping file");
                 continue;
             }
