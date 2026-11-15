@@ -414,10 +414,10 @@ fn copy_license_files(build_directory: &Path, destination_dir: &Path, source: &S
 
     let exclude_paths: Vec<_> = source.license_exclude.iter().map(|x| build_directory.join(x)).collect();
 
+    let mut found_files = Vec::new();
+
     let mut queue = VecDeque::from([(0, build_directory.to_path_buf())]);
     while let Some((depth, item)) = queue.pop_front() {
-        let mut found_files = false;
-
         // Read all files in the directory
         for entry in fs::read_dir(&item).err_with_path("read", &item)? {
             let entry = entry.err_with_path("iterate", &item)?;
@@ -438,50 +438,102 @@ fn copy_license_files(build_directory: &Path, destination_dir: &Path, source: &S
                 continue;
             }
 
-            let file_name = entry.file_name().to_ascii_lowercase();
+            let file_name = entry.file_name();
             let Some(file_name) = file_name.to_str() else { continue };
 
-            // Check if file name matches license file names and has the correct extension
-            for license_file_name in LICENSE_FILE_NAMES {
-                if file_name.starts_with(license_file_name) {
-                    // Skip file if it has an extension and it is not a correct extension
-                    if let Some(extension) = io::get_last_extension(file_name)
-                        && !LICENSE_FILE_EXTENSIONS.contains(&&*extension.to_lowercase())
-                    {
-                        break;
-                    }
-
-                    found_files = true;
-                    debug!(
-                        "Found license file at '{}'",
-                        entry.path().strip_prefix(build_directory).unwrap_or(build_directory).display()
-                    );
-
-                    // Check if file was already copied (for example using `license_include`)
-                    let destination_path = destination_dir.join(entry.file_name());
-                    if destination_path.exists() {
-                        debug!("License file with same name is already copied, skipping file");
-                    }
-
-                    // Create destination directory if it does not exist
-                    if !destination_dir.exists() {
-                        fs::create_dir_all(destination_dir).err_with_path("create dirs", destination_dir)?;
-                    }
-
-                    fs::copy(entry.path(), destination_path).err_with_path("copy", entry.path())?;
-                    break;
-                }
+            // Continue searching if the file is not a license file
+            if !is_license_file(file_name) {
+                continue;
             }
+
+            debug!(
+                "Found license file at '{}'",
+                entry.path().strip_prefix(build_directory).unwrap_or(build_directory).display()
+            );
+            found_files.push(entry);
         }
 
         // Stop searching if we found files in this directory
-        if found_files {
-            return Ok(());
+        if !found_files.is_empty() {
+            break;
         }
     }
 
-    debug!("Unable to find license files for package");
+    if found_files.is_empty() {
+        debug!("Unable to find license files for package");
+    }
+
+    // Copy all found files
+    for license_file in &found_files {
+        // Check if file was already copied (for example using `license_include`)
+        let destination_path = destination_dir.join(license_file.file_name());
+        if destination_path.exists() {
+            debug!("License file with same name is already copied, skipping file");
+            continue;
+        }
+
+        // Check if path escapes build directory
+        let path = io::normalize_path(&license_file.path());
+        if !path.starts_with(build_directory) {
+            debug!("License file is located outside of the build directory, skipping file");
+            continue;
+        }
+
+        // If the file is a symlink, check if it was already included or escapes the directory
+        let metadata = license_file.metadata().err_with_path("read metadata of", license_file.path())?;
+        if metadata.is_symlink() {
+            let destination = fs::read_link(license_file.path()).err_with_path("read link", license_file.path())?;
+            let destination = match destination.starts_with("/") {
+                true => destination,
+                false => license_file.path().join("..").join(destination),
+            };
+            let destination = io::normalize_path(&destination);
+
+            // Check if path escapes build directory
+            if !destination.starts_with(build_directory) {
+                debug!("License file is a symlink to a file outside of the build directory, skipping file");
+                continue;
+            }
+
+            // Check if the original file was included
+            if found_files.iter().any(|x| x.path() == destination) {
+                debug!("License file is a symlink to another included file, skipping file");
+                continue;
+            }
+        }
+
+        // Create destination directory if it does not exist
+        if !destination_dir.exists() {
+            fs::create_dir_all(destination_dir).err_with_path("create dirs", destination_dir)?;
+        }
+
+        fs::copy(license_file.path(), destination_path).err_with_path("copy", license_file.path())?;
+    }
+
     Ok(())
+}
+
+/// Check if the given file name matches one of the license file names and has the correct extension.
+/// Returns true if the file is a license file, false otherwise
+fn is_license_file(file_name: &str) -> bool {
+    let file_name = &file_name.to_lowercase();
+
+    for license_file_name in LICENSE_FILE_NAMES {
+        if !file_name.starts_with(license_file_name) {
+            continue;
+        }
+
+        // Skip file if it has an extension and it is not a correct extension
+        if let Some(extension) = io::get_last_extension(file_name)
+            && !LICENSE_FILE_EXTENSIONS.contains(&&*extension.to_lowercase())
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    false
 }
 
 /// Copies license files that are listed as `license_include` into the destination directory.
@@ -566,7 +618,11 @@ pub mod tests {
 
     use tempfile::tempdir;
 
-    use crate::{platforms::symlink::create_symlink, repositories::types::FileSize};
+    use crate::{
+        builder::builder::is_license_file,
+        platforms::symlink::{create_symlink, platform},
+        repositories::types::FileSize,
+    };
 
     use super::*;
 
@@ -616,6 +672,73 @@ pub mod tests {
         assert!(destination.join("License").exists());
         assert!(!destination.join("COPYING").exists());
         assert!(!destination.join("foo").join("COPYING").exists());
+    }
+
+    #[test]
+    fn copy_license_files_symlinks() {
+        let build_dir = tempdir().unwrap();
+        let build_dir = build_dir.path();
+        let destination = tempdir().unwrap();
+        let destination = destination.path();
+        File::create(&build_dir.join("License")).unwrap();
+        platform::create_symlink(&build_dir.join("License"), &build_dir.join("COPYING")).unwrap();
+
+        let source = &create_source(Vec::new(), Vec::new());
+        copy_license_files(build_dir, destination, source).unwrap();
+        assert!(destination.join("License").exists());
+        assert!(!destination.join("COPYING").exists());
+    }
+
+    #[test]
+    fn copy_license_files_symlinks_top_dir() {
+        let build_dir = tempdir().unwrap();
+        let build_dir = build_dir.path();
+        let destination = tempdir().unwrap();
+        let destination = destination.path();
+        File::create(&build_dir.join("License")).unwrap();
+        fs::create_dir(&build_dir.join("foo")).unwrap();
+        File::create(&build_dir.join("foo").join("COPYING")).unwrap();
+        platform::create_symlink(&build_dir.join("foo").join("COPYING"), &build_dir.join("COPYING")).unwrap();
+
+        let source = &create_source(Vec::new(), Vec::new());
+        copy_license_files(build_dir, destination, source).unwrap();
+        assert!(destination.join("License").exists());
+        assert!(destination.join("COPYING").exists());
+        assert!(!destination.join("foo").join("COPYING").exists());
+    }
+
+    #[test]
+    fn copy_license_files_symlinks_escape() {
+        let temp_dir = tempdir().unwrap();
+        let temp_dir = temp_dir.path();
+        let build_dir = temp_dir.join("build");
+        let destination = tempdir().unwrap();
+        let destination = destination.path();
+        fs::create_dir(&build_dir).unwrap();
+        File::create(&build_dir.join("License")).unwrap();
+        File::create(&temp_dir.join("COPYING")).unwrap();
+        platform::create_symlink(&temp_dir.join("COPYING"), &build_dir.join("COPYING")).unwrap();
+
+        let source = &create_source(Vec::new(), Vec::new());
+        copy_license_files(&build_dir, destination, source).unwrap();
+        assert!(destination.join("License").exists());
+        assert!(!destination.join("COPYING").exists());
+    }
+
+    #[test]
+    fn is_license_file_valid() {
+        assert!(is_license_file("LICENSE"));
+        assert!(is_license_file("COPYING"));
+        assert!(is_license_file("COPYING.md"));
+        assert!(is_license_file("COPYING-GPL3"));
+        assert!(is_license_file("NOTICE"));
+    }
+
+    #[test]
+    fn is_license_file_invalid() {
+        assert!(!is_license_file("LICENSE.gpl"));
+        assert!(!is_license_file("my-license"));
+        assert!(!is_license_file("COPYING.license"));
     }
 
     #[test]
