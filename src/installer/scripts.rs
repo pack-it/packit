@@ -199,6 +199,9 @@ fn run_script(script_data: &ScriptData, run_dir: impl AsRef<Path>, env: Environm
         .env("PACKIT_VERBOSE", if script_data.verbose { "1" } else { "0" })
         .env("PACKIT_BUILD_JOBS_COUNT", job_count.to_string());
 
+    // Disable stdin for scripts (prevents hanging scripts when input is piped into Packit)
+    command.stdin(Stdio::null());
+
     // Only display build logging if verbose is enabled, otherwise create combined pipe for reading
     let mut output = None;
     if show_output {
