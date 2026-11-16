@@ -71,7 +71,7 @@ impl<'a> TryInto<Environment> for ScriptEnv<'a> {
 impl<'a> ScriptEnv<'a> {
     /// Creates a new `ScriptEnv`.
     pub fn new(dependencies: &'a Vec<&'a InstalledPackageVersion>, install_path: &'a Path, requirements: &'a Vec<Requirement>) -> Self {
-        Self::new_with_extra_paths(Vec::new(), dependencies, &install_path, requirements)
+        Self::new_with_extra_paths(Vec::new(), dependencies, install_path, requirements)
     }
 
     /// Creates a new `ScriptEnv` with extra PATH entries.
@@ -92,7 +92,7 @@ impl<'a> ScriptEnv<'a> {
     /// Creates the `PATH` for the `Environment`.
     /// The path will include the bin directories of all dependencies and standard system bin paths.
     fn create_path(&self) -> Result<String> {
-        let mut parts = vec![Self::path_to_string(&self.install_path, "PATH")?];
+        let mut parts = vec![Self::path_to_string(self.install_path, "PATH")?];
 
         // Add all dependencies to PATH
         for dependency in self.dependencies {
