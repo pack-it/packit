@@ -90,7 +90,7 @@ impl<'a> ScriptEnv<'a> {
     }
 
     /// Creates the `PATH` for the `Environment`.
-    /// The path will include the bin directories of all dependencies and standard system bin paths.
+    /// The path will include the install directory of the package, the bin directories of all dependencies and standard system bin paths.
     fn create_path(&self) -> Result<String> {
         let mut parts = vec![Self::path_to_string(self.install_path, "PATH")?];
 
