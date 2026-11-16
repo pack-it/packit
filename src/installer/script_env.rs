@@ -69,8 +69,14 @@ impl<'a> TryInto<Environment> for ScriptEnv<'a> {
 
 impl<'a> ScriptEnv<'a> {
     /// Creates a new `ScriptEnv`.
-    pub fn new(dependencies: &'a Vec<&'a InstalledPackageVersion>, requirements: &'a Vec<Requirement>) -> Self {
-        Self::new_with_extra_paths(Vec::new(), dependencies, requirements)
+    pub fn new(dependencies: &'a Vec<&'a InstalledPackageVersion>, install_path: &Path, requirements: &'a Vec<Requirement>) -> Self {
+        
+        let install_path_str = match ScriptEnv::path_to_string(&install_path.join("bin"), "PATH") {
+            Ok(path_str) => path_str,
+            Err(_) => "".to_string(),
+        };
+
+        Self::new_with_extra_paths(vec![install_path_str], dependencies, requirements)
     }
 
     /// Creates a new `ScriptEnv` with extra PATH entries.
