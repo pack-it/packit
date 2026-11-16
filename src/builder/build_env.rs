@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::collections::HashMap;
+use std::{collections::HashMap, path::Path};
 
 use crate::{
     installer::{ScriptEnv, ScriptEnvError},
@@ -34,7 +34,7 @@ pub type Result<T> = core::result::Result<T, ScriptEnvError>;
 pub struct BuildEnv<'a> {
     dependencies: &'a Vec<&'a InstalledPackageVersion>,
     build_dependencies: Vec<&'a InstalledPackageVersion>,
-    install_path: &'a String,
+    install_path: &'a Path,
     build_requirements: &'a Vec<Requirement>,
 }
 
@@ -44,7 +44,7 @@ impl<'a> TryInto<Environment> for BuildEnv<'a> {
     /// Converts the `BuildEnv` struct into a normalized `Environment` struct.
     fn try_into(self) -> Result<Environment> {
         let mut env: Environment =
-            ScriptEnv::new_with_extra_paths(self.create_extra_paths()?, self.dependencies, self.install_path.to_string(), self.build_requirements).try_into()?;
+            ScriptEnv::new_with_extra_paths(self.create_extra_paths()?, self.dependencies, self.install_path, self.build_requirements).try_into()?;
 
         // TODO: maybe also sandbox TMPDIR variable
         // TODO: maybe use active version path instead of real version path for all dependencies
@@ -84,7 +84,7 @@ impl<'a> BuildEnv<'a> {
     pub fn new(
         dependencies: &'a Vec<&'a InstalledPackageVersion>,
         build_dependencies: Vec<&'a InstalledPackageVersion>,
-        install_path: &'a String,
+        install_path: &'a Path,
         build_requirements: &'a Vec<Requirement>,
     ) -> Self {
         Self {

@@ -655,10 +655,8 @@ fn check_package_test(package_id: &PackageId, register: &PackageRegister, config
         read_files.push((file, file_content));
     }
 
-    let install_directory = config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
-
     // Run the test script and only return true if the test itself failed
-    let script_env = ScriptEnv::new(&installed_dependencies, &install_directory, &local_metadata.test_requirements);
+    let script_env = ScriptEnv::new(&installed_dependencies, &package_version.install_path, &local_metadata.test_requirements);
     match scripts::run_test_script(&script_data, &read_files, script_env) {
         Ok(_) => Ok(false),
         Err(ScriptError::ScriptEnvError(ScriptEnvError::RequirementNotSatisfied(requirement))) => {
