@@ -13,25 +13,16 @@ use crate::{
     builder::{
         BinaryPatcher, BuildEnv,
         error::{BuilderError, Result},
-    },
-    cli::display::{
+    }, cli::display::{
         self, ProgressBar, Spinner,
         logging::{debug, warning},
         styled::Styled,
-    },
-    config::Config,
-    installer::{
-        install_tree::InstallMeta,
-        scripts::{self, ScriptData},
-        types::PackageId,
-        unpack::{ArchiveExtension, unpack},
-    },
-    register::package_register::PackageRegister,
-    repositories::{
+    }, config::Config, installer::{
+        ScriptEnv, install_tree::InstallMeta, scripts::{self, ScriptData}, types::PackageId, unpack::{ArchiveExtension, unpack},
+    }, register::package_register::PackageRegister, repositories::{
         manager::RepositoryManager,
         types::{Checksum, Patch, Source},
-    },
-    utils::{io, ioerror::IOResultExt, patches, reading::ReadExt, requests},
+    }, utils::{io, ioerror::IOResultExt, patches, reading::ReadExt, requests},
 };
 
 /// The list of automatically detected license files
@@ -190,8 +181,14 @@ impl<'a> Builder<'a> {
             println!("Applied patch '{id}' to {}", package_id.style());
         }
 
+        let install_directory = self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string());
+        let install_directory_str = match ScriptEnv::path_to_string(&install_directory.join("bin"), "PATH") {
+            Ok(path_str) => path_str,
+            Err(_) => "".to_string(),
+        };
+
         // Create build env
-        let env = BuildEnv::new(&installed_dependencies, installed_build_dependencies, &target.build_requirements);
+        let env = BuildEnv::new(&installed_dependencies, installed_build_dependencies, &install_directory_str, &target.build_requirements);
 
         // Construct args for the build script
         let script_args = install_meta.version_metadata.get_script_args(&install_meta.target_bounds)?;
