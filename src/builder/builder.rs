@@ -13,16 +13,25 @@ use crate::{
     builder::{
         BinaryPatcher, BuildEnv,
         error::{BuilderError, Result},
-    }, cli::display::{
+    },
+    cli::display::{
         self, ProgressBar, Spinner,
         logging::{debug, warning},
         styled::Styled,
-    }, config::Config, installer::{
-        install_tree::InstallMeta, scripts::{self, ScriptData}, types::PackageId, unpack::{ArchiveExtension, unpack},
-    }, register::package_register::PackageRegister, repositories::{
+    },
+    config::Config,
+    installer::{
+        install_tree::InstallMeta,
+        scripts::{self, ScriptData},
+        types::PackageId,
+        unpack::{ArchiveExtension, unpack},
+    },
+    register::package_register::PackageRegister,
+    repositories::{
         manager::RepositoryManager,
         types::{Checksum, Patch, Source},
-    }, utils::{io, ioerror::IOResultExt, patches, reading::ReadExt, requests},
+    },
+    utils::{io, ioerror::IOResultExt, patches, reading::ReadExt, requests},
 };
 
 /// The list of automatically detected license files
@@ -182,7 +191,12 @@ impl<'a> Builder<'a> {
         }
 
         // Create build env
-        let env = BuildEnv::new(&installed_dependencies, installed_build_dependencies, destination_dir.as_ref(), &target.build_requirements);
+        let env = BuildEnv::new(
+            &installed_dependencies,
+            installed_build_dependencies,
+            destination_dir.as_ref(),
+            &target.build_requirements,
+        );
 
         // Construct args for the build script
         let script_args = install_meta.version_metadata.get_script_args(&install_meta.target_bounds)?;

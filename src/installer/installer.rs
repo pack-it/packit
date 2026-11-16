@@ -588,7 +588,7 @@ impl<'a> Installer<'a> {
                 Some(spinner)
             },
         };
- 
+
         // Run script
         let script_env = ScriptEnv::new(&dependencies, install_directory, &target.test_requirements);
         match scripts::run_test_script(&script_data, &read_files, script_env) {
