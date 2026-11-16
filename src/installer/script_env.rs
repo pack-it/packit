@@ -48,6 +48,7 @@ pub type Result<T> = core::result::Result<T, ScriptEnvError>;
 pub struct ScriptEnv<'a> {
     extra_paths: Vec<String>,
     dependencies: &'a Vec<&'a InstalledPackageVersion>,
+    install_path: &'a Path,
     requirements: &'a Vec<Requirement>,
 }
 
@@ -69,27 +70,29 @@ impl<'a> TryInto<Environment> for ScriptEnv<'a> {
 
 impl<'a> ScriptEnv<'a> {
     /// Creates a new `ScriptEnv`.
-    pub fn new(dependencies: &'a Vec<&'a InstalledPackageVersion>, requirements: &'a Vec<Requirement>) -> Self {
-        Self::new_with_extra_paths(Vec::new(), dependencies, requirements)
+    pub fn new(dependencies: &'a Vec<&'a InstalledPackageVersion>, install_path: &'a Path, requirements: &'a Vec<Requirement>) -> Self {
+        Self::new_with_extra_paths(Vec::new(), dependencies, install_path, requirements)
     }
 
     /// Creates a new `ScriptEnv` with extra PATH entries.
     pub fn new_with_extra_paths(
         extra_paths: Vec<String>,
         dependencies: &'a Vec<&'a InstalledPackageVersion>,
+        install_path: &'a Path,
         requirements: &'a Vec<Requirement>,
     ) -> Self {
         Self {
             extra_paths,
             dependencies,
+            install_path,
             requirements,
         }
     }
 
     /// Creates the `PATH` for the `Environment`.
-    /// The path will include the bin directories of all dependencies and standard system bin paths.
+    /// The path will include the install directory of the package, the bin directories of all dependencies and standard system bin paths.
     fn create_path(&self) -> Result<String> {
-        let mut parts = Vec::new();
+        let mut parts = vec![Self::path_to_string(self.install_path, "PATH")?];
 
         // Add all dependencies to PATH
         for dependency in self.dependencies {

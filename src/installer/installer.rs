@@ -590,7 +590,7 @@ impl<'a> Installer<'a> {
         };
 
         // Run script
-        let script_env = ScriptEnv::new(&dependencies, &target.test_requirements);
+        let script_env = ScriptEnv::new(&dependencies, install_directory, &target.test_requirements);
         match scripts::run_test_script(&script_data, &read_files, script_env) {
             Ok(_) => (),
             Err(ScriptError::ScriptEnvError(ScriptEnvError::RequirementNotSatisfied(requirement))) => {
