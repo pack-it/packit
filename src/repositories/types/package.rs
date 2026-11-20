@@ -8,7 +8,7 @@ use crate::{
     platforms::Target,
     repositories::{
         error::{RepositoryError, Result},
-        types::{DeprecationInfo, TargetBounds},
+        types::{DeprecationInfo, PackageCompatibility, TargetBounds},
     },
 };
 
@@ -24,6 +24,7 @@ pub struct PackageMeta {
     #[serde(default, skip_serializing_if = "HashSet::is_empty")]
     pub conflicts_with: HashSet<PackageName>,
     pub supported_versions: HashMap<TargetBounds, VersionIntervals>,
+    pub compatibility: Option<PackageCompatibility>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub deprecation: Option<DeprecationInfo>,
@@ -88,6 +89,7 @@ pub mod tests {
             required_packit_version: None,
             conflicts_with: HashSet::new(),
             supported_versions,
+            compatibility: None,
             deprecation: None,
         }
     }

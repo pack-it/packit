@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 mod checksum;
 mod common;
+mod compatibility;
 mod index;
 mod license;
 mod package;
@@ -23,14 +24,15 @@ pub use self::prebuilds::PrebuildMeta;
 pub use self::prebuilds::PrebuildsList;
 
 pub use self::checksum::Checksum;
-pub use self::common::Script;
-
 pub use self::common::Date;
 pub use self::common::DeprecationInfo;
 pub use self::common::FileSize;
 pub use self::common::Patch;
+pub use self::common::Script;
 pub use self::common::Source;
 pub use self::common::Sources;
+
+pub use compatibility::PackageCompatibility;
 
 pub use self::index::IndexMeta;
 
