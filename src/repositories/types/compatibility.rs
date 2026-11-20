@@ -73,7 +73,21 @@ fn validate_compatibility_map<E>(map: &CompatibilityMap) -> Result<(), E>
 where
     E: serde::de::Error,
 {
-    // TODO: validate that compatibility intervals do not overlap
+    // Check that intervals do not overlap
+    for (key_1, interval_1) in map.iter() {
+        for (key_2, interval_2) in map.iter() {
+            if key_1 == key_2 {
+                continue;
+            }
+
+            if interval_1.overlaps(interval_2) {
+                return Err(de::Error::invalid_value(
+                    de::Unexpected::Other("overlapping compatibility intervals"),
+                    &"non-overlapping intervals",
+                ));
+            }
+        }
+    }
 
     Ok(())
 }

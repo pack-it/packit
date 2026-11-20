@@ -73,7 +73,8 @@ impl Display for VersionBounds {
 }
 
 impl VersionBounds {
-    /// Checks if the current version bound covers a given version. Returns true if it does, false otherwise.
+    /// Checks if the current version bound covers a given version.
+    /// Returns true if it does, false otherwise.
     pub fn covers(&self, version: &Version) -> bool {
         match self {
             VersionBounds::Range(low, high) if low <= version && high > version => true,
@@ -85,6 +86,48 @@ impl VersionBounds {
             VersionBounds::Equal(equal) if version == equal => true,
             _ => false,
         }
+    }
+
+    /// Checks if this and another version bound overlap with each other.
+    /// Returns true if it does overlap, false otherwise.
+    pub fn overlaps(&self, other: &Self) -> bool {
+        // Extract min and max of `self`, including a bool specifying if the version is inclusive or not
+        let (self_min, self_max) = match self {
+            VersionBounds::Range(low, high) => (Some((low, true)), Some((high, false))),
+            VersionBounds::IncludingRange(low, high) => (Some((low, true)), Some((high, true))),
+            VersionBounds::Lower(version) => (None, Some((version, false))),
+            VersionBounds::LowerEqual(version) => (None, Some((version, true))),
+            VersionBounds::Higher(version) => (Some((version, false)), None),
+            VersionBounds::HigherEqual(version) => (Some((version, true)), None),
+            VersionBounds::Equal(version) => (Some((version, true)), Some((version, true))),
+        };
+
+        // Extract min and max of `other`, including a bool specifying if the version is inclusive or not
+        let (other_min, other_max) = match other {
+            VersionBounds::Range(low, high) => (Some((low, true)), Some((high, false))),
+            VersionBounds::IncludingRange(low, high) => (Some((low, true)), Some((high, true))),
+            VersionBounds::Lower(version) => (None, Some((version, false))),
+            VersionBounds::LowerEqual(version) => (None, Some((version, true))),
+            VersionBounds::Higher(version) => (Some((version, false)), None),
+            VersionBounds::HigherEqual(version) => (Some((version, true)), None),
+            VersionBounds::Equal(version) => (Some((version, true)), Some((version, true))),
+        };
+
+        // Check if `self` ends before the start of `other`
+        if let (Some((max, max_inclusive)), Some((min, min_inclusive))) = (self_max, other_min) {
+            if max < min || (max == min && !(max_inclusive && min_inclusive)) {
+                return false;
+            }
+        }
+
+        // Check if `other` ends before the start of `self`
+        if let (Some((max, max_inclusive)), Some((min, min_inclusive))) = (other_max, self_min) {
+            if max < min || (max == min && !(max_inclusive && min_inclusive)) {
+                return false;
+            }
+        }
+
+        true
     }
 }
 
@@ -214,6 +257,153 @@ mod tests {
         assert!(!version_bound.covers(&create_version("2.9")));
         assert!(version_bound.covers(&create_version("3.0")));
         assert!(!version_bound.covers(&create_version("3.1")));
+    }
+
+    #[test]
+    fn range_overlaps() {
+        let version_bound = VersionBounds::Range(create_version("3.0"), create_version("3.5"));
+
+        let other_range = VersionBounds::Range(create_version("2.0"), create_version("3.0"));
+        let other_including_range = VersionBounds::IncludingRange(create_version("2.0"), create_version("3.0"));
+        let other_lower = VersionBounds::Lower(create_version("3.0"));
+        let other_lower_equal = VersionBounds::LowerEqual(create_version("3.0"));
+        let other_higher = VersionBounds::Higher(create_version("3.5"));
+        let other_higher_equal = VersionBounds::HigherEqual(create_version("3.5"));
+        let other_equal = VersionBounds::Equal(create_version("3.1"));
+
+        assert!(!version_bound.overlaps(&other_range));
+        assert!(version_bound.overlaps(&other_including_range));
+        assert!(!version_bound.overlaps(&other_lower));
+        assert!(version_bound.overlaps(&other_lower_equal));
+        assert!(!version_bound.overlaps(&other_higher));
+        assert!(!version_bound.overlaps(&other_higher_equal));
+        assert!(version_bound.overlaps(&other_equal));
+    }
+
+    #[test]
+    fn including_range_overlaps() {
+        let version_bound = VersionBounds::IncludingRange(create_version("3.0"), create_version("3.5"));
+
+        let other_range = VersionBounds::Range(create_version("2.0"), create_version("3.0"));
+        let other_including_range = VersionBounds::IncludingRange(create_version("2.0"), create_version("3.0"));
+        let other_lower = VersionBounds::Lower(create_version("3.0"));
+        let other_lower_equal = VersionBounds::LowerEqual(create_version("3.0"));
+        let other_higher = VersionBounds::Higher(create_version("3.5"));
+        let other_higher_equal = VersionBounds::HigherEqual(create_version("3.5"));
+        let other_equal = VersionBounds::Equal(create_version("3.1"));
+
+        assert!(!version_bound.overlaps(&other_range));
+        assert!(version_bound.overlaps(&other_including_range));
+        assert!(!version_bound.overlaps(&other_lower));
+        assert!(version_bound.overlaps(&other_lower_equal));
+        assert!(!version_bound.overlaps(&other_higher));
+        assert!(version_bound.overlaps(&other_higher_equal));
+        assert!(version_bound.overlaps(&other_equal));
+    }
+
+    #[test]
+    fn lower_overlaps() {
+        let version_bound = VersionBounds::Lower(create_version("3.0"));
+
+        let other_range = VersionBounds::Range(create_version("2.0"), create_version("3.0"));
+        let other_including_range = VersionBounds::IncludingRange(create_version("2.0"), create_version("3.0"));
+        let other_lower = VersionBounds::Lower(create_version("3.0"));
+        let other_lower_equal = VersionBounds::LowerEqual(create_version("3.0"));
+        let other_higher = VersionBounds::Higher(create_version("3.5"));
+        let other_higher_equal = VersionBounds::HigherEqual(create_version("2.5"));
+        let other_equal = VersionBounds::Equal(create_version("2.9"));
+
+        assert!(version_bound.overlaps(&other_range));
+        assert!(version_bound.overlaps(&other_including_range));
+        assert!(version_bound.overlaps(&other_lower));
+        assert!(version_bound.overlaps(&other_lower_equal));
+        assert!(!version_bound.overlaps(&other_higher));
+        assert!(version_bound.overlaps(&other_higher_equal));
+        assert!(version_bound.overlaps(&other_equal));
+    }
+
+    #[test]
+    fn lower_equal_overlaps() {
+        let version_bound = VersionBounds::LowerEqual(create_version("3.0"));
+
+        let other_range = VersionBounds::Range(create_version("2.0"), create_version("3.0"));
+        let other_including_range = VersionBounds::IncludingRange(create_version("2.0"), create_version("3.0"));
+        let other_lower = VersionBounds::Lower(create_version("3.0"));
+        let other_lower_equal = VersionBounds::LowerEqual(create_version("3.0"));
+        let other_higher = VersionBounds::Higher(create_version("3.5"));
+        let other_higher_equal = VersionBounds::HigherEqual(create_version("2.5"));
+        let other_equal = VersionBounds::Equal(create_version("3.0"));
+
+        assert!(version_bound.overlaps(&other_range));
+        assert!(version_bound.overlaps(&other_including_range));
+        assert!(version_bound.overlaps(&other_lower));
+        assert!(version_bound.overlaps(&other_lower_equal));
+        assert!(!version_bound.overlaps(&other_higher));
+        assert!(version_bound.overlaps(&other_higher_equal));
+        assert!(version_bound.overlaps(&other_equal));
+    }
+
+    #[test]
+    fn higher_overlaps() {
+        let version_bound = VersionBounds::Higher(create_version("3.0"));
+
+        let other_range = VersionBounds::Range(create_version("2.0"), create_version("3.0"));
+        let other_including_range = VersionBounds::IncludingRange(create_version("2.0"), create_version("3.0"));
+        let other_lower = VersionBounds::Lower(create_version("3.5"));
+        let other_lower_equal = VersionBounds::LowerEqual(create_version("3.0"));
+        let other_higher = VersionBounds::Higher(create_version("3.5"));
+        let other_higher_equal = VersionBounds::HigherEqual(create_version("2.5"));
+        let other_equal = VersionBounds::Equal(create_version("3.0"));
+
+        assert!(!version_bound.overlaps(&other_range));
+        assert!(!version_bound.overlaps(&other_including_range));
+        assert!(version_bound.overlaps(&other_lower));
+        assert!(!version_bound.overlaps(&other_lower_equal));
+        assert!(version_bound.overlaps(&other_higher));
+        assert!(version_bound.overlaps(&other_higher_equal));
+        assert!(!version_bound.overlaps(&other_equal));
+    }
+
+    #[test]
+    fn higher_equal_overlaps() {
+        let version_bound = VersionBounds::HigherEqual(create_version("3.0"));
+
+        let other_range = VersionBounds::Range(create_version("2.0"), create_version("3.0"));
+        let other_including_range = VersionBounds::IncludingRange(create_version("2.0"), create_version("3.0"));
+        let other_lower = VersionBounds::Lower(create_version("3.5"));
+        let other_lower_equal = VersionBounds::LowerEqual(create_version("3.0"));
+        let other_higher = VersionBounds::Higher(create_version("3.5"));
+        let other_higher_equal = VersionBounds::HigherEqual(create_version("2.5"));
+        let other_equal = VersionBounds::Equal(create_version("3.0"));
+
+        assert!(!version_bound.overlaps(&other_range));
+        assert!(version_bound.overlaps(&other_including_range));
+        assert!(version_bound.overlaps(&other_lower));
+        assert!(version_bound.overlaps(&other_lower_equal));
+        assert!(version_bound.overlaps(&other_higher));
+        assert!(version_bound.overlaps(&other_higher_equal));
+        assert!(version_bound.overlaps(&other_equal));
+    }
+
+    #[test]
+    fn equal_overlaps() {
+        let version_bound = VersionBounds::Equal(create_version("3.0"));
+
+        let other_range = VersionBounds::Range(create_version("2.0"), create_version("3.0"));
+        let other_including_range = VersionBounds::IncludingRange(create_version("2.0"), create_version("3.0"));
+        let other_lower = VersionBounds::Lower(create_version("3.5"));
+        let other_lower_equal = VersionBounds::LowerEqual(create_version("3.0"));
+        let other_higher = VersionBounds::Higher(create_version("3.5"));
+        let other_higher_equal = VersionBounds::HigherEqual(create_version("2.5"));
+        let other_equal = VersionBounds::Equal(create_version("3.0"));
+
+        assert!(!version_bound.overlaps(&other_range));
+        assert!(version_bound.overlaps(&other_including_range));
+        assert!(version_bound.overlaps(&other_lower));
+        assert!(version_bound.overlaps(&other_lower_equal));
+        assert!(!version_bound.overlaps(&other_higher));
+        assert!(version_bound.overlaps(&other_higher_equal));
+        assert!(version_bound.overlaps(&other_equal));
     }
 
     #[test]

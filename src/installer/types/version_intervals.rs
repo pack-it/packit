@@ -136,6 +136,20 @@ impl VersionIntervals {
         false
     }
 
+    /// Checks if this and another version interval overlap with each other.
+    /// Returns true if it does overlap, false otherwise.
+    pub fn overlaps(&self, version_intervals: &Self) -> bool {
+        for self_bound in &self.version_bounds {
+            for other_bound in &version_intervals.version_bounds {
+                if self_bound.overlaps(other_bound) {
+                    return true;
+                }
+            }
+        }
+
+        false
+    }
+
     /// Checks if the version bounds are empty. Returns true if it is, false otherwise.
     pub fn is_empty(&self) -> bool {
         self.version_bounds.is_empty()
