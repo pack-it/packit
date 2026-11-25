@@ -6,13 +6,15 @@ This file explains the Packit metadata repository structure and shows some examp
 - [`index.toml`](#indextoml)
 - [`packages`](#packages)
 - [`package.toml`](#packagetoml)
+    - [Compatibility](#compatibility)
+        - [Example](#example)
 - [`targets.toml`](#targetstoml)
     - [Global fields](#global-fields)
     - [Sources](#sources)
-        - [Example](#example)
+        - [Example](#example-1)
         - [Sources directory](#sources-directory)
     - [Patches](#patches)
-        - [Example](#example-1)
+        - [Example](#example-2)
     - [Deprecation](#deprecation)
     - [Target fields](#target-fields)
     - [Available requirements](#available-requirements)
@@ -66,6 +68,29 @@ Each package contains this file, it describes the package as whole. It shows the
 - Conflicting packages
 - Supported versions (for each target, see [Target bounds](#target-bounds))
 - Deprecation information about the package
+
+### Compatibility
+The `package.toml` file defines the compatibility of versions with other versions of the same package. The compatibility is defined as a table, where the key is an identifier for the compatibility range, and the value is a [version bounds](#version-bounds) describing the range of compatible versions.
+
+The compatibility table also allows to define different compatibility ranges for different targets. See the example below and [target bounds](#target-bounds).
+
+If a package does not have a compatibility definition, all versions are assumed to be compatible. Target specific overwrites do still require a definition for all targets.
+
+Note that Packit currently only parses these fields, it does not yet check for version compatibility.
+
+#### Example
+In this example there are multiple different compatibility ranges. Windows has a different compatibility defined, while other platforms use the default ranges defined above.
+
+```
+[compatibility]
+1 = "1-2"
+2 = "2-3"
+3 = "3-4"
+
+[compatibility.windows]
+1 = "1-3"
+2 = "3-4"
+```
 
 ## `targets.toml`
 Each package version directory contains a `targets.toml` file. This file describes version specific information. This information can be the same for all targets (global) or target specific. Some fields in a target section override their global value. Other fields are additive, meaning both the global and target-specific values are used.
@@ -285,7 +310,7 @@ Scripts get certain environment variables from Packit:
 | `PACKIT_PACKAGE_DEPENDENCIES_PATH` | The path containing symlinks to all dependencies of the package.                           |
 | `PACKIT_VERBOSE`                   | True (1) if verbose output is enabled, false (0) otherwise.                                |
 | `PACKIT_EXECUTE_BUILD_TEST`        | True (1) if the build tests should be executed, false (0) otherwise.                       |
-| `PACKIT_BUILD_JOBS_COUNT`          | The number of jobs to use for build processes in the build script. Using `2 * the CPU count` as a heuristic.                           |
+| `PACKIT_BUILD_JOBS_COUNT`          | The number of jobs to use for build processes in the build script. Using `2 * the CPU count` as a heuristic. |
 
 Please note that the build script output is only shown to the user when the verbose mode is turned on. All other scripts always show their output, the output of these scripts should thus be clean. Optional verbose output can be printed when the `PACKIT_VERBOSE` is `1`.
 

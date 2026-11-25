@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Add support for path inputs in the `checksum` command.
 - Support for running Packit on arm64 musl linux (aarch64-unknown-linux-musl).
 - Support for `doas` in install.sh
+- The `compatibility` table in package metadata, to define compatibility of package versions.
 
 ### Changes
 - The test environment now uses a fresh environment for each test and can be used in parallel.
