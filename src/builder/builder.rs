@@ -3,7 +3,7 @@ use bytes::Bytes;
 use colored::Colorize;
 use std::{
     collections::VecDeque,
-    fs,
+    fs::{self, DirEntry},
     path::{Path, PathBuf},
 };
 use tempfile::TempDir;
@@ -405,8 +405,7 @@ where
 }
 
 /// Copies license files from the original source into the destination directory.
-/// Does a breadth-first search from the build directory and stops when it finds license files.
-/// Only traverse to depth 2, to prevent detecting third party license files.
+/// Automatically detects license files via `find_license_files`.
 fn copy_license_files(build_directory: &Path, destination_dir: &Path, source: &Source) -> Result<()> {
     // Copy all include paths first
     copy_include_license_files(build_directory, destination_dir, source)?;
@@ -417,53 +416,8 @@ fn copy_license_files(build_directory: &Path, destination_dir: &Path, source: &S
         return Ok(());
     }
 
-    let exclude_paths: Vec<_> = source.license_exclude.iter().map(|x| build_directory.join(x)).collect();
-
-    let mut found_files = Vec::new();
-
-    let mut queue = VecDeque::from([(0, build_directory.to_path_buf())]);
-    while let Some((depth, item)) = queue.pop_front() {
-        // Read all files in the directory
-        for entry in fs::read_dir(&item).err_with_path("read", &item)? {
-            let entry = entry.err_with_path("iterate", &item)?;
-
-            // Skip paths that should be excluded
-            if exclude_paths.contains(&entry.path()) {
-                continue;
-            }
-
-            let metadata = entry.metadata().err_with_path("read metadata of", entry.path())?;
-
-            // If the entry is a directory, add it to the queue
-            if metadata.is_dir() {
-                // Only add next level if depth is below 2
-                if depth < 2 {
-                    queue.push_back((depth + 1, entry.path()));
-                }
-                continue;
-            }
-
-            let file_name = entry.file_name();
-            let Some(file_name) = file_name.to_str() else { continue };
-
-            // Continue searching if the file is not a license file
-            if !is_license_file(file_name) {
-                continue;
-            }
-
-            debug!(
-                "Found license file at '{}'",
-                entry.path().strip_prefix(build_directory).unwrap_or(build_directory).display()
-            );
-            found_files.push(entry);
-        }
-
-        // Stop searching if we found files in this directory
-        if !found_files.is_empty() {
-            break;
-        }
-    }
-
+    // Detect license files
+    let found_files = find_license_files(build_directory, source)?;
     if found_files.is_empty() {
         debug!("Unable to find license files for package");
     }
@@ -516,6 +470,60 @@ fn copy_license_files(build_directory: &Path, destination_dir: &Path, source: &S
     }
 
     Ok(())
+}
+
+/// Finds license files in the given build directory.
+/// Does a breadth-first search from the build directory and stops when it finds license files.
+/// Only traverse to depth 2, to prevent detecting third party license files.
+fn find_license_files(build_directory: &Path, source: &Source) -> Result<Vec<DirEntry>> {
+    let exclude_paths: Vec<_> = source.license_exclude.iter().map(|x| build_directory.join(x)).collect();
+
+    let mut found_files = Vec::new();
+
+    let mut queue = VecDeque::from([(0, build_directory.to_path_buf())]);
+    while let Some((depth, item)) = queue.pop_front() {
+        // Read all files in the directory
+        for entry in fs::read_dir(&item).err_with_path("read", &item)? {
+            let entry = entry.err_with_path("iterate", &item)?;
+
+            // Skip paths that should be excluded
+            if exclude_paths.contains(&entry.path()) {
+                continue;
+            }
+
+            let metadata = entry.metadata().err_with_path("read metadata of", entry.path())?;
+
+            // If the entry is a directory, add it to the queue
+            if metadata.is_dir() {
+                // Only add next level if depth is below 2
+                if depth < 2 {
+                    queue.push_back((depth + 1, entry.path()));
+                }
+                continue;
+            }
+
+            let file_name = entry.file_name();
+            let Some(file_name) = file_name.to_str() else { continue };
+
+            // Continue searching if the file is not a license file
+            if !is_license_file(file_name) {
+                continue;
+            }
+
+            debug!(
+                "Found license file at '{}'",
+                entry.path().strip_prefix(build_directory).unwrap_or(build_directory).display()
+            );
+            found_files.push(entry);
+        }
+
+        // Stop searching if we found files in this directory
+        if !found_files.is_empty() {
+            break;
+        }
+    }
+
+    Ok(found_files)
 }
 
 /// Check if the given file name matches one of the license file names and has the correct extension.
@@ -728,6 +736,23 @@ pub mod tests {
         copy_license_files(&build_dir, destination, source).unwrap();
         assert!(destination.join("License").exists());
         assert!(!destination.join("COPYING").exists());
+    }
+
+    #[test]
+    fn copy_license_files_symlinks_too_deep() {
+        let build_dir = tempdir().unwrap();
+        let build_dir = build_dir.path();
+        let destination = tempdir().unwrap();
+        let destination = destination.path();
+        let long_path = build_dir.join("x").join("y").join("z");
+        fs::create_dir_all(&long_path).unwrap();
+        File::create(&long_path.join("license")).unwrap();
+        platform::create_symlink(&long_path.join("license"), &build_dir.join("COPYING")).unwrap();
+
+        let source = &create_source(Vec::new(), Vec::new());
+        copy_license_files(build_dir, destination, source).unwrap();
+        assert!(!destination.join("license").exists());
+        assert!(destination.join("COPYING").exists());
     }
 
     #[test]
