@@ -9,7 +9,7 @@ use crate::{
     builder::Builder,
     cli::display::{
         ProgressBar, QuestionResponse, Spinner, ask_user,
-        logging::{debug, warning},
+        logging::{debug, error, warning},
         standard_print,
         styled::{MapStyled, Styled},
     },
@@ -176,11 +176,26 @@ impl<'a> Installer<'a> {
                 },
             };
 
+            // Save the packages current state. When the state is `None` it means no other version of this package has been installed yet.
+            // The state consists of symlink state and active version.
+            let state = self.register.get_package(&node.get_package_id().name).and_then(|p| Some((p.symlinked, p.active_version.clone())));
+
             let dependencies = tree.get_children_ids_filtered(node, InstallLabel::is_dependency);
-            match node.get_label().get_type() {
-                InstallType::Build | InstallType::BuildAll => self.install_package(node_value, dependencies, false)?,
-                _ => self.install_package(node_value, dependencies, true)?,
+            let result = match node.get_label().get_type() {
+                InstallType::Build | InstallType::BuildAll => self.install_package(node_value, dependencies, false),
+                _ => self.install_package(node_value, dependencies, true),
+            };
+
+            if result.is_ok() {
+                continue;
             }
+
+            // Rollback the installation
+            if let Err(e) = self.rollback(node.get_package_id(), state) {
+                error!(e, "Failed to rollback install");
+            }
+
+            result?
         }
 
         Ok(())
@@ -243,40 +258,13 @@ impl<'a> Installer<'a> {
         // Set correct permissions for the installed package
         permissions::set_packit_permissions(&install_directory, self.config.multiuser, true)?;
 
-        // Add and save package to register
-        self.register.add_package(
-            &install_meta.package_metadata,
-            &install_meta.version_metadata,
-            dependencies.clone(),
-            source_repository,
-            install_meta.repository_name.clone(),
-            &install_directory,
-            false,
-            false,
-            use_prebuild,
-        );
-        self.register.save_to(&PackageRegister::get_path(&self.config.prefix_directory))?;
-
-        let installed_package_version = match self.register.get_package_version_mut(&package_id) {
-            Some(installed_package_version) => installed_package_version,
-            None => {
-                return Err(InstallerError::UnreachableError {
-                    msg: "Package version cannot be found even though it was inserted right before".to_string(),
-                });
-            },
-        };
-
         // Refresh the local metadata for the new package
         let current_revision = install_meta.version_metadata.get_revision_count();
         let provider = self.repository_manager.get_metadata_provider(&install_meta.repository_id)?;
         let local_metadata = LocalMetaHandler::new(&self.config.prefix_directory).get_package(&package_id);
         let updated_metadata = local_metadata.refresh(provider, current_revision)?;
-        installed_package_version.update_metadata_refresh(updated_metadata);
-        self.register.save_to(&PackageRegister::get_path(&self.config.prefix_directory))?;
 
         self.execute_postinstall(&package_id, install_meta, &install_directory, &script_args)?;
-
-        self.determine_active(install_meta, &package_id, target_meta)?;
 
         // Only run the test if the skip test option is false
         if !self.options.skip_test {
@@ -284,7 +272,7 @@ impl<'a> Installer<'a> {
             for dependency in &dependencies {
                 let Some(installed_package_version) = self.register.get_package_version(dependency) else {
                     return Err(InstallerError::UnreachableError {
-                        msg: "Package version cannot be found even though it was inserted right before".to_string(),
+                        msg: "Dependency package version cannot be found even though it was inserted right before".to_string(),
                     });
                 };
                 installed_dependencies.push(installed_package_version);
@@ -299,6 +287,34 @@ impl<'a> Installer<'a> {
                 installed_dependencies,
             )?;
         }
+
+        // Only add to the register when the entire package installation is done
+        self.register.add_package(
+            &install_meta.package_metadata,
+            &install_meta.version_metadata,
+            dependencies.clone(),
+            source_repository,
+            install_meta.repository_name.clone(),
+            &install_directory,
+            false,
+            false,
+            use_prebuild,
+        );
+
+        let installed_package_version = match self.register.get_package_version_mut(&package_id) {
+            Some(installed_package_version) => installed_package_version,
+            None => {
+                return Err(InstallerError::UnreachableError {
+                    msg: "Package version cannot be found even though it was inserted right before".to_string(),
+                });
+            },
+        };
+        installed_package_version.update_metadata_refresh(updated_metadata);
+
+        self.register.save_to(&PackageRegister::get_path(&self.config.prefix_directory))?;
+
+        // Only do symlinking after the package has successfully been installed, so users cannot use a broken package
+        self.determine_active(install_meta, &package_id, target_meta)?;
 
         if let Some(notice) = &version_meta.postinstall_notice {
             println!("{notice}");
@@ -610,6 +626,47 @@ impl<'a> Installer<'a> {
         Ok(())
     }
 
+    /// Rolls back the changes made by the installation of the given package id.
+    fn rollback(&mut self, package_id: &PackageId, state: Option<(bool, Version)>) -> Result<()> {
+        // Revert symlink and active version states
+        if let Some(state) = &state {
+            let original_id = PackageId::new(package_id.name.clone(), state.1.clone());
+            Symlinker::new(self.config).set_active(self.register, &original_id, state.0)?;
+        }
+
+        // Try to run the uninstall script (don't return if it fails)
+        if let Some(package_version) = self.register.get_package_version(package_id) {
+            _ = self.run_uninstall_script(package_version);
+        }
+
+        // Remove from register
+        self.register.remove_package_version(package_id);
+
+        let mut directory = self.config.prefix_directory.join("packages").join(&package_id.name);
+        let mut metadata_directory = self.config.prefix_directory.join("metadata").join(&package_id.name);
+        if state.is_some() {
+            directory = directory.join(package_id.version.to_string());
+            metadata_directory = metadata_directory.join(package_id.version.to_string());
+        }
+
+        Symlinker::new(self.config).remove_package_symlinks(&directory)?;
+
+        // Remove the dependency symlinks if they exist
+        let dependency_directory_path = self.config.prefix_directory.join("dependencies").join(package_id.to_string());
+        if dependency_directory_path.exists() {
+            fs::remove_dir_all(&dependency_directory_path).err_with_path("remove dirs", &dependency_directory_path)?;
+        }
+
+        // Remove (metadata) files
+        fs::remove_dir_all(&directory).err_with_path("remove dirs", &directory)?;
+
+        if metadata_directory.exists() {
+            fs::remove_dir_all(&metadata_directory).err_with_path("remove dirs", &metadata_directory)?;
+        }
+
+        Ok(())
+    }
+
     /// Removes the build dependencies recursively. There are early returns to make sure that the
     /// package is not removed if it was already installed, is not installed anymore or is a dependency.
     fn remove_build_dependencies(&mut self, node_index: usize, tree: &InstallTree) -> Result<Vec<PackageId>> {
@@ -718,7 +775,7 @@ impl<'a> Installer<'a> {
             fs::remove_dir_all(&dependency_directory_path).err_with_path("remove dirs", &dependency_directory_path)?;
         }
 
-        // Check if the package was symlinked
+        // Check if the package is the active version and symlinked
         if installed_package.active_version == package_id.version && installed_package.symlinked {
             io::remove_symlinks(&self.config.prefix_directory, &directory)?;
         }
