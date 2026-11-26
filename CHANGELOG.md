@@ -1,33 +1,37 @@
 # Changelog
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-
 ## [Unreleased](https://github.com/pack-it/packit/compare/0.0.5...HEAD)
 
 ### Added
+
 - The metadata repositories can now contain source files.
 - Support for unpacking bzip2 file formats.
 - The `msvc` requirement now supports specifiying version bounds using `msvc@<version-bounds>`.
 - Add support for path inputs in the `checksum` command.
 - Support for running Packit on arm64 musl linux (aarch64-unknown-linux-musl).
 - Support for `doas` in install.sh
+- Rollbacks after failed installations, so Packit is not in a half state (note installs still not atomic)
 
 ### Changes
+
 - The test environment now uses a fresh environment for each test and can be used in parallel.
 - Test scripts now also use a managed environment like the build environment.
 - Build and test scripts now have the package `bin` directory in their `PATH`.
 
 ### Fixed
+
 - Fix `LocalMetadataExistence` verifier fix not updating the last refresh and update state in the register.
 - Fix OS version detection not extracting the Linux kernel version correctly.
 - Fix hanging scripts when Packit receives stdin.
 
-
 ## [v0.0.5](https://github.com/pack-it/packit/compare/0.0.4...0.0.5) - 2026-09-21
 
 ### Added
+
 - The integration tests to test Packit.
 - The build scripts now get the `PACKIT_BUILD_JOBS_COUNT` variable to use for parallel builds and tests.
 - The uninstall now uninstalls packages in the correct order (so dependents before dependencies).
@@ -46,6 +50,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The checks for paths defined in the metadata that escape their parent directory.
 
 ### Changes
+
 - The build tests are now turned off by default and can be turned on with `--execute-build-test` (`--skip-build-test` is removed).
 - Package names are now always lowercase, the commands translate uppercase to lowercase. (BREAKING)
 - The parsing for dependencies and targets bounds doesn't allow for `name@` anymore. (BREAKING)
@@ -55,6 +60,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Update all dependencies to their latest available versions.
 
 ### Fixed
+
 - Fix patch apply directory meta check reporting wrong issues.
 - Fix patches being able to change files outside of the build directory.
 - Fix the `license_include` file being able to include a file outside of the build directory.
@@ -68,17 +74,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Fix update functionality checking if dependency is still satisfied in a wrong way.
 - Fix the re-install fix in the repairer uninstalling a package when it cannot be installed.
 
-
 ## [v0.0.4](https://github.com/pack-it/packit/compare/0.0.3...0.0.4) - 2026-08-16
 
 ### Added
+
 - The `build_requirements` and `test_requirements` fields, with the `msvc` requirement. (BREAKING)
 - The `meta-check` utility command, which checks the metadata of a given repository.
 - The `InvalidFiles` check in the verifier, which check directories for invalid files.
 - The `MissingDependencySymlinks` check in the verifier, which checks for missing or incorrect symlinks in the dependencies directory of a certain package.
 - The `prebuilds.toml` file in the metadata, to support more advanced specification of prebuilds for a package:
-    - Prebuilds can now be shared by multiple targets.
-    - Prebuilds can now exclude certain paths of a package.
+  - Prebuilds can now be shared by multiple targets.
+  - Prebuilds can now exclude certain paths of a package.
 - The `skip-test` and `skip-build-test` flags in the `install` command, to skip Packit tests or skip build tests. (BREAKING)
 - The `--tree` flag in the `search` command, to show the tree of a given package.
 - The `info` command (without arguments) to show information about the current Packit install, such as prefix path and target information.
@@ -96,6 +102,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The `license_include` field to `sources` in the metadata, which can be used to include certain files in the license file copying.
 
 ### Changes
+
 - Change display of true and false values in the `info` and `search` commands.
 - Prebuilds now have a toml metadata file instead of the checksum file, containing the checksum and size of the prebuild. (BREAKING)
 - The license field in the metadata now allows nesting and specifying exceptions. (BREAKING)
@@ -111,6 +118,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The build process now automatically detects the root of a source directory, meaning `cd` in scripts is not needed anymore. (BREAKING)
 
 ### Fixed
+
 - Fix error messages not representing the error correctly.
 - Fix MSVC detection not finding VS Build Tools.
 - Fix "check length methods" from the verifier returning wrong length in case of an incomplete check list.
@@ -124,10 +132,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Fix missing build dependency paths in `ACLOCAL_PATH` environment variable.
 - Fix `unlink` removing dependencies symlinks and other symlinks outside of the symlinked directories.
 
-
 ## [v0.0.3](https://github.com/pack-it/packit/compare/0.0.2...0.0.3) - 2026-07-11
 
 ### Added
+
 - Support for loading non-text external test files.
 - The `--active` flag for the list command, to list all active packages.
 - Support for context (using our [`contextdiff-parser`](https://github.com/pack-it/contextdiff-parser)) and unified diff formats for patches.
@@ -148,6 +156,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The `--verbose` flag for the `search` command.
 
 ### Changes
+
 - The build system now includes a new `package-build` xtask to create a full Packit prebuild for the release.
 - The list command now uses column order grid printing instead of row order.
 - The patch apply process now uses a more advanced file path resolver, which ensures better patch compatibility.
@@ -168,6 +177,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Packit now has a MSRV of 1.88.0 (BREAKING)
 
 ### Fixed
+
 - Fix package not found issue when multiple repositories have the same package but different versions.
 - Fix `--updatables` flag listing older installed package versions when a newer up-to-date version is installed.
 - Fix checksum check for patch files that are downloaded from the metadata repository.
@@ -177,10 +187,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Fix `Permissions` verifier check, by allowing readonly flag on files.
 - Fix `InvalidDependencies` verifier check, by also checking for target specific dependencies.
 
-
 ## [v0.0.2](https://github.com/pack-it/packit/compare/0.0.1...0.0.2) - 2026-05-14
 
 ### Added
+
 - The config command, to view and change the config through the CLI.
 - Support for using external files for test scripts in the package metadata.
 - The fuzzy-search feature, to provide a package suggestion in case of a wrong package parameter.
@@ -190,11 +200,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Support for Regex search in the search command, to search packages based on a given regex pattern.
 - Support for applying patches to the source code of packages.
 - Verifier and Repairer features
-    - The check and fix command now accept multiple package parameters.
-    - The inconsistent register fix doesn't require a re-install anymore.
-    - Check after fix (re-run check to make sure the fix worked).
-    - Checks and fixes for: stray directories, empty directories, package existence, correct permissions, missing Config.toml and missing Register.toml.
-    - Checks for all register fields
+  - The check and fix command now accept multiple package parameters.
+  - The inconsistent register fix doesn't require a re-install anymore.
+  - Check after fix (re-run check to make sure the fix worked).
+  - Checks and fixes for: stray directories, empty directories, package existence, correct permissions, missing Config.toml and missing Register.toml.
+  - Checks for all register fields
 - Skip uninstall option when update is not possible because of dependents which need the older version.
 - Portable repositories, a generated repository containing only specific packages for use on airgapped systems.
 - The init command which initializes the Packit environment and files.
@@ -202,23 +212,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The `--all` flag to the package command to package all installed packages.
 
 ### Changes
+
 - The build system now includes a new `build-install` xtask to create a full Packit build in a `bin` directory structure.
 - The register file is renamed from `Installed.toml` to `Register.toml`. (BREAKING)
 - Renamed the source repository fields in the register: (BREAKING) <br>
-`source_repository_url` -> `metadata_repository_url` <br>
-`source_repository_provider` -> `metadata_repository_provider` <br>
-`source_prebuild_repository_url` -> `prebuilds_repository_url` <br>
-`source_prebuild_repository_provider` -> `prebuilds_repository_provider`
+  `source_repository_url` -> `metadata_repository_url` <br>
+  `source_repository_provider` -> `metadata_repository_provider` <br>
+  `source_prebuild_repository_url` -> `prebuilds_repository_url` <br>
+  `source_prebuild_repository_provider` -> `prebuilds_repository_provider`
 - Renamed the `path` repository field in the config to `url`. (BREAKING)
 - The list command now has grid printing.
 
 ### Removed
+
 - The repositories command, this command is now integrated in the new config command.
 
 ### Fixed
+
 - Fix repeated questions for building from source instead of using a prebuild.
 - Fix the repairer fix for broken dependency trees. The missing dependency now gets the correct dependents and is set in the dependencies directory.
-
 
 ## [v0.0.1](https://github.com/pack-it/packit/releases/tag/0.0.1) - 2026-04-16
 

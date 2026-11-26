@@ -2,10 +2,11 @@
 
 This file aims to explain the installation process as accurately as possible. It also includes the build process.
 
-- [Dependency Resolution](#dependency-resolution)
-- [After Installation](#after-installation)
-- [Building from Source](#building-from-source)
-- [Future Additions](#future-additions)
+- [Dependency resolution](#dependency-resolution)
+- [After installation](#after-installation)
+- [Building from source](#building-from-source)
+- [Future additions](#future-additions)
+- [Failed installations](#failed-installation)
 
 ## Dependency resolution
 The first thing that happens when installing a package is the dependency resolution. Resolving a single dependency starts with choosing a repository to get the package metadata from. This order is defined with the [repository rank](./configuration.md#available-fields). Packit will get the package metadata from the first repository which contains the package. If the package cannot be found an error is returned. Then Packit chooses from the valid dependency versions. It will choose the latest satisfying version that is not deprecated. If all versions are deprecated it will choose the version that got deprecated the latest.
@@ -41,5 +42,13 @@ The result is that the paths in the patched binaries point to their dependencies
 
 Later when the version of a package dependency needs to be switched, Packit just changes the symlink in the `dependencies` directory to point at the new dependency version.
 
+## Failed installation
+When an installation fails because of an error, Packit does a rollback. This is done with information saved before the installation process starts. This state contains two things: if a package was symlinked and the active version. The rollback does the following:
+- If the saved state exists it will revert to this state. If it doesn't exist that means no other version of this package was installed before and there is no package state to return to.
+- The package is removed from the register first, because the register should never claim that a package is installed if it's not.
+- The remaining files and symlinks are removed.
+
+Note that only one package installation is rolled back. This means that when dependencies were already (correctly) installed these will NOT be deleted.
+
 ## Future additions
-There are two things that we will try to add in future Packit versions. The installation process is not yet parallelized, doing this would probably result in a significant performance increase. The installation of a single package is also not yet atomic. Meaning that if a package installation is cancelled half way through, Packit will be in a half state. Most of the time it possible to fix this with the [`fix`](./commands/fix.md) command, because it is quite advanced. However, it would be better if this was not the case, so we will try to make package installations atomic in future versions.
+There are two things that we will try to add in future Packit versions. The installation process is not yet parallelized, doing this would probably result in a significant performance increase. The installation of a single package is also not yet atomic. Meaning that if a package installation is interrupted half way through, Packit will be in a half state. Most of the time it possible to fix this with the [`fix`](./commands/fix.md) command, because it is quite advanced. However, it would be better if this was not the case, so we will try to make package installations atomic in future versions.

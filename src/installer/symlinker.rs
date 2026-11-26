@@ -116,15 +116,7 @@ impl<'a> Symlinker<'a> {
             version: Some(package.active_version.clone()),
         })?;
 
-        // Remove all symlinks that are in any of the `SYMLINK_DIRECTORIES`
-        for entry in fs::read_dir(&self.config.prefix_directory).err_with_path("read", &self.config.prefix_directory)? {
-            let entry = entry.err_with_path("iterate", &self.config.prefix_directory)?;
-
-            let file_type = entry.file_type().err_with_path("get filetype of", entry.path())?;
-            if file_type.is_dir() && SYMLINK_DIRECTORIES.iter().any(|x| *x == entry.file_name()) {
-                io::remove_symlinks(&entry.path(), &package_version.install_path)?;
-            }
-        }
+        self.remove_package_symlinks(&package_version.install_path)?;
 
         // Update symlinked state in package register
         match register.get_package_mut(package_name) {
@@ -140,6 +132,21 @@ impl<'a> Symlinker<'a> {
 
         // Save package register
         register.save_to(&PackageRegister::get_path(&self.config.prefix_directory))?;
+
+        Ok(())
+    }
+
+    /// Remove all symlinks that are in any of the `SYMLINK_DIRECTORIES`.
+    /// This should normally not be called. It mainly exists to remove symlinks for broken package installations.
+    pub fn remove_package_symlinks(&self, install_path: &Path) -> Result<()> {
+        for entry in fs::read_dir(&self.config.prefix_directory).err_with_path("read", &self.config.prefix_directory)? {
+            let entry = entry.err_with_path("iterate", &self.config.prefix_directory)?;
+
+            let file_type = entry.file_type().err_with_path("get filetype of", entry.path())?;
+            if file_type.is_dir() && SYMLINK_DIRECTORIES.iter().any(|x| *x == entry.file_name()) {
+                io::remove_symlinks(&entry.path(), install_path)?;
+            }
+        }
 
         Ok(())
     }
