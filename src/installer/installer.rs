@@ -636,7 +636,7 @@ impl<'a> Installer<'a> {
 
         // Try to run the uninstall script (don't return if it fails)
         if let Some(package_version) = self.register.get_package_version(package_id) {
-            _ = self.run_uninstall_script(package_version);
+            _ = self.run_uninstall_script(package_id, &package_version.install_path);
         }
 
         // Remove from register
@@ -747,6 +747,11 @@ impl<'a> Installer<'a> {
             _ => self.config.prefix_directory.join("packages").join(&package_id.name).join(package_id.version.to_string()),
         };
 
+        let local_metadata_path = match installed_versions {
+            1 => self.config.prefix_directory.join("metadata").join(&package_id.name),
+            _ => self.config.prefix_directory.join("metadata").join(&package_id.name).join(package_id.version.to_string()),
+        };
+
         let installed_package = match self.register.get_package(&package_id.name) {
             Some(package) => package,
             None => {
@@ -766,8 +771,35 @@ impl<'a> Installer<'a> {
             },
         };
 
+        // These values are cloned, so we can remove the package from the register first
+        let symlinked = installed_package.symlinked;
+        let active_version = installed_package.active_version.clone();
+        let install_path = installed_package_version.install_path.clone();
+
+        // Remove package from the register first, so the register has the correct state
+        debug!("Removing {} from the package register", package_id.style());
+        self.register.remove_package_version(&package_id);
+
+        // Check if the package is the active version and symlinked
+        // Remove these symlinks first so the package is harder to use before it reaches a half state during the uninstall
+        if active_version == package_id.version && symlinked {
+            io::remove_symlinks(&self.config.prefix_directory, &directory)?;
+        }
+
+        // Change active package when uninstalled package is currently active
+        if active_version == package_id.version {
+            let mut other_versions = self.register.get_all_package_versions(&package_id.name);
+            other_versions.retain(|x| x.package_id.version != package_id.version);
+            other_versions.sort_by_key(|x| &x.package_id.version);
+
+            if let Some(newest) = other_versions.last() {
+                println!("Set active package to version {}", newest.package_id.style());
+                Symlinker::new(self.config).set_active(self.register, &newest.package_id.clone(), symlinked)?;
+            }
+        }
+
         // Run uninstall script
-        self.run_uninstall_script(installed_package_version)?;
+        self.run_uninstall_script(&package_id, &install_path)?;
 
         // Remove the dependency symlinks if they exist
         let dependency_directory_path = self.config.prefix_directory.join("dependencies").join(package_id.to_string());
@@ -775,36 +807,11 @@ impl<'a> Installer<'a> {
             fs::remove_dir_all(&dependency_directory_path).err_with_path("remove dirs", &dependency_directory_path)?;
         }
 
-        // Check if the package is the active version and symlinked
-        if installed_package.active_version == package_id.version && installed_package.symlinked {
-            io::remove_symlinks(&self.config.prefix_directory, &directory)?;
-        }
-
-        // Change active package when uninstalled package is currently active
-        if installed_package.active_version == package_id.version {
-            let mut other_versions = self.register.get_all_package_versions(&package_id.name);
-            other_versions.retain(|x| x.package_id.version != package_id.version);
-            other_versions.sort_by_key(|x| &x.package_id.version);
-
-            if let Some(newest) = other_versions.last() {
-                println!("Set active package to version {}", newest.package_id.style());
-                Symlinker::new(self.config).set_active(self.register, &newest.package_id.clone(), installed_package.symlinked)?;
-            }
-        }
-
         // Delete the determined directory
         debug!("Removing the package directory: {}", directory.display());
         fs::remove_dir_all(&directory).err_with_path("remove dirs", &directory)?;
 
-        // Remove package from the register
-        debug!("Removing {} from the package register", package_id.style());
-        self.register.remove_package_version(&package_id);
-
         // Remove local metadata
-        let local_metadata_path = match installed_versions {
-            1 => self.config.prefix_directory.join("metadata").join(&package_id.name),
-            _ => self.config.prefix_directory.join("metadata").join(&package_id.name).join(package_id.version.to_string()),
-        };
         debug!("Removing the local metadata directory: {}", local_metadata_path.display());
         fs::remove_dir_all(&local_metadata_path).err_with_path("remove dirs", &directory)?;
 
@@ -817,6 +824,7 @@ impl<'a> Installer<'a> {
     /// Returns an `InstallerError::PackageNotFound` error if the package cannot be found.
     fn uninstall_all(&mut self, package_name: &PackageName) -> Result<Vec<PackageId>> {
         let installed_versions = self.register.get_all_package_versions(package_name);
+        let packages: Vec<PackageId> = installed_versions.iter().map(|p| p.package_id.clone()).collect();
 
         // Ask the user if he/she wants to continue when version isn't specified and there are multiple versions installed
         let question = "Version is not specified, do you wish to uninstall all versions of this package?";
@@ -834,35 +842,43 @@ impl<'a> Installer<'a> {
             });
         }
 
-        // Path to the determined directory
+        let installed_package = match self.register.get_package(package_name) {
+            Some(package) => package,
+            None => {
+                return Err(InstallerError::UnreachableError {
+                    msg: "Package cannot be found even though it was found before".to_string(),
+                });
+            },
+        };
+
+        // Path to the package directory
         let directory = self.config.prefix_directory.join("packages").join(package_name);
 
-        // Remove active path symlink
-        debug!("Unlinking the active path");
-        let active_path = self.config.prefix_directory.join("active").join(package_name);
-        match active_path.exists() {
-            true => symlink::remove_symlink(&active_path)?,
-            false => warning!("Active symlink did not exist, was the package even installed successfully?"),
-        }
+        let symlinked = installed_package.symlinked;
 
-        // Check if package was symlinked
-        if let Some(package) = self.register.get_package(package_name) {
-            if package.symlinked {
-                debug!("Unlinking {}", package_name.style());
-                io::remove_symlinks(&self.config.prefix_directory, &directory)?;
-            }
+        // Delete the installed package from the register first, so the register has the correct state
+        debug!("Removing {} from the package register", package_name.style());
+        self.register.remove_package(package_name);
+
+        // Remove symlinks if the package was symlinked (this includes the active symlink)
+        // Remove these symlinks first so the package is harder to use before it reaches a half state during the uninstall
+        if symlinked {
+            debug!("Unlinking {}", package_name.style());
+            io::remove_symlinks(&self.config.prefix_directory, &directory)?;
         }
 
         // Run uninstall scripts for all versions
-        for package_version in &installed_versions {
+        for package_id in &packages {
             // Remove the dependency symlinks
-            let dependency_directory_path = self.config.prefix_directory.join("dependencies").join(package_version.package_id.to_string());
+            let dependency_directory_path = self.config.prefix_directory.join("dependencies").join(package_id.to_string());
             if fs::exists(&dependency_directory_path).err_with_path("check existence of", &dependency_directory_path)? {
                 fs::remove_dir_all(&dependency_directory_path).err_with_path("remove dirs", &dependency_directory_path)?;
             }
 
             // Run uninstall script
-            self.run_uninstall_script(package_version)?;
+            let install_path =
+                self.config.prefix_directory.join("packages").join(package_id.name.to_string()).join(package_id.version.to_string());
+            self.run_uninstall_script(package_id, &install_path)?;
         }
 
         if let Some(directory) = directory.to_str() {
@@ -870,25 +886,17 @@ impl<'a> Installer<'a> {
         }
         fs::remove_dir_all(&directory).err_with_path("remove dirs", &directory)?;
 
-        let uninstalled = installed_versions.iter().map(|p| p.package_id.clone()).collect();
-
-        // Delete the installed package from toml
-        debug!("Removing {} from the package register", package_name.style());
-        self.register.remove_package(package_name);
-
         // Remove local metadata
         let local_metadata_path = self.config.prefix_directory.join("metadata").join(package_name);
         debug!("Removing the local metadata directory: {}", local_metadata_path.display());
         fs::remove_dir_all(&local_metadata_path).err_with_path("remove dirs", &directory)?;
 
-        Ok(uninstalled)
+        Ok(packages)
     }
 
     /// Downloads and runs the uninstall script of a given package.
     /// Could return an `InstallerError`.
-    fn run_uninstall_script(&self, installed_package_version: &InstalledPackageVersion) -> Result<()> {
-        let package_id = &installed_package_version.package_id;
-
+    fn run_uninstall_script(&self, package_id: &PackageId, install_path: &Path) -> Result<()> {
         let local_meta_handler = LocalMetaHandler::new(&self.config.prefix_directory).get_package(package_id);
         let local_metadata = local_meta_handler.read_metadata()?;
 
@@ -907,7 +915,7 @@ impl<'a> Installer<'a> {
         let script_args = local_metadata.script_args.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
         let script_data = ScriptData::new(
             &script_file,
-            &installed_package_version.install_path,
+            &install_path,
             package_id,
             self.config,
             &script_args,
