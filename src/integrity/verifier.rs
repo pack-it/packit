@@ -35,7 +35,7 @@ impl Verifier {
     /// Gets the result of the next initial check.
     /// Returns and `Issue` if an issue is found, `None` if no issues are found.
     pub fn next_initial_check(&mut self) -> Result<Option<Issue>> {
-        let ordered_checks = Check::get_ordered_checks(Check::get_initial_checks());
+        let ordered_checks = Check::get_initial_checks();
         let check = match ordered_checks.get(self.current_initial_check) {
             Some(check) => check,
             None => return Ok(None),
@@ -54,7 +54,7 @@ impl Verifier {
             Check::RegisterSyntax => initial::check_register_syntax()?,
 
             // Return `VerifierError::UnimplementedCheck` if the current check is an initial check (meaning it's not implemented).
-            _ if Check::get_initial_checks().contains(check) => return Err(VerifierError::UnimplementedCheck),
+            _ if Check::get_initial_checks().contains(&check) => return Err(VerifierError::UnimplementedCheck),
 
             // Return early if the check is not an initial check
             _ => return Ok(None),
@@ -75,7 +75,7 @@ impl Verifier {
             return Err(VerifierError::InitialChecksSkipped);
         }
 
-        let ordered_checks = Check::get_ordered_checks(Check::get_checks());
+        let ordered_checks = Check::get_checks();
         let check = match ordered_checks.get(self.current_check) {
             Some(check) => check,
             None => return Ok(None),
@@ -150,11 +150,11 @@ impl Verifier {
 
     /// Gets the number of initial checks.
     pub fn get_initial_check_length(&self) -> usize {
-        Check::get_ordered_checks(Check::get_initial_checks()).len()
+        Check::get_initial_checks().len()
     }
 
     /// Gets the number of normal checks.
     pub fn get_check_length(&self) -> usize {
-        Check::get_ordered_checks(Check::get_checks()).len()
+        Check::get_checks().len()
     }
 }

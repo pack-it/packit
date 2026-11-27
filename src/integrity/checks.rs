@@ -1,20 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::collections::HashSet;
-
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Check {
-    // Initial checks (which verify methods that the verifier uses internally)
     Permissions,
     ConfigExistence,
     ConfigSyntax,
     RegisterExistence,
     RegisterSyntax,
-
-    // General checks
     StrayDirectory,
     PackitGroup,
-
-    // Package related checks
     StorageConsistency,
     RegisterConsistency,
     LocalMetadataExistence,
@@ -32,73 +25,33 @@ pub enum Check {
     Test,
 }
 
+// The order in which all checks should happen.
+pub const CHECKS: [Check; 22] = [
+    Check::Permissions,
+    Check::PackitGroup,
+    Check::ConfigExistence,
+    Check::ConfigSyntax,
+    Check::RegisterExistence,
+    Check::RegisterSyntax,
+    Check::StrayDirectory,
+    Check::ForbiddenLink,
+    Check::MissingLink,
+    Check::StorageConsistency,
+    Check::RegisterConsistency,
+    Check::LocalMetadataExistence,
+    Check::InvalidActive,
+    Check::MissingDependencies,
+    Check::InvalidDependencies,
+    Check::MissingDependents,
+    Check::InvalidDependents,
+    Check::DependencyTree,
+    Check::MissingDependencySymlinks,
+    Check::InvalidFiles,
+    Check::Alterations,
+    Check::Test,
+];
+
 impl Check {
-    /// Gets the dependencies of a check (the checks which should happen before the given check).
-    const fn get_dependencies(&self) -> &[Self] {
-        match self {
-            // Initial checks
-            Self::Permissions => &[],
-            Self::ConfigExistence => &[Self::Permissions],
-            Self::ConfigSyntax => &[Self::Permissions, Self::ConfigExistence],
-            Self::RegisterExistence => &[Self::Permissions, Self::ConfigExistence, Self::ConfigSyntax],
-            Self::RegisterSyntax => &[
-                Self::Permissions,
-                Self::ConfigExistence,
-                Self::ConfigSyntax,
-                Self::RegisterExistence,
-            ],
-
-            // General checks
-            Self::PackitGroup => &[],
-            Self::StrayDirectory => &[],
-
-            // Package checks
-            Self::ForbiddenLink => &[],
-            Self::MissingLink => &[],
-            Self::StorageConsistency => &[Self::StrayDirectory],
-            Self::RegisterConsistency => &[Self::StrayDirectory],
-            Self::LocalMetadataExistence => &[Self::StorageConsistency, Self::RegisterConsistency],
-            Self::InvalidActive => &[Self::StorageConsistency, Self::RegisterConsistency],
-            Self::MissingDependencies => &[Self::LocalMetadataExistence, Self::StorageConsistency, Self::RegisterConsistency],
-            Self::InvalidDependencies => &[Self::LocalMetadataExistence, Self::StorageConsistency, Self::RegisterConsistency],
-            Self::MissingDependents => &[
-                Self::LocalMetadataExistence,
-                Self::StorageConsistency,
-                Self::RegisterConsistency,
-                Self::MissingDependencies,
-                Self::InvalidDependencies,
-            ],
-            Self::InvalidDependents => &[
-                Self::LocalMetadataExistence,
-                Self::StorageConsistency,
-                Self::RegisterConsistency,
-                Self::MissingDependencies,
-                Self::InvalidDependencies,
-            ],
-            Self::DependencyTree => &[
-                Self::LocalMetadataExistence,
-                Self::StorageConsistency,
-                Self::RegisterConsistency,
-                Self::MissingDependencies,
-                Self::InvalidDependencies,
-                Self::MissingDependents,
-                Self::InvalidDependents,
-            ],
-            Self::MissingDependencySymlinks => &[Self::DependencyTree],
-            Self::InvalidFiles => &[Self::DependencyTree],
-            Self::Alterations => &[Self::LocalMetadataExistence, Self::StorageConsistency, Self::RegisterConsistency],
-            Self::Test => &[
-                Self::LocalMetadataExistence,
-                Self::ForbiddenLink,
-                Self::MissingLink,
-                Self::DependencyTree,
-                Self::Alterations,
-                Self::MissingDependencySymlinks,
-                Self::InvalidFiles,
-            ],
-        }
-    }
-
     /// Gets all initial checks.
     pub const fn get_initial_checks<'a>() -> &'a [Self] {
         &[
@@ -132,72 +85,20 @@ impl Check {
             Self::Test,
         ]
     }
-
-    /// Gets the checks in the correct order based on the 'check dependency tree'.
-    /// Returns a flattened 'check dependency tree'.
-    pub fn get_ordered_checks(checks: &[Self]) -> Vec<&Self> {
-        let mut ordered = Vec::new();
-        for check in checks {
-            ordered.extend(Self::get_ordered_checks(check.get_dependencies()));
-            ordered.push(check);
-        }
-
-        let mut seen = HashSet::new();
-        let mut unique_ordered = Vec::new();
-        for check in ordered {
-            if !seen.contains(check) {
-                unique_ordered.push(check);
-                seen.insert(check);
-            }
-        }
-
-        unique_ordered
-    }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use super::*;
 
     #[test]
-    fn check_order() {
-        assert_eq!(Check::get_ordered_checks(&[Check::Permissions]), Vec::from([&Check::Permissions]));
-
-        assert_eq!(
-            Check::get_ordered_checks(&[Check::DependencyTree]),
-            Vec::from([
-                &Check::StrayDirectory,
-                &Check::StorageConsistency,
-                &Check::RegisterConsistency,
-                &Check::LocalMetadataExistence,
-                &Check::MissingDependencies,
-                &Check::InvalidDependencies,
-                &Check::MissingDependents,
-                &Check::InvalidDependents,
-                &Check::DependencyTree,
-            ])
-        );
-    }
-
-    #[test]
-    fn check_cycles() {
-        let mut all_checks = Check::get_initial_checks().to_vec();
-        all_checks.extend(Check::get_checks().to_vec());
-
-        for check in all_checks {
-            check_cylces_impl(&check.clone(), &mut HashSet::from([check]));
-        }
-    }
-
-    fn check_cylces_impl(parent: &Check, seen: &mut HashSet<Check>) {
-        for check in parent.get_dependencies() {
-            if seen.contains(check) {
-                panic!("Cycle found in verifier checks")
-            }
-
-            seen.insert(check.clone());
-            check_cylces_impl(check, seen);
-            seen.remove(check);
+    fn check_duplicates() {
+        let mut seen = HashSet::new();
+        for check in CHECKS {
+            assert!(!seen.contains(&check));
+            seen.insert(check);
         }
     }
 }
