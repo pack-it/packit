@@ -20,17 +20,14 @@ use crate::{
 /// The errors that occur during verification.
 #[derive(Error, Debug)]
 pub enum VerifierError {
+    #[error("Tried to load the `{0}` before it was verified")]
+    UseBeforeVerify(String),
+
     #[error("Cannot parse symlink name, because it doesn't end properly")]
     InvalidSymlink,
 
     #[error("Cannot parse filename, because it contains invalid unicode")]
     InvalidUnicodeError,
-
-    #[error("Cannot do general checks before doing initial checks")]
-    InitialChecksSkipped,
-
-    #[error("Cannot continue with checks, missing check implementation")]
-    UnimplementedCheck,
 
     #[error("Could parse toml")]
     TomlError(#[from] TomlError),

@@ -6,17 +6,10 @@ use std::process::exit;
 use crate::{
     cli::{
         commands::HandleCommand,
-        display::{
-            QuestionResponse, ask_user,
-            logging::{debug, error},
-        },
-        parameter_checks,
+        display::{QuestionResponse, ask_user, logging::error},
     },
-    config::Config,
-    installer::types::{OptionalPackageId, PackageId},
-    integrity::{Repairer, Verifier, error::VerifierError},
-    register::package_register::PackageRegister,
-    repositories::manager::RepositoryManager,
+    installer::types::OptionalPackageId,
+    integrity::Verifier,
     utils::unwrap_or_exit::UnwrapOrExit,
 };
 
@@ -32,133 +25,52 @@ const UNSUCCESSFUL_FIX_MESSAGE: &str = "The issue could not be fixed, due to unk
 
 impl HandleCommand for FixArgs {
     fn handle(&self) {
-        let mut verifier = Verifier::new();
-        let mut repairer = Repairer::new();
-
-        let mut solved_issues = 0;
-        match self.fix_initial(&mut verifier, &mut repairer, &mut solved_issues) {
-            Ok(_) => {},
-            Err(e) if verifier.issues_found() > solved_issues => {
-                debug!(err: e, "An error occurred when issues were already found, skipping remaining checks");
-                return;
-            },
-            Err(e) => {
-                error!(e, "An error occurred while doing the initial verifier checks");
-                exit(1);
-            },
-        };
-
-        let Err(e) = self.fix(&mut verifier, &mut repairer, &mut solved_issues) else {
-            return;
-        };
-
-        if verifier.issues_found() <= solved_issues {
-            error!(e, "An error occurred while doing the verifier checks");
-            exit(1);
-        }
-
-        debug!(err: e, "An error occurred when issues were already found, skipping remaining checks");
-    }
-}
-
-impl FixArgs {
-    /// Fixes the initial issues, which check basic files that Packit requires to run properly (for example Config.toml or Register.toml).
-    fn fix_initial(&self, verifier: &mut Verifier, repairer: &mut Repairer, issues_solved: &mut u32) -> Result<(), VerifierError> {
-        let mut fixed_issue = false;
-        while verifier.get_initial_check_index() < verifier.get_initial_check_length() {
-            let issue = match verifier.next_initial_check()? {
-                // If there is an issue and we previously attempted to fix it, error and exit
-                Some(_) if fixed_issue => {
-                    error!(msg: UNSUCCESSFUL_FIX_MESSAGE);
-                    exit(1);
-                },
-
-                // If there is an issue, return the issue to fix it
-                Some(issue) => issue,
-
-                // If there is no issue and we previously attempted to fix it, show a success message and reset `fixed_issue`
-                None if fixed_issue => {
-                    println!("{}", "Successfully fixed the issue".bold().green());
-                    fixed_issue = false;
-                    *issues_solved += 1;
-                    continue;
-                },
-
-                // If there is no issue, continue
-                None => continue,
-            };
-
-            println!("{issue}");
-            println!("{}", issue.get_fix_message());
-            if ask_user(FIX_MESSAGE, QuestionResponse::Yes).unwrap_or_exit(1).is_no() {
-                exit(0);
-            }
-
-            // Repair the found issues
-            repairer.fix_initial_issues(issue).unwrap_or_exit(1);
-
-            // Reverse the verifier to redo the check to make sure the fix worked
-            verifier.reverse_initial_check();
-
-            fixed_issue = true;
-        }
-
-        Ok(())
-    }
-
-    /// Does the normal fixes.
-    fn fix(&self, verifier: &mut Verifier, repairer: &mut Repairer, issues_solved: &mut u32) -> Result<(), VerifierError> {
-        let config = Config::from(&Config::get_default_path()).unwrap_or_exit_msg("Cannot load config", 1);
-        let manager = RepositoryManager::new(&config);
-        let register_dir = PackageRegister::get_path(&config.prefix_directory);
-        let mut register = PackageRegister::from(&register_dir).unwrap_or_exit(1);
-
-        // Get the package ids
-        let package_ids = parameter_checks::expand_optional_ids(&register, &config, &self.packages);
-
-        // Fix all packages if no packages are specified
-        let packages: &Vec<PackageId> = match package_ids.is_empty() {
-            true => &register.iterate_all().map(|p| p.package_id.clone()).collect(),
-            false => &package_ids,
-        };
+        let mut verifier = Verifier::new(self.packages.clone());
 
         // Retrieve and fix the issues one by one
         let mut fixed_issue = false;
         while verifier.get_check_index() < verifier.get_check_length() {
-            let check_result = verifier.next_check(packages, &register, &config)?;
-            let issue = match check_result {
+            let issue = match verifier.next_check() {
                 // If there is an issue and we previously attempted to fix it, error and exit
-                Some(_) if fixed_issue => {
+                Ok(Some(_)) if fixed_issue => {
                     error!(msg: UNSUCCESSFUL_FIX_MESSAGE);
                     exit(1);
                 },
 
                 // If there is an issue, return the issue to fix it
-                Some(issue) => issue,
+                Ok(Some(issue)) => issue,
 
                 // If there is no issue and we previously attempted to fix it, show a success message and reset `fixed_issue`
-                None if fixed_issue => {
+                Ok(None) if fixed_issue => {
                     println!("{}", "Successfully fixed the issue".bold().green());
                     fixed_issue = false;
-                    *issues_solved += 1;
                     continue;
                 },
 
                 // If there is no issue, continue
-                None => continue,
+                Ok(None) => continue,
+
+                // Display errors and exit
+                Err(e) => {
+                    error!(e, "An error occurred while doing the verifier checks");
+                    exit(1);
+                },
             };
 
             println!("{issue}");
             println!("{}", issue.get_fix_message());
             if ask_user(FIX_MESSAGE, QuestionResponse::Yes).unwrap_or_exit(1).is_no() {
-                return Ok(());
+                println!("The issue has NOT been fixed and no further checks were done");
+                return;
             }
 
             // Repair the found issues
-            repairer.fix(issue, &mut register, &config, &manager).unwrap_or_exit(1);
+            if let Err(e) = verifier.fix(issue) {
+                error!(e, "An error occurred while trying to fix the issue");
+                exit(1);
+            }
 
-            // Save register after each fix
-            register.save_to(&register_dir).unwrap_or_exit(1);
+            // TODO: Here used to be a register save, make sure this is now done in every fix separately
 
             // Reverse the verifier to redo the check to make sure the fix worked
             verifier.reverse_check();
@@ -169,7 +81,5 @@ impl FixArgs {
         if verifier.issues_found() == 0 {
             println!("No issues were found!");
         }
-
-        Ok(())
     }
 }

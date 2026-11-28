@@ -6,10 +6,9 @@ pub mod metadata;
 mod repairer;
 mod toml_repairer;
 mod utils;
-mod verifier;
+pub mod verifier;
+mod verifier_checks;
 
 pub use issue::Issue;
-
-pub use repairer::Repairer;
 
 pub use verifier::Verifier;

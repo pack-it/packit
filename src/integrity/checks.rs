@@ -1,3 +1,5 @@
+use std::sync::LazyLock;
+
 // SPDX-License-Identifier: GPL-3.0-only
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Check {
@@ -28,11 +30,11 @@ pub enum Check {
 // The order in which all checks should happen.
 pub const CHECKS: [Check; 22] = [
     Check::Permissions,
-    Check::PackitGroup,
     Check::ConfigExistence,
     Check::ConfigSyntax,
     Check::RegisterExistence,
     Check::RegisterSyntax,
+    Check::PackitGroup,
     Check::StrayDirectory,
     Check::ForbiddenLink,
     Check::MissingLink,
@@ -51,41 +53,28 @@ pub const CHECKS: [Check; 22] = [
     Check::Test,
 ];
 
-impl Check {
-    /// Gets all initial checks.
-    pub const fn get_initial_checks<'a>() -> &'a [Self] {
-        &[
-            Self::Permissions,
-            Self::ConfigExistence,
-            Self::ConfigSyntax,
-            Self::RegisterExistence,
-            Self::RegisterSyntax,
-        ]
+// TODO: Check if there is a better way to do this
+pub static CONFIG_VERIFIED_INDEX: LazyLock<usize> = LazyLock::new(|| {
+    let mut verified_index = 0;
+    for (index, check) in CHECKS.iter().enumerate() {
+        if *check == Check::ConfigExistence || *check == Check::ConfigSyntax {
+            verified_index = index;
+        }
     }
 
-    /// Gets the normal checks.
-    pub const fn get_checks<'a>() -> &'a [Self] {
-        &[
-            Self::StorageConsistency,
-            Self::RegisterConsistency,
-            Self::LocalMetadataExistence,
-            Self::DependencyTree,
-            Self::Alterations,
-            Self::PackitGroup,
-            Self::StrayDirectory,
-            Self::MissingDependents,
-            Self::InvalidDependents,
-            Self::InvalidActive,
-            Self::ForbiddenLink,
-            Self::MissingLink,
-            Self::MissingDependencies,
-            Self::InvalidDependencies,
-            Self::MissingDependencySymlinks,
-            Self::InvalidFiles,
-            Self::Test,
-        ]
+    verified_index
+});
+
+pub static REGISTER_VERIFIED_INDEX: LazyLock<usize> = LazyLock::new(|| {
+    let mut verified_index = 0;
+    for (index, check) in CHECKS.iter().enumerate() {
+        if *check == Check::RegisterExistence || *check == Check::RegisterSyntax {
+            verified_index = index;
+        }
     }
-}
+
+    verified_index
+});
 
 #[cfg(test)]
 mod tests {
@@ -100,5 +89,10 @@ mod tests {
             assert!(!seen.contains(&check));
             seen.insert(check);
         }
+    }
+
+    #[test]
+    fn check_index_order() {
+        assert!(*CONFIG_VERIFIED_INDEX < *REGISTER_VERIFIED_INDEX);
     }
 }
