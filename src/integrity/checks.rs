@@ -1,6 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use std::sync::LazyLock;
 
-// SPDX-License-Identifier: GPL-3.0-only
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Check {
     Permissions,
@@ -34,7 +34,6 @@ pub const CHECKS: [Check; 22] = [
     Check::ConfigSyntax,
     Check::RegisterExistence,
     Check::RegisterSyntax,
-    Check::PackitGroup,
     Check::StrayDirectory,
     Check::ForbiddenLink,
     Check::MissingLink,
@@ -51,29 +50,23 @@ pub const CHECKS: [Check; 22] = [
     Check::InvalidFiles,
     Check::Alterations,
     Check::Test,
+    Check::PackitGroup, // Done last, because there is no fix yet
 ];
 
-// TODO: Check if there is a better way to do this
+// Get the index of the last config check (after this check the config can be used)
 pub static CONFIG_VERIFIED_INDEX: LazyLock<usize> = LazyLock::new(|| {
-    let mut verified_index = 0;
-    for (index, check) in CHECKS.iter().enumerate() {
-        if *check == Check::ConfigExistence || *check == Check::ConfigSyntax {
-            verified_index = index;
-        }
-    }
-
-    verified_index
+    CHECKS
+        .iter()
+        .rposition(|check| *check == Check::ConfigExistence || *check == Check::ConfigSyntax)
+        .expect("Expected config check to exist")
 });
 
+// Get the index of the last register check (after this check the register can be used)
 pub static REGISTER_VERIFIED_INDEX: LazyLock<usize> = LazyLock::new(|| {
-    let mut verified_index = 0;
-    for (index, check) in CHECKS.iter().enumerate() {
-        if *check == Check::RegisterExistence || *check == Check::RegisterSyntax {
-            verified_index = index;
-        }
-    }
-
-    verified_index
+    CHECKS
+        .iter()
+        .rposition(|check| *check == Check::RegisterExistence || *check == Check::RegisterSyntax)
+        .expect("Expected register check to exist")
 });
 
 #[cfg(test)]

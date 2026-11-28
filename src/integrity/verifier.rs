@@ -126,7 +126,7 @@ impl Verifier {
     }
 
     /// Fixes the given issue by executing the fix for that issue.
-    /// Note: The register is not saved after the fix is applied.
+    /// Note that the register must be saved here when the register is used and mutated.
     pub fn fix(&mut self, issue: Issue) -> Result<()> {
         match issue {
             Issue::MissingConfig => repairer::initial::fix_missing_config()?,
@@ -140,46 +140,54 @@ impl Verifier {
                 let config = self.get_config()?;
                 let mut register = self.get_register(&config)?;
                 let manager = RepositoryManager::new(&config);
-                repairer::package::fix_broken_tree(missing, &mut register, &config, &manager)?
+                repairer::package::fix_broken_tree(missing, &mut register, &config, &manager)?;
+                register.save_to(&PackageRegister::get_path(&config.prefix_directory))?
             },
             Issue::InconsistentStorage(missing) => {
                 let config = self.get_config()?;
                 let mut register = self.get_register(&config)?;
                 let manager = RepositoryManager::new(&config);
-                repairer::package::fix_inconsistent_storage(missing, &mut register, &config, &manager)?
+                repairer::package::fix_inconsistent_storage(missing, &mut register, &config, &manager)?;
+                register.save_to(&PackageRegister::get_path(&config.prefix_directory))?
             },
             Issue::InconsistentRegister(missing) => {
                 let config = self.get_config()?;
                 let mut register = self.get_register(&config)?;
                 let manager = RepositoryManager::new(&config);
-                repairer::package::fix_inconsistent_register(missing, &mut register, &config, &manager)?
+                repairer::package::fix_inconsistent_register(missing, &mut register, &config, &manager)?;
+                register.save_to(&PackageRegister::get_path(&config.prefix_directory))?
             },
             Issue::MissingLocalMetadata(missing) => {
                 let config = self.get_config()?;
                 let mut register = self.get_register(&config)?;
                 let manager = RepositoryManager::new(&config);
-                repairer::package::fix_missing_local_metadata(missing, &mut register, &config, &manager)?
+                repairer::package::fix_missing_local_metadata(missing, &mut register, &config, &manager)?;
+                register.save_to(&PackageRegister::get_path(&config.prefix_directory))?
             },
             Issue::MissingDependencies(missing) => {
                 let config = self.get_config()?;
                 let mut register = self.get_register(&config)?;
                 let manager = RepositoryManager::new(&config);
-                repairer::package::fix_missing_dependencies(missing, &mut register, &manager)?
+                repairer::package::fix_missing_dependencies(missing, &mut register, &manager)?;
+                register.save_to(&PackageRegister::get_path(&config.prefix_directory))?
             },
             Issue::InvalidDependencies(invalid) => {
                 let config = self.get_config()?;
                 let mut register = self.get_register(&config)?;
-                repairer::package::fix_invalid_dependencies(invalid, &mut register)?
+                repairer::package::fix_invalid_dependencies(invalid, &mut register)?;
+                register.save_to(&PackageRegister::get_path(&config.prefix_directory))?
             },
             Issue::MissingDependents(missing) => {
                 let config = self.get_config()?;
                 let mut register = self.get_register(&config)?;
-                repairer::package::fix_missing_dependents(missing, &mut register)
+                repairer::package::fix_missing_dependents(missing, &mut register);
+                register.save_to(&PackageRegister::get_path(&config.prefix_directory))?
             },
             Issue::InvalidDependents(invalid) => {
                 let config = self.get_config()?;
                 let mut register = self.get_register(&config)?;
-                repairer::package::fix_invalid_dependents(invalid, &mut register)
+                repairer::package::fix_invalid_dependents(invalid, &mut register);
+                register.save_to(&PackageRegister::get_path(&config.prefix_directory))?
             },
             Issue::MissingDependencySymlinks(missing) => {
                 let config = self.get_config()?;
@@ -188,29 +196,34 @@ impl Verifier {
             Issue::InvalidActive(invalid) => {
                 let config = self.get_config()?;
                 let mut register = self.get_register(&config)?;
-                repairer::package::fix_invalid_active(invalid, &mut register, &config)?
+                repairer::package::fix_invalid_active(invalid, &mut register, &config)?;
+                register.save_to(&PackageRegister::get_path(&config.prefix_directory))?
             },
             Issue::ForbiddenLink(forbidden) => {
                 let config = self.get_config()?;
                 let mut register = self.get_register(&config)?;
-                repairer::package::fix_forbidden_link(forbidden, &mut register, &config)?
+                repairer::package::fix_forbidden_link(forbidden, &mut register, &config)?;
+                register.save_to(&PackageRegister::get_path(&config.prefix_directory))?
             },
             Issue::MissingLinks(missing) => {
                 let config = self.get_config()?;
                 let mut register = self.get_register(&config)?;
-                repairer::package::fix_missing_links(missing, &mut register, &config)?
+                repairer::package::fix_missing_links(missing, &mut register, &config)?;
+                register.save_to(&PackageRegister::get_path(&config.prefix_directory))?
             },
             Issue::FailedTest(failing) => {
                 let config = self.get_config()?;
                 let mut register = self.get_register(&config)?;
                 let manager = RepositoryManager::new(&config);
-                repairer::package::try_reinstall(failing, &mut register, &manager, &config)?
+                repairer::package::try_reinstall(failing, &mut register, &manager, &config)?;
+                register.save_to(&PackageRegister::get_path(&config.prefix_directory))?
             },
             Issue::AlteredPackage(altered) => {
                 let config = self.get_config()?;
                 let mut register = self.get_register(&config)?;
                 let manager = RepositoryManager::new(&config);
-                repairer::package::try_reinstall(altered, &mut register, &manager, &config)?
+                repairer::package::try_reinstall(altered, &mut register, &manager, &config)?;
+                register.save_to(&PackageRegister::get_path(&config.prefix_directory))?
             },
             Issue::MissingPackitGroup => warning!("Fix not executed, because the issue fix is not yet implemented"),
         }
@@ -218,7 +231,8 @@ impl Verifier {
         Ok(())
     }
 
-    fn prepare_arguments(&mut self) -> Result<(Config, PackageRegister, Vec<PackageId>)> {
+    /// Prepares the arguments for the verifier. Returns a tuple with the config, register and packages to check.
+    fn prepare_arguments(&mut self) -> Result<(Config, PackageRegister, &Vec<PackageId>)> {
         let config = self.get_config()?;
         let register = self.get_register(&config)?;
         let packages = self.get_packages(&register, &config);
@@ -226,6 +240,8 @@ impl Verifier {
     }
 
     /// Gets the config if the config has been verified, otherwise returns a `VerifierError::UseBeforeVerify` error.
+    /// This is just an extra check, if the order has correctly been defined this shouldn't be a problem.
+    /// However problems will only appear if the config is broken, so this might be missed if not checked like this.
     fn get_config(&self) -> Result<Config> {
         if self.current_check > *CONFIG_VERIFIED_INDEX {
             return Ok(Config::from(&Config::get_default_path())?);
@@ -235,6 +251,8 @@ impl Verifier {
     }
 
     /// Gets the register if the register has been verified, otherwise returns a `VerifierError::UseBeforeVerify` error.
+    /// This is just an extra check, if the order has correctly been defined this shouldn't be a problem.
+    /// However problems will only appear if the register is broken, so this might be missed if not checked like this.
     fn get_register(&self, config: &Config) -> Result<PackageRegister> {
         if self.current_check > *REGISTER_VERIFIED_INDEX {
             let register_dir = PackageRegister::get_path(&config.prefix_directory);
@@ -244,17 +262,20 @@ impl Verifier {
         return Err(VerifierError::UseBeforeVerify("register".to_string()));
     }
 
-    // TODO: Check if returning a reference is possible
-    fn get_packages(&mut self, register: &PackageRegister, config: &Config) -> Vec<PackageId> {
+    /// Gets the packages that should be checked, if no packages were given it will get them with the register.
+    /// Note that we don't know if the register has been adjusted, so we need to get it for every check.
+    fn get_packages(&mut self, register: &PackageRegister, config: &Config) -> &Vec<PackageId> {
         if self.optional_ids.is_empty() {
-            return register.iterate_all().map(|p| p.package_id.clone()).collect();
+            // First set the field, so we can return a reference
+            self.expanded_ids = register.iterate_all().map(|p| p.package_id.clone()).collect();
+            return &self.expanded_ids;
         }
 
         if self.expanded_ids.is_empty() {
             self.expanded_ids = parameter_checks::expand_optional_ids(&register, &config, &self.optional_ids);
         };
 
-        self.expanded_ids.clone()
+        &self.expanded_ids
     }
 
     /// Get the number of issues found.
@@ -274,6 +295,7 @@ impl Verifier {
         self.current_check
     }
 
+    /// Gets the number of checks.
     pub fn get_check_length(&self) -> usize {
         CHECKS.len()
     }

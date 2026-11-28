@@ -20,9 +20,6 @@ pub struct FixArgs {
     packages: Vec<OptionalPackageId>,
 }
 
-const FIX_MESSAGE: &str = "Would you like to automatically apply the fix above?";
-const UNSUCCESSFUL_FIX_MESSAGE: &str = "The issue could not be fixed, due to unknown reasons";
-
 impl HandleCommand for FixArgs {
     fn handle(&self) {
         let mut verifier = Verifier::new(self.packages.clone());
@@ -33,7 +30,7 @@ impl HandleCommand for FixArgs {
             let issue = match verifier.next_check() {
                 // If there is an issue and we previously attempted to fix it, error and exit
                 Ok(Some(_)) if fixed_issue => {
-                    error!(msg: UNSUCCESSFUL_FIX_MESSAGE);
+                    error!(msg: "The issue could not be fixed, due to unknown reasons");
                     exit(1);
                 },
 
@@ -59,7 +56,8 @@ impl HandleCommand for FixArgs {
 
             println!("{issue}");
             println!("{}", issue.get_fix_message());
-            if ask_user(FIX_MESSAGE, QuestionResponse::Yes).unwrap_or_exit(1).is_no() {
+            let question = "Would you like to automatically apply the fix above?";
+            if ask_user(question, QuestionResponse::Yes).unwrap_or_exit(1).is_no() {
                 println!("The issue has NOT been fixed and no further checks were done");
                 return;
             }
@@ -69,8 +67,6 @@ impl HandleCommand for FixArgs {
                 error!(e, "An error occurred while trying to fix the issue");
                 exit(1);
             }
-
-            // TODO: Here used to be a register save, make sure this is now done in every fix separately
 
             // Reverse the verifier to redo the check to make sure the fix worked
             verifier.reverse_check();

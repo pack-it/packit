@@ -20,7 +20,6 @@ pub struct CheckArgs {
 
 impl HandleCommand for CheckArgs {
     fn handle(&self) {
-        // TODO: Check if this can be done in a nicer way
         let mut verifier = Verifier::new(self.packages.clone());
         while verifier.get_check_index() < verifier.get_check_length() {
             match verifier.next_check() {
